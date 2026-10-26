@@ -78,10 +78,12 @@ export function ProjectCollaborationSidebar({
       <header className="project-collaboration-heading">
         <div>
           <strong title={heading}>{heading}</strong>
-          <span>
-            {workspaceId
-              ? projectName + ' · Workspace chat'
-              : 'Project chat · Seamus & dot'}
+          <span
+            title={
+              workspaceId ? projectName + ' · Workspace chat' : 'Project chat'
+            }
+          >
+            {workspaceId ? 'Workspace' : 'Project'}
           </span>
         </div>
         <button
@@ -127,7 +129,10 @@ export function ProjectCollaborationSidebar({
         hidden={tab !== 'chat'}
         className="project-chat-slot"
       >
-        <DotSidechatLive {...(workspaceId ? { workspaceId } : { projectId })} />
+        <DotSidechatLive
+          compactHeader
+          {...(workspaceId ? { workspaceId } : { projectId })}
+        />
       </div>
       {tab === 'plan' && (
         <div

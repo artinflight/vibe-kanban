@@ -85,7 +85,7 @@ export function ProjectCollaborationLayout({
       if (event.key !== 'Tab' || !root) return;
       const nodes = Array.from(
         root.querySelectorAll<HTMLElement>(
-          'button, input, textarea, select, [tabindex="0"]'
+          'button, summary, input, textarea, select, [tabindex="0"]'
         )
       ).filter(
         (node) =>

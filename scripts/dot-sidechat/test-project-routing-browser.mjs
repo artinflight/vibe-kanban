@@ -133,7 +133,7 @@ try {
           assert.ok(
             await sidebar
               .locator('.project-collaboration-heading span')
-              .textContent()
+              .getAttribute('title')
               .then((text) => text.includes('Synthetic project'))
           );
       }
@@ -157,6 +157,142 @@ try {
         assert.ok(box.y + box.height <= 1001);
       }
       await ready('project');
+      // Measure the actual project sidebar with its production CSS at a shorter
+      // viewport too. Secondary details overlay history rather than consuming it.
+      await page.setViewportSize({ width, height: 844 });
+      assert.equal(
+        await sidebar.locator('.dot-heading, .dot-session').count(),
+        0
+      );
+      const history = sidebar.locator('.dot-history');
+      const headerSpace = await history.evaluate(
+        (el) =>
+          el.getBoundingClientRect().top -
+          el.closest('aside').getBoundingClientRect().top
+      );
+      assert.ok(headerSpace <= 160, `Compact header consumed ${headerSpace}px`);
+      const panelBox = await sidebar.boundingBox();
+      const historyBox = await history.boundingBox();
+      const composerBox = await sidebar.locator('.dot-composer').boundingBox();
+      assert.ok(
+        (historyBox.height + composerBox.height) / panelBox.height >= 0.65
+      );
+      assert.equal(
+        await input().evaluate((el) => getComputedStyle(el).fontSize),
+        '16px'
+      );
+      assert.equal(
+        await sidebar
+          .locator('.dot-message > p')
+          .first()
+          .evaluate((el) => getComputedStyle(el).fontSize),
+        '16px'
+      );
+      const details = sidebar.locator('.dot-chat-details');
+      const summary = details.locator('summary');
+      assert.equal(await details.getAttribute('open'), null);
+      await input().fill('Details preserve this draft');
+      const retainedInput = await input().elementHandle();
+      await summary.focus();
+      await page.keyboard.press('Enter');
+      await details
+        .getByRole('button', { name: 'Refresh conversation', exact: true })
+        .waitFor();
+      assert.ok(
+        (await details.textContent()).includes('Private browser session')
+      );
+      assert.equal(
+        await details
+          .getByRole('button', { name: 'Disconnect', exact: true })
+          .count(),
+        1
+      );
+      const expandedHistory = await history.boundingBox();
+      assert.equal(expandedHistory.y, historyBox.y);
+      assert.equal(expandedHistory.height, historyBox.height);
+      await details
+        .locator('.dot-chat-details-content')
+        .screenshot({ path: output + `/chat-details-${width}.png` });
+      await page.keyboard.press('Escape');
+      assert.equal(await details.getAttribute('open'), null);
+      assert.equal(await input().inputValue(), 'Details preserve this draft');
+      assert.equal(
+        await retainedInput.evaluate(
+          (node) => node === document.getElementById('dot-draft')
+        ),
+        true
+      );
+      // Refresh changes synthetic flags only. Navigating flags sends no state writes.
+      const originalFlags = structuredClone(s.messages.project);
+      s.messages.project.push({
+        ...s.messages.project[0],
+        id: 'second-flag',
+        seq: 2,
+        body: 'Another unresolved question',
+      });
+      async function refreshDetails() {
+        if (!(await details.evaluate((el) => el.open))) await summary.click();
+        await details
+          .getByRole('button', { name: 'Refresh conversation', exact: true })
+          .click();
+        await summary.click();
+      }
+      await refreshDetails();
+      await page
+        .getByRole('button', { name: 'Jump to Needs Attention', exact: true })
+        .filter({ hasText: 'Attention · 2' })
+        .waitFor();
+      await page
+        .getByRole('button', { name: 'Jump to Needs Attention', exact: true })
+        .click();
+      await page
+        .getByRole('button', { name: 'Next flagged message', exact: true })
+        .click();
+      assert.equal(
+        await sidebar
+          .locator('[data-dot-attention-current]')
+          .getAttribute('id'),
+        'message-second-flag'
+      );
+      await page
+        .getByRole('button', { name: 'Previous flagged message', exact: true })
+        .click();
+      assert.equal(
+        await sidebar
+          .locator('[data-dot-attention-current]')
+          .getAttribute('id'),
+        'message-note-project'
+      );
+      assert.deepEqual(s.messages.project[0], originalFlags[0]);
+      s.messages.project = s.messages.project.map((m) => ({
+        ...m,
+        attention: null,
+      }));
+      await refreshDetails();
+      await page
+        .getByRole('button', { name: 'Jump to Needs Attention', exact: true })
+        .filter({ hasText: 'No flags' })
+        .waitFor();
+      assert.ok(
+        await page
+          .getByRole('button', { name: 'Next flagged message', exact: true })
+          .isDisabled()
+      );
+      assert.match(
+        await sidebar
+          .locator('.dot-attention-nav [role="status"]')
+          .textContent(),
+        /No unresolved flagged messages/
+      );
+      s.messages.project = originalFlags;
+      await refreshDetails();
+      await page.waitForFunction(
+        () => !document.getElementById('message-second-flag')
+      );
+      await sidebar.screenshot({
+        path: output + `/compact-project-${width}.png`,
+      });
+      await page.setViewportSize({ width, height: 1000 });
       await input().fill('Project retained draft');
       await page
         .getByRole('button', { name: 'Reply to message 1', exact: true })
@@ -278,6 +414,9 @@ try {
       assert.equal(await input().inputValue(), 'B isolated draft');
       await route('a');
       await ready('a');
+      await sidebar.screenshot({
+        path: output + `/compact-workspace-${width}.png`,
+      });
       await input().fill('A pinned reply');
       await page
         .getByRole('button', { name: 'Reply to message 1', exact: true })
@@ -351,6 +490,13 @@ try {
       results.push({
         width,
         passed: true,
+        compactHeader: {
+          headerSpace,
+          detailsKeyboardEscape: true,
+          flagsNavigateWithoutWrites: true,
+          zeroFlags: true,
+          messageAndComposer16px: true,
+        },
         lateGet: true,
         rapidSwitch: true,
         inFlightRetryExact: true,
@@ -370,4 +516,21 @@ try {
   await browser.close();
   await new Promise((r) => server.close(r));
   await writeFile(output + '/results.json', JSON.stringify(results, null, 2));
+  if (results.length === 2) {
+    const views = await Promise.all(
+      [390, 1440].map(async (width) => {
+        const image = (
+          await readFile(output + `/compact-project-${width}.png`)
+        ).toString('base64');
+        const workspace = (
+          await readFile(output + `/compact-workspace-${width}.png`)
+        ).toString('base64');
+        return `<section><h2>${width < 768 ? 'Narrow · 390 px' : 'Desktop · 1440 px (sidebar)'}</h2><img alt="Compact project Dot Chat" src="data:image/png;base64,${image}"><details><summary>Workspace destination / long name</summary><img alt="Exact workspace header with long name" src="data:image/png;base64,${workspace}"></details></section>`;
+      })
+    );
+    await writeFile(
+      output + '/compact-header-preview.html',
+      `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Compact project Dot Chat preview</title><style>body{margin:0;padding:24px;background:#191919;color:#eee;font:16px system-ui}h1{font-size:24px}p{max-width:900px;line-height:1.5;color:#ccc}.views{display:flex;gap:24px;flex-wrap:wrap;align-items:flex-start}section{max-width:100%;width:420px}h2{font-size:16px}img{max-width:100%;height:auto;border:1px solid #555;border-radius:6px}summary{padding:16px 0;cursor:pointer}</style><h1>Project Dot Chat · compact header</h1><p>Actual React sidebar rendered with production CSS and synthetic conversations. One destination line, chat/plan tabs, and a compact attention toolbar. Scope, privacy, refresh and disconnect are available under the ••• details control. No live messages or agent prompts were used. These are test previews, not a live deployment.</p><div class="views">${views.join('')}</div></html>`
+    );
+  }
 }

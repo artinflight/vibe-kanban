@@ -72,7 +72,11 @@ export async function dotApi(
   return response.json();
 }
 
-type ChatTarget = { workspaceId?: string; projectId?: string };
+type ChatTarget = {
+  workspaceId?: string;
+  projectId?: string;
+  compactHeader?: boolean;
+};
 type RetainedDraft = { body: string; reply: string | null };
 // Owner-session/context scoped fallback when tab storage is temporarily unavailable.
 const draftCache = new Map<string, RetainedDraft>();
@@ -89,7 +93,11 @@ export function DotSidechatLive(props: ChatTarget) {
   return <DotSidechatSession key={key} {...(key === 'none' ? {} : props)} />;
 }
 
-function DotSidechatSession({ workspaceId, projectId }: ChatTarget) {
+function DotSidechatSession({
+  workspaceId,
+  projectId,
+  compactHeader,
+}: ChatTarget) {
   const contextId = projectId ?? workspaceId;
   const targetKey = projectId ? 'project' : 'workspace';
   const target = useMemo(
@@ -490,12 +498,14 @@ function DotSidechatSession({ workspaceId, projectId }: ChatTarget) {
     );
   return (
     <div className="dot-fixture-container">
-      <div className="dot-session">
-        <span>Private browser session</span>
-        <button type="button" onClick={() => void logout()}>
-          Disconnect
-        </button>
-      </div>
+      {!compactHeader && (
+        <div className="dot-session">
+          <span>Private browser session</span>
+          <button type="button" onClick={() => void logout()}>
+            Disconnect
+          </button>
+        </div>
+      )}
       {!contextId ? (
         <div className="dot-access">
           Select an issue-linked workspace to chat with Dot.
@@ -503,6 +513,8 @@ function DotSidechatSession({ workspaceId, projectId }: ChatTarget) {
       ) : (
         <DotSidechatPanel
           live
+          compactHeader={compactHeader}
+          onDisconnect={() => void logout()}
           notificationsEnabled={snapshot?.capabilities?.notifications ?? false}
           onRead={readReplies}
           onReadState={

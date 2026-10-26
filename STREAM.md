@@ -50,3 +50,10 @@ New source-only [destination safety and Personal/header corrections](VK_WORKSPAC
 retain all live Dot behavior and require hosted validation plus separate activation
 approval. Fresh private resource accounting separates terminal font demand from
 later checks; no Nightly/Caspian allowance or denied-action boundary is relaxed.
+
+## October26 compact project chat header
+
+[Compact header](VK_DOT_COMPACT_HEADER.md) removes stacked identity/session/scope
+labels from project and embedded-workspace chat. Secondary details move to a
+native disclosure; attention remains directly reachable. This is implementation
+and preview work, with no live activation or service changes.

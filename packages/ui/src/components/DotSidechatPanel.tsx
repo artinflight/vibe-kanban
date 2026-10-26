@@ -43,6 +43,8 @@ export interface SidechatReceipt {
 export interface DotSidechatPanelProps {
   live?: boolean;
   projectScope?: boolean;
+  compactHeader?: boolean;
+  onDisconnect?: () => void;
   notificationsEnabled?: boolean;
   onRead?: (messages: string[]) => Promise<void>;
   onAttention?: (
@@ -310,30 +312,34 @@ export function DotSidechatPanel(props: DotSidechatPanelProps) {
 
   return (
     <section
-      className="dot-panel bg-secondary text-normal"
+      className={`dot-panel bg-secondary text-normal${props.compactHeader ? ' dot-panel-compact' : ''}`}
       aria-label="Private Dot conversation"
     >
-      <header className="dot-heading">
-        <div>
-          <span className="dot-orb" aria-hidden="true" />
-          <strong>Dot</strong>
-          <span className="dot-private">Private</span>
-        </div>
-        <button
-          type="button"
-          aria-label="Refresh conversation"
-          onClick={props.onRefresh}
-        >
-          ↻
-        </button>
-      </header>
-      <div className="dot-scope">
-        <strong>{props.issueLabel}</strong>
-        <span>
-          {props.projectScope ? 'Scope' : 'Workspace context'}:{' '}
-          {props.workspaceLabel}
-        </span>
-      </div>
+      {!props.compactHeader && (
+        <>
+          <header className="dot-heading">
+            <div>
+              <span className="dot-orb" aria-hidden="true" />
+              <strong>Dot</strong>
+              <span className="dot-private">Private</span>
+            </div>
+            <button
+              type="button"
+              aria-label="Refresh conversation"
+              onClick={props.onRefresh}
+            >
+              ↻
+            </button>
+          </header>
+          <div className="dot-scope">
+            <strong>{props.issueLabel}</strong>
+            <span>
+              {props.projectScope ? 'Scope' : 'Workspace context'}:{' '}
+              {props.workspaceLabel}
+            </span>
+          </div>
+        </>
+      )}
       <nav
         className="dot-attention-nav"
         aria-label="Needs Attention navigation"
@@ -341,14 +347,20 @@ export function DotSidechatPanel(props: DotSidechatPanelProps) {
         <button
           type="button"
           disabled={props.loading || !flagged.length}
+          aria-label="Jump to Needs Attention"
           aria-describedby={attentionStatusId}
           onClick={() => jumpAttention(0)}
         >
-          Jump to Needs Attention
+          {props.compactHeader
+            ? flagged.length
+              ? `Attention · ${flagged.length}`
+              : 'No flags'
+            : 'Jump to Needs Attention'}
         </button>
         <button
           type="button"
           aria-label="Previous flagged message"
+          title="Previous flagged message"
           disabled={props.loading || !flagged.length}
           onClick={() => jumpAttention(-1)}
         >
@@ -357,12 +369,17 @@ export function DotSidechatPanel(props: DotSidechatPanelProps) {
         <button
           type="button"
           aria-label="Next flagged message"
+          title="Next flagged message"
           disabled={props.loading || !flagged.length}
           onClick={() => jumpAttention(1)}
         >
           →
         </button>
-        <span id={attentionStatusId} role="status">
+        <span
+          id={attentionStatusId}
+          role="status"
+          className={props.compactHeader ? 'dot-visually-hidden' : undefined}
+        >
           {props.loading
             ? 'Loading conversation…'
             : props.error && !props.messages.length
@@ -373,6 +390,42 @@ export function DotSidechatPanel(props: DotSidechatPanelProps) {
                   ? `${attentionIndex + 1} of ${flagged.length}`
                   : `${cursor ? 'Flag changed · ' : ''}${flagged.length} unresolved`}
         </span>
+        {props.compactHeader && (
+          <details
+            className="dot-chat-details"
+            onKeyDown={(event) => {
+              if (event.key === 'Escape') {
+                event.preventDefault();
+                event.stopPropagation();
+                event.currentTarget.open = false;
+                event.currentTarget.querySelector('summary')?.focus();
+              }
+            }}
+          >
+            <summary
+              aria-label="Conversation details"
+              title="Conversation details"
+            >
+              •••
+            </summary>
+            <div className="dot-chat-details-content">
+              <strong>{props.issueLabel}</strong>
+              <div className="dot-scope">
+                {props.projectScope ? 'Scope' : 'Workspace context'}:{' '}
+                {props.workspaceLabel}
+              </div>
+              <p>Private browser session · You &amp; Dot</p>
+              <button type="button" onClick={props.onRefresh}>
+                Refresh conversation
+              </button>
+              {props.onDisconnect && (
+                <button type="button" onClick={props.onDisconnect}>
+                  Disconnect
+                </button>
+              )}
+            </div>
+          </details>
+        )}
       </nav>
       {!props.live && (
         <div className="dot-fixture">

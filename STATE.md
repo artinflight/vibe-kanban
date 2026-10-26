@@ -65,3 +65,5 @@ cleanup or new persistent access is applied. See [scope and approval boundary](D
 Dispatch-note caller correction is source-only: trusted initiating identity is
 currently unavailable. Preserve historical receipts/raw content and explicit
 owner management associations; [derived neutral presentation contract](DOT_DISPATCH_ATTRIBUTION.md).
+
+Project Dot Chat header consolidation and preview contract: [compact header](VK_DOT_COMPACT_HEADER.md). Source/preview readiness remains separate from live activation.

@@ -82,3 +82,7 @@ creation to exact destinations, includes self-or-unassigned Personal visibility 
 prominent human workspace names. No new activation; use hosted builds and fresh
 bounded resource admission. Real unresolved project and shared-issue questions
 remain untouched; private scope diagnosis is separate from notification cleanup.
+
+Newest requested UI correction: [compact project Dot Chat header](VK_DOT_COMPACT_HEADER.md).
+Use hosted frontend-only layout acceptance/screenshots and synthetic transport;
+current live assets stay untouched. Prior header release preparation is retained.

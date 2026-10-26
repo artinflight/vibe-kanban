@@ -10,6 +10,22 @@ error queue require changed-name replay and complete body/SQL binding before a
 new accepted anchor. Neither readiness of the new observer nor a completed census
 retroactively certifies the original epoch or the full recovery set.
 
+`HeldRecoverySet.validate(required_root_aliases=...)` binds explicitly declared
+source-root links and their target closures. The package supplies a mapping from
+each required alias to exact `literal`/`resolved` values; the descriptor's
+`root_aliases` must match. This extension currently supports direct absolute
+links. The map must contain the exact symlink plus the resolved target root and
+all required target content. Immutable alias proofs hash both the link and target
+closure. Unexpected aliases, retargets, missing targets and descriptor-only scope
+expansion fail closed. This matches the producer's pre-existing explicit-root
+alias expansion; discovered symlinks are still preserved without following them.
+
+`vk_nightly_namespace.replay_metadata` consumes an exact ready same-epoch window
+after the one-time bootstrap audit. It observes changed names and expands only
+new/moved-in directories. Absence points and absent subtree closures are later
+epoch observations; they never prove original-epoch recovery. It grants no body,
+baseline, fence or schedule acceptance. Subsequent events remain a new suffix.
+
 MM's all-agent B pointer and explicit live E/Q/R scope supersede the copied
 Staging-only guard. No MM allowance is required for B; genuine B health/access,
 capacity, applicable pauses and finite writer ownership remain.

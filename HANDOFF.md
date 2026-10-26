@@ -1,9 +1,9 @@
 # October26 — operational completion in progress
 
-Tracking runs; no backup calendar is enabled. R3 keeps its cursor and original
-observer. Move-aware v2 is ready on the same115-root plan, with no raw faults.
-One bootstrap namespace audit runs under v2. Both Printshop closures and current
-body/SQL bindings need acceptance. Preserve these jobs and original faults.
+No backup calendar is enabled. R3 retains its cursor/original observer; move-aware
+v2 is ready on the same115 roots. The audit finished902818 paths/error-free.
+Changed-name replay/alias contracts are retained. Current body/SQL binding and
+composed restore remain. Preserve the qualifier, both observers and raw faults.
 Read the latest section of VK_NIGHTLY_BACKUP_EFFICIENCY.md for exact jobs,
 component indexes, current gaps and required acceptance. The old observer's gap,
 all original restore/carrier epochs and tracked bytecode remain intact.

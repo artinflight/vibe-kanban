@@ -16,6 +16,8 @@ from vk_nightly_file_version import attributes, fingerprint
 from vk_nightly_qualification import encode_observation
 from vk_nightly_tracking import source_bindings
 from vk_rolling_backup import Exclusions
+from vk_change_journal import scope
+from vk_prep_common import identity
 
 
 def observe(path):
@@ -143,3 +145,81 @@ def audit(plan, database, *, checkpoint, maximum_paths, on_progress=lambda _: No
     state['complete'] = state['pending_errors'] == 0
     on_progress(state)
     return state
+
+
+def replay_metadata(plan, report, *, instance, since, maximum_paths, checkpoint):
+    """Reconcile only the exact changed-name window after a namespace audit.
+
+    This accepts no body baseline and produces no restore/schedule acceptance.
+    It returns metadata observations/absence points for an explicitly bounded
+    replay layer. Only newly created/moved-in directories are expanded. Changes
+    after report.sequence remain the next suffix, never claimed as replayed.
+    """
+    if (type(since) is not int or since < 0 or report.get('since') != since
+            or report.get('instance') != instance or report.get('ready') is not True
+            or report.get('errors') or report.get('terminal')
+            or report.get('plan_sha256') != identity(plan)
+            or report.get('scope_sha256') != identity(scope(plan))
+            or type(report.get('sequence')) is not int or report['sequence'] < since
+            or type(maximum_paths) is not int or maximum_paths < 1):
+        raise ValueError('exact continuous namespace replay window required')
+    paths = report.get('changed')
+    events = report.get('events')
+    if (not isinstance(paths, list) or len(paths) != len(set(paths))
+            or not isinstance(events, dict) or set(paths) != set(events)):
+        raise ValueError('complete changed names and masks required')
+    bindings = source_bindings(plan)
+    roots = set(plan['sources']) | {b['resolved'] for b in bindings.values() if b is not None}
+    exclusions = Exclusions(plan)
+    observations, absent, expansions = {}, [], []
+
+    def within(path, root):
+        return path == root or path.startswith(root.rstrip('/') + '/')
+
+    def add(raw):
+        if (not isinstance(raw, str) or not raw.startswith('/') or str(Path(raw)) != raw
+                or '..' in Path(raw).parts or '\0' in raw
+                or not any(within(raw, root) for root in roots)):
+            raise ValueError('replay path escaped declared roots/explicit alias target')
+        if exclusions(raw) or raw in observations or raw in absent:
+            return
+        if len(observations) + len(absent) >= maximum_paths:
+            raise ValueError('namespace replay exceeds bounded path budget')
+        checkpoint()
+        try:
+            observations[raw] = observe(raw)
+        except FileNotFoundError:
+            # An absence observation is not a claim of original-epoch deletion.
+            # The controller binds it to this later replay window and replays
+            # any subsequent recreation before accepting a current descriptor.
+            absent.append(raw)
+
+    for raw in paths:
+        mask = events[raw]
+        if type(mask) is not int or not 0 < mask < 2**32:
+            raise ValueError('actual replay event mask required')
+        add(raw)
+        if (mask & 0x40000000 and mask & (0x100 | 0x80)
+                and observations.get(raw, {}).get('kind') == 'directory'):
+            expansions.append(raw)
+    minimal = []
+    for root in sorted(expansions):
+        if not any(within(root, parent) for parent in minimal):
+            minimal.append(root)
+    for root in minimal:
+        def failed(error):
+            raise error
+        for directory, dirs, files in os.walk(root, followlinks=False, onerror=failed):
+            dirs[:] = [name for name in dirs if not exclusions(Path(directory) / name)]
+            for name in dirs + files:
+                add(str(Path(directory) / name))
+    checkpoint()
+    exclusions.validate()
+    if source_bindings(plan) != bindings:
+        raise ValueError('source root changed during bounded metadata replay')
+    return dict(instance=instance, since=since, through=report['sequence'], observations=observations,
+                absent_observations=absent,
+                absent_subtrees=[p for p in absent if events.get(p, 0) & 0x40000000],
+                expanded_subtrees=minimal, unchanged_paths_scanned=0,
+                source_payload_bytes_read=0, backup_payload_bytes_copied=0,
+                baseline_accepted=False, subsequent_changes_replayed=False)

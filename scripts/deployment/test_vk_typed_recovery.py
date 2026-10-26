@@ -115,6 +115,72 @@ class TypedRecoveryTests(unittest.TestCase):
                                                   enrollment_resolution_sha256=checksum(c))
         return d, adapter, current
 
+    def alias_descriptor(self):
+        self.rows['home/state/runtime-current'] = dict(self.meta, kind='symlink', target='/runtime/release')
+        self.rows['runtime/release'] = dict(self.meta, kind='directory')
+        self.rows['runtime/release/file'] = self.file(self.body, segments=[
+            self.segment('accepted-base', 'home/state/log', b'original\n'),
+            self.segment('current', 'suffix', b'new\n', zlib.compress(b'new\n'))])
+        self.write_overlay()
+        d = self.descriptor()
+        d['sources'].append('/home/state/runtime-current')
+        d['root_aliases'] = {'/home/state/runtime-current': dict(literal='/runtime/release', resolved='/runtime/release')}
+        return d
+
+    def test_explicit_declared_root_alias_includes_target_body_without_following_link(self):
+        d = self.alias_descriptor()
+        def check(h):
+            result = self.validate(h, required_sources=d['sources'], required_root_aliases=d['root_aliases'])
+            self.assertTrue(result['member_map_validated'])
+            self.assertEqual(b''.join(h.blocks('runtime/release/file')), self.body)
+        self.use(check, d)
+
+    def test_descriptor_alone_cannot_add_an_external_alias_target(self):
+        d = self.alias_descriptor()
+        with self.assertRaisesRegex(ValueError, 'alias contract differs'):
+            self.use(lambda h: self.validate(h, required_sources=d['sources']), d)
+
+    def test_root_alias_retarget_rejects_old_consumer_pin(self):
+        d = self.alias_descriptor()
+        expected = {'/home/state/runtime-current': dict(literal='/runtime/other', resolved='/runtime/other')}
+        with self.assertRaisesRegex(ValueError, 'alias contract differs'):
+            self.use(lambda h: self.validate(h, required_sources=d['sources'], required_root_aliases=expected), d)
+
+    def test_alias_target_missing_rejects_even_with_descriptor_binding(self):
+        d = self.alias_descriptor()
+        del self.rows['runtime/release']
+        self.write_overlay()
+        d.update(indexes=self.descriptor()['indexes'])
+        with self.assertRaises(KeyError):
+            self.use(lambda h: self.validate(h, required_sources=d['sources'], required_root_aliases=d['root_aliases']), d)
+
+    def test_alias_literal_mismatch_or_unlisted_root_is_rejected(self):
+        d = self.alias_descriptor()
+        self.rows['home/state/runtime-current']['target'] = '/runtime/other'
+        self.write_overlay()
+        d.update(indexes=self.descriptor()['indexes'])
+        with self.assertRaisesRegex(ValueError, 'link/target coverage differs'):
+            self.use(lambda h: self.validate(h, required_sources=d['sources'], required_root_aliases=d['root_aliases']), d)
+        with self.assertRaisesRegex(ValueError, 'alias contract differs'):
+            self.use(lambda h: self.validate(h, required_root_aliases=d['root_aliases']), d)
+
+    def test_immutable_alias_closure_must_cover_its_target_bodies_too(self):
+        d = self.alias_descriptor()
+        root = '/home/state/runtime-current'
+        closure = [(name, self.rows[name]) for name in ('home/state/runtime-current',
+                    'runtime/release', 'runtime/release/file')]
+        raw = b''.join(canonical({'name': name, 'entry': row}) + b'\n' for name, row in closure)
+        proof = dict(independent_proof_sha256='a'*64, member_count=3,
+                     member_map_sha256=hashlib.sha256(raw).hexdigest())
+        d.update(immutable_sources={root: proof}, journal_sources=['/home/state'])
+        self.use(lambda h: self.validate(h, required_sources=d['sources'],
+                 required_root_aliases=d['root_aliases'], immutable_sources={root: proof}), d)
+        wrong = dict(proof, member_count=1)
+        d['immutable_sources'] = {root: wrong}
+        with self.assertRaisesRegex(ValueError, 'immutable source member closure differs'):
+            self.use(lambda h: self.validate(h, required_sources=d['sources'],
+                     required_root_aliases=d['root_aliases'], immutable_sources={root: wrong}), d)
+
     def test_explicit_enrollment_adapter_preserves_raw_unready_catchup(self):
         d, adapter, current = self.resolved_enrollment()
         def check(h):

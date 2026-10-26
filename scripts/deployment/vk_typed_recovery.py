@@ -339,7 +339,8 @@ class HeldRecoverySet:
 
     def validate(self, *, plan_sha256, scope_sha256, required_sources,
                  original_sources, required_pins, required_SQL,
-                 journal_scope_sha256=None, immutable_sources=None, enrollment_resolution=None):
+                 journal_scope_sha256=None, immutable_sources=None, enrollment_resolution=None,
+                 required_root_aliases=None):
         """Validate the complete namespace and exact caller-selected contract.
 
         Required sets come from the consumer's authenticated package, not from
@@ -349,6 +350,30 @@ class HeldRecoverySet:
         self.verified = False
         self.check(); d = self.descriptor
         immutable_sources = immutable_sources or {}
+        # Declared source-root links and their explicitly resolved targets are
+        # both capture scope (matching the producer's original scan contract).
+        # The consumer supplies this binding from its authenticated package;
+        # descriptor-only additions cannot authorize arbitrary outside roots.
+        aliases = required_root_aliases or {}
+        if (not isinstance(aliases, dict) or d.get('root_aliases', {}) != aliases
+                or not set(aliases) <= set(required_sources)):
+            raise ValueError('explicit source-root alias contract differs')
+        target_roots = set()
+        for alias, binding in aliases.items():
+            if (not isinstance(binding, dict) or set(binding) != {'literal', 'resolved'}
+                    or not isinstance(binding['resolved'], str) or not binding['resolved'].startswith('/')
+                    or binding['literal'] != binding['resolved']):
+                raise ValueError('direct absolute source-root alias binding required')
+            target = '/' + key(binding['resolved'][1:])
+            if target == alias or target.startswith(alias.rstrip('/') + '/'):
+                raise ValueError('source-root alias cycle')
+            link = self.index.entry(key(alias[1:]))
+            target_row = self.index.entry(key(target[1:]))
+            if (link.get('kind') != 'symlink' or link.get('target') != binding['literal']
+                    or target_row.get('kind') not in ('directory', 'file', 'hardlink')):
+                raise ValueError('source-root alias link/target coverage differs')
+            target_roots.add(target)
+        effective_sources = set(required_sources) | target_roots
         journal_scope_sha256 = journal_scope_sha256 or scope_sha256
         if (d.get('format') != FORMAT or d.get('source_prefix') != '/'
                 or d.get('writer_fence_verified') is not False
@@ -386,7 +411,7 @@ class HeldRecoverySet:
                 plan_sha256=plan_sha256, required_sources=required_sources)
         elif enrollment_resolution is not None:
             raise ValueError('unexpected enrollment certificate for error-free journal')
-        h = hashlib.sha256(); count = 0; source_members = set()
+        h = hashlib.sha256(); count = 0; source_members = set(); target_members = set()
         frozen = {root: [hashlib.sha256(), 0] for root in immutable_sources}
         lookup = lru_cache(maxsize=8192)(self.index._entry)
         for name, row in self.index.entries():
@@ -417,19 +442,24 @@ class HeldRecoverySet:
             absolute = '/' + name
             if any(absolute == path or absolute.startswith(path.rstrip('/') + '/') for path in resolved_paths):
                 raise ValueError('vanished enrollment subtree remains in selected map')
-            if not any(absolute == root or absolute.startswith(root.rstrip('/') + '/') for root in required_sources):
+            if not any(absolute == root or absolute.startswith(root.rstrip('/') + '/') for root in effective_sources):
                 raise ValueError('member outside declared source scope')
             if absolute in required_sources:
                 source_members.add(absolute)
+            if absolute in target_roots:
+                target_members.add(absolute)
             encoded = canonical({'name': name, 'entry': row}) + b'\n'
             h.update(encoded); count += 1
             for root, accumulator in frozen.items():
-                if absolute == root or absolute.startswith(root.rstrip('/') + '/'):
+                alias_target = aliases.get(root, {}).get('resolved')
+                if (absolute == root or absolute.startswith(root.rstrip('/') + '/')
+                        or alias_target is not None and (absolute == alias_target
+                            or absolute.startswith(alias_target.rstrip('/') + '/'))):
                     accumulator[0].update(encoded); accumulator[1] += 1
             if count % 2048 == 0:
                 self.check()
         if (count != d.get('member_count') or h.hexdigest() != d.get('member_map_sha256')
-                or source_members != set(required_sources)):
+                or source_members != set(required_sources) or target_members != target_roots):
             raise ValueError('complete member map/root coverage differs')
         for root, (frozen_digest, frozen_count) in frozen.items():
             proof = immutable_sources[root]

@@ -1,5 +1,47 @@
 # October26 — move-aware observer handover and namespace reconciliation
 
+The bootstrap audit completed11:23EDT:902818 paths/760975 regular files,
+103472 directories/38371 symlinks, zero pending errors or special inodes,
+330051584B control index and SQLite integrity OK. A real114-root kernel witness
+binds the overlapping observer. The audit window11005..64449 contains458 changed
+names; it is continuously observed, not an atomic body snapshot. All backup
+bodies and original epochs remain untouched.
+
+At11:30EDT bounded metadata replay11005..95568 processes491 changed names into
+258 observations/244 later absence points, expanding only four new subtrees.
+The272002B receipt records three absent directory closures explicitly; consumers
+must remove their old descendants from the current map, without deleting any
+source or old recovery epoch. Unchanged members are not enumerated or hashed.
+Subsequent changes are the next suffix, not silently claimed as replayed.
+
+Two declared root aliases are now bound to their literal links and resolved
+targets. The worktree target has600234 namespace members; the current Dot Python
+release target has34. Its outside-literal-root target is part of the original
+producer contract, not optional scope. The typed reader now requires the same
+explicit `root_aliases` binding from the authenticated consumer package, proves
+both link and target-root coverage, and includes target bodies in any immutable
+closure. A descriptor cannot grant itself outside roots. This remains namespace/
+consumer integration: all current file/SQL bodies still need their qualified
+recipes and composed acceptance before an operational calendar is enabled.
+
+The Printshop move is now explicitly dispositioned for a later current version:
+the old worktree root is absent, the new root has57 namespace members/45 files.
+Bounded qualification hashes301003B;23 files reuse accepted body carriers. The
+remaining22 files total137290raw bytes and stream directly to one61474B B ZIP,
+SHA71249c65db33aecbef17abd05816302468801879d26971801c2f882da8171ad4.
+Native complete member hashes and independent RAM extraction/reopened hashes/
+recorded Linux metadata all pass11:48EDT; no changes under either closure occurred.
+The successful owned component unit is terminal; all original bytes/faults remain.
+This supplies the missing45-file recipe layer for final compilation, not whole
+current baseline or original-epoch repair. No larger capture or old body recopy
+occurred. The initial exact-name catalog lookup error is retained separately.
+
+The final alias/replay integration runs595 regression tests successfully(one skip).
+One prior run exposed a timing-sensitive fixture: setup and rewrite could share
+a filesystem ctime tick. The test now establishes an observed changed ctime while
+asserting size/inode/mtime stay fixed; production source-stability checks were not
+weakened. Full-run failure and final passing logs are both retained.
+
 The original tracker/qualification remain intact. At11:13EDT the separate
 `vk-nightly-change-tracking-v2.service` is ready with103480 watches and no raw
 errors, PID2670342/start23505160, epoch a44b760560b74e33924e663afdc15e51.

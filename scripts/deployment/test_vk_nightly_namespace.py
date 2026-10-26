@@ -6,8 +6,10 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from vk_nightly_namespace import audit
+from vk_nightly_namespace import audit, replay_metadata
 from vk_nightly_qualification import decode_observation
+from vk_prep_common import identity
+from vk_change_journal import scope
 
 
 class NamespaceTests(unittest.TestCase):
@@ -78,6 +80,44 @@ class NamespaceTests(unittest.TestCase):
         self.assertFalse(result['baseline_accepted'])
         self.assertEqual(result['pending_errors'], 1)
         self.assertEqual(self.db.execute('select count(*) from namespace_errors').fetchone()[0], 1)
+
+    def replay(self, events, **changes):
+        plan = {'sources': [str(self.source)]}
+        report = dict(instance='one', since=10, sequence=11, ready=True, errors=[], terminal=None,
+                      changed=list(events), events=events, plan_sha256=identity(plan),
+                      scope_sha256=identity(scope(plan)))
+        report.update(changes)
+        return replay_metadata(plan, report, instance='one', since=10, maximum_paths=100, checkpoint=lambda: None)
+
+    def test_unchanged_replay_does_not_enumerate_or_observe_unchanged_members(self):
+        with patch('vk_nightly_namespace.observe', side_effect=AssertionError('unchanged path stat')):
+            with patch('vk_nightly_namespace.os.walk', side_effect=AssertionError('unchanged tree walk')):
+                result = self.replay({})
+        self.assertEqual(result['observations'], {})
+        self.assertEqual(result['unchanged_paths_scanned'], 0)
+
+    def test_changed_new_directory_only_expands_its_own_subtree(self):
+        new = self.source / 'new'
+        new.mkdir()
+        (new / 'file').write_text('not read')
+        result = self.replay({str(new): 0x40000100})
+        self.assertEqual(result['expanded_subtrees'], [str(new)])
+        self.assertEqual(set(result['observations']), {str(new), str(new / 'file')})
+        self.assertNotIn(str(self.source / 'file'), result['observations'])
+
+    def test_replay_absence_is_a_later_point_not_original_epoch_repair(self):
+        missing = str(self.source / 'gone')
+        result = self.replay({missing: 0x200})
+        self.assertEqual(result['absent_observations'], [missing])
+        self.assertFalse(result['baseline_accepted'])
+
+    def test_replay_rejects_fault_epoch_incomplete_names_and_scope_escape(self):
+        for change in [dict(ready=False), dict(errors=[{'overflow': True}]),
+                       dict(instance='new'), dict(changed=[]), dict(since=9)]:
+            with self.assertRaises(ValueError):
+                self.replay({str(self.source / 'file'): 8}, **change)
+        with self.assertRaises(ValueError):
+            self.replay({str(self.root / 'outside'): 8})
 
 
 if __name__ == '__main__':

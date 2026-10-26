@@ -3,6 +3,7 @@ import io
 import os
 from pathlib import Path
 import tempfile
+import time
 import unittest
 
 from vk_nightly_file_version import capture_version
@@ -40,11 +41,22 @@ class StableVersionTests(unittest.TestCase):
 
     def test_same_size_mtime_rewrite_is_rejected_by_ctime(self):
         path = self.path; before = path.stat()
+        case = self
         class Rewrite(io.BytesIO):
             def write(self, value):
                 result = super().write(value)
-                with path.open('r+b') as f: f.write(b'new')
-                os.utime(path, ns=(before.st_atime_ns, before.st_mtime_ns))
+                # A fast write+utime can share the filesystem's timestamp tick
+                # with setup. Establish this test's actual changed-ctime
+                # precondition, while keeping size/inode/mtime unchanged.
+                for _ in range(100):
+                    with path.open('r+b') as f: f.write(b'new')
+                    os.utime(path, ns=(before.st_atime_ns, before.st_mtime_ns))
+                    if path.stat().st_ctime_ns != before.st_ctime_ns: break
+                    time.sleep(.002)
+                after = path.stat()
+                case.assertNotEqual(after.st_ctime_ns, before.st_ctime_ns)
+                case.assertEqual((after.st_ino, after.st_size, after.st_mtime_ns),
+                                 (before.st_ino, before.st_size, before.st_mtime_ns))
                 return result
         with self.assertRaises(ValueError): self.capture(Rewrite())
 

@@ -11,14 +11,15 @@ history, unknown past approval settings and pending work fail closed.
 
 Validation follow-up: 14 focused Rust handoff fixtures, 42 connector tests and
 28 installed-source regressions plus schema/dispatch/allowlist checks pass offline.
-The bounded server-library run uses one process per test: **101 passed, 2 failed,
-2 ignored**. Both failures are the launch/timeout positive paths blocked by the
-unchanged live capacity inventory of seven engines; exact staging base
-`5b43524ea35b2eb5dd80d0881dc8445489f4442f` reproduces the identical assertion before
-the handoff fence. Large-history and monitor-startup fixtures pass isolated on
-both base and branch. Mixed-process base failures prove the old global-home /
-worker-registry isolation requirement; CI uses nextest. These are diagnosed
-baseline/environmental limits, not green test results. See the contract's table.
+The final bounded server-library run on code head `888518dcb0` uses one process
+per test: **103 passed, 0 failed, 2 ignored**, no timeouts. Earlier launch/timeout
+failures reproduced at the identical assertion on exact staging base
+`5b43524ea35b2eb5dd80d0881dc8445489f4442f` with seven native engines. The host count
+naturally fell to six; both positive paths then passed with unchanged guards.
+Large-history and monitor-startup fixtures pass isolated on base and branch.
+Mixed-process base failures prove the old global-home / worker-registry isolation
+requirement; CI uses nextest. The ownership/capacity sources remain byte-identical
+to staging. See the contract's before/after table.
 
 Normal locked pnpm dependencies and the previously missing Cargo `arboard` are
 resolved. Full formatting, ops checks, frontend lint and strict focused server

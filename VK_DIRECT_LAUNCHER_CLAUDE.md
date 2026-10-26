@@ -119,11 +119,13 @@ The connector suite passes 42 tests and the installed-source verifier passes 28
 legacy regressions plus schema/discovery/dispatch assertions with zero live calls.
 The additional backend regressions exercise unrelated CODEX admission alongside
 an unresolved handoff, and refusal to discard a custom source preset/mode.
-All 14 focused handoff tests pass. The complete server-library matrix, with every
-case in its own bounded process, reports **101 passed, 2 failed, 2 ignored**.
-The only failures are the unchanged capacity-blocked positive paths below; no
-case timed out. Ignored cases remain ignored, not passed. This is not an all-green
-server suite.
+All 14 focused handoff tests pass. The final complete server-library matrix on
+code head `888518dcb0c3c06873cef1e95cb12e9239648291`, with each case in its own
+120-second-bounded process, reports **103 passed, 0 failed, 2 ignored**. No case
+timed out. Ignored cases remain ignored, not passed. Final test binary SHA256:
+`9d8eb7f8a8e8cd65ee03a5814d633b74f7466364f86b941a7d014c15e7acbe64`.
+The following documentation-only receipt update does not change tested Rust or
+connector source.
 
 Strict focused lint also passes:
 `cargo clippy --locked --offline -p server --lib --tests --no-default-features -j 1 -- -D warnings`.
@@ -151,21 +153,25 @@ server test binary, `original_worker::tests::<name> --exact --nocapture`, in a
 fresh process, with a 120-second timeout and temporary files on the mounted SSD.
 The bounded base/updated-branch results were:
 
-| Fixture suffix | Isolated base | Isolated updated branch | Classification |
-| --- | --- | --- | --- |
-| `production_follow_up_resolution_launch_and_workspace_races` | Fails at `tests.rs:1053`, both admissions return `Worker collision or capacity guard blocked` | Identical capacity assertion | Existing fixture's positive path is environmentally capacity-blocked. |
-| `production_timeout_receipt_recovery_and_revoke_endpoint` | Same failure at the same assertion | Identical capacity assertion | Same host-capacity boundary. |
-| `production_large_history_startup_and_native_input_admission` | Passes, 51.21 seconds | Passes | Previous shared-process failure is baseline harness interference. |
-| `production_startup_holds_pr_monitor_archive_launch_until_adopted` | Passes, 2.50 seconds | Passes | Isolation control passes. |
+| Fixture suffix | Isolated base (seven engines) | Branch (seven engines) | Final code head (six engines) | Classification |
+| --- | --- | --- | --- | --- |
+| `production_follow_up_resolution_launch_and_workspace_races` | Fails at `tests.rs:1053`, both admissions return `Worker collision or capacity guard blocked` | Identical capacity assertion | Passes, 2.42 seconds | Existing fixture's positive path is environmentally capacity-blocked. |
+| `production_timeout_receipt_recovery_and_revoke_endpoint` | Same failure at the same assertion | Identical capacity assertion | Passes, 2.70 seconds | Same host-capacity boundary. |
+| `production_large_history_startup_and_native_input_admission` | Passes, 51.21 seconds | Passes | Passes, 46.14 seconds | Previous shared-process failure is baseline harness interference. |
+| `production_startup_holds_pr_monitor_archive_launch_until_adopted` | Passes, 2.50 seconds | Passes | Passes, 2.27 seconds | Isolation control passes. |
 
 Read-only inventory using the exact native process-matching/deduplication rules
 found seven app-server engines; `VK_USE_SYSTEMD_RUN` and execution-limit overrides
 were unset. `original_worker_capacity_available()` requires fewer than seven,
 independently of the fixture's synthetic swap sampler. Both failing admissions
 return before dispatch, so they never reach this PR's new follow-up fence.
-The positive launch/timeout paths therefore require an already-available host lane on a suitable test runner.
-These are **not passes**. No process was stopped, safety threshold changed,
-capacity override enabled or collision guard bypassed.
+The earlier branch matrix was 101 passed, 2 capacity-blocked failures, 2 ignored.
+During the final committed-head run, read-only inventory showed **six** engines
+(11:45 UTC), with the systemd override still unset. The host availability changed
+naturally: both positive launch/timeout paths then passed, with all four ownership
+fixtures passing in isolation. No process was stopped, safety threshold changed,
+capacity override enabled or collision guard bypassed. The earlier failed runs
+remain failed evidence; the final green run independently closes these two paths.
 
 The base's four production fixtures run together with `--test-threads=2` all
 failed with shared-native-goal / SQLite thread-identity errors. They mutate
@@ -214,6 +220,5 @@ Claude workspace/session dispatch with explicit model/effort and approvals, an
 idle complete-history handoff to the explicitly selected Codex model/effort,
 receipt reconciliation/replay proving one target launch, source/unknown-target
 fences, and readback of history, Recommend policy and approval settings. It also
-requires the broader native/frontend gates on a provisioned runner and a genuinely
-available capacity lane for the two positive ownership fixtures. None of these
+requires the broader native/frontend gates on a provisioned runner. None of these
 requires or authorizes experiments on an existing production session.

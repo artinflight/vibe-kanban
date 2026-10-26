@@ -60,6 +60,9 @@ class SealedMemberIndex:
         connection.execute('pragma query_only=on')
         if connection.execute('select format,complete from metadata').fetchall()!=[(FORMAT,1)]:
             raise ValueError('complete authenticated current member map required')
+        if connection.execute("select 1 from sqlite_master where name='namespace_reconciliation'").fetchone():
+            if connection.execute('select complete,suffix_complete from namespace_reconciliation').fetchall()!=[(1,1)]:
+                raise ValueError('later namespace requires its completed durable journal suffix')
         self.sidecars=reference.get('consistent_SQL_sidecars',{})
         actual={name:decode_member(raw)['required_SQL_source'] for name,raw in connection.execute(
             "select name,row from members where state='SQLite-sidecar'")}
@@ -244,6 +247,99 @@ class CurrentMap:
             if processed%4096==0:progress(dict(processed=processed,last_name=last,control_bytes=self.path.stat().st_size))
         self.db.execute('update metadata set complete=1')
         return dict(already_complete=False, processed=processed, more_members=False, **self.summary())
+
+    def reconcile_namespace(self, namespace, qualified, *, checkpoint, maximum_paths):
+        """Adopt one complete later metadata epoch without replaying body hashes.
+
+        Reuse requires the full nine-field identity AND Linux xattrs from the
+        earlier successful hash to match the later anchored observation. A new
+        inode, same-length rewrite, metadata change or missing proof remains
+        unresolved. Absent old names are retained separately pending the live
+        journal suffix; neither this pass nor its new epoch repairs old gaps.
+        """
+        if type(maximum_paths) is not int or maximum_paths<1:raise ValueError('finite namespace reconciliation required')
+        record=namespace.execute('select binding,complete from gap_meta where id=1').fetchone()
+        if not record or record[1]!=1:raise ValueError('complete later namespace epoch required')
+        binding=json.loads(record[0]);encoded=json.dumps(binding,sort_keys=True,separators=(',',':'))
+        self.check();db=self.db
+        db.execute('create table if not exists namespace_reconciliation(id integer primary key,binding text,last_name text,complete integer,suffix_complete integer)')
+        db.execute('insert or ignore into namespace_reconciliation values(1,?,?,0,0)',(encoded,''))
+        stored,last,complete=db.execute('select binding,last_name,complete from namespace_reconciliation where id=1').fetchone()
+        if stored!=encoded:raise ValueError('later namespace/observer binding changed; preserve existing reconciliation')
+        if complete:return dict(already_complete=True,processed=0,journal_suffix_required=True,**self.summary())
+        db.execute('update metadata set complete=0');sources={p for p, in db.execute('select path from SQL_sources')}
+        processed=reused=0
+        def matches(version,observation):
+            return (version is not None and version.get('state') in ('qualified-retained-body','qualified-pending-body')
+                and version.get('source_identity')==observation['identity']
+                and all(version['row'].get(k)==observation[k] for k in ('mode','uid','gid','mtime_ns','bytes','xattrs')))
+        while processed<maximum_paths:
+            checkpoint();self.check()
+            batch=namespace.execute('select name,row from namespace where name>? order by name limit ?',
+                                    (last,min(128,maximum_paths-processed))).fetchall()
+            if not batch:break
+            rows=[];newSQL=[]
+            for name,raw in batch:
+                observation=decode_observation(raw);version=None
+                if observation['kind']=='file':
+                    candidate=qualified(name)
+                    if matches(candidate,observation):version=candidate
+                    if version is None:
+                        old=db.execute('select row from members where name=?',(name,)).fetchone()
+                        previous=decode_member(old[0]).get('qualification') if old else None
+                        if matches(previous,observation):version=previous
+                    if version is not None:
+                        version=dict(version,journal={k:binding[k] for k in ('instance','plan_sha256','scope_sha256')},
+                            metadata_handover=dict(original_journal=version.get('journal'),
+                                exact_source_identity_and_xattrs_reobserved=True,source_body_bytes_reread=0,
+                                original_journal_gap_repaired=False))
+                        version['journal']['sequence']=binding['start_sequence'];reused+=1
+                state,value=classify(name,observation,version,SQL_sources=sources)
+                if state=='SQLite-needs-image':sources.add('/'+name);newSQL.append('/'+name)
+                rows.append((name,state,encode_member(value)))
+            db.execute('begin immediate')
+            try:
+                db.executemany('insert into members values(?,?,?) on conflict(name) do update set state=excluded.state,row=excluded.row',rows)
+                db.executemany('insert or ignore into SQL_sources values(?)',((p,) for p in newSQL))
+                db.execute('update namespace_reconciliation set last_name=? where id=1',(batch[-1][0],))
+                checkpoint();self.check();db.execute('commit')
+            except BaseException:
+                if db.in_transaction:db.execute('rollback')
+                raise
+            last=batch[-1][0];processed+=len(batch)
+        more=namespace.execute('select 1 from namespace where name>? limit 1',(last,)).fetchone() is not None
+        if not more:
+            # ATTACH is deliberately disabled in native B. Keyset merge the two
+            # ordered local cursors instead of trusting current Git resolution
+            # or inferring that an old name was included in a later archive.
+            db.execute('create table if not exists namespace_absent(name text primary key,old_state text,row blob,disposition text) without rowid')
+            candidates=db.execute('select name,state,row from members order by name')
+            missing=[]
+            for name,state,raw in candidates:
+                if namespace.execute('select 1 from namespace where name=?',(name,)).fetchone() is None:
+                    missing.append((name,state,raw,'later-gap-absence-needs-journal-suffix'))
+                if len(missing)>=128:
+                    self._retain_absent(missing,checkpoint);missing=[]
+            if missing:self._retain_absent(missing,checkpoint)
+            db.execute('begin immediate')
+            try:
+                db.execute('update namespace_reconciliation set complete=1 where id=1')
+                db.execute('update metadata set complete=1');checkpoint();db.execute('commit')
+            except BaseException:
+                if db.in_transaction:db.execute('rollback')
+                raise
+        return dict(processed=processed,reused_qualified_versions=reused,last_name=last,more_names=more,
+                    journal_suffix_required=True,original_epoch_repaired=False,**self.summary())
+
+    def _retain_absent(self,rows,checkpoint):
+        self.db.execute('begin immediate')
+        try:
+            self.db.executemany('insert or ignore into namespace_absent values(?,?,?,?)',rows)
+            self.db.executemany('delete from members where name=?',((r[0],) for r in rows))
+            checkpoint();self.db.execute('commit')
+        except BaseException:
+            if self.db.in_transaction:self.db.execute('rollback')
+            raise
 
     def reencode(self, *, checkpoint, maximum_paths, progress=lambda _:None):
         """Lossless in-place control compaction; retain compile cursor and values.

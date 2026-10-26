@@ -1,4 +1,5 @@
 import hashlib
+import json
 import os
 from pathlib import Path
 import sqlite3
@@ -11,6 +12,45 @@ from vk_nightly_qualification import encode_observation,decode_observation
 
 
 class CurrentMapTests(unittest.TestCase):
+    def later_namespace(self):
+        later=sqlite3.connect(':memory:');self.addCleanup(later.close)
+        later.execute('create table namespace(name text primary key,row blob)')
+        later.execute('create table gap_meta(id integer primary key,binding text,complete integer)')
+        later.execute('insert into gap_meta values(1,?,1)',(json.dumps(dict(instance='new-epoch',plan_sha256='a'*64,
+            scope_sha256='b'*64,start_sequence=17,original_epoch_repaired=False)),))
+        return later
+
+    def test_later_gap_namespace_reuses_only_exact_version_identity_and_retains_absences(self):
+        later=self.later_namespace();rewritten=dict(self.observation,identity=list(self.observation['identity']))
+        rewritten['identity'][5]+=1
+        later.executemany('insert into namespace values(?,?)',[(n,encode_observation(o)) for n,o in
+            [('home/a',self.observation),('home/b',rewritten)]])
+        with CurrentMap.held(self.path,binding=self.binding,create=True) as m:
+            self.ns.execute('insert into namespace values(?,?)',('home/gone',encode_observation(self.observation)))
+            self.compile(m)
+            def q(name):return dict(self.version,source='/'+name)
+            first=m.reconcile_namespace(later,q,checkpoint=lambda:None,maximum_paths=1)
+            self.assertTrue(first['more_names'])
+            self.assertFalse(m.db.execute('select complete from metadata').fetchone()[0])
+            final=m.reconcile_namespace(later,q,checkpoint=lambda:None,maximum_paths=10)
+            self.assertFalse(final['more_names']);self.assertTrue(final['journal_suffix_required'])
+            self.assertEqual(final['member_states'],{'verified-file':1,'file-needs-qualification':1})
+            point=decode_member(m.db.execute("select row from members where name='home/a'").fetchone()[0])['qualification']
+            self.assertEqual(point['journal']['instance'],'new-epoch')
+            self.assertTrue(point['metadata_handover']['exact_source_identity_and_xattrs_reobserved'])
+            self.assertEqual(m.db.execute('select name,disposition from namespace_absent').fetchall(),
+                             [('home/gone','later-gap-absence-needs-journal-suffix')])
+            with self.assertRaisesRegex(ValueError,'durable journal suffix'):
+                SealedMemberIndex(m.db,m.check,{'consistent_SQL_sidecars':{}})
+
+    def test_gap_namespace_xattr_change_cannot_reuse_an_old_body_qualification(self):
+        later=self.later_namespace();changed=dict(self.observation,xattrs={'user.changed':'eA=='})
+        later.execute('insert into namespace values(?,?)',('home/a',encode_observation(changed)))
+        with CurrentMap.held(self.path,binding=self.binding,create=True) as m:
+            self.compile(m)
+            final=m.reconcile_namespace(later,lambda n:self.version,checkpoint=lambda:None,maximum_paths=10)
+            self.assertEqual(final['member_states'],{'file-needs-qualification':1})
+
     def test_relocated_pointer_fails_closed_with_provider_instruction_before_SQLite_open(self):
         with tempfile.TemporaryDirectory(dir='/dev/shm') as root:
             p=Path(root)/'moved.sqlite';p.write_bytes(b'VK_NIGHTLY_B_CONTROL_POINTER_V1\n{}\n');p.chmod(0o400)

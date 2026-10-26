@@ -90,14 +90,14 @@ def advance_B(client,key,plan,binding,*,guard,maximum_directories,maximum_paths,
     """Coarse native transactions avoid one network round trip per file/dir."""
     if type(maximum_directories) is not int or maximum_directories<1 or type(maximum_paths) is not int or maximum_paths<1:
         raise ValueError('finite metadata reconciliation admission required')
-    exclusions=Exclusions(plan);directories=0;rows=[];children=[];errors=[];done=[];latest={}
+    exclusions=Exclusions(plan);directories=0;rows=[];children=[];errors=[];done=[];latest={};frame_weight=0
     def flush():
-        nonlocal rows,children,errors,done,latest
+        nonlocal rows,children,errors,done,latest,frame_weight
         if not (rows or errors or done):return
         guard();exclusions.validate()
         latest=client.call(op='namespace-batch',name=key,rows=rows,children=children,errors=errors,
                            completed=done,maximum_paths=maximum_paths)
-        rows=[];children=[];errors=[];done=[]
+        rows=[];children=[];errors=[];done=[];frame_weight=0
     while directories<maximum_directories:
         guard();exclusions.validate()
         paths=client.call(op='namespace-next',name=key,limit=min(512,maximum_directories-directories))['paths']
@@ -105,9 +105,15 @@ def advance_B(client,key,plan,binding,*,guard,maximum_directories,maximum_paths,
         for path in paths:
             guard()
             for kind,member,row,is_directory in directory_records(path,exclusions):
+                # Bound both item count and escaped/base64 frame size. Larger
+                # ordinary batches amortize HDD FULL commits without enlarging
+                # the 4MiB protocol bound or using an SSD transaction journal.
+                weight=2*len(row)+6*len(member.encode())+256
+                if frame_weight+weight>2*1024**2:flush()
                 (rows if kind=='row' else errors).append((member,row))
+                frame_weight+=weight
                 if is_directory:children.append('/'+member)
-                if len(rows)+len(errors)>=128:flush()
+                if len(rows)+len(errors)>=1024:flush()
             done.append(path);directories+=1
         flush();on_progress(dict(latest,directories_this_phase=directories,last_directory=paths[-1]))
     flush()

@@ -111,5 +111,44 @@ class SQLPointTests(unittest.TestCase):
         self.assertEqual(result['sha256'],captured[0]['sha256'])
         self.assertEqual(result['new_B_encoded_payload_bytes'],0)
 
+    def interrupted_layout(self):
+        partial={}
+        def stop(value):
+            partial.update(value)
+            if 'layout' in value:raise RuntimeError('simulated volatile scratch loss after durable B layout')
+        with self.assertRaises(RuntimeError):self.capture(on_prepared=stop)
+        # Only disposable fixture RAM is lost. Every B object/manifest remains.
+        Path(partial['captured_RAM_point']['working_RAM_path']).unlink()
+        return partial
+
+    def test_lost_RAM_point_recovers_from_B_layout_without_source_access_or_duplicate_payload(self):
+        partial=self.interrupted_layout();original=partial['captured_RAM_point'];self.source.unlink()
+        connect=sqlite3.connect
+        def no_source(*args,**kwargs):
+            if str(self.source) in str(args[0]):self.fail('durable B recovery accessed later live source')
+            return connect(*args,**kwargs)
+        with patch('vk_nightly_sql_point.sqlite3.connect',side_effect=no_source):
+            result=self.capture(resume=original,resume_layout={k:partial[k] for k in ('layout','manifest')})
+        self.assertTrue(result['recovered_from_durable_B_layout'])
+        self.assertEqual(result['sha256'],original['sha256']);self.assertEqual(result['source_API_image_bytes'],0)
+        self.assertEqual(result['new_B_encoded_payload_bytes'],0)
+        self.assertEqual(result['independent']['integrity'],'ok')
+        self.assertTrue(result['independent']['independent_Linux_metadata_verified'])
+        self.assertEqual(list(self.root.glob('nightly-sql-*')),[])
+
+    def test_changed_durable_SQL_layout_is_rejected_without_source_or_new_scratch(self):
+        partial=self.interrupted_layout();self.source.unlink();partial['layout']['sha256']='a'*64
+        with self.assertRaisesRegex(ValueError,'layout/original API proof differs'):
+            self.capture(resume=partial['captured_RAM_point'],resume_layout={k:partial[k] for k in ('layout','manifest')})
+        self.assertEqual(list(self.root.glob('nightly-sql-*')),[])
+
+    def test_low_RAM_recovery_keeps_B_layout_and_can_resume_after_admission(self):
+        from types import SimpleNamespace
+        partial=self.interrupted_layout();self.source.unlink();args=dict(resume=partial['captured_RAM_point'],resume_layout={k:partial[k] for k in ('layout','manifest')})
+        with patch('vk_nightly_sql_point.os.statvfs',return_value=SimpleNamespace(f_bavail=0,f_frsize=4096)):
+            with self.assertRaisesRegex(OSError,'RAM independent SQL recovery scratch unavailable'):self.capture(**args)
+        self.assertEqual(list(self.root.glob('nightly-sql-*')),[])
+        self.assertTrue(self.capture(**args)['recovered_from_durable_B_layout'])
+
 
 if __name__=='__main__':unittest.main()

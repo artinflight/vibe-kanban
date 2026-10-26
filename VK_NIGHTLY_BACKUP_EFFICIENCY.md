@@ -1345,3 +1345,21 @@ reader leases, barrier protocol, worker reuse and simulated SSD ENOSPC.
 `pnpm run ops:check` and diff checks pass. Required local formatting completed
 Rust and stopped because Prettier is absent; no dependency install or compile
 was launched. Full hosted exact-head recovery CI is still required.
+
+### Durable source reuse and volatile scratch recovery
+
+Exact9f875f37f hosted recovery passed678tests/1skip. All six verified SSD
+index replicas now have pointers, releasing2085306368allocatedB in total.
+The B-only completed-qualification merge reused105182verified-file versions
+without reading source bodies or copying carriers. Actual remaining demand
+must still be qualified against the new namespace/suffix; the old106.65GB
+request ceiling is not transfer demand.
+
+A completed SQL upload now survives loss of its RAM working image. Recovery
+verifies the original API bracket against the authenticated B layout, restores
+and independently hashes/probes one bounded RAM inode, persists acceptance on B,
+then releases only that verified disposable inode. It never opens the later live
+DB or repeats uploaded payload. Low RAM defers before allocation and preserves
+all B inputs.51focused tests and22native gap-map tests pass. Namespace adoption
+reuses only exact nine-field source identity and xattrs, retains absent names
+explicitly, and its sealed-reader gate rejects an unfinished journal suffix.

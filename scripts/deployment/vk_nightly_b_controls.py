@@ -286,7 +286,7 @@ class Store:
                 replay_errors=db.execute('select count(*) from namespace_errors').fetchone()[0],
                 index_bytes=path.stat().st_size)
         if op=='namespace-batch':
-            if len(q['rows'])+len(q['errors'])>128 or len(q['completed'])>512:
+            if len(q['rows'])+len(q['errors'])>1024 or len(q['completed'])>512:
                 raise ValueError('bounded namespace transaction required')
             maximum=q['maximum_paths']
             if type(maximum) is not int or maximum<1:raise ValueError('finite namespace bound required')
@@ -323,6 +323,29 @@ class Store:
                 return decode_observation(row[0]) if row else None
             return value.refresh_unresolved(qualified,checkpoint=lambda:self.guard(path.stat().st_size+LIMIT),
                 maximum_paths=q['maximum_paths'],after=q.get('after',''))
+        if op=='reconcile-current-map':
+            import vk_nightly_current_map as current
+            from vk_nightly_qualification import decode_observation
+            qualifier,qp,qi,ql=self.handles[name(q['qualifier'])]
+            namespace,np,ni,nl=self.handles[name(q['namespace'])]
+            for p,i in ((qp,qi),(np,ni)):
+                if self.objects.file_identity(p)[:2]!=i:raise ValueError('reconciliation dependency substituted')
+            value=current.CurrentMap();value.db=db;value.path=path;value.inode=tuple(inode)
+            def qualified(member):
+                row=qualifier.execute('select row from versions where name=?',(member,)).fetchone()
+                return decode_observation(row[0]) if row else None
+            return value.reconcile_namespace(namespace,qualified,checkpoint=lambda:self.guard(path.stat().st_size+LIMIT),
+                maximum_paths=q['maximum_paths'])
+        if op=='member-demand':
+            from vk_nightly_current_map import decode_member
+            totals={};largest=[]
+            for member,state,raw in db.execute("select name,state,row from members where state not in ('directory','symlink','verified-file')"):
+                value=decode_member(raw);row=value.get('member') or value.get('namespace') or {}
+                count,size=totals.get(state,(0,0));size+=row.get('bytes',0);totals[state]=(count+1,size)
+                if state=='file-needs-capture':
+                    largest.append((row['bytes'],member));largest=sorted(largest,reverse=True)[:10]
+            return dict(unresolved_counts_and_logical_bytes=totals,largest_qualified_pending_files=largest,
+                        source_body_bytes_read=0,backup_payload_bytes_copied=0)
         if op in ('execute','executemany'):
             # A rollback journal can touch any existing page. This is actual
             # operation headroom, not a withdrawn fixed B reserve.

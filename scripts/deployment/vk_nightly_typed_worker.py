@@ -189,10 +189,13 @@ def run_SQL(config,*,backend=None):
                 def prepared(value):
                     state['partial'].setdefault(source,{}).update(value);report('SQL-API-point-retained-before-next-step')
                 retained=state['partial'].get(source,{}).get('captured_RAM_point')
+                partial=state['partial'].get(source,{})
+                layout={k:partial[k] for k in ('layout','manifest')} if all(k in partial for k in ('layout','manifest')) else None
                 result=capture_SQL_point(source,remote.client,allowed_sources=set(config['SQL_sources']),guard=guard,
                     retained_by_sha=lambda sha,size:old.get((sha,size)),ram_root='/dev/shm',
                     maximum_image_bytes=config['maximum_SQL_image_bytes'],chunk_bytes=config['chunk_bytes'],
-                    timeout_seconds=config['SQL_image_timeout_seconds'],on_prepared=prepared,resume=retained)
+                    timeout_seconds=config['SQL_image_timeout_seconds'],on_prepared=prepared,resume=retained,
+                    resume_layout=layout)
                 if result['status']=='larger_SQL_working_window_required':state['deferred'][source]=result
                 else:
                     state['completed'][source]=result;state['partial'].pop(source,None);state['deferred'].pop(source,None)

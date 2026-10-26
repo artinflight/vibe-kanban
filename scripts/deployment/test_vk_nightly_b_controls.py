@@ -263,6 +263,19 @@ class BControlTests(unittest.TestCase):
         final=advance_B(self.client,'gap-state',plan,binding,guard=lambda:None,maximum_directories=100,maximum_paths=100)
         self.assertTrue(final['enumeration_complete']);self.assertEqual(final['unique_paths'],3)
         self.assertEqual(final['source_body_bytes_read'],0);self.assertEqual(final['work_SSD_index_bytes'],0)
+        from vk_nightly_current_map import FORMAT
+        current=self.client.connect('map-after-gap',self.sha)
+        current.execute('create table metadata(format text,binding text,last_name text,complete integer)')
+        current.execute('insert into metadata values(?,?,?,1)',(FORMAT,'{}',''))
+        current.execute('create table members(name text primary key,state text,row blob)')
+        current.execute('create table SQL_sources(path text primary key)')
+        qualifier=self.client.connect('gap-qualified',self.sha)
+        qualifier.execute('create table versions(name text primary key,row blob)')
+        reconciled=self.client.call(op='reconcile-current-map',name='map-after-gap',namespace='gap-state',
+            qualifier='gap-qualified',maximum_paths=100)
+        self.assertEqual(reconciled['member_states'],{'directory':2,'file-needs-qualification':1})
+        self.assertTrue(reconciled['journal_suffix_required'])
+        current.close();qualifier.close()
         db.close()
 
     def test_long_native_queries_keep_the_real_guard_and_report_its_stop_reason(self):

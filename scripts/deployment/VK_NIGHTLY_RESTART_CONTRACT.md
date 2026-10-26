@@ -1,5 +1,15 @@
 ## October26 current boundary
 
+Nightly's move-aware observer now overlaps its original epoch. The original
+qualifier still uses the old observer; raw faults are retained. The new observer
+subscribes before enumerating directories and retains actual kernel watch/inode
+continuity for cookie-qualified in-scope moves. New/unmatched/protected-root moves
+remain explicit pending coverage or faults. A separate one-time metadata audit
+reconciles bootstrap names under the new observer. Its output and any pending
+error queue require changed-name replay and complete body/SQL binding before a
+new accepted anchor. Neither readiness of the new observer nor a completed census
+retroactively certifies the original epoch or the full recovery set.
+
 MM's all-agent B pointer and explicit live E/Q/R scope supersede the copied
 Staging-only guard. No MM allowance is required for B; genuine B health/access,
 capacity, applicable pauses and finite writer ownership remain.

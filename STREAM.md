@@ -16,8 +16,10 @@ alone are insufficient. Reuse accepted162.70GB/137DB and all valid later layers.
 Current source work reconciles PR263 against Staging and authenticates reusable
 components from failed v8i without relabeling its parent as accepted. Historical
 17SQL/one-rollout/five-watch counts must not be treated as current requirements.
-The Staging-owned v11 observer ended naturally; Nightly's own tracker is running.
-A new observer epoch or namespace census is not proof of complete body coverage.
+The Staging-owned v11 observer ended naturally. Nightly's original tracker and
+R3 qualifier remain live; the move-aware v2 tracker overlaps them for an explicit
+handover. One metadata-only namespace audit covers bootstrap names under v2.
+Neither a new observer epoch nor a namespace census proves complete body coverage.
 
 Live MM scope/pointer and current owner guard were reconciled October26. B needs
 no Staging/MM allowance; E/Q/R STOP remains intact. Preserve actual B health,

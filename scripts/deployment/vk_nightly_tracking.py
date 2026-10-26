@@ -20,7 +20,8 @@ import stat
 import threading
 import time
 
-from vk_change_journal import Journal, scope
+from vk_change_journal import scope
+from vk_nightly_move_journal import Journal
 from vk_nightly_journal_store import canonical, validate_report
 from vk_prep_common import identity, save
 

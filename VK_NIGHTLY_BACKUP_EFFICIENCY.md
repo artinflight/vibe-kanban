@@ -1,3 +1,57 @@
+# October26 — move-aware observer handover and namespace reconciliation
+
+The original tracker/qualification remain intact. At11:13EDT the separate
+`vk-nightly-change-tracking-v2.service` is ready with103480 watches and no raw
+errors, PID2670342/start23505160, epoch a44b760560b74e33924e663afdc15e51.
+Its exact package/config/plan is pinned outside Git; config SHA
+ce549d2be6b559e2526339fb1c63d02dc200a9073fab9a0ed85bd245c5bc3bcb.
+This is an intentional observer overlap, not a second backup producer. Same-plan
+kernel evidence and both reports survive in TRACKING_V2_OVERLAP_READY. The old
+Printshop fault remains unready; no old epoch or source bytes were rewritten.
+
+The operational observer now retains kernel watches across actual in-scope
+directory renames, using nonzero inotify cookies and both watched parents, or
+the same watch/inode when a move targets a newly created parent. It subscribes
+before listing each directory, closing the initial enrollment race. Unmatched
+moves remain pending/unready then fault; required-root moves, overflow, ignored
+watches and root-alias substitution still fail closed. Ordinary unchanged delta
+queries still walk/stat/hash/copy zero source paths. Recent rename diagnostics
+are bounded; the complete changed-path masks remain in the durable queue.
+
+`vk-nightly-namespace-reconciliation-r1-20261026.service` owns one new metadata-only
+bootstrap audit, PID2704146, with a768MiB SQLite ceiling,512MiB memory maximum,
+25%CPU and no swap. It closes the old selector-to-observer naming gap explicitly;
+it is not the ordinary nightly selection route. At11:15EDT262400 paths were
+recorded with zero pending errors and no body reads/copies. Aliases plus declared
+targets are preserved; discovered symlinks are not followed; original exact
+exclusions/absence exceptions remain. Concurrent missing/unstable child metadata
+is retained in an explicit replay queue, never silently omitted or called a full
+map. Source alias changes still invalidate the audit. Completion requires the
+actual final journal window, changed-name replay and independently bound bodies.
+
+R3 remains the sole selected-body qualifier. Its11:15EDT progress is97894 further
+qualifications,92035 retained matches,5859 pending body requests and122 observed
+missing names. No body was recopied. These are this phase's counters, not whole
+set totals or restore acceptance. Follow its durable cursor; do not restart it.
+
+The final585-case full regression passed(one skip), including actual directory
+moves, watch-before-listing enrollment and retained pending namespace errors.
+Ops/diff checks pass. The required format invocation completed Rust formatting,
+then failed at frontend formatting because Prettier is absent; no frontend,
+Rust compile/test or full-format pass is claimed for this Python-only change.
+No capture worker/calendar is accepted yet;
+current body/SQL/runtime binding, complete descriptor/readback and restart/failure
+integration remain gates. The schedule's requested time is02:00 Toronto; no next
+run exists before actual activation. No Vibe backend restart is involved.
+
+Measured own cgroup `memory.high` reclaim occurred with roughly42MiB qualifier
+RSS and58MiB namespace RSS, no max/OOM events and over8GiB available host RAM.
+The owned jobs' soft throttles were adjusted within their unchanged hard maxima:
+R3 High320MiB/Max384MiB, audit High384MiB/Max512MiB, both Swap0. PID/start, all
+real source/access/integrity/space checks and the4GiB host-headroom guard remain.
+No host pressure cause is inferred solely from those counters. The exact before/
+after receipt is OWNED_SOFT_THROTTLE_RECONCILIATION in the private evidence area.
+
 # October26 — running tracking and current qualification
 
 The existing Staging v11 observer ended at its own timeout. A complete report

@@ -1,9 +1,9 @@
 # October26 — operational completion in progress
 
-Nightly tracking is running; no backup calendar is enabled. R2 stopped on a
-Printshop rename after47025 qualifications/80.55GB hashed. R3 resumes its saved
-cursor with a same-observer scoped witness; both Printshop worktrees remain open
-reconciliation requirements. Follow its existing unit/receipts, no duplicate.
+Tracking runs; no backup calendar is enabled. R3 keeps its cursor and original
+observer. Move-aware v2 is ready on the same115-root plan, with no raw faults.
+One bootstrap namespace audit runs under v2. Both Printshop closures and current
+body/SQL bindings need acceptance. Preserve these jobs and original faults.
 Read the latest section of VK_NIGHTLY_BACKUP_EFFICIENCY.md for exact jobs,
 component indexes, current gaps and required acceptance. The old observer's gap,
 all original restore/carrier epochs and tracked bytecode remain intact.

@@ -1,4 +1,4 @@
-# October26 — native B control storage,17:19EDT checkpoint
+# October26 — native B control storage, 2026-10-26 18:54:49 EDT checkpoint
 
 The user explicitly requested removing growing Nightly control/temp dependence
 on the work SSD before commissioning. A task-only allocation measurement found
@@ -28,9 +28,9 @@ read locks. Actual B identity, health, explicit applicable stops, permissions,
 create-only checkpoints and operation-space checks remain. The withdrawn Disk
 B reserve/quota is not carried forward.
 
-Normal map/qualifier consumers passed against B. Exclusive source kernel leases
-then replaced only those two inactive SSD replicas with small read-only location
-pointers, recovering1473417216allocatedB. The exact raw checkpoints and original
+Normal consumers for all six indexes passed against B. Exclusive source kernel
+leases then replaced only their six inactive SSD replicas with small read-only
+location pointers, recovering2085306368allocatedB. The exact raw checkpoints and original
 Linux UID/GID/mode/xattrs/nanosecond timestamps remain on B. Legacy direct SQLite
 calls fail closed; use the authenticated native-B reference. Optional original-
 byte recall is RAM-only with measured admission, complete reopened SHA/SQLite
@@ -38,14 +38,25 @@ integrity and Linux metadata restoration before immutable read. Tests verify an
 active reader refuses retirement and preserves the raw source. Device/inode/
 kernel ctime remain recorded provenance, not falsely restorable metadata.
 
-The B tracker is ready under its separate control-index lease. Actual v3 service
-PID1396499/epoch69f5043bed464f1e86b718f6c639281b has107009watches/raw errors0 at
-17:19EDT,626688B B database. Its authoritative journal and health are on B;
-optional SSD status is capped64KiB and ENOSPC/EDQUOT/EROFS does not terminate
-observation. A missing SSD mount causes no fallback root write. New capture
-worker mode uses B map/cohort-state/leases and only a bounded status mirror;
-its unchanged root/RAM/swap, source-mount, native B and deadline guards remain.
-It does not inherit a free-SSD threshold for indexes it no longer allocates.
+The fixed-health B tracker v5 is ready: PID2491269,
+epochd57cdf0f05d14d19aa55cab3f594f8ce,107009watches/errors0. Its
+journal and health are on B. The old v4 remains live only until its active gap
+pass closes. Actual new/old/new durable kernel barriers prove overlap, recorded
+on B in journal-handover-proofs/72adb19bc1ace1ab35f0a06e5b07e06a5b89ac9ee4fcfdfb652efeb4fb1a99bd.
+An incomplete proc census was planning uncertainty, not an OS prohibition;
+ordinary inotify enrollment passed the unchanged native kernel quota. No access
+denial was bypassed and no old observer was stopped for that admission.
+
+Optional SSD status has one64KiB file and one fixed64KiB temporary maximum.
+The new partial-write test found and fixed a generic-save collision after
+ENOSPC: only the failed call's own temporary inode is released; an unknown stale
+temporary is preserved and reported on B. Subsequent durable commits continue
+and the mirror recovers when writable. Normal B health reads work without the
+mirror. A missing SSD mount causes no fallback root write. New capture worker
+mode uses B map/cohort-state/leases and only bounded status; unchanged root/RAM/
+swap, source-mount, native B and deadline guards remain. It does not require free
+SSD space for indexes it no longer allocates. The frozen SQL phase v4 remains
+unmodified; a later exact source package will adopt the newer mirror routine.
 
 RAM fixtures cover transactions, lost ACKs, kernel reader refusal, exact recall,
 large-row pagination, B-only SQL cohort state and completed-point reuse, full-SSD
@@ -53,8 +64,10 @@ status handling and bounded source metadata reconciliation. The complete legacy
 suite cannot run under a /dev/shm TMPDIR because its older production-placement
 fixtures explicitly require a mounted secondary path; that failed harness run
 is retained, not called a production failure or a pass. The original runner
-placement check remains. Exact-head hosted full CI is still required for this
-new source, in addition to narrow RAM tests and actual B proofs.
+placement check remains. Exact9f875f37f hosted CI passed678tests/1skip;895141bd5 also passed hosted
+recovery. The latest69focused regressions and40keyset/storage cases passed.
+A final targeted error guard run passed18cases. Later exact-head hosted CI is
+still required for the newest mirror/keyset changes.
 
 The14:34EDT gap remains explicit. The new observer only proves its own forward
 coverage. The prepared reconciliation records directories and metadata on B,

@@ -13,30 +13,61 @@ import json
 import os
 from pathlib import Path
 import signal
+import stat
 import threading
 
 from vk_nightly_b_controls import tracking_store,seed
 from vk_nightly_desktop_controls import DesktopControls
 from vk_nightly_tracking import serve
-from vk_prep_common import save
 
 
-def write_health(db,path,value,*,mirror=save):
+def health_mirror(path,value):
+    """At most one64KiB cached status and one64KiB fixed temporary file.
+
+    A failed write removes only the inode created by this call. A stale or
+    conflicting temporary file is preserved and reported on B, never replaced.
+    This avoids a failed generic save leaving PID.new and stopping the next
+    otherwise healthy journal commit with EEXIST after SSD exhaustion.
+    """
+    path=Path(path);raw=(json.dumps(value,sort_keys=True,separators=(',',':'))+'\n').encode()
+    if len(raw)>65536:raise ValueError('fixed-size optional health mirror exceeded')
+    temporary=path.with_name(path.name+'.mirror.new')
+    fd=os.open(temporary,os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW|os.O_CLOEXEC,0o600)
+    created=os.fstat(fd);committed=False
+    try:
+        view=memoryview(raw)
+        while view:
+            written=os.write(fd,view)
+            if written<=0:raise OSError('short optional health mirror write')
+            view=view[written:]
+        os.fsync(fd);os.replace(temporary,path);committed=True
+    finally:
+        if not committed:
+            try:
+                current=temporary.lstat()
+                if (stat.S_ISREG(current.st_mode) and current.st_nlink==1 and current.st_uid==os.getuid()
+                        and (current.st_dev,current.st_ino)==(created.st_dev,created.st_ino)):
+                    temporary.unlink()
+            except FileNotFoundError:pass
+        os.close(fd)
+
+
+def write_health(db,path,value,*,mirror=health_mirror):
     value=dict(value)
     if Path(path).is_relative_to('/mnt/vk-storage') and not os.path.ismount('/mnt/vk-storage'):
         value['optional_SSD_health_mirror_error']='secondary SSD unavailable; no local write attempted'
-    elif len(json.dumps(value).encode())>65536:
+    elif len(json.dumps(value,sort_keys=True,separators=(',',':')).encode())+1>65536:
         value['optional_SSD_health_mirror_error']='status exceeds fixed 64KiB mirror budget'
     else:
         try:mirror(path,value)
         except OSError as error:
-            if error.errno not in (errno.ENOSPC,errno.EDQUOT,errno.EROFS):raise
+            if error.errno not in (errno.ENOSPC,errno.EDQUOT,errno.EROFS,errno.EEXIST):raise
             value['optional_SSD_health_mirror_error']=str(error)
     db.execute('insert into tracking_health values(1,?) on conflict(id) do update set row=excluded.row',
                (json.dumps(value,sort_keys=True,separators=(',',':')),))
 
 
-def run(config,*,guard,mirror=save):
+def run(config,*,guard,mirror=health_mirror):
     stop=threading.Event()
     signal.signal(signal.SIGTERM,lambda *_:stop.set());signal.signal(signal.SIGINT,lambda *_:stop.set())
     with DesktopControls(config['controls'],guard=guard) as remote:
@@ -54,6 +85,17 @@ def run(config,*,guard,mirror=save):
         plan=json.loads(Path(config['plan']).read_text())
         serve(plan,None,Path(config['endpoint']),guard=guard,status_path=None,stop=stop,
               store_factory=factory,status_writer=lambda value:factory.status(value))
+
+
+def status_B(config,*,guard):
+    """Normal health remains readable when the optional SSD cache is absent."""
+    with DesktopControls(config['controls'],guard=guard) as remote:
+        db=remote.client.connect(config['index_name'],config['checkpoint_sha256'],readonly=True,working=True)
+        try:
+            row=db.execute('select row from tracking_health where id=1').fetchone()
+            if row is None:raise ValueError('authoritative B tracker health not yet committed')
+            return json.loads(row[0])
+        finally:db.close()
 
 
 def main():

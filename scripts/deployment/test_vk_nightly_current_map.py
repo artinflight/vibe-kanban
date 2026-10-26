@@ -15,6 +15,7 @@ class CurrentMapTests(unittest.TestCase):
     def later_namespace(self):
         later=sqlite3.connect(':memory:');self.addCleanup(later.close)
         later.execute('create table namespace(name text primary key,row blob)')
+        later.execute('create table namespace_errors(name text primary key,error blob)')
         later.execute('create table gap_meta(id integer primary key,binding text,complete integer)')
         later.execute('insert into gap_meta values(1,?,1)',(json.dumps(dict(instance='new-epoch',plan_sha256='a'*64,
             scope_sha256='b'*64,start_sequence=17,original_epoch_repaired=False)),))
@@ -50,6 +51,14 @@ class CurrentMapTests(unittest.TestCase):
             self.compile(m)
             final=m.reconcile_namespace(later,lambda n:self.version,checkpoint=lambda:None,maximum_paths=10)
             self.assertEqual(final['member_states'],{'file-needs-qualification':1})
+
+    def test_namespace_error_cannot_be_mislabeled_as_an_absent_old_member(self):
+        later=self.later_namespace();later.execute('insert into namespace_errors values(?,?)',('home/a',b'permission denied'))
+        with CurrentMap.held(self.path,binding=self.binding,create=True) as m:
+            self.compile(m)
+            with self.assertRaisesRegex(ValueError,'targeted replay before absence adoption'):
+                m.reconcile_namespace(later,lambda name:None,checkpoint=lambda:None,maximum_paths=10)
+            self.assertEqual(m.db.execute('select count(*) from members').fetchone()[0],2)
 
     def test_relocated_pointer_fails_closed_with_provider_instruction_before_SQLite_open(self):
         with tempfile.TemporaryDirectory(dir='/dev/shm') as root:

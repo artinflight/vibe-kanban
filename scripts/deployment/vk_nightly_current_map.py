@@ -260,6 +260,8 @@ class CurrentMap:
         if type(maximum_paths) is not int or maximum_paths<1:raise ValueError('finite namespace reconciliation required')
         record=namespace.execute('select binding,complete from gap_meta where id=1').fetchone()
         if not record or record[1]!=1:raise ValueError('complete later namespace epoch required')
+        if namespace.execute('select count(*) from namespace_errors').fetchone()[0]:
+            raise ValueError('namespace errors require explicit targeted replay before absence adoption')
         binding=json.loads(record[0]);encoded=json.dumps(binding,sort_keys=True,separators=(',',':'))
         self.check();db=self.db
         db.execute('create table if not exists namespace_reconciliation(id integer primary key,binding text,last_name text,complete integer,suffix_complete integer)')
@@ -313,14 +315,22 @@ class CurrentMap:
             # ordered local cursors instead of trusting current Git resolution
             # or inferring that an old name was included in a later archive.
             db.execute('create table if not exists namespace_absent(name text primary key,old_state text,row blob,disposition text) without rowid')
-            candidates=db.execute('select name,state,row from members order by name')
-            missing=[]
-            for name,state,raw in candidates:
-                if namespace.execute('select 1 from namespace where name=?',(name,)).fetchone() is None:
-                    missing.append((name,state,raw,'later-gap-absence-needs-journal-suffix'))
-                if len(missing)>=128:
-                    self._retain_absent(missing,checkpoint);missing=[]
-            if missing:self._retain_absent(missing,checkpoint)
+            db.execute('create table if not exists namespace_absence_cursor(id integer primary key,last_name text)')
+            db.execute('insert or ignore into namespace_absence_cursor values(1,?)',('',))
+            tail=db.execute('select last_name from namespace_absence_cursor where id=1').fetchone()[0]
+            namespace_names=iter(namespace.execute('select name from namespace where name>? order by name',(tail,)))
+            present=next(namespace_names,(None,))[0];since_checkpoint=0
+            while True:
+                checkpoint();batch=db.execute('select name,state,row from members where name>? order by name limit 128',(tail,)).fetchall()
+                if not batch:break
+                missing=[]
+                for name,state,raw in batch:
+                    while present is not None and present<name:present=next(namespace_names,(None,))[0]
+                    if present!=name:missing.append((name,state,raw,'later-gap-absence-needs-journal-suffix'))
+                tail=batch[-1][0];since_checkpoint+=len(batch)
+                if missing or since_checkpoint>=8192:
+                    self._retain_absent(missing,checkpoint,tail);since_checkpoint=0
+            self._retain_absent([],checkpoint,tail)
             db.execute('begin immediate')
             try:
                 db.execute('update namespace_reconciliation set complete=1 where id=1')
@@ -331,11 +341,12 @@ class CurrentMap:
         return dict(processed=processed,reused_qualified_versions=reused,last_name=last,more_names=more,
                     journal_suffix_required=True,original_epoch_repaired=False,**self.summary())
 
-    def _retain_absent(self,rows,checkpoint):
+    def _retain_absent(self,rows,checkpoint,last_name):
         self.db.execute('begin immediate')
         try:
             self.db.executemany('insert or ignore into namespace_absent values(?,?,?,?)',rows)
             self.db.executemany('delete from members where name=?',((r[0],) for r in rows))
+            self.db.execute('update namespace_absence_cursor set last_name=? where id=1',(last_name,))
             checkpoint();self.db.execute('commit')
         except BaseException:
             if self.db.in_transaction:self.db.execute('rollback')

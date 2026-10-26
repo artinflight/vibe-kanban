@@ -1,4 +1,5 @@
 import hashlib
+import json
 import os
 from pathlib import Path
 import sqlite3
@@ -126,6 +127,31 @@ class BControlTests(unittest.TestCase):
     def test_new_native_B_state_seed_needs_no_SSD_source_or_hydration(self):
         digest=seed(self.client);db=self.client.connect('new-seed',digest)
         self.assertEqual(db.execute('select version from nightly_control_seed').fetchone(),(1,));db.close()
+
+    def test_partial_SSD_health_write_is_bounded_and_next_commit_recovers_without_stale_temp_collision(self):
+        import errno
+        from unittest.mock import patch
+        from vk_nightly_b_tracker import write_health
+        db=self.client.connect('health-recovery',self.sha)
+        db.execute('create table tracking_health(id integer primary key,row text not null)')
+        path=self.root/'status.json';original=os.write;calls=0
+        def partial(fd,raw):
+            nonlocal calls
+            calls+=1
+            if calls==1:return original(fd,raw[:16])
+            raise OSError(errno.ENOSPC,'synthetic actual partial write, then SSD full')
+        with patch('vk_nightly_b_tracker.os.write',side_effect=partial):write_health(db,path,dict(ready=True,sequence=1))
+        value=json.loads(db.execute('select row from tracking_health').fetchone()[0])
+        self.assertTrue(value['ready']);self.assertIn('optional_SSD_health_mirror_error',value)
+        self.assertFalse(path.exists());self.assertEqual(list(self.root.glob('*.mirror.new')),[])
+        write_health(db,path,dict(ready=True,sequence=2))
+        self.assertEqual(json.loads(path.read_text())['sequence'],2)
+        self.assertEqual(list(self.root.glob('*.mirror.new')),[])
+        stale=path.with_name(path.name+'.mirror.new');stale.write_bytes(b'preserve unknown stale inode')
+        write_health(db,path,dict(ready=True,sequence=3))
+        self.assertEqual(stale.read_bytes(),b'preserve unknown stale inode')
+        self.assertEqual(json.loads(db.execute('select row from tracking_health').fetchone()[0])['sequence'],3)
+        db.close()
 
     def test_large_binary_rows_are_paginated_without_truncation_or_frame_overflow(self):
         db=self.client.connect('large-rows',self.sha);rows=[(i,bytes([i])*600000) for i in range(6)]
@@ -255,13 +281,14 @@ class BControlTests(unittest.TestCase):
         from vk_prep_common import identity
         from vk_change_journal import scope
         source=self.root/'namespace-source';source.mkdir();(source/'sub').mkdir();(source/'sub'/'file').write_text('fixture')
+        for i in range(200):(source/'sub'/('small-'+str(i))).write_text('x')
         plan={'sources':[str(source)]};anchor=dict(ready=True,errors=[],terminal=None,instance='one',sequence=1,
             plan_sha256=identity(plan),scope_sha256=identity(scope(plan)))
         db=self.client.connect('gap-state',self.sha);binding=initialize(db,plan,anchor)
         first=advance_B(self.client,'gap-state',plan,binding,guard=lambda:None,maximum_directories=1,maximum_paths=100)
         self.assertFalse(first['enumeration_complete'])
-        final=advance_B(self.client,'gap-state',plan,binding,guard=lambda:None,maximum_directories=100,maximum_paths=100)
-        self.assertTrue(final['enumeration_complete']);self.assertEqual(final['unique_paths'],3)
+        final=advance_B(self.client,'gap-state',plan,binding,guard=lambda:None,maximum_directories=100,maximum_paths=1000)
+        self.assertTrue(final['enumeration_complete']);self.assertEqual(final['unique_paths'],203)
         self.assertEqual(final['source_body_bytes_read'],0);self.assertEqual(final['work_SSD_index_bytes'],0)
         from vk_nightly_current_map import FORMAT
         current=self.client.connect('map-after-gap',self.sha)
@@ -272,8 +299,8 @@ class BControlTests(unittest.TestCase):
         qualifier=self.client.connect('gap-qualified',self.sha)
         qualifier.execute('create table versions(name text primary key,row blob)')
         reconciled=self.client.call(op='reconcile-current-map',name='map-after-gap',namespace='gap-state',
-            qualifier='gap-qualified',maximum_paths=100)
-        self.assertEqual(reconciled['member_states'],{'directory':2,'file-needs-qualification':1})
+            qualifier='gap-qualified',maximum_paths=1000)
+        self.assertEqual(reconciled['member_states'],{'directory':2,'file-needs-qualification':201})
         self.assertTrue(reconciled['journal_suffix_required'])
         current.close();qualifier.close()
         db.close()

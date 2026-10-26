@@ -293,6 +293,52 @@ for line in sys.stdin:
     }
 
     #[test]
+    fn native_review_all_selected_policies_preserve_existing_profile_constraints() {
+        let defaults: Value =
+            serde_json::from_str(include_str!("../../default_profiles.json")).unwrap();
+        for profile in [
+            defaults["executors"]["CODEX"]["DEFAULT"]["CODEX"].clone(),
+            serde_json::json!({"sandbox":"read-only","ask_for_approval":"never"}),
+            serde_json::json!({"sandbox":"workspace-write","ask_for_approval":"unless-trusted"}),
+        ] {
+            for policy in [
+                crate::model_selector::PermissionPolicy::Auto,
+                crate::model_selector::PermissionPolicy::Supervised,
+                crate::model_selector::PermissionPolicy::Plan,
+            ] {
+                let read_only = profile["sandbox"] == "read-only"
+                    || policy == crate::model_selector::PermissionPolicy::Plan;
+                let mut codex: Codex = serde_json::from_value(profile.clone()).unwrap();
+                let mut config = ExecutorConfig::new(BaseCodingAgent::Codex);
+                config.permission_policy = Some(policy);
+                config.model_id = Some("gpt-6.1-sol".into());
+                config.reasoning_id = Some("medium".into());
+                codex.apply_overrides(&config);
+                let start = codex.build_thread_start_params(Path::new("/fixture"));
+                assert_eq!(start.approval_policy, Some(V2AskForApproval::OnRequest));
+                assert_eq!(
+                    start.sandbox,
+                    Some(if read_only {
+                        V2SandboxMode::ReadOnly
+                    } else {
+                        V2SandboxMode::WorkspaceWrite
+                    })
+                );
+                let resumed = resume_params_from("existing-owner-thread".into(), start.clone());
+                assert_eq!(resumed.approval_policy, start.approval_policy);
+                assert_eq!(resumed.sandbox, start.sandbox);
+                assert_eq!(resumed.thread_id, "existing-owner-thread");
+                assert_eq!(resumed.model, start.model);
+                assert_eq!(resumed.config, start.config);
+                assert_eq!(
+                    resumed.config.as_ref().unwrap()["model_reasoning_effort"],
+                    "medium"
+                );
+            }
+        }
+    }
+
+    #[test]
     fn routed_overrides_reach_start_and_resume_parameters() {
         use crate::executors::StandardCodingAgentExecutor;
         let mut codex: Codex = serde_json::from_value(serde_json::json!({})).unwrap();

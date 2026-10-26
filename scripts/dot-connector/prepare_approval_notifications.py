@@ -48,7 +48,8 @@ def main():
         records.append({'component': folder, 'file': target, 'sha256': digest(destination)})
     manifest = {'phase': 'prepared_not_installed', 'files': records, 'baseline': BASELINE,
                 'backend_required': 'Claude action-context bridge; current backend has no native action details in ApprovalInfo',
-                'routing_changes': 'none; proposed permission-routing changes were rejected by automatic approval review',
+                'routing_changes': 'Source candidate uses native Claude default/acceptEdits/plan evaluation, interactive unresolved callbacks and safe plan exit; no live policy/profile changes performed',
+                'backend_compatibility': {'api_schema_change': False, 'notification_fields': 'additive; legacy actions unavailable', 'automatic_install': False},
                 'activation_requires': 'Exact coordinated backend/connector/notifier release authorization and owner admission; no restarts are performed by this script',
                 'preserve': ['selected model/effort', 'SUPERVISED', 'native histories/ownership', 'subscriptions/principals/credentials', 'approval IDs/outcomes', 'genuine security decisions']}
     (output/'manifest.json').write_text(json.dumps(manifest, indent=2)+'\n')

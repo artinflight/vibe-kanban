@@ -22,7 +22,6 @@ use crate::{
 
 const EXIT_PLAN_MODE_NAME: &str = "ExitPlanMode";
 const ASK_USER_QUESTION_NAME: &str = "AskUserQuestion";
-pub const AUTO_APPROVE_CALLBACK_ID: &str = "AUTO_APPROVE_CALLBACK_ID";
 pub const STOP_GIT_CHECK_CALLBACK_ID: &str = "STOP_GIT_CHECK_CALLBACK_ID";
 // Prefix for denial messages from the user, mirrors claude code CLI behavior
 const TOOL_DENY_PREFIX: &str = "The user doesn't want to proceed with this tool use. The tool use was rejected (eg. if it was a file edit, the new_string was NOT written to the file). To tell you how to proceed, the user said: ";
@@ -31,7 +30,6 @@ const TOOL_DENY_PREFIX: &str = "The user doesn't want to proceed with this tool 
 pub struct ClaudeAgentClient {
     log_writer: LogWriter,
     approvals: Option<Arc<dyn ExecutorApprovalService>>,
-    auto_approve: bool, // true when approvals is None
     repo_context: RepoContext,
     commit_reminder_prompt: String,
     cancel: CancellationToken,
@@ -46,11 +44,9 @@ impl ClaudeAgentClient {
         commit_reminder_prompt: String,
         cancel: CancellationToken,
     ) -> Arc<Self> {
-        let auto_approve = approvals.is_none();
         Arc::new(Self {
             log_writer,
             approvals,
-            auto_approve,
             repo_context,
             commit_reminder_prompt,
             cancel,
@@ -66,6 +62,7 @@ impl ClaudeAgentClient {
         let approval_service = self
             .approvals
             .as_ref()
+            .filter(|service| service.supports_interactive_approvals())
             .ok_or(ExecutorApprovalError::ServiceUnavailable)?;
 
         let context = super::approval_context::summary(&tool_name, &tool_input);
@@ -117,7 +114,7 @@ impl ClaudeAgentClient {
                         updated_input: tool_input,
                         updated_permissions: Some(vec![PermissionUpdate {
                             update_type: PermissionUpdateType::SetMode,
-                            mode: Some(PermissionMode::BypassPermissions),
+                            mode: Some(PermissionMode::Default),
                             destination: Some(PermissionUpdateDestination::Session),
                             rules: None,
                             behavior: None,
@@ -155,6 +152,7 @@ impl ClaudeAgentClient {
         let approval_service = self
             .approvals
             .as_ref()
+            .filter(|service| service.supports_interactive_approvals())
             .ok_or(ExecutorApprovalError::ServiceUnavailable)?;
 
         let question_count = tool_input
@@ -287,6 +285,7 @@ impl ClaudeAgentClient {
         _permission_suggestions: Option<Vec<PermissionUpdate>>,
         tool_use_id: Option<String>,
     ) -> Result<PermissionResult, ExecutorError> {
+        let tool_use_id = tool_use_id.filter(|id| !id.trim().is_empty());
         if tool_name == ASK_USER_QUESTION_NAME {
             if let Some(latest_tool_use_id) = tool_use_id {
                 return self
@@ -302,12 +301,7 @@ impl ClaudeAgentClient {
                 });
             }
         }
-        if self.auto_approve {
-            Ok(PermissionResult::Allow {
-                updated_input: input,
-                updated_permissions: None,
-            })
-        } else if let Some(latest_tool_use_id) = tool_use_id {
+        if let Some(latest_tool_use_id) = tool_use_id {
             self.handle_approval(latest_tool_use_id, tool_name, input)
                 .await
         } else {
@@ -318,7 +312,7 @@ impl ClaudeAgentClient {
                 tool_name
             );
             Ok(PermissionResult::Deny {
-                message: "Cannot request supervised approval without a tool_use_id".to_string(),
+                message: "Cannot request approval without a tool_use_id".to_string(),
                 interrupt: Some(false),
             })
         }
@@ -350,36 +344,20 @@ impl ClaudeAgentClient {
             });
         }
 
-        if self.auto_approve {
+        if callback_id == "tool_approval" {
+            // Registered only for questions and plan exits. Ordinary native
+            // decisions are not promoted to manual approval by a blanket hook.
             Ok(serde_json::json!({
                 "hookSpecificOutput": {
                     "hookEventName": "PreToolUse",
-                    "permissionDecision": "allow",
-                    "permissionDecisionReason": "Auto-approved by SDK"
+                    "permissionDecision": "ask",
+                    "permissionDecisionReason": "User interaction required"
                 }
             }))
         } else {
-            match callback_id.as_str() {
-                AUTO_APPROVE_CALLBACK_ID => Ok(serde_json::json!({
-                    "hookSpecificOutput": {
-                        "hookEventName": "PreToolUse",
-                        "permissionDecision": "allow",
-                        "permissionDecisionReason": "Approved by SDK"
-                    }
-                })),
-                _ => {
-                    // Hook callbacks is only used to forward approval requests to can_use_tool.
-                    // This works because `ask` decision in hook callback triggers a can_use_tool request
-                    // https://docs.claude.com/en/api/agent-sdk/permissions#permission-flow-diagram
-                    Ok(serde_json::json!({
-                        "hookSpecificOutput": {
-                            "hookEventName": "PreToolUse",
-                            "permissionDecision": "ask",
-                            "permissionDecisionReason": "Forwarding to canusetool service"
-                        }
-                    }))
-                }
-            }
+            // Abstain, including obsolete auto-approve callbacks. Never grant
+            // permission or override native deny/ask rules from an unknown hook.
+            Ok(serde_json::json!({}))
         }
     }
 

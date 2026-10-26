@@ -58,16 +58,19 @@ async fn claude_preview_keeps_real_approve_deny_and_timeout_request_bound() {
         );
         let input = json!({"command":"ls -lh ./art-candidates", "description":"Read existing review files"});
         let original_input = input.clone();
-        let task = tokio::spawn(async move {
-            client
+        let task =
+            tokio::spawn(async move {
+                client
                 .on_can_use_tool(
                     "Bash".into(),
                     input,
-                    None,
+                    Some(serde_json::from_value(json!([{
+                        "type":"setMode", "mode":"bypassPermissions", "destination":"session"
+                    }])).unwrap()),
                     Some("synthetic-tool-call".into()),
                 )
                 .await
-        });
+            });
         let pending = tokio::time::timeout(Duration::from_secs(5), async {
             loop {
                 let infos = approvals.pending_infos();
@@ -227,6 +230,93 @@ async fn claude_supervised_missing_tool_id_never_grants_permission() {
         .unwrap();
     assert_eq!(
         hook["hookSpecificOutput"]["permissionDecision"], "ask",
-        "Existing supervised hook semantics stay unchanged pending explicit routing authorization"
+        "Questions and plan exits retain explicit owner interaction"
     );
+}
+
+#[tokio::test]
+async fn claude_native_fallback_without_interactive_owner_fails_closed() {
+    for service in [
+        None,
+        Some(Arc::new(executors::approvals::NoopExecutorApprovalService)
+            as Arc<dyn ExecutorApprovalService>),
+    ] {
+        let client = ClaudeAgentClient::new(
+            LogWriter::new(tokio::io::sink()),
+            service,
+            RepoContext::default(),
+            String::new(),
+            CancellationToken::new(),
+        );
+        for tool in ["Bash", "AskUserQuestion", "ExitPlanMode"] {
+            assert!(
+                client
+                    .on_can_use_tool(tool.into(), json!({}), None, Some("fixture".into()))
+                    .await
+                    .is_err()
+            );
+        }
+        for hook in ["AUTO_APPROVE_CALLBACK_ID", "unknown"] {
+            assert_eq!(
+                client
+                    .on_hook_callback(hook.into(), json!({}), None)
+                    .await
+                    .unwrap(),
+                json!({})
+            );
+        }
+    }
+}
+
+#[tokio::test]
+async fn claude_plan_approval_exits_to_native_default_not_bypass() {
+    let (approvals, bridge, execution) = bridge().await;
+    let client = ClaudeAgentClient::new(
+        LogWriter::new(tokio::io::sink()),
+        Some(bridge),
+        RepoContext::default(),
+        String::new(),
+        CancellationToken::new(),
+    );
+    let task = tokio::spawn(async move {
+        client
+            .on_can_use_tool(
+                "ExitPlanMode".into(),
+                json!({"plan":"synthetic"}),
+                None,
+                Some("plan-exit".into()),
+            )
+            .await
+    });
+    let pending = tokio::time::timeout(Duration::from_secs(5), async {
+        loop {
+            if let Some(info) = approvals.pending_infos().into_iter().next() {
+                break info;
+            }
+            tokio::time::sleep(Duration::from_millis(5)).await;
+        }
+    })
+    .await
+    .unwrap();
+    assert!(!task.is_finished());
+    approvals
+        .respond(
+            &pending.approval_id,
+            ApprovalResponse {
+                execution_process_id: execution,
+                status: utils::approvals::ApprovalOutcome::Approved,
+            },
+        )
+        .await
+        .unwrap();
+    let result = tokio::time::timeout(Duration::from_secs(5), task)
+        .await
+        .unwrap()
+        .unwrap()
+        .unwrap();
+    let value = serde_json::to_value(result).unwrap();
+    assert_eq!(value["updatedPermissions"][0]["mode"], "default");
+    assert_eq!(value["updatedPermissions"][0]["destination"], "session");
+    assert!(!value.to_string().contains("bypassPermissions"));
+    assert!(approvals.pending_infos().is_empty());
 }

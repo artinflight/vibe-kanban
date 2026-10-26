@@ -1,3 +1,4 @@
+pub mod handoff;
 pub mod queue;
 pub mod review;
 pub mod steering;
@@ -158,6 +159,7 @@ pub(crate) async fn follow_up_admitted<D: Deployment>(
     State(deployment): State<D>,
     Json(payload): Json<CreateFollowUpAttempt>,
 ) -> Result<ResponseJson<ApiResponse<ExecutionProcess, QueueStatus>>, ApiError> {
+    handoff::require_unclaimed(&deployment.db().pool, session.id).await?;
     services::services::original_worker::record_input(
         &deployment.db().pool,
         session.id,
@@ -466,6 +468,8 @@ pub fn router(deployment: &DeploymentImpl) -> Router<DeploymentImpl> {
             "/follow-up",
             post(follow_up).layer(DefaultBodyLimit::max(PROMPT_JSON_BODY_LIMIT_BYTES)),
         )
+        .route("/handoff", get(handoff::capability).post(handoff::handoff))
+        .route("/handoff/{request_id}", get(handoff::get_receipt))
         .route("/reset", post(reset_process))
         .route("/setup", post(run_setup_script))
         .route("/review", post(review::start_review))

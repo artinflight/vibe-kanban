@@ -32,6 +32,9 @@ Historical statements describe their dated checkpoint, not present authority.
 - Operational diagnostics, account values and private manifests stay private
   on local/B storage. Publish only reviewed public source. No secrets in Git.
 
+Direct launcher Claude selection and guarded handoff are source preparation only;
+see [the T68 contract](VK_DIRECT_LAUNCHER_CLAUDE.md). No live adoption is claimed.
+
 ## Topic map and present evidence boundaries
 
 | Area | Read next | Boundary |

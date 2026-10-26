@@ -1,3 +1,16 @@
+# Direct launcher Claude support — T68
+
+Branch `vk/695f-vk-direct-launch` starts from fork staging `5b43524ea`.
+The new focused issue `0eb31691-b6e1-406a-a2b9-a4b9bf5ca1f2` (T68) was
+created and linked before code work. Scope: direct connector executor/schema and
+Claude dispatch, plus an explicit idempotent idle-checkpoint Codex handoff.
+See [contract, limits and validation](VK_DIRECT_LAUNCHER_CLAUDE.md).
+Prepare a draft PR into staging only. No deployment, restart, global settings,
+Staging Check, production agent, billing or recovery-data changes are authorized.
+
+The following inherited stream notes describe earlier work, not this branch's
+implementation or release authority.
+
 # Collapsible Issues release stream
 
 Current branch prepares the accepted collapsible issue UI for rebase-merge

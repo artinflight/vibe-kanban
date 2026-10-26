@@ -74,25 +74,33 @@ def accepted_base_carrier(index,sha,size):
         layer='accepted-base',selector=row[0],sha256=sha,bytes=size)])
 
 
-def still_covered(version,report):
+def still_covered(version,report,*,coverage=None):
     """A resumed qualifier reuses only a continuously observed exact version."""
     anchor=version['journal']
-    if (report.get('ready') is not True or report.get('errors') or report.get('terminal')
-            or report.get('instance')!=anchor['instance']
+    if (report.get('terminal') or report.get('instance')!=anchor['instance']
             or report.get('scope_sha256')!=anchor['scope_sha256']
             or report.get('plan_sha256')!=anchor['plan_sha256']
             or type(report.get('since')) is not int or not 0<=report['since']<=anchor['sequence']
             or type(report.get('sequence')) is not int or report['sequence']<anchor['sequence']):return False
+    if report.get('ready') is not True or report.get('errors'):
+        from vk_nightly_scoped_coverage import ScopedCoverage
+        if not isinstance(coverage,ScopedCoverage):return False
+        try:coverage.check(report,[version['source']])
+        except (ValueError,OSError):return False
     path=Path(version['source'])
     return not any(str(path)==changed or str(path).startswith(changed.rstrip('/')+'/')
                    for changed in report['changed'])
 
 
-def qualify_file(path,*,maximum_bytes,journal,carriers,guard):
+def qualify_file(path,*,maximum_bytes,journal,carriers,guard,coverage=None):
     """carriers(sha,size) returns only externally authenticated typed recipes."""
-    if (journal.get('ready') is not True or journal.get('errors') or journal.get('terminal')
-            or type(journal.get('sequence')) is not int):
+    scoped=None
+    if journal.get('terminal') or type(journal.get('sequence')) is not int:
         raise ValueError('current source qualification needs live continuous tracking')
+    if journal.get('ready') is not True or journal.get('errors'):
+        from vk_nightly_scoped_coverage import ScopedCoverage
+        if not isinstance(coverage,ScopedCoverage):raise ValueError('current source qualification needs live continuous tracking')
+        scoped=coverage.check(journal,[str(path)])
     observed=capture_version(path,HashOnly(),maximum_bytes=maximum_bytes,guard=guard)
     row=dict(kind='file',bytes=observed['bytes'],sha256=observed['sha256'],
              **{k:observed['metadata'][k] for k in ('mode','uid','gid','mtime_ns','xattrs')})
@@ -108,4 +116,5 @@ def qualify_file(path,*,maximum_bytes,journal,carriers,guard):
                 state='qualified-retained-body' if carrier is not None else 'qualified-pending-body',
                 source_payload_bytes_hashed=observed['bytes'],backup_payload_bytes_copied=0,
                 carrier_epoch_preserved=True,original_epoch_repaired=False,
-                namespace_or_whole_baseline_accepted=False)
+                namespace_or_whole_baseline_accepted=False,
+                **({'scoped_qualification_coverage':scoped} if scoped is not None else {}))

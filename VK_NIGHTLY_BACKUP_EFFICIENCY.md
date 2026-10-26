@@ -21,12 +21,13 @@ receipt47b6ed80178a798c36b0eaab2ee2d0b43fbbbd29cf27cdcb90b71997c472b226.
 Null old hashes/original gaps are never turned into carriers.
 
 The first4096 current file versions all matched retained bodies after822632285
-bytes of necessary source hashing. The same durable qualifier now continues
-over all three composed request maps, using keyset continuation and those4096
-completed observations. Its unit is
-`vk-nightly-current-qualification-r2-20261026.service`; controller
-`/tmp/nightly-qualify-composed-r2-20261026.py`; authoritative progress/result/
-failure receipts are `SELECTED_QUALIFICATION_R2_*` in the same private area.
+bytes of necessary source hashing. The durable qualifier continues over all
+three maps using keyset continuation and those4096 observations. R2 stopped
+10:05EDT after47025 further qualifications/80545231834 hashed bytes on one
+Printshop directory-move fault. All completed rows remain. R3 resumes the same
+DB/cursor, unit `vk-nightly-current-qualification-r3-20261026.service`, controller
+`/tmp/nightly-qualify-composed-r3-20261026.py`; receipts are
+`SELECTED_QUALIFICATION_R3_*`. Preserve R2's terminal evidence too.
 Do not restart it or treat the old106.65GB request budget as transfer demand.
 Its finite control budget is1GiB, source-read phase bound160GiB; no backup payload
 is written on OS/work SSD. Control observations are bounded lossless compressed
@@ -40,8 +41,9 @@ transfer can recover exactly previously hashed bytes after later append and
 reuse an independently verified prefix, with full point digest verification.
 That distinct interface leaves ordinary live-stable capture checks unchanged.
 
-The final complete564-case regression run passed(one skip), including the
-qualified-point/tail transfer and eight existing file-version cases. Earlier
+The final complete570-case regression run passed(one skip), including scoped
+recovery after a real rename, qualified-point/tail transfer and existing
+file-version cases. Earlier
 557/560-case runs also passed(one skip). Initial full-suite failure was caused by
 an overlong fixture TMPDIR; both AF_UNIX cases and cron syntax pass at a short
 task-local fixture path. Required `pnpm run format` passed Rust formatting but
@@ -63,6 +65,16 @@ nothing ran. The admitted alternative materialized only in checked RAM tmpfs.
 The healthy readback's own ten-minute timeout was extended to twenty minutes by
 an exact owned-unit drop-in; PID/start and all memory/access/space controls stayed
 unchanged. The original semantic-probe failure and its complete RAM file remain.
+
+Scoped move recovery preserves the raw ready=false/error list. A same-PID/fd
+kernel witness covers114 distinct required roots; certificate
+adb88aa33fa3bf5f58d00092e6f7917445203f867c19a5e04859fa6cf03c91ff
+confines unresolved coverage to the old/new87d4 Printshop worktree closures.
+It allows only individual unaffected file qualifications and reuse, never whole
+baseline/directory/fence acceptance. Unknown faults/overflow/new moves or changed
+root bindings fail closed. Both closures still need current namespace/body
+reconciliation; no raw fault is cleared, required root dropped, or historical
+gap declared recovered. R3 uses the new accepted-base hash lookup too.
 
 Remaining operational gates: finish current qualification and namespace/journal
 closure (newly observed retained-schema97 SQLite file requires the SQL API,

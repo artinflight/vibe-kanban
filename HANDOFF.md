@@ -1,8 +1,9 @@
 # October26 — operational completion in progress
 
-Nightly-owned change tracking is running after v11's natural timeout; no backup
-calendar is enabled. The current qualifier reuses its first4096 observations and
-accepted bodies; follow its existing unit/receipts, never launch a duplicate.
+Nightly tracking is running; no backup calendar is enabled. R2 stopped on a
+Printshop rename after47025 qualifications/80.55GB hashed. R3 resumes its saved
+cursor with a same-observer scoped witness; both Printshop worktrees remain open
+reconciliation requirements. Follow its existing unit/receipts, no duplicate.
 Read the latest section of VK_NIGHTLY_BACKUP_EFFICIENCY.md for exact jobs,
 component indexes, current gaps and required acceptance. The old observer's gap,
 all original restore/carrier epochs and tracked bytecode remain intact.

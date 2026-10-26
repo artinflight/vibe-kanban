@@ -15,9 +15,10 @@ native tool/action details. Prepared display-context and redacted preview fix,
 plus denial of uncorrelated supervised calls. Routing changes (including opt-in)
 were rejected by automatic review and have NOT executed. No live MP action or
 service/settings change occurred. 49 connector +28 installed regressions and
-three standalone Rust preview tests pass; full bridge CI is pending. Local cold
-Cargo build was stopped at3.8GiB SSD free (exit130, not a test pass). Complete
-review/CI, then obtain the explicit routing decision and coordinated release
+three preview/four production bridge tests pass in focused CI at1b4049e6f.
+Standard CI is green:629 Nextest passed/14 skipped,15 scheduling checks and
+Clippy/schema/frontend/Tauri gates pass. Local cold Cargo build stopped at3.8GiB
+SSD free (exit130, not a pass). Obtain the explicit routing decision and release
 authorization described in that guide; never disable genuine security approvals.
 
 Live connector follow-up completed: Seamus explicitly authorized the connector

@@ -22,6 +22,14 @@ pending15:47:26UTC, a roughly13-minute interval. Its notification says only
 proof of human approval, rejection or confirmed timeout. This trace proves one
 wait; it does not quantify every earlier interruption or infer outage coverage.
 
+Read-only inspection found no permission-rule arrays in the usual user settings
+file, and no project `.claude/settings.json` or `settings.local.json` in the MP
+worktree. This is not a complete managed-policy/effective-settings inventory.
+The client also ignores native permission suggestions and approves only the
+current input (`updated_permissions: None`); it must not turn a one-call approval
+into a persistent grant. No previously granted command allowlist was found in
+those inspected files.
+
 The sources explain two independent defects:
 
 1. In SUPERVISED mode, `ClaudeCode::get_hooks` forces `ask` for nearly every tool,
@@ -107,17 +115,30 @@ reader integrations, rollback sources and all subscriptions/credentials.
   request-bound outcomes, schema discovery and retry deduplication.
 - The existing installed-source verifier passes 28 policy/capacity/status
   regressions and exact executor/schema/dispatch/allowlist checks, offline.
-- Three new Rust preview tests pass in a small standalone rustc harness using
-  existing shared serde_json artifacts. This does not verify the full bridge.
-- Four production Claude/Vibe bridge tests are added for real approve/deny/
-  timeout, unchanged inputs/no persistent grants, sensitive previews, invalid
-  contexts and uncorrelated callbacks. CI verification is pending at this receipt.
+- Three new Rust preview tests and standalone strict Clippy pass using existing
+  shared serde_json artifacts, without rebuilding the workspace locally.
+- Final code/CI head `1b4049e6fbbd36d69d2d753926ce7bdd79fbd95a` passes
+  [focused connector acceptance CI](https://github.com/artinflight/vibe-kanban/actions/runs/40362154224):
+  all three preview tests, all four production Claude/Vibe bridge tests, 49
+  connector tests and existing steering fixtures. The bridge exercises real
+  approve/deny/timeout, unchanged inputs/no persistent grants, sensitive and
+  invalid context, execution-ID binding and uncorrelated callback refusal.
+- [Standard CI](https://github.com/artinflight/vibe-kanban/actions/runs/40362154121)
+  is green on that exact head: 629 Nextest cases passed, 14 skipped, all seven
+  new Rust cases passed, 49 connector tests passed, and 15 scheduling checks
+  passed (108 filtered). Backend Clippy, schema checks, Tauri and frontend gates
+  pass. The earlier run hit a new nonminimal-boolean Clippy lint; `e8e07ccd8`
+  fixed it without relaxing lint or changing the redaction checks. The initial
+  run is not reported green. Later receipt edits change documentation only.
+  Private deployment checks requiring `VK_PRIVATE_DEPLOY_KEY` remain skipped
+  and unverified; green standard CI is not live routing/deployment acceptance.
 - Local full bridge command:
   `CARGO_TARGET_DIR=/home/mcp/.local/share/vibe-kanban-green-build/cargo-target CARGO_INCREMENTAL=0 CARGO_PROFILE_DEV_DEBUG=0 CARGO_PROFILE_TEST_DEBUG=0 cargo test --locked --offline -p services --lib claude_ --no-default-features -j 1`.
   A cold dependency rebuild was interrupted with exit130 when the shared SSD had
   only3.8GiB available. This is NOT a passed test. No cleanup, dependency install,
   threshold change or unrelated process stop was performed. The repository's
-  existing provisioned CI must verify the full bridge/standard gates.
+  existing provisioned CI verifies the bridge; it does not turn the interrupted
+  local build into a pass. No further local Cargo build is admitted here.
 
 Live acceptance is still required after authorized activation: the same MP
 session must retain its native identity/model/effort/history/owner, a bounded

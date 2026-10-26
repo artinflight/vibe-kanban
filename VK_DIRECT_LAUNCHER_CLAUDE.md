@@ -7,6 +7,11 @@ to that new issue before implementation. Base: fork staging
 launcher files have been installed. No Vibe backend, global setting, staging
 branch, existing production agent/session or recovery data has been changed.
 
+For the subsequent MP approval investigation, tested source fix and blocked
+routing/activation decision, see [the approval follow-up](VK_CLAUDE_APPROVAL_ROUTING.md).
+Its final code head `1b4049e6f` passes standard and focused CI; it has not been
+installed. The original successful Claude continuation release below is unchanged.
+
 ## October 26 installation and verified Claude continuation
 
 Before installation the live adapter remained CODEX-only, SHA256
@@ -211,12 +216,13 @@ The pure validators use a small internal error type mapped to the existing HTTP
 variants. This resolves the new helpers' strict-lint errors without changing the
 shared API error enum or suppressing lints.
 
-The final code head `7abe4a8726cc5b7f0e94b25f13fc801c7ec11dac` also passed
+The launcher-only code head `7abe4a8726cc5b7f0e94b25f13fc801c7ec11dac` also passed
 [provisioned Test CI](https://github.com/artinflight/vibe-kanban/actions/runs/40317886586):
 622 Nextest cases passed, 14 skipped, plus 15 scheduling-enabled persistence checks,
 Clippy, schemas, frontend and Tauri compile/lint checks.
 [Executor/connector artifact CI](https://github.com/artinflight/vibe-kanban/actions/runs/40317886492)
-passed. Subsequent receipt commits change documentation only. Private remote
+passed. Receipt commits through `bec957555` changed documentation only. The
+subsequent source approval follow-up is linked above. Private remote
 checks requiring `VK_PRIVATE_DEPLOY_KEY` were skipped and remain unverified.
 After the live continuation, the 42 connector tests, 28 baseline regressions,
 exact schema/dispatch/allowlist verifier, `pnpm run format` and

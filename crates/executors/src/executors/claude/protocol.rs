@@ -14,7 +14,7 @@ use crate::{
         ExecutorError,
         claude::{
             client::ClaudeAgentClient,
-            types::{Message, PermissionMode, SDKControlRequest, SDKControlRequestType},
+            types::{Message, SDKControlRequest, SDKControlRequestType},
         },
     },
 };
@@ -86,6 +86,11 @@ impl ProtocolPeer {
                                 }) => {
                                     self.handle_control_request(&client, request_id, request)
                                         .await;
+                                }
+                                Ok(CLIMessage::System { subtype, claude_code_version }) => {
+                                    if subtype == "init" {
+                                        client.observe_runtime_version(claude_code_version.as_deref());
+                                    }
                                 }
                                 Ok(CLIMessage::Result(_)) => {
                                     break;
@@ -209,12 +214,5 @@ impl ProtocolPeer {
     pub async fn interrupt(&self) -> Result<(), ExecutorError> {
         self.send_json(&SDKControlRequest::new(SDKControlRequestType::Interrupt {}))
             .await
-    }
-
-    pub async fn set_permission_mode(&self, mode: PermissionMode) -> Result<(), ExecutorError> {
-        self.send_json(&SDKControlRequest::new(
-            SDKControlRequestType::SetPermissionMode { mode },
-        ))
-        .await
     }
 }

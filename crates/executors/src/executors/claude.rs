@@ -1,5 +1,9 @@
 // SDK submodules
+mod approval_context;
 pub mod client;
+mod permission_boundary;
+#[cfg(test)]
+mod permission_tests;
 pub mod protocol;
 pub mod slash_commands;
 pub mod types;
@@ -29,7 +33,7 @@ use workspace_utils::{
 };
 
 use self::{
-    client::{AUTO_APPROVE_CALLBACK_ID, ClaudeAgentClient, STOP_GIT_CHECK_CALLBACK_ID},
+    client::{ClaudeAgentClient, STOP_GIT_CHECK_CALLBACK_ID},
     protocol::ProtocolPeer,
     types::{ControlRequestType, ControlResponseType, PermissionMode},
 };
@@ -62,7 +66,7 @@ fn base_command(claude_code_router: bool) -> &'static str {
     if claude_code_router {
         "npx -y @musistudio/claude-code-router@1.0.66 code"
     } else {
-        "npx -y @anthropic-ai/claude-code@2.1.62"
+        "npx -y @anthropic-ai/claude-code@2.1.77"
     }
 }
 
@@ -162,18 +166,16 @@ impl ClaudeCode {
         if plan && approvals {
             tracing::warn!("Both plan and approvals are enabled. Plan will take precedence.");
         }
-        if plan || approvals {
-            // Enable bypass at startup, otherwise we cannot change to it after exiting plan mode
-            builder = builder.extend_params(["--permission-prompt-tool=stdio"]);
-            builder = builder.extend_params([format!(
-                "--permission-mode={}",
-                PermissionMode::BypassPermissions
-            )]);
-        } else {
-            builder = builder.extend_params(["--disallowedTools=AskUserQuestion"]);
-        }
+        // Set the effective policy before the process can consume any prompt,
+        // including resumed sessions. Never boot in bypass and change it later.
+        builder = builder.extend_params([
+            "--permission-prompt-tool=stdio".to_owned(),
+            format!("--permission-mode={}", self.permission_mode()),
+        ]);
         if self.dangerously_skip_permissions.unwrap_or(false) {
-            builder = builder.extend_params(["--dangerously-skip-permissions"]);
+            tracing::warn!(
+                "Legacy dangerously_skip_permissions is constrained by Vibe's native permission policy"
+            );
         }
         if let Some(model) = &self.model {
             builder = builder.extend_params(["--model", model]);
@@ -192,16 +194,44 @@ impl ClaudeCode {
             "--replay-user-messages",
         ]);
 
-        apply_overrides(builder, &self.cmd)
+        let builder = apply_overrides(builder, &self.cmd)?;
+        // Custom presets retain their executable, model, effort, rules and env.
+        // Refuse conflicting policy controls instead of silently rewriting them.
+        let command = builder.build_initial()?;
+        let args = command.args();
+        for arg in args {
+            let flag = arg.split('=').next().unwrap_or(arg);
+            if matches!(
+                flag,
+                "--dangerously-skip-permissions" | "--allow-dangerously-skip-permissions"
+            ) {
+                return Err(CommandBuildError::InvalidShellParams(
+                    "Claude custom permission bypass is incompatible with Vibe approval routing"
+                        .into(),
+                ));
+            }
+        }
+        // Exactly one mode and callback transport belong to Vibe. Additional
+        // flags could otherwise override them through last-option-wins parsing.
+        for flag in ["--permission-mode", "--permission-prompt-tool"] {
+            let count = args
+                .iter()
+                .filter(|arg| arg.split('=').next() == Some(flag))
+                .count();
+            if count != 1 {
+                return Err(CommandBuildError::InvalidShellParams(format!(
+                    "Claude custom {flag} conflicts with Vibe approval routing"
+                )));
+            }
+        }
+        Ok(builder)
     }
 
     pub fn permission_mode(&self) -> PermissionMode {
         if self.plan.unwrap_or(false) {
             PermissionMode::Plan
-        } else if self.approvals.unwrap_or(false) {
-            PermissionMode::Default
         } else {
-            PermissionMode::BypassPermissions
+            PermissionMode::Default
         }
     }
 
@@ -217,42 +247,22 @@ impl ClaudeCode {
             );
         }
 
-        // Add PreToolUse hooks based on plan/approvals settings
-        if self.plan.unwrap_or(false) {
-            hooks.insert(
-                "PreToolUse".to_string(),
-                serde_json::json!([
-                    {
-                        "matcher": "^(ExitPlanMode|AskUserQuestion)$",
-                        "hookCallbackIds": ["tool_approval"],
-                    },
-                    {
-                        "matcher": "^(?!(ExitPlanMode|AskUserQuestion)$).*",
-                        "hookCallbackIds": [AUTO_APPROVE_CALLBACK_ID],
-                    }
-                ]),
-            );
-        } else if self.approvals.unwrap_or(false) {
-            hooks.insert(
-                "PreToolUse".to_string(),
-                serde_json::json!([
-                    {
-                        "matcher": "^(?!(Glob|Grep|NotebookRead|Read|Task|TodoWrite)$).*",
-                        "hookCallbackIds": ["tool_approval"],
-                    }
-                ]),
-            );
-        } else {
-            hooks.insert(
-                "PreToolUse".to_string(),
-                serde_json::json!([
-                    {
-                        "matcher": "^AskUserQuestion$",
-                        "hookCallbackIds": ["tool_approval"],
-                    }
-                ]),
-            );
-        }
+        // Ordinary tools must reach Claude's native deny/ask/allow evaluation.
+        // Force only genuinely interactive questions and plan transitions into
+        // the request-bound Vibe callback, even with a broad native allow rule.
+        hooks.insert(
+            "PreToolUse".to_string(),
+            serde_json::json!([
+                {
+                    "matcher": "^(ExitPlanMode|AskUserQuestion)$",
+                    "hookCallbackIds": ["tool_approval"],
+                },
+                {
+                    "matcher": "^(Write|Edit|MultiEdit|NotebookEdit)$",
+                    "hookCallbackIds": [permission_boundary::CALLBACK_ID],
+                }
+            ]),
+        );
 
         Some(serde_json::Value::Object(hooks))
     }
@@ -351,9 +361,10 @@ impl StandardCodingAgentExecutor for ClaudeCode {
         prompt: &str,
         env: &ExecutionEnv,
     ) -> Result<SpawnedChild, ExecutorError> {
+        let current_dir = current_dir.canonicalize()?;
         let command_builder = self.build_command_builder().await?;
         let command_parts = command_builder.build_initial()?;
-        self.spawn_internal(current_dir, prompt, command_parts, env)
+        self.spawn_internal(&current_dir, prompt, command_parts, env)
             .await
     }
 
@@ -365,6 +376,7 @@ impl StandardCodingAgentExecutor for ClaudeCode {
         reset_to_message_id: Option<&str>,
         env: &ExecutionEnv,
     ) -> Result<SpawnedChild, ExecutorError> {
+        let current_dir = current_dir.canonicalize()?;
         let command_builder = self.build_command_builder().await?;
 
         let mut args = vec!["--resume".to_string(), session_id.to_string()];
@@ -377,7 +389,7 @@ impl StandardCodingAgentExecutor for ClaudeCode {
         }
 
         let command_parts = command_builder.build_follow_up(&args)?;
-        self.spawn_internal(current_dir, prompt, command_parts, env)
+        self.spawn_internal(&current_dir, prompt, command_parts, env)
             .await
     }
 
@@ -653,7 +665,6 @@ impl ClaudeCode {
             })?;
 
         let new_stdout = create_stdout_pipe_writer(&mut child)?;
-        let permission_mode = self.permission_mode();
         let hooks = self.get_hooks(env.commit_reminder);
 
         // Create cancellation token for graceful shutdown
@@ -665,14 +676,16 @@ impl ClaudeCode {
         let repo_context = env.repo_context.clone();
         let commit_reminder_prompt = env.commit_reminder_prompt.clone();
         let cancel_for_task = cancel.clone();
+        let permission_root = Some(current_dir.to_path_buf());
         tokio::spawn(async move {
             let log_writer = LogWriter::new(new_stdout);
-            let client = ClaudeAgentClient::new(
+            let client = ClaudeAgentClient::new_scoped(
                 log_writer.clone(),
                 approvals_clone,
                 repo_context,
                 commit_reminder_prompt,
                 cancel_for_task.clone(),
+                permission_root,
             );
             let protocol_peer =
                 ProtocolPeer::spawn(child_stdin, child_stdout, client.clone(), cancel_for_task);
@@ -684,10 +697,6 @@ impl ClaudeCode {
                     .log_raw(&format!("Error: Failed to initialize - {e}"))
                     .await;
                 return;
-            }
-
-            if let Err(e) = protocol_peer.set_permission_mode(permission_mode).await {
-                tracing::warn!("Failed to set permission mode to {permission_mode}: {e}");
             }
 
             // Send user message

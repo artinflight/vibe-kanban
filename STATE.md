@@ -32,6 +32,14 @@ Historical statements describe their dated checkpoint, not present authority.
 - Operational diagnostics, account values and private manifests stay private
   on local/B storage. Publish only reviewed public source. No secrets in Git.
 
+The approved Claude connector files are installed and its explicitly authorized
+service-only restart passed. Dot successfully continued the disposable Claude
+session with exact context/selection and no duplicate job; see
+[T68](VK_DIRECT_LAUNCHER_CLAUDE.md). Cached new-workspace schema refresh and live
+Codex handoff remain unverified. No Vibe backend release is claimed.
+The [MP approval follow-up](VK_CLAUDE_APPROVAL_ROUTING.md) has source-only preview
+and authorized native-routing fixes; coordinated activation remains pending.
+
 ## Topic map and present evidence boundaries
 
 | Area | Read next | Boundary |

@@ -1,3 +1,28 @@
+# Direct launcher Claude support — T68
+
+Branch `vk/695f-vk-direct-launch` starts from fork staging `5b43524ea`.
+The new focused issue `0eb31691-b6e1-406a-a2b9-a4b9bf5ca1f2` (T68) was
+created and linked before code work. Scope: direct connector executor/schema and
+Claude dispatch, plus an explicit idempotent idle-checkpoint Codex handoff.
+See [contract, limits and validation](VK_DIRECT_LAUNCHER_CLAUDE.md).
+Draft PR281 remains open into staging. The approved adapter/launcher files are
+installed and only the connector service was restarted with explicit permission.
+The disposable initial Claude turn and Dot's real existing-session continuation
+both passed, preserving context and Sonnet/low/SUPERVISED selection; exactly two
+model turns completed. Do not replay them. New-workspace cached schema refresh
+and separately authorized backend/migration handoff acceptance remain distinct
+boundaries. No Vibe restart, Staging Check/control, production-session experiment,
+billing/global-setting, merge or recovery-data change occurred.
+
+The MP approval follow-up now implements explicitly authorized native Claude
+permission routing and bounded notification context, retaining genuine owner
+approvals and denials. No global profile or live session changed. See
+[approval evidence](VK_CLAUDE_APPROVAL_ROUTING.md) and the
+[rollout/rollback gates](VK_CLAUDE_APPROVAL_ROLLOUT.md).
+
+The following inherited stream notes describe earlier work, not this branch's
+implementation or release authority.
+
 # Collapsible Issues release stream
 
 Current branch prepares the accepted collapsible issue UI for rebase-merge

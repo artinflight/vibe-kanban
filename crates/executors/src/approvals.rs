@@ -46,6 +46,15 @@ pub trait ExecutorApprovalService: Send + Sync {
     /// Creates a tool approval request. Returns the approval_id immediately.
     async fn create_tool_approval(&self, tool_name: &str) -> Result<String, ExecutorApprovalError>;
 
+    /// Display-only bounded/redacted action context, never a permission grant.
+    async fn create_tool_approval_with_context(
+        &self,
+        tool_name: &str,
+        _context: &str,
+    ) -> Result<String, ExecutorApprovalError> {
+        self.create_tool_approval(tool_name).await
+    }
+
     /// Creates a question approval request. Returns the approval_id immediately.
     async fn create_question_approval(
         &self,

@@ -3,7 +3,13 @@ on:
   pull_request:
     branches: [staging]
     paths:
-      - 'crates/executors/src/executors/codex/client.rs'
+      - 'crates/executors/src/executors/codex/**'
+      - 'crates/executors/src/executors/codex.rs'
+      - 'crates/executors/src/executors/claude.rs'
+      - 'crates/executors/src/executors/claude/**'
+      - 'crates/executors/src/approvals.rs'
+      - 'crates/services/src/services/approvals/**'
+      - 'crates/services/src/services/approvals.rs'
       - 'scripts/dot-connector/**'
       - '.github/workflows/dot-steering-acceptance.yml'
   workflow_dispatch:
@@ -25,12 +31,27 @@ jobs:
         with:
           ref: ${{ env.VK_EXPECTED_SOURCE }}
           persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
       - uses: ./.github/actions/cargo-checks-common-setup
         with:
           toolchain: nightly-2025-12-04
           cache-key: backend-test-Linux-X64-ubuntu-24.04
       - name: Verify steering protocol fixture without account access
         run: cargo test --locked -p executors --lib steering_
+      - name: Verify Claude approval preview and genuine consent bridge
+        run: |
+          cargo test --locked -p executors --lib approval_context::tests
+          cargo test --locked -p executors --lib permission_tests
+          cargo test --locked -p executors --lib permission_boundary::tests
+          cargo test --locked -p executors --lib native_review_
+          cargo test --locked -p services --lib claude_approval_tests -- --test-threads=1
+      - name: Verify pinned Claude native permissions without provider access
+        run: |
+          npm install --prefix "$RUNNER_TEMP/claude-native-legacy" --ignore-scripts --no-audit --no-fund @anthropic-ai/claude-code@2.1.62
+          npm install --prefix "$RUNNER_TEMP/claude-native-fixture" --ignore-scripts --no-audit --no-fund @anthropic-ai/claude-code@2.1.77
+          python3 -B scripts/dot-connector/verify_claude_native_permissions.py --node "$(command -v node)" --cli "$RUNNER_TEMP/claude-native-fixture/node_modules/@anthropic-ai/claude-code/cli.js" --legacy-cli "$RUNNER_TEMP/claude-native-legacy/node_modules/@anthropic-ai/claude-code/cli.js"
       - name: Test connector and overlay preparation
         run: python3 -B -m unittest discover -s scripts/dot-connector -p 'test_*.py' -v
       - name: Export source-bound executor test binary

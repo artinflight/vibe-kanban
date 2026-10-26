@@ -1,4 +1,6 @@
 #[cfg(test)]
+mod claude_approval_tests;
+#[cfg(test)]
 mod elicitation_tests;
 pub mod executor_approvals;
 

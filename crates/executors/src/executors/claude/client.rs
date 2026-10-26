@@ -1,4 +1,10 @@
-use std::sync::Arc;
+use std::{
+    path::PathBuf,
+    sync::{
+        Arc,
+        atomic::{AtomicBool, Ordering},
+    },
+};
 
 use tokio_util::sync::CancellationToken;
 use workspace_utils::approvals::{ApprovalStatus, QuestionStatus};
@@ -22,7 +28,6 @@ use crate::{
 
 const EXIT_PLAN_MODE_NAME: &str = "ExitPlanMode";
 const ASK_USER_QUESTION_NAME: &str = "AskUserQuestion";
-pub const AUTO_APPROVE_CALLBACK_ID: &str = "AUTO_APPROVE_CALLBACK_ID";
 pub const STOP_GIT_CHECK_CALLBACK_ID: &str = "STOP_GIT_CHECK_CALLBACK_ID";
 // Prefix for denial messages from the user, mirrors claude code CLI behavior
 const TOOL_DENY_PREFIX: &str = "The user doesn't want to proceed with this tool use. The tool use was rejected (eg. if it was a file edit, the new_string was NOT written to the file). To tell you how to proceed, the user said: ";
@@ -31,10 +36,11 @@ const TOOL_DENY_PREFIX: &str = "The user doesn't want to proceed with this tool 
 pub struct ClaudeAgentClient {
     log_writer: LogWriter,
     approvals: Option<Arc<dyn ExecutorApprovalService>>,
-    auto_approve: bool, // true when approvals is None
     repo_context: RepoContext,
     commit_reminder_prompt: String,
     cancel: CancellationToken,
+    permission_root: Option<PathBuf>,
+    native_permissions_qualified: AtomicBool,
 }
 
 impl ClaudeAgentClient {
@@ -46,15 +52,44 @@ impl ClaudeAgentClient {
         commit_reminder_prompt: String,
         cancel: CancellationToken,
     ) -> Arc<Self> {
-        let auto_approve = approvals.is_none();
-        Arc::new(Self {
+        Self::new_scoped(
             log_writer,
             approvals,
-            auto_approve,
             repo_context,
             commit_reminder_prompt,
             cancel,
+            None,
+        )
+    }
+
+    pub fn new_scoped(
+        log_writer: LogWriter,
+        approvals: Option<Arc<dyn ExecutorApprovalService>>,
+        repo_context: RepoContext,
+        commit_reminder_prompt: String,
+        cancel: CancellationToken,
+        permission_root: Option<PathBuf>,
+    ) -> Arc<Self> {
+        Arc::new(Self {
+            log_writer,
+            approvals,
+            repo_context,
+            commit_reminder_prompt,
+            cancel,
+            permission_root: permission_root.and_then(|root| root.canonicalize().ok()),
+            native_permissions_qualified: AtomicBool::new(false),
         })
+    }
+
+    pub fn observe_runtime_version(&self, version: Option<&str>) {
+        let qualified = version == Some(super::permission_boundary::QUALIFIED_VERSION);
+        self.native_permissions_qualified
+            .store(qualified, Ordering::Release);
+        if !qualified {
+            tracing::warn!(
+                "Claude runtime not qualified for scoped edit authorization; retaining native Default owner fallback"
+            );
+        }
     }
 
     async fn handle_approval(
@@ -66,9 +101,14 @@ impl ClaudeAgentClient {
         let approval_service = self
             .approvals
             .as_ref()
+            .filter(|service| service.supports_interactive_approvals())
             .ok_or(ExecutorApprovalError::ServiceUnavailable)?;
 
-        let approval_id = match approval_service.create_tool_approval(&tool_name).await {
+        let context = super::approval_context::summary(&tool_name, &tool_input);
+        let approval_id = match approval_service
+            .create_tool_approval_with_context(&tool_name, &context)
+            .await
+        {
             Ok(id) => id,
             Err(err) => {
                 self.handle_approval_error(&tool_name, &tool_use_id, &err)
@@ -113,7 +153,7 @@ impl ClaudeAgentClient {
                         updated_input: tool_input,
                         updated_permissions: Some(vec![PermissionUpdate {
                             update_type: PermissionUpdateType::SetMode,
-                            mode: Some(PermissionMode::BypassPermissions),
+                            mode: Some(PermissionMode::Default),
                             destination: Some(PermissionUpdateDestination::Session),
                             rules: None,
                             behavior: None,
@@ -151,6 +191,7 @@ impl ClaudeAgentClient {
         let approval_service = self
             .approvals
             .as_ref()
+            .filter(|service| service.supports_interactive_approvals())
             .ok_or(ExecutorApprovalError::ServiceUnavailable)?;
 
         let question_count = tool_input
@@ -283,6 +324,7 @@ impl ClaudeAgentClient {
         _permission_suggestions: Option<Vec<PermissionUpdate>>,
         tool_use_id: Option<String>,
     ) -> Result<PermissionResult, ExecutorError> {
+        let tool_use_id = tool_use_id.filter(|id| !id.trim().is_empty());
         if tool_name == ASK_USER_QUESTION_NAME {
             if let Some(latest_tool_use_id) = tool_use_id {
                 return self
@@ -298,24 +340,19 @@ impl ClaudeAgentClient {
                 });
             }
         }
-        if self.auto_approve {
-            Ok(PermissionResult::Allow {
-                updated_input: input,
-                updated_permissions: None,
-            })
-        } else if let Some(latest_tool_use_id) = tool_use_id {
+        if let Some(latest_tool_use_id) = tool_use_id {
             self.handle_approval(latest_tool_use_id, tool_name, input)
                 .await
         } else {
-            // Auto approve tools with no matching tool_use_id
-            // tool_use_id is undocumented so this may not be possible
+            // Missing correlation cannot establish permission for a supervised
+            // call. Keep it denied instead of silently bypassing the bridge.
             tracing::warn!(
                 "No tool_use_id available for tool '{}', cannot request approval",
                 tool_name
             );
-            Ok(PermissionResult::Allow {
-                updated_input: input,
-                updated_permissions: None,
+            Ok(PermissionResult::Deny {
+                message: "Cannot request approval without a tool_use_id".to_string(),
+                interrupt: Some(false),
             })
         }
     }
@@ -324,7 +361,7 @@ impl ClaudeAgentClient {
         &self,
         callback_id: String,
         input: serde_json::Value,
-        _tool_use_id: Option<String>,
+        tool_use_id: Option<String>,
     ) -> Result<serde_json::Value, ExecutorError> {
         // Stop hook git check - uses `decision` (approve/block) and `reason` fields
         if callback_id == STOP_GIT_CHECK_CALLBACK_ID {
@@ -346,36 +383,57 @@ impl ClaudeAgentClient {
             });
         }
 
-        if self.auto_approve {
+        if callback_id == super::permission_boundary::CALLBACK_ID {
+            let event_id = input.get("tool_use_id").and_then(serde_json::Value::as_str);
+            let correlated = tool_use_id
+                .as_deref()
+                .or(event_id)
+                .is_some_and(|id| !id.trim().is_empty())
+                && tool_use_id
+                    .as_deref()
+                    .zip(event_id)
+                    .is_none_or(|(a, b)| a == b);
+            if !correlated {
+                return Ok(serde_json::json!({"hookSpecificOutput": {
+                    "hookEventName":"PreToolUse", "permissionDecision":"deny",
+                    "permissionDecisionReason":"Cannot correlate workspace edit authorization"
+                }}));
+            }
+            if !self.native_permissions_qualified.load(Ordering::Acquire) {
+                return Ok(serde_json::json!({}));
+            }
+            // This is a fast per-call scope check, never an owner wait or native
+            // allow rule. Native explicit deny/ask evaluation still follows it.
+            return Ok(
+                if super::permission_boundary::allows_workspace_edit(
+                    self.permission_root.as_deref(),
+                    &input,
+                ) {
+                    serde_json::json!({"hookSpecificOutput": {
+                        "hookEventName":"PreToolUse", "permissionDecision":"allow",
+                        "permissionDecisionReason":"Routine edit within this execution's canonical workspace"
+                    }})
+                } else {
+                    // Default mode will consult native rules/the owner. If this
+                    // callback fails, the CLI also abstains: no grant remains behind.
+                    serde_json::json!({})
+                },
+            );
+        }
+        if callback_id == "tool_approval" {
+            // Registered only for questions and plan exits. Ordinary native
+            // decisions are not promoted to manual approval by a blanket hook.
             Ok(serde_json::json!({
                 "hookSpecificOutput": {
                     "hookEventName": "PreToolUse",
-                    "permissionDecision": "allow",
-                    "permissionDecisionReason": "Auto-approved by SDK"
+                    "permissionDecision": "ask",
+                    "permissionDecisionReason": "User interaction required"
                 }
             }))
         } else {
-            match callback_id.as_str() {
-                AUTO_APPROVE_CALLBACK_ID => Ok(serde_json::json!({
-                    "hookSpecificOutput": {
-                        "hookEventName": "PreToolUse",
-                        "permissionDecision": "allow",
-                        "permissionDecisionReason": "Approved by SDK"
-                    }
-                })),
-                _ => {
-                    // Hook callbacks is only used to forward approval requests to can_use_tool.
-                    // This works because `ask` decision in hook callback triggers a can_use_tool request
-                    // https://docs.claude.com/en/api/agent-sdk/permissions#permission-flow-diagram
-                    Ok(serde_json::json!({
-                        "hookSpecificOutput": {
-                            "hookEventName": "PreToolUse",
-                            "permissionDecision": "ask",
-                            "permissionDecisionReason": "Forwarding to canusetool service"
-                        }
-                    }))
-                }
-            }
+            // Abstain, including obsolete auto-approve callbacks. Never grant
+            // permission or override native deny/ask rules from an unknown hook.
+            Ok(serde_json::json!({}))
         }
     }
 

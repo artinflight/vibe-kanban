@@ -19,6 +19,11 @@ pub enum CLIMessage {
     ControlCancelRequest {
         request_id: String,
     },
+    System {
+        subtype: String,
+        #[serde(default)]
+        claude_code_version: Option<String>,
+    },
     Result(serde_json::Value),
     #[serde(untagged)]
     Other(serde_json::Value),
@@ -70,7 +75,11 @@ pub enum ControlRequestType {
         input: Value,
         #[serde(skip_serializing_if = "Option::is_none")]
         permission_suggestions: Option<Vec<PermissionUpdate>>,
-        #[serde(skip_serializing_if = "Option::is_none")]
+        #[serde(
+            rename = "blocked_path",
+            alias = "blocked_paths",
+            skip_serializing_if = "Option::is_none"
+        )]
         blocked_paths: Option<String>,
         #[serde(skip_serializing_if = "Option::is_none")]
         tool_use_id: Option<String>,

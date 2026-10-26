@@ -165,6 +165,18 @@ impl ExecutorApprovalService for ExecutorApprovalBridge {
         self.create_internal(tool_name, false, None, None).await
     }
 
+    async fn create_tool_approval_with_context(
+        &self,
+        tool_name: &str,
+        context: &str,
+    ) -> Result<String, ExecutorApprovalError> {
+        if context.trim().is_empty() || context.len() > 16_384 {
+            return Err(ExecutorApprovalError::ServiceUnavailable);
+        }
+        self.create_internal(tool_name, false, None, Some(context.to_owned()))
+            .await
+    }
+
     async fn create_question_approval(
         &self,
         tool_name: &str,

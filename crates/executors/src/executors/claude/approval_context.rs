@@ -5,42 +5,48 @@ use serde_json::{Map, Value, json};
 const MAX_PREVIEW_BYTES: usize = 4096;
 
 fn safe_text(text: &str) -> bool {
-    let lower = text.to_ascii_lowercase();
-    text.len() <= MAX_PREVIEW_BYTES
-        && !text.chars().any(|c| {
+    if text.len() > MAX_PREVIEW_BYTES
+        || text.chars().any(|c| {
             c.is_control() || matches!(c, '\u{202a}'..='\u{202e}' | '\u{2066}'..='\u{2069}')
         })
-        && ![
-            "password",
-            "passwd",
-            "secret",
-            "token",
-            "api_key",
-            "api-key",
-            "apikey",
-            "authorization",
-            "cookie",
-            "credential",
-            "private_key",
-            "private-key",
-            "bearer ",
-            "-----begin",
-            "sk-",
-            "ghp_",
-            "github_pat_",
-            "x-amz-",
-            "signature=",
-            "sig=",
-            "sas=",
-        ]
-        .iter()
-        .any(|part| lower.contains(part))
-        && !(text.contains("://")
-            && text.split("://").skip(1).any(|rest| {
-                rest.split('/')
-                    .next()
-                    .is_some_and(|host| host.contains('@'))
-            }))
+    {
+        return false;
+    }
+    let lower = text.to_ascii_lowercase();
+    if [
+        "password",
+        "passwd",
+        "secret",
+        "token",
+        "api_key",
+        "api-key",
+        "apikey",
+        "authorization",
+        "cookie",
+        "credential",
+        "private_key",
+        "private-key",
+        "bearer ",
+        "-----begin",
+        "sk-",
+        "ghp_",
+        "github_pat_",
+        "x-amz-",
+        "signature=",
+        "sig=",
+        "sas=",
+    ]
+    .iter()
+    .any(|part| lower.contains(part))
+    {
+        return false;
+    }
+
+    !text.split("://").skip(1).any(|rest| {
+        rest.split('/')
+            .next()
+            .is_some_and(|host| host.contains('@'))
+    })
 }
 
 pub(super) fn summary(tool: &str, input: &Value) -> String {

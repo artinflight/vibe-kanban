@@ -5,8 +5,11 @@ The new focused issue `0eb31691-b6e1-406a-a2b9-a4b9bf5ca1f2` (T68) was
 created and linked before code work. Scope: direct connector executor/schema and
 Claude dispatch, plus an explicit idempotent idle-checkpoint Codex handoff.
 See [contract, limits and validation](VK_DIRECT_LAUNCHER_CLAUDE.md).
-Prepare a draft PR into staging only. No deployment, restart, global settings,
-Staging Check, production agent, billing or recovery-data changes are authorized.
+Draft PR281 remains open into staging. The October 26 follow-up requests an
+operational connector release; automatic review blocked the prepared live install
+pending explicit connector-only approval. No Vibe restart, Staging Check/control,
+production-session experiment, billing/global-setting, merge or recovery-data
+change is part of the proposed connector-only action.
 
 The following inherited stream notes describe earlier work, not this branch's
 implementation or release authority.

@@ -9,6 +9,17 @@ repository overlay. Native Rust MCP already supports Claude. The new backend
 handoff requires the migration and existing serialized admission; long/incomplete
 history, unknown past approval settings and pending work fail closed.
 
+Live-release follow-up: the adapter is still the original CODEX-only file; the
+committed overlay was not installed. A hash-pinned private SSD package and rollback
+copy are prepared; real adapter discovery/read-only calls and 42+28 tests pass.
+Automatic review rejected live replacement, citing the earlier no-deployment
+boundary. Explicit connector-only install and two disposable Sonnet/low turns are
+pending approval. Verified unchanged live hash and HTTP200 health/readiness; no
+restart/model call/merge/global-setting or recovery-data change. Read the contract's
+live-preparation section before acting. Current execution is
+`1a22bd64-ede9-40a1-a9f0-759f65e14d74`; failed `72c2ade5` Git observation remains
+retained and is not eligible for the documented completed-owner repair.
+
 Validation follow-up: 14 focused Rust handoff fixtures, 42 connector tests and
 28 installed-source regressions plus schema/dispatch/allowlist checks pass offline.
 The final bounded server-library run on code head `888518dcb0` uses one process

@@ -6,6 +6,53 @@ implementation. Base: fork staging `5b43524ea35b2eb5dd80d0881dc8445489f4442f`.
 No live adapter, Vibe instance, global setting, staging branch, existing agent,
 production Claude session, or recovery data is changed by this preparation.
 
+## October 26 live release preparation
+
+The operator requested making ordinary Claude start/continue operational. Live
+inspection confirms the installation gap: `/home/mcp/code/vibe-dot-connector/adapter.py`
+still has SHA256
+`ed2de6dba65cce7d8e43c7260126b3f119f451bc52662ec4ddbb9beb82b5ca84`,
+advertises CODEX only, and rejects Claude in its follow-up resolver. The committed
+overlay was never installed. The existing backend already supports native Claude;
+this ordinary dispatch repair does not require a Vibe/backend restart or deploying
+the separate guarded Codex-handoff route.
+
+A private mounted-SSD release package retains the exact original adapter, prepared
+candidate, discovery comparison and manifest. Expected installed adapter SHA256:
+`231808d27e14546ecd532cba3e517091507359828a8dcaada6282450ca43a217`;
+launcher module SHA256:
+`dc35326c84fcfce2e347bc8f40656bc658d8ad61e71220148129badd5ade8397`.
+The 42 connector tests and 28 installed-source regressions pass again. Fresh stdio
+adapter discovery against the actual backend returns 36 baseline tools versus 38
+candidate tools; only the two guarded handoff tools are added, and Claude appears
+in the workspace executor schema. Both adapters pass a read-only project lookup.
+The connector health/readiness endpoints return HTTP200.
+
+**Installation is blocked, not completed.** Automatic approval review rejected
+replacing the live adapter and adding `launcher.py`, interpreting the earlier
+no-deployment/no-live-handoff instruction as still applicable. The command was
+rejected before execution; readback proves the original hash remains installed
+and `launcher.py` is absent. Explicit connector-only installation plus two short
+supervised Sonnet/low acceptance turns was requested. No service restart, live
+model turn, production-session prompt, billing/configuration change, merge or
+recovery-data modification occurred.
+
+After explicit approval, publish the module before atomically replacing the
+hash-matched adapter; retain permissions and the rollback copy. Verify discovery
+through the actual Dot connector, then use a disposable T68 workspace for an
+initial marker and a continuation that recalls it without restating it. Reconcile
+all returned IDs before another write, retain selected executor/model/effort and
+approval settings, and stop on uncertain launch or quota refusal. Do not replay
+writes or experiment on another owner's production Claude session. The separate
+Codex-handoff route must continue failing closed on an incompatible backend.
+
+The interrupted execution `72c2ade5-d214-404f-b94f-375c3523ec1b` retains a failed
+Git observation (`affected repository inventory differs from admitted turn`).
+The scoped repair requires a completed, non-dropped owner and genuine idle
+boundary; the interrupted owner is failed and this workspace is running. No
+repair, status rewrite or deletion was attempted. Source PR evidence is separate
+from that unproven native observation.
+
 ## Correct layer and exact executor behavior
 
 The direct connector intercepts `start_workspace` and `run_session_prompt` before

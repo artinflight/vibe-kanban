@@ -69,6 +69,9 @@ class Store:
           workspace TEXT NOT NULL, request TEXT NOT NULL, reply_to TEXT,
           hash TEXT NOT NULL, created REAL NOT NULL,
           UNIQUE(thread,seq), UNIQUE(thread,role,request), UNIQUE(reply_to));
+        CREATE TABLE IF NOT EXISTS owner_reply_targets(
+          message TEXT PRIMARY KEY REFERENCES messages(id),
+          target TEXT NOT NULL REFERENCES messages(id));
         CREATE TABLE IF NOT EXISTS dot_reply_state(
           message TEXT PRIMARY KEY REFERENCES messages(id),
           seen INTEGER NOT NULL DEFAULT 0,
@@ -76,6 +79,10 @@ class Store:
           initial_attention_kind TEXT CHECK(initial_attention_kind IN ('question','action')),
           resolved INTEGER NOT NULL DEFAULT 0,
           updated REAL NOT NULL);
+        CREATE TABLE IF NOT EXISTS dispatch_notes(
+          owner TEXT NOT NULL,execution TEXT NOT NULL,workspace TEXT NOT NULL,
+          session TEXT NOT NULL,kind TEXT NOT NULL,thread TEXT NOT NULL,message TEXT NOT NULL,
+          PRIMARY KEY(owner,execution),UNIQUE(message));
         CREATE TABLE IF NOT EXISTS bindings(
           thread TEXT PRIMARY KEY REFERENCES threads(id),
           subscription TEXT NOT NULL, active INTEGER NOT NULL, expires REAL NOT NULL);
@@ -86,6 +93,11 @@ class Store:
           next_try REAL NOT NULL DEFAULT 0, lease_until REAL NOT NULL DEFAULT 0,
           subscription TEXT, http_status INTEGER, updated REAL NOT NULL);
         """)
+
+        # Durable owner override: automatic visibility reads must not undo it.
+        with self.transaction():
+            if "manual_unread" not in {r[1] for r in self.db.execute("PRAGMA table_info(dot_reply_state)")}:
+                self.db.execute("ALTER TABLE dot_reply_state ADD COLUMN manual_unread INTEGER NOT NULL DEFAULT 0")
 
         # Legacy Dot replies become unread once. Reopening never resets state.
         self.db.execute("INSERT OR IGNORE INTO dot_reply_state(message,updated) SELECT id,created FROM messages WHERE role='dot'")
@@ -148,7 +160,37 @@ class Store:
                                (principal.owner, row["project"], row["issue"], workspace)).fetchone():
             raise Rejected("Workspace is not authorized for this thread")
 
-    def append(self, principal, thread, workspace, request, body, reply_to=None, event_id=None, attention=None):
+    def _owner_reply_target(self, principal, thread, workspace, target):
+        if target is None:
+            return None
+        if principal.role != 'owner' or not isinstance(target, str) or not target or len(target) > 200:
+            raise Rejected('Invalid owner reply target')
+        # Conversation is shared across issue workspaces; dispatch notes are not.
+        row = self.db.execute("""SELECT m.id FROM messages m LEFT JOIN dispatch_notes d
+          ON d.message=m.id AND d.thread=m.thread AND d.owner=? AND d.workspace=m.workspace
+          WHERE m.id=? AND m.thread=? AND (d.message IS NULL OR d.workspace=?)""",
+          (principal.owner, target, thread, workspace)).fetchone()
+        if not row:
+            raise Rejected('Reply target is unavailable in this conversation')
+        return row['id']
+
+    def _owner_reply_reference(self, thread, message, display_workspace=None):
+        # The live connector also has read-only readers of pre-upgrade snapshots.
+        if not self.db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='owner_reply_targets'").fetchone():
+            return None
+        row = self.db.execute("""SELECT t.id,t.seq,t.role,t.body,t.created,d.workspace AS dispatch_workspace
+          FROM owner_reply_targets r JOIN messages t ON t.id=r.target JOIN messages m ON m.id=r.message
+          LEFT JOIN dispatch_notes d ON d.message=t.id AND d.thread=t.thread AND d.workspace=t.workspace
+            AND d.owner=(SELECT owner FROM threads WHERE id=t.thread)
+          WHERE r.message=? AND m.thread=? AND t.thread=m.thread""", (message, thread)).fetchone()
+        if not row:
+            return None
+        unavailable = display_workspace is not None and row['dispatch_workspace'] is not None and row['dispatch_workspace'] != display_workspace
+        return {'id':row['id'], 'seq':row['seq'], 'role':row['role'], 'created':row['created'],
+                'excerpt':'' if unavailable else row['body'][:1000], 'truncated':len(row['body']) > 1000,
+                'unavailable':unavailable}
+
+    def append(self, principal, thread, workspace, request, body, reply_to=None, event_id=None, attention=None, in_reply_to=None):
         self._principal(principal, ("owner", "dot"))
         if not isinstance(body, str) or not body.strip() or len(body.encode()) > 60000:
             raise Rejected("Message must contain 1..60000 UTF-8 bytes")
@@ -168,11 +210,13 @@ class Store:
                                          (reply_to, thread)).fetchone()
                 if not target or target["event"] != event_id or target["workspace"] != workspace:
                     raise Rejected("Reply must match the exact owner message/event/workspace")
+            target_id = self._owner_reply_target(principal, thread, workspace, in_reply_to)
             digest = hashlib.sha256(body.encode()).hexdigest()
             old = self.db.execute("SELECT * FROM messages WHERE thread=? AND role=? AND request=?",
                                   (thread, principal.role, request)).fetchone()
             if old:
-                if (old["hash"], old["workspace"], old["reply_to"]) != (digest, workspace, reply_to):
+                old_target = self.db.execute('SELECT target FROM owner_reply_targets WHERE message=?', (old['id'],)).fetchone()
+                if (old["hash"], old["workspace"], old["reply_to"], old_target['target'] if old_target else None) != (digest, workspace, reply_to, target_id):
                     raise Rejected("Idempotency key conflict")
                 # Idempotency compares the original annotation, not subsequently
                 # resolved state. A retry cannot reopen an action or mark it unread.
@@ -186,6 +230,8 @@ class Store:
             mid, now = str(uuid.uuid4()), self.clock()
             self.db.execute("INSERT INTO messages VALUES (?,?,?,?,?,?,?,?,?,?)",
                             (mid, thread, seq, principal.role, body, workspace, request, reply_to, digest, now))
+            if target_id is not None:
+                self.db.execute('INSERT INTO owner_reply_targets VALUES (?,?)', (mid, target_id))
             if principal.role=='dot':
                 self.db.execute('INSERT INTO dot_reply_state(message,attention_kind,initial_attention_kind,updated) VALUES (?,?,?,?)',(mid,attention,attention,now))
             if principal.role == "owner":
@@ -198,11 +244,13 @@ class Store:
                                     "intent": "sidechat_reply_requested",
                                     "reply_scope": "same_thread_only",
                                     "message_sha256": digest}, "cursor": None}
+                if target_id is not None:
+                    payload['data']['in_reply_to'] = target_id
                 self.db.execute("INSERT INTO outbox(event,message,thread,payload,updated) VALUES (?,?,?,?,?)",
                                 (eid, mid, thread, canonical(payload), now))
             return dict(self.db.execute("SELECT * FROM messages WHERE id=?", (mid,)).fetchone())
 
-    def read(self, principal, thread, after=0, limit=50, through=None):
+    def read(self, principal, thread, after=0, limit=50, through=None, display_workspace=None):
         self._principal(principal, ("owner", "dot"))
         scope = self._thread(principal, thread)
         if type(after) is not int or after < 0 or type(limit) is not int or not 1 <= limit <= 100:
@@ -212,14 +260,33 @@ class Store:
             through = high
         if type(through) is not int or through < after or through > high:
             raise Rejected("Invalid snapshot")
-        rows = [dict(r) for r in self.db.execute("SELECT * FROM messages WHERE thread=? AND seq>? AND seq<=? ORDER BY seq LIMIT ?",
-                                                (thread, after, through, limit + 1))]
+        if display_workspace is not None:
+            self._workspace(principal, scope, display_workspace)
+        rows = [dict(r) for r in self.db.execute("""SELECT m.*,d.workspace AS dispatch_workspace,d.execution AS dispatch_execution
+            FROM messages m LEFT JOIN dispatch_notes d
+              ON d.message=m.id AND d.thread=m.thread AND d.owner=? AND d.workspace=m.workspace
+            WHERE m.thread=? AND m.seq>? AND m.seq<=?
+              AND (? IS NULL OR d.message IS NULL OR d.workspace=?)
+            ORDER BY m.seq LIMIT ?""",
+            (principal.owner, thread, after, through, display_workspace, display_workspace, limit+1))]
         more = len(rows) > limit
         rows = rows[:limit]
         for message in rows:
+            if message['role'] == 'owner':
+                reference = self._owner_reply_reference(thread, message['id'], display_workspace)
+                if reference:
+                    message['in_reply_to'] = reference['id']
+                    message['reply_reference'] = reference
+            dispatch_workspace=message.pop('dispatch_workspace')
+            dispatch_execution=message.pop('dispatch_execution')
+            if dispatch_workspace:
+                message['dispatch_note']={'workspace_id':dispatch_workspace,'execution_id':dispatch_execution}
+                from dispatch_attribution import presentation
+                message['dispatch_note'].update(presentation(self, principal, message))
             if message['role']=='dot':
-                state=self.db.execute('SELECT seen,attention_kind,resolved FROM dot_reply_state WHERE message=?',(message['id'],)).fetchone()
+                state=self.db.execute('SELECT seen,manual_unread,attention_kind,resolved FROM dot_reply_state WHERE message=?',(message['id'],)).fetchone()
                 message['seen']=bool(state and state['seen'])
+                message['manual_unread']=bool(state and state['manual_unread'])
                 message['attention']={'kind':state['attention_kind'],'resolved':bool(state['resolved'])} if state and state['attention_kind'] else None
             if message["role"] == "owner":
                 message["owner_intent"] = {
@@ -239,15 +306,41 @@ class Store:
         allowed=set(projects)
         rows=self.db.execute("""SELECT t.project,t.issue,
           SUM(CASE WHEN s.seen=0 THEN 1 ELSE 0 END) AS unread_count,
+          SUM(CASE WHEN s.attention_kind IS NOT NULL AND s.resolved=0 THEN 1 ELSE 0 END) AS needs_attention_count,
+          SUM(CASE WHEN bound.workspace IS NULL AND s.seen=0 THEN 1 ELSE 0 END) AS shared_unread_count,
+          SUM(CASE WHEN bound.workspace IS NULL AND s.attention_kind IS NOT NULL AND s.resolved=0 THEN 1 ELSE 0 END) AS shared_needs_attention_count
+          FROM threads t JOIN messages m ON m.thread=t.id AND m.role='dot'
+          JOIN dot_reply_state s ON s.message=m.id LEFT JOIN scopes bound
+            ON bound.owner=t.owner AND bound.project=t.project AND bound.issue=t.issue AND bound.workspace=m.workspace
+          WHERE t.owner=? GROUP BY t.project,t.issue""",(principal.owner,)).fetchall()
+        # Shared history does not imply shared notification scope. Stored message
+        # destinations must match an existing trusted scope; never infer a target
+        # from dispatch provenance, siblings, text or a legacy unknown workspace.
+        workspace_rows=self.db.execute("""SELECT t.project,t.issue,m.workspace,
+          SUM(CASE WHEN s.seen=0 THEN 1 ELSE 0 END) AS unread_count,
           SUM(CASE WHEN s.attention_kind IS NOT NULL AND s.resolved=0 THEN 1 ELSE 0 END) AS needs_attention_count
           FROM threads t JOIN messages m ON m.thread=t.id AND m.role='dot'
-          JOIN dot_reply_state s ON s.message=m.id WHERE t.owner=?
-          GROUP BY t.project,t.issue""",(principal.owner,)).fetchall()
+          JOIN dot_reply_state s ON s.message=m.id JOIN scopes bound
+            ON bound.owner=t.owner AND bound.project=t.project AND bound.issue=t.issue AND bound.workspace=m.workspace
+          WHERE t.owner=? AND t.issue!=('project:'||t.project)
+          GROUP BY t.project,t.issue,m.workspace""",(principal.owner,)).fetchall()
         return {'issues':[{'project_id':r['project'],'issue_id':r['issue'],
-          'unread_count':r['unread_count'],'needs_attention_count':r['needs_attention_count']}
+          'unread_count':r['unread_count'],'needs_attention_count':r['needs_attention_count'],
+          'shared_unread_count':r['shared_unread_count'],'shared_needs_attention_count':r['shared_needs_attention_count']}
           for r in rows if r['project'] in allowed and not r['issue'].startswith('project:') and (r['unread_count'] or r['needs_attention_count'])],
+          'workspaces':[{'project_id':r['project'],'issue_id':r['issue'],'workspace_id':r['workspace'],
+          'unread_count':r['unread_count'],'needs_attention_count':r['needs_attention_count']}
+          for r in workspace_rows if r['project'] in allowed and (r['unread_count'] or r['needs_attention_count'])],
           'projects':[{'project_id':r['project'],'unread_count':r['unread_count'],'needs_attention_count':r['needs_attention_count']}
           for r in rows if r['project'] in allowed and r['issue']=='project:'+r['project'] and (r['unread_count'] or r['needs_attention_count'])]}
+
+    def _reply_for_workspace(self, principal, thread, workspace, message):
+        # Genuine conversation remains issue-shared; verified dispatch notes do not.
+        return self.db.execute("""SELECT m.workspace,s.attention_kind,s.resolved
+          FROM messages m JOIN dot_reply_state s ON s.message=m.id LEFT JOIN dispatch_notes d
+            ON d.message=m.id AND d.thread=m.thread AND d.owner=? AND d.workspace=m.workspace
+          WHERE m.id=? AND m.thread=? AND m.role='dot' AND (d.message IS NULL OR d.workspace=?)""",
+          (principal.owner,message,thread,workspace)).fetchone()
 
     def seen_replies(self, principal, thread, workspace, messages):
         self._principal(principal,('owner',))
@@ -256,11 +349,27 @@ class Store:
         with self.transaction():
             scope=self._thread(principal,thread);self._workspace(principal,scope,workspace)
             for message in messages:
-                if not self.db.execute("SELECT 1 FROM messages WHERE id=? AND thread=? AND role='dot'",(message,thread)).fetchone():
+                if not self._reply_for_workspace(principal,thread,workspace,message):
                     raise Rejected('Visible reply unavailable')
+            acknowledged=[]
             for message in messages:
-                self.db.execute('UPDATE dot_reply_state SET seen=1,updated=? WHERE message=? AND seen=0',(self.clock(),message))
-        return {'seen':messages}
+                self.db.execute('UPDATE dot_reply_state SET seen=1,updated=? WHERE message=? AND seen=0 AND manual_unread=0',(self.clock(),message))
+                if self.db.execute('SELECT seen FROM dot_reply_state WHERE message=?',(message,)).fetchone()[0]:
+                    acknowledged.append(message)
+        return {'seen':acknowledged}
+
+    def set_reply_read_state(self, principal, thread, workspace, message, action):
+        self._principal(principal,('owner',))
+        if not isinstance(message,str) or action not in ('read','unread'):
+            raise Rejected('Explicit read or unread action required')
+        with self.transaction():
+            scope=self._thread(principal,thread);self._workspace(principal,scope,workspace)
+            if not self._reply_for_workspace(principal,thread,workspace,message):
+                raise Rejected('Dot reply unavailable in this scope')
+            unread=action=='unread'
+            self.db.execute('UPDATE dot_reply_state SET seen=?,manual_unread=?,updated=? WHERE message=?',(int(not unread),int(unread),self.clock(),message))
+        return {'message':message,'seen':not unread,'manual_unread':unread}
+
 
     def set_sidechat_attention(self, principal, thread, workspace, message, action):
         self._principal(principal,('owner','dot'))
@@ -268,7 +377,7 @@ class Store:
             raise Rejected('Explicit attention action required')
         with self.transaction():
             scope=self._thread(principal,thread);self._workspace(principal,scope,workspace)
-            row=self.db.execute("SELECT m.workspace,s.attention_kind,s.resolved FROM messages m JOIN dot_reply_state s ON s.message=m.id WHERE m.id=? AND m.thread=? AND m.role='dot'",(message,thread)).fetchone()
+            row=self._reply_for_workspace(principal,thread,workspace,message)
             if not row or (principal.role=='dot' and row['workspace']!=workspace):
                 raise Rejected('Dot reply unavailable in this scope')
             if action in ('resolve','reopen') and not row['attention_kind']:
@@ -312,6 +421,9 @@ class Store:
                         "message_id":row["id"],"sequence":row["seq"],
                         "message_sha256":row["hash"],"author_type":"authenticated_owner",
                         "intent":"sidechat_reply_requested","reply_scope":"same_thread_only"}
+            reference = self._owner_reply_reference(row['thread'], row['id'])
+            if reference:
+                expected['in_reply_to'] = reference['id']
             if event.get("eventId")!=row["event"] or event.get("name")!=EVENT or event.get("data")!=expected:
                 raise Rejected("Stored event context is inconsistent; do not guess a reply target")
             items.append({"event":event,

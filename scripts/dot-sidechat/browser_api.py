@@ -21,6 +21,7 @@ import urllib.parse
 import uuid
 
 from sidechat import Principal, Rejected, Store
+from workspace_management import WorkspaceManagement
 from project_collaboration import Conflict
 
 PREFIX = "/api/dot-sidechat/"
@@ -135,6 +136,7 @@ class WorkspaceResolver:
 class BrowserAPI:
     def __init__(self, store, resolver):
         self.store, self.resolver, self.auth = store, resolver, BrowserAuth(store)
+        self.management = WorkspaceManagement(store)
 
     def scope(self, session, workspace):
         scope = self.resolver(str(uuid.UUID(workspace)))
@@ -187,27 +189,37 @@ class BrowserAPI:
         return self.snapshot(owner, thread, scope, after, through)
 
     def snapshot(self, owner, thread, scope, after, through):
-        page = self.store.read(owner, thread["id"], after=after, through=through, limit=50)
+        page = self.store.read(owner, thread["id"], after=after, through=through, limit=50, display_workspace=scope["workspace"])
         page["scope"] = scope
-        page["capabilities"] = {"notifications":True}
+        page["capabilities"] = {"notifications":True,"manual_unread":True,"message_replies":True}
         page["receipts"] = {m["id"]: self.store.receipt(owner, thread["id"], m["id"])
                             for m in page["messages"] if m["role"] == "owner"}
         return page
 
     def send(self, session, args):
-        if set(args) not in ({"workspace", "request", "body"}, {"project", "request", "body"}):
+        if set(args) - {'in_reply_to'} not in ({"workspace", "request", "body"}, {"project", "request", "body"}):
             raise Rejected("Unexpected send argument")
+        if 'in_reply_to' in args and not isinstance(args['in_reply_to'], str):
+            raise Rejected('Exact reply message ID required')
         owner, thread, scope = self.target(session, args)
-        return self.store.append(owner, thread["id"], scope["workspace"], args["request"], args["body"])
+        return self.store.append(owner, thread["id"], scope["workspace"], args["request"], args["body"], in_reply_to=args.get('in_reply_to'))
 
 
     def notifications(self, session):
-        return self.store.notifications(Principal(session['owner'],'owner'),json.loads(session['projects']))
+        owner, projects = Principal(session['owner'],'owner'), json.loads(session['projects'])
+        result = self.store.notifications(owner, projects)
+        result['managed_workspaces'] = self.management.visible(owner, projects, self.resolver)
+        return result
 
     def seen(self, session, args):
         if set(args) not in ({'workspace','messages'}, {'project','messages'}):raise Rejected('Unexpected read argument')
         owner,thread,scope=self.target(session,args)
         return self.store.seen_replies(owner,thread['id'],scope['workspace'],args['messages'])
+
+    def read_state(self, session, args):
+        if set(args) not in ({'workspace','message','action'}, {'project','message','action'}):raise Rejected('Unexpected read-state argument')
+        owner,thread,scope=self.target(session,args)
+        return self.store.set_reply_read_state(owner,thread['id'],scope['workspace'],args['message'],args['action'])
 
     def attention(self, session, args):
         if set(args) not in ({'workspace','message','action'}, {'project','message','action'}):raise Rejected('Unexpected attention argument')
@@ -297,6 +309,8 @@ def handler(api, origin):
                 return self.output(200,api.notifications(session))
             if self.command=='POST' and route=='seen':
                 return self.output(200,api.seen(session,args))
+            if self.command=='POST' and route=='read-state':
+                return self.output(200,api.read_state(session,args))
             if self.command=='POST' and route=='attention':
                 return self.output(200,api.attention(session,args))
             if self.command == "POST" and route == "send":

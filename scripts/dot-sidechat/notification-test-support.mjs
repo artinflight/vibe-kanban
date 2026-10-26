@@ -43,6 +43,8 @@ export async function bundleNotifications() {
 export function state(long = false) {
   return {
     seen: false,
+    manualUnread: false,
+    readStates: [],
     resolved: false,
     attention: true,
     reads: [],
@@ -69,26 +71,27 @@ export function transport(s) {
       });
     if (route === 'notifications')
       return result({
+        managed_workspaces: s.managed,
         issues:
-          !s.seen || !s.resolved
+          !s.seen || (s.attention && !s.resolved)
             ? [
                 {
                   project_id: 'project-fixture',
                   issue_id: 'issue-fixture',
                   unread_count: s.seen ? 0 : 1,
-                  needs_attention_count: s.resolved ? 0 : 1,
+                  needs_attention_count: s.attention && !s.resolved ? 1 : 0,
                 },
               ]
             : [],
       });
-    if (route.startsWith('thread?'))
-      return result({
+    if (route.startsWith('thread?')) {
+      const page = {
         thread: { id: 'thread-fixture' },
         scope: {
           issue_label: 'Fixture issue',
           workspace_label: 'Selected workspace',
         },
-        messages: [
+        messages: s.messages ?? [
           {
             id: 'dot-reply',
             role: 'dot',
@@ -99,25 +102,57 @@ export function transport(s) {
             workspace: '11111111-1111-4111-8111-111111111111',
             created: 1,
             seen: s.seen,
-            attention: { kind: 'question', resolved: s.resolved },
+            manual_unread: s.manualUnread,
+            attention: s.attention
+              ? { kind: 'question', resolved: s.resolved }
+              : null,
           },
         ],
         receipts: {},
-        through: 2,
+        through: s.messages?.at(-1)?.seq ?? 2,
         next_after: null,
-        capabilities: { notifications: true },
-      });
+        capabilities: {
+          notifications: true,
+          message_replies: s.supportsReplies === true,
+          manual_unread: s.supportsManualUnread !== false,
+        },
+      };
+      if (s.holdThread)
+        await new Promise((resolve) => {
+          s.releaseThread = resolve;
+        });
+      return result(page);
+    }
     const body = JSON.parse(options.body ?? '{}');
     if (options.headers['X-Dot-CSRF'] !== 'fixture-csrf')
       throw Error('Missing CSRF');
     if (route === 'seen') {
       if (JSON.stringify(body.messages) !== '["dot-reply"]')
         throw Error('Unexpected read IDs');
+      if (s.manualUnread) return result({ seen: [] });
       s.seen = true;
       s.reads.push(body);
+      if (s.holdRead)
+        await new Promise((resolve) => {
+          s.releaseRead = resolve;
+        });
       return result({ seen: body.messages });
     }
+    if (route === 'read-state') {
+      if (body.message !== 'dot-reply') throw Error('Wrong reply');
+      s.readStates.push(body);
+      if (s.failReadState)
+        return { ok: false, status: 503, json: async () => ({}) };
+      s.manualUnread = body.action === 'unread';
+      s.seen = !s.manualUnread;
+      return result({
+        message: body.message,
+        seen: s.seen,
+        manual_unread: s.manualUnread,
+      });
+    }
     if (route === 'attention') {
+      s.attention = true;
       if (body.message !== 'dot-reply') throw Error('Wrong reply');
       s.resolved = body.action === 'resolve';
       return result({});

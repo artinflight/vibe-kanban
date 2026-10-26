@@ -95,6 +95,7 @@ jobs:
               - 'packages/ui/**'
               - 'shared/**'
               - 'scripts/testing/kanban-issue-panel*'
+              - 'scripts/testing/*workspace-destination*'
               - 'scripts/testing/run-kanban-issue-panel-tests.mjs'
               - 'scripts/testing/*read-only-web-links*'
               - 'scripts/vk-publish-artifact.py'
@@ -279,6 +280,8 @@ jobs:
       - uses: actions/checkout@v6
       - name: Test sidechat recovery, delivery and project-scope rollout
         run: python3 -B -m unittest discover -s scripts/dot-sidechat -v
+      - name: Test lightweight connector controls and issue-linked workspace preflight
+        run: python3 -B -m unittest discover -s scripts/dot-connector -p 'test_*.py' -v
 
   frontend-checks:
     needs: [branch-policy, branch-freshness, changes]
@@ -316,10 +319,27 @@ jobs:
             "./scripts/check-legacy-frontend-paths.sh"
 
       - name: Test independent Dot unread and Needs Attention notifications
-        run: node scripts/dot-sidechat/test-notifications-ui.mjs && node scripts/dot-sidechat/test-live-ui.mjs
+        run: node scripts/dot-sidechat/test-notifications-ui.mjs && node scripts/dot-sidechat/test-live-ui.mjs && node scripts/dot-sidechat/test-sidebar-activity.mjs && node scripts/dot-sidechat/test-attention-navigation-ui.mjs && node scripts/dot-sidechat/test-management-ui.mjs && node scripts/dot-sidechat/test-dispatch-presentation-ui.mjs && node scripts/dot-sidechat/test-code-blocks-ui.mjs && node scripts/dot-sidechat/test-project-routing-ui.mjs && node scripts/dot-sidechat/test-project-notices-ui.mjs
 
       - name: Check issue creation persistence, local assignments and workspace pagination
-        run: node --experimental-strip-types --test packages/web-core/src/shared/lib/issueCreation.test.ts packages/web-core/src/pages/workspaces/workspaceAssignmentFilter.test.ts packages/web-core/src/pages/workspaces/workspaceSidebarPagination.test.ts
+        run: node --experimental-strip-types --test packages/web-core/src/shared/lib/issueCreation.test.ts packages/web-core/src/pages/workspaces/workspaceAssignmentFilter.test.ts packages/web-core/src/pages/workspaces/workspaceSidebarPagination.test.ts packages/web-core/src/shared/lib/dotWorkspaceActivity.test.ts packages/web-core/src/shared/lib/dotProjectNotices.test.ts
+
+      - name: Check exact workspace destinations and Personal visibility
+        run: node scripts/testing/test-workspace-destination.mjs
+
+      - name: Browser-check workspace destination and human headers
+        timeout-minutes: 5
+        env:
+          PLAYWRIGHT_MODULE: ${{ runner.temp }}/workspace-browser-tools/node_modules/playwright-core/index.mjs
+          CHROME_BIN: /usr/bin/google-chrome
+          CHROMIUM_PATH: /usr/bin/google-chrome
+        run: |
+          npm install --prefix "$RUNNER_TEMP/workspace-browser-tools" --no-save --no-package-lock --ignore-scripts --no-audit --no-fund playwright-core@1.59.1
+          node scripts/testing/test-workspace-destination-browser.mjs
+          export DOT_BASELINE_RELEASE="$GITHUB_WORKSPACE/packages/local-web/dist"
+          export VK_TEST_OUTPUT="$RUNNER_TEMP/workspace-route-headers"
+          node scripts/dot-sidechat/test-project-routing-browser.mjs
+          node scripts/dot-sidechat/test-sidebar-activity-browser.mjs
 
       - name: Check actual issue panel Close/reopen races
         env:
@@ -629,7 +649,7 @@ jobs:
           npm install --prefix "$RUNNER_TEMP/vk-history-tools" --no-package-lock --ignore-scripts react-test-renderer@18.3.1
           node scripts/testing/run-long-thread-history-tests.mjs
           node scripts/testing/run-mcp-approval-ui-tests.mjs
-          node --experimental-strip-types --test packages/web-core/src/shared/lib/issueCreation.test.ts packages/web-core/src/pages/workspaces/workspaceAssignmentFilter.test.ts packages/web-core/src/pages/workspaces/workspaceSidebarPagination.test.ts
+          node --experimental-strip-types --test packages/web-core/src/shared/lib/issueCreation.test.ts packages/web-core/src/pages/workspaces/workspaceAssignmentFilter.test.ts packages/web-core/src/pages/workspaces/workspaceSidebarPagination.test.ts packages/web-core/src/shared/lib/dotWorkspaceActivity.test.ts packages/web-core/src/shared/lib/dotProjectNotices.test.ts
           node scripts/testing/run-kanban-issue-panel-tests.mjs
           pnpm run web-core:check
           pnpm run local-web:check

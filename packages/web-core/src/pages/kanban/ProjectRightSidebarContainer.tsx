@@ -58,44 +58,6 @@ type RightPanelState =
   | { kind: 'issue-workspace'; workspaceId: string }
   | { kind: 'workspace-create'; draftId: string; issueId: string | null };
 
-type LocalWorkspaceSummary = {
-  id: string;
-  name: string;
-  branch: string;
-};
-
-function resolveLocalWorkspaceFromRemoteLink(
-  remoteWorkspace: {
-    local_workspace_id: string | null;
-    name: string | null;
-  } | null,
-  localWorkspaces: LocalWorkspaceSummary[]
-): LocalWorkspaceSummary | null {
-  if (!remoteWorkspace) {
-    return null;
-  }
-
-  if (remoteWorkspace.local_workspace_id) {
-    const directMatch = localWorkspaces.find(
-      (workspace) => workspace.id === remoteWorkspace.local_workspace_id
-    );
-    if (directMatch) {
-      return directMatch;
-    }
-  }
-
-  const normalizedName = remoteWorkspace.name?.trim().toLowerCase() ?? '';
-  if (!normalizedName) {
-    return null;
-  }
-
-  const nameMatches = localWorkspaces.filter(
-    (workspace) => workspace.name.trim().toLowerCase() === normalizedName
-  );
-
-  return nameMatches.length === 1 ? nameMatches[0] : null;
-}
-
 function resolveIssuePanelResolution({
   issueId,
   hasIssue,
@@ -217,65 +179,8 @@ function WorkspaceSessionPanel({
     [remoteWorkspaces, workspaceId, projectId]
   );
 
-  const allLocalWorkspaces = useMemo<LocalWorkspaceSummary[]>(
-    () =>
-      [...activeWorkspaces, ...archivedWorkspaces].map((workspace) => ({
-        id: workspace.id,
-        name: workspace.name,
-        branch: workspace.branch,
-      })),
-    [activeWorkspaces, archivedWorkspaces]
-  );
-
-  const localWorkspaceIds = useMemo(
-    () => new Set(allLocalWorkspaces.map((workspace) => workspace.id)),
-    [allLocalWorkspaces]
-  );
-
-  const fallbackLinkedWorkspace = useMemo(() => {
-    if (!routeState.issueId) {
-      return null;
-    }
-
-    const issueLinkedWorkspace = remoteWorkspaces.find(
-      (ws) => ws.issue_id === routeState.issueId && ws.project_id === projectId
-    );
-
-    return resolveLocalWorkspaceFromRemoteLink(
-      issueLinkedWorkspace ?? linkedWorkspace,
-      allLocalWorkspaces
-    );
-  }, [
-    routeState.issueId,
-    remoteWorkspaces,
-    projectId,
-    linkedWorkspace,
-    allLocalWorkspaces,
-  ]);
-
-  useEffect(() => {
-    if (localWorkspaceIds.has(workspaceId)) {
-      return;
-    }
-
-    if (!routeState.issueId || !projectId || !fallbackLinkedWorkspace) {
-      return;
-    }
-
-    appNavigation.goToProjectIssueWorkspace(
-      projectId,
-      routeState.issueId,
-      fallbackLinkedWorkspace.id,
-      { replace: true }
-    );
-  }, [
-    localWorkspaceIds,
-    workspaceId,
-    routeState.issueId,
-    projectId,
-    fallbackLinkedWorkspace,
-    appNavigation,
-  ]);
+  // The requested workspace ID is authoritative. A sidebar snapshot can be
+  // loading, filtered or stale; absence never authorizes choosing a sibling.
 
   const linkedIssueId = linkedWorkspace?.issue_id ?? null;
   const breadcrumbIssueId = routeState.issueId ?? linkedIssueId;
@@ -286,6 +191,8 @@ function WorkspaceSessionPanel({
   }, [breadcrumbIssueId, getIssue]);
 
   const workspaceBranch = workspace?.branch ?? workspaceSummary?.branch ?? null;
+  const workspaceName =
+    workspace?.name || workspaceSummary?.name || workspaceBranch || 'Workspace';
 
   const handleOpenIssuePanel = useCallback(() => {
     if (projectId && breadcrumbIssueId) {
@@ -365,10 +272,11 @@ function WorkspaceSessionPanel({
                   <button
                     type="button"
                     onClick={handleOpenWorkspaceView}
-                    className={breadcrumbButtonClass}
+                    className={`${breadcrumbButtonClass} text-xl font-semibold text-high font-ibm-plex-sans`}
+                    title={workspaceName}
                     aria-label="Open workspace"
                   >
-                    {workspaceBranch ?? 'Workspace'}
+                    {workspaceName}
                   </button>
                 </div>
 
@@ -431,7 +339,7 @@ function WorkspaceSessionPanel({
                 data-chatbox-container="true"
               >
                 <SessionChatBoxContainer
-                  {...(isSessionsLoading || isWorkspaceLoading
+                  {...(isSessionsLoading || isWorkspaceLoading || !workspace
                     ? {
                         mode: 'placeholder' as const,
                       }

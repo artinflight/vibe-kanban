@@ -1,42 +1,59 @@
-# Collapsible Issues release stream
+# Coordinated Dot release
 
-Current branch prepares the accepted collapsible issue UI for rebase-merge
-into staging and a frontend-only live release. See
-[feature, validation and release evidence](VK_COLLAPSIBLE_ISSUES.md).
-Preserve the compact indexes and all existing release protections below.
+Staging owns one compatible frontend and Python release for exact-message Reply,
+Jump to Needs Attention, persistent explicit Dot management, selective dispatch-note
+acknowledgement and neutral caller attribution. Preserve the published Eastern
+timestamps, collapsible issues, current private continuation support and CU/Stop.
 
-# Usage-efficiency follow-up: compact job outcomes
+The final expanded scope also includes destination-safe project/workspace routing,
+sidebar drag/full-width and compact project unread rows with a small blue badge in
+Workspaces Needs Attention. Preserve destination drafts, flags and sibling isolation.
 
-Base: staging `d0b0bb298` (PR266 merged). Branch:
-`fix/compact-job-outcomes-20261017`, existing Automatic Restart Preflight owner.
-This follow-up adds bounded durable outcomes to the existing runner and measures
-actual JSON payload reduction. Approval-review share is not evidence of waste;
-models, AutoSwitch, all approval checks and QA remain unchanged. Staging retains
-release ownership; no new execution owner or nightly job.
+## Source and boundaries
 
-Seamus authorized reducing repeated pickup input and redundant work while
-keeping models, effort, AutoSwitch, full history and acceptance unchanged.
-Scope: lossless continuity archives and concise current indexes, adoption of
-the existing fingerprinted `scripts/deployment/vk_prepare.py` result reuse,
-and narrow shared-job correctness fixes coordinated with their existing owners.
+- [Reply contract](VK_DOT_MESSAGE_REPLIES.md): immutable owner quote links are
+  separate from Dot delivery/continuation links; keep reply-aware Python on rollback.
+- [Attention navigation](VK_DOT_ATTENTION_NAVIGATION.md): navigate every loaded
+  unresolved flag without resolving or acknowledging it.
+- [Explicit management](VK_DOT_WORKSPACE_MANAGEMENT.md): owner-authorized association
+  metadata only; dispatches, reads, counts and siblings never establish management.
+- [Selective acknowledgement](DOT_SELECTIVE_NOTIFICATION_ACK.md): exact fresh IDs
+  and state tokens; protect owner messages, genuine conversations, manual unread,
+  unresolved attention, siblings, new and unselected notes.
+- [Caller attribution](DOT_DISPATCH_ATTRIBUTION.md): current caller is unverified;
+  derived presentation leaves raw histories, hashes and execution bindings intact.
 
-Staging owns combined release/native queue recorder-drain acceptance. Nightly
-workspace604d/PR263 owns producer completion, capture reconciliation, B package,
-whole-plan recovery and schedule activation. Do not edit their workspaces,
-duplicate jobs/stores, compile another candidate or claim their pending checks.
-All runtime, admission, data, security and human-QA constraints in [STATE](STATE.md)
-remain active. No production change is part of this stream.
+## Validation and activation
 
-Validation must show exact archival preservation and bounded pickup input,
-then exercise the existing Preparation runner with identical commands and
-acceptance before/after reuse. Count actual command launches and repeated
-input bytes; do not infer tokens, money or model-call savings from byte counts.
-Any model-workflow claim needs actual same-model provider evidence.
+The integrated complete Python overlay passes fixture and copied-current-data
+checks. Source-owner desktop/mobile tests and exact combined hosted CI/artifact
+receipts remain separate evidence; a successful build alone is not live acceptance.
+Staging must retain current data, compatible rollback, review-state journal and
+verified backup, then validate actual served assets, API contracts and tool adoption.
+No Vibe/backend or agent restart is part of this component release. Dot browser,
+connector and publisher module lifetimes require a coordinated narrow reload.
+Respect current owner authorization, resource admission and the sole Nightly capture;
+never replace its job or infer whole-backup/restore acceptance from this UI release.
+Keep model/effort, Recommend, security, grants, subscriptions and human-QA cleanup
+boundaries unchanged. Exact private associations and receipts stay private.
 
-Read [the efficiency evidence/contract](USAGE_EFFICIENCY.md) for current results
-and unresolved acceptance. The full prior branch histories, constraints,
-identities and receipts remain in [STREAM history](STREAM_HISTORY_20261017.md),
-indexed and hash-bound by [the archive manifest](CONTINUITY_ARCHIVE.json).
+## Continuity
 
-Current release coordination, newer Sidebar adoption and remaining private gates:
-[October 17 release status](VK_RELEASE_COORDINATION_20261017.md).
+Complete parent notes remain in Git. [Full stream history](STREAM_HISTORY_20261017.md)
+and [archive provenance](CONTINUITY_ARCHIVE.json) retain historical evidence.
+Private receipts stay local/B. Nightly whole-plan restore remains separate.
+
+## October19 UI follow-up
+
+Font-only3cd0a6e63 is verified live without restart. Fenced code remains held.
+New source-only [destination safety and Personal/header corrections](VK_WORKSPACE_DESTINATION_SAFETY.md)
+retain all live Dot behavior and require hosted validation plus separate activation
+approval. Fresh private resource accounting separates terminal font demand from
+later checks; no Nightly/Caspian allowance or denied-action boundary is relaxed.
+
+## October26 compact project chat header
+
+[Compact header](VK_DOT_COMPACT_HEADER.md) removes stacked identity/session/scope
+labels from project and embedded-workspace chat. Secondary details move to a
+native disclosure; attention remains directly reachable. This is implementation
+and preview work, with no live activation or service changes.

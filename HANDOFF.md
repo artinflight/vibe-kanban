@@ -1,3 +1,11 @@
+# Preserved source checkpoints
+
+The prior Preserve caller-attribution and selective-ack pickup notes remain
+byte-for-byte in [source checkpoints](HANDOFF_PRESERVE_CHECKPOINTS_20261019.md).
+Use [DOT_DISPATCH_ATTRIBUTION](DOT_DISPATCH_ATTRIBUTION.md) and
+[selective acknowledgement](DOT_SELECTIVE_NOTIFICATION_ACK.md) for their
+source/reload contracts; dated source-ready notes are not current live receipts.
+
 # Pickup
 
 Current bounded follow-up: [compact durable job outcomes](USAGE_JOB_OUTCOMES.md).
@@ -29,3 +37,52 @@ Current release coordination, newer Sidebar adoption and remaining private gates
 [October 17 release status](VK_RELEASE_COORDINATION_20261017.md).
 
 Collapsible issue behavior and approved frontend release: [topic evidence](VK_COLLAPSIBLE_ISSUES.md).
+
+Newest follow-up: [exact-message Reply to](VK_DOT_MESSAGE_REPLIES.md) is implemented
+and tested for issue/project chats, including durable links and uncertain retries.
+It requires matching Dot Python/API plus frontend release; **not activated here**.
+Staging owns its current timestamp execution5ab782bd and subsequent integration.
+Apply only the feature diff onto its newer frontend/current Python baseline;
+retain timestamps, collapsible UI, continuations, CU/Stop and latest-data rollback.
+
+[Jump to Needs Attention](VK_DOT_ATTENTION_NAVIGATION.md) is the newest UI-only
+follow-up: all-page unresolved-flag navigation, stable selection and no flag
+mutation. Its handoff supersedes the timestamp-in-progress status above:
+timestamps are verified live07:12:15 EDT Oct18; Reply to plus navigation still
+await Staging's next integration. Current frontend/rollback pins and old r1
+inputs are retained in the derived private baseline record; no new capture.
+Preserve execution88a68ab1 retains exact-message acknowledgement ownership.
+
+Newest owner request: [persistent Dot management](VK_DOT_WORKSPACE_MANAGEMENT.md)
+uses an explicit local association, never dispatch/read/count inference. Only
+verified T89 is provided for backfill; nothing is enabled live here. Staging owns
+combined Reply+Jump+management release; Preserve retains provenance/ack contracts.
+
+Staging compatibility follow-up: Reply/Jump panel now consumes Preserve174668ed7's
+neutral derived dispatch author/body, including composer/history reply quotes.
+Raw history/IDs/hash/order remain unchanged; no management inference. Real target
+backfill/approval data is retained only in the private Staging handoff; tracked
+examples are synthetic. Staging still owns all packaging and activation.
+
+Priority before combined release: [Project chat routing and sizing](VK_PROJECT_DOT_CHAT_ROUTING.md)
+binds the sidebar to the displayed exact workspace, restores project chat on
+close/Back, retains per-session/destination drafts and pins in-flight sends.
+Drag/full-width/restore keep chat state mounted. Staging's existing coordination
+record was notified before packaging; no competing activation here.
+
+Current follow-up: [Dot code blocks](VK_DOT_CODE_BLOCKS.md) adds safe fenced code,
+Prism highlighting and exact Copy. [16px typography](VK_DOT_TYPOGRAPHY.md) alone
+is verified live from3cd0a6e63 on October19 at06:55 EDT without restart.
+Code blocks and newer changes remain held pending separate activation approval.
+Use private Nightly/Disk bounded admission; no restart or state/routing change.
+
+Newest source-only follow-up: [workspace destination safety](VK_WORKSPACE_DESTINATION_SAFETY.md)
+removes sibling/name-based workspace substitutions, scopes session selection and
+creation to exact destinations, includes self-or-unassigned Personal visibility and
+prominent human workspace names. No new activation; use hosted builds and fresh
+bounded resource admission. Real unresolved project and shared-issue questions
+remain untouched; private scope diagnosis is separate from notification cleanup.
+
+Newest requested UI correction: [compact project Dot Chat header](VK_DOT_COMPACT_HEADER.md).
+Use hosted frontend-only layout acceptance/screenshots and synthetic transport;
+current live assets stay untouched. Prior header release preparation is retained.

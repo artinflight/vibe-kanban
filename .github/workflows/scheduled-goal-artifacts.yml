@@ -16,6 +16,11 @@ on:
       - 'scripts/build-scheduled-goal-artifacts.py'
       - '.github/workflows/scheduled-goal-artifacts.yml'
   workflow_dispatch:
+    inputs:
+      frontend_only:
+        description: Build only the source-bound local frontend; no backend artifact
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -26,6 +31,7 @@ concurrency:
 
 jobs:
   build:
+    if: github.event_name != 'workflow_dispatch' || !inputs.frontend_only
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     env:
@@ -64,5 +70,71 @@ jobs:
         with:
           name: scheduled-goal-${{ env.VK_EXPECTED_SOURCE }}
           path: ${{ runner.temp }}/vk-scheduled-goal-artifacts
+          retention-days: 14
+          if-no-files-found: error
+
+  frontend-only:
+    if: github.event_name == 'workflow_dispatch' && inputs.frontend_only
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      NODE_VERSION: 22
+      PNPM_VERSION: 10.13.1
+      NODE_OPTIONS: --max-old-space-size=4096
+      VITE_DOT_SIDECHAT: '1'
+      VITE_DOT_SIDECHAT_FIXTURE: '0'
+      SENTRY_TELEMETRY: 'false'
+      VK_EXPECTED_SOURCE: ${{ github.sha }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ env.VK_EXPECTED_SOURCE }}
+          persist-credentials: false
+      - uses: ./.github/actions/setup-node
+      - name: Install source-locked frontend dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Check chat types and synthetic read, attention and destination behavior
+        run: |
+          pnpm run ui:check
+          pnpm run web-core:check
+          node scripts/dot-sidechat/test-notifications-ui.mjs
+          node scripts/dot-sidechat/test-attention-navigation-ui.mjs
+          node scripts/dot-sidechat/test-project-routing-ui.mjs
+          node scripts/dot-sidechat/test-project-notices-ui.mjs
+      - name: Build and seal the exact local frontend
+        run: |
+          test "$(git rev-parse HEAD)" = "$VK_EXPECTED_SOURCE"
+          pnpm --filter @vibe/local-web exec vite build --sourcemap false
+          git diff --exit-code
+          python3 - <<'PYCODE'
+          import hashlib,json,os,pathlib,shutil,subprocess
+          root=pathlib.Path('packages/local-web/dist')
+          assert (root/'index.html').is_file()
+          output=pathlib.Path(os.environ['RUNNER_TEMP'])/'vk-frontend-artifact'
+          shutil.copytree(root,output/'frontend')
+          files={str(p.relative_to(root)):{'sha256':hashlib.sha256(p.read_bytes()).hexdigest(),'bytes':p.stat().st_size} for p in sorted(root.rglob('*')) if p.is_file()}
+          manifest={'source':os.environ['VK_EXPECTED_SOURCE'],'tree':subprocess.check_output(['git','rev-parse','HEAD^{tree}'],text=True).strip(),'members':files,'backend_built':False,'runtime_acceptance':'not performed by builder'}
+          (output/'frontend-manifest.json').write_text(json.dumps(manifest,indent=2)+'\n')
+          PYCODE
+      - name: Verify compact project header and exact chat destinations
+        timeout-minutes: 5
+        env:
+          PLAYWRIGHT_MODULE: ${{ runner.temp }}/header-browser/node_modules/playwright-core/index.mjs
+          CHROMIUM_PATH: /usr/bin/google-chrome
+          DOT_BASELINE_RELEASE: ${{ github.workspace }}/packages/local-web/dist
+          VK_TEST_OUTPUT: ${{ runner.temp }}/header-preview
+        run: |
+          npm install --prefix "$RUNNER_TEMP/header-browser" --no-save --no-package-lock --ignore-scripts --no-audit --no-fund playwright-core@1.59.1
+          node scripts/dot-sidechat/test-project-routing-browser.mjs
+      - uses: actions/upload-artifact@v6
+        with:
+          name: compact-header-preview-${{ env.VK_EXPECTED_SOURCE }}
+          path: ${{ runner.temp }}/header-preview
+          retention-days: 14
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v6
+        with:
+          name: frontend-only-${{ env.VK_EXPECTED_SOURCE }}
+          path: ${{ runner.temp }}/vk-frontend-artifact
           retention-days: 14
           if-no-files-found: error

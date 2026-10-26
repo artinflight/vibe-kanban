@@ -155,6 +155,26 @@ try {
       page.click('#sibling'),
     ]);
     assert.equal(s.reads.length, 1);
+    await page
+      .locator('[aria-label="Mark Dot reply as unread"]')
+      .evaluate((n) => {
+        n.click();
+        n.click();
+      });
+    await page.locator('[aria-label="Mark Dot reply as read"]').waitFor();
+    assert.equal(s.readStates.length, 1);
+    await page.locator('[aria-label="Refresh conversation"]').click();
+    await page.waitForTimeout(180);
+    assert.equal(
+      s.reads.length,
+      1,
+      'Focused open chat preserves manual unread'
+    );
+    assert.equal(s.seen, false);
+    assert.equal(
+      await page.locator('[aria-label="Dot Needs Attention: 1"]').count(),
+      3
+    );
     await page.reload();
     await page
       .locator('[aria-label="Dot Needs Attention: 1"]')
@@ -162,9 +182,14 @@ try {
       .waitFor();
     assert.equal(
       await page.locator('[aria-label="Dot unread replies: 1"]').count(),
-      0
+      3
     );
     await page.click('#toggle-dot');
+    await page.locator('[aria-label="Mark Dot reply as read"]').click();
+    await page.waitForFunction(
+      () => !document.querySelector('[aria-label="Dot unread replies: 1"]')
+    );
+    assert.equal(s.resolved, false);
     await page.locator('[aria-label="Resolve Dot question"]').click();
     await page.waitForFunction(
       () => !document.querySelector('[aria-label="Dot Needs Attention: 1"]')

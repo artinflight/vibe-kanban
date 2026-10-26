@@ -100,3 +100,8 @@ Nightly durable journal. Its fresh readback10:25UTC has nine enrollment errors,
 observation_readyfalse and explicit earlier-epoch gaps. Preserve the raw report.
 Earlier zero-error/census receipts cannot certify this current state. No new
 Nightly schedule is installed and there is no accepted next-run promise.
+
+The private backup-only watcher now waits on inotify FD readiness instead of
+imposing50ms drain latency. Queue overflow still invalidates coverage, and idle
+reader failures still become explicit errors. This is not a durable cross-run
+journal and does not repair the live Staging observer's earlier gaps.

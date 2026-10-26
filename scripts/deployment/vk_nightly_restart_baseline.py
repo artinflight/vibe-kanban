@@ -11,6 +11,7 @@ import json
 import os
 from pathlib import Path, PurePosixPath
 import stat
+import select
 import threading
 
 from vk_change_journal import scope
@@ -167,8 +168,14 @@ def capture_journal(plan, reader=None):
             # Waiting until capture checkpoints lets a busy source overflow the
             # kernel queue during a long, otherwise valid online backup.
             def drain():
-                while not stop.wait(.05):
-                    try:owned.read()
+                while not stop.is_set():
+                    try:
+                        # Wake on kernel readiness rather than deliberately
+                        # leaving a busy inotify queue undrained for50ms.
+                        # The timeout still detects reader failures when idle.
+                        select.select([owned.fd], [], [], .05)
+                        if stop.is_set():return
+                        owned.read()
                     except Exception as error:
                         with owned.lock:
                             owned.errors.append({'private_reader_failed': type(error).__name__})

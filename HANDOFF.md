@@ -58,3 +58,12 @@ All previous Nightly pickup text survives byte-for-byte in
 [HANDOFF history](HANDOFF_NIGHTLY_HISTORY_20261026.md).
 [Archive manifest](NIGHTLY_CONTINUITY_ARCHIVE_20261026.json) binds sizes/hashes and
 parent commits. Upstream history remains in HANDOFF_HISTORY_20261017.md.
+
+## Private journal drain correction
+
+Hosted backup recovery found a real busy-queue overflow with the old private
+pump's forced50ms sleep. The pump now wakes on FD readiness, preserving overflow
+and failure invalidation.36bounded RAM cases pass, including20,000writes without
+intermediate reports, idle reader failure, actual overflow refusal and the bounded
+child-import regression. This changes only future Nightly source; no current
+Staging observer was modified/reloaded. Hosted exact-head results must be collected.

@@ -1,3 +1,24 @@
+# October 26: PR282 published; conditional rollout not yet ready
+
+Read [discussion repair evidence](VK_ISSUE_COMMENTS.md). PR282 targets staging,
+is ready for review and has passing full CI on `a7312c35c`. VK Dev T72 remains
+linked to workspace `a6f852f0-d00c-4dee-8864-1201d66ae6e1`.
+
+The operator authorized deployment when backup/rollback/active-job gates pass.
+Preserve the actual private backend and newer served frontend: isolated overlay
+builds and a migration-compatible rollback are prepared under
+`/mnt/vk-storage/vk-issue-comments-rollout-20261026`; inspect current receipts
+before acting. Candidate builds and 73 runnable private server tests pass
+(3 incident tests ignored); guard builds with 5 passing tests. Rollback compiles
+and its retained source/hash are reverified. Extra DB-test compilation hit the
+unchanged SSD floor; that suite, actual-data rollback rehearsal and compatible
+frontend validation/build/package remain pending. No shared cache or original
+was removed; safe capacity relief is required before resuming. Nightly owner604d
+reports current coverage/restore gaps, and other agents remain active. No production route/service/database/frontend was switched.
+S25 status now proves the existing Desktop-native Tailscale path; actual deployed
+desktop/physical phone comments/reactions still need acceptance. Preserve all
+jobs and private integrations. Remaining sections are historical context.
+
 # Pickup
 
 Current bounded follow-up: [compact durable job outcomes](USAGE_JOB_OUTCOMES.md).

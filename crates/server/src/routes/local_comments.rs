@@ -72,11 +72,9 @@ pub(super) fn api_fallback<S: Clone + Send + Sync + 'static>() -> Router<S> {
 fn mutation(data: impl Serialize) -> Json<Value> {
     Json(json!({"data": data, "txid": 0}))
 }
-fn validate_text(text: &str) -> Result<(), ApiError> {
+fn validate_text(text: &str) -> Result<(), &'static str> {
     if text.trim().is_empty() {
-        return Err(ApiError::BadRequest(
-            "Message or emoji must not be empty".into(),
-        ));
+        return Err("Message or emoji must not be empty");
     }
     Ok(())
 }
@@ -153,7 +151,7 @@ async fn create_comment(
     State(CommentDb(pool)): State<CommentDb>,
     Json(q): Json<CreateIssueCommentRequest>,
 ) -> Result<Json<Value>, ApiError> {
-    validate_text(&q.message)?;
+    validate_text(&q.message).map_err(|message| ApiError::BadRequest(message.into()))?;
     require_issue(&pool, q.issue_id).await?;
     if let Some(parent) = q.parent_id
         && find_comment(&pool, parent).await?.issue_id != q.issue_id
@@ -181,7 +179,7 @@ async fn update_comment(
 ) -> Result<Json<Value>, ApiError> {
     let existing = find_comment(&pool, id).await?;
     let message = q.message.unwrap_or(existing.message);
-    validate_text(&message)?;
+    validate_text(&message).map_err(|message| ApiError::BadRequest(message.into()))?;
     let parent = q.parent_id.unwrap_or(existing.parent_id);
     if let Some(parent_id) = parent {
         if find_comment(&pool, parent_id).await?.issue_id != existing.issue_id {
@@ -215,7 +213,7 @@ async fn create_reaction(
     State(CommentDb(pool)): State<CommentDb>,
     Json(q): Json<CreateIssueCommentReactionRequest>,
 ) -> Result<Json<Value>, ApiError> {
-    validate_text(&q.emoji)?;
+    validate_text(&q.emoji).map_err(|message| ApiError::BadRequest(message.into()))?;
     find_comment(&pool, q.comment_id).await?;
     let id = q.id.unwrap_or_else(Uuid::new_v4);
     sqlx::query("INSERT INTO local_issue_comment_reactions(id, comment_id, user_id, emoji) VALUES (?, ?, ?, ?) ON CONFLICT DO NOTHING")
@@ -233,7 +231,7 @@ async fn update_reaction(
 ) -> Result<Json<Value>, ApiError> {
     let row = find_reaction(&pool, id).await?;
     let emoji = q.emoji.unwrap_or(row.emoji);
-    validate_text(&emoji)?;
+    validate_text(&emoji).map_err(|message| ApiError::BadRequest(message.into()))?;
     sqlx::query("UPDATE local_issue_comment_reactions SET emoji = ? WHERE id = ?")
         .bind(emoji)
         .bind(id)

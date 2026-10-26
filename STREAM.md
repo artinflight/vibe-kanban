@@ -18,9 +18,11 @@ components from failed v8i without relabeling its parent as accepted. Historical
 17SQL/one-rollout/five-watch counts must not be treated as current requirements.
 The Staging-owned v11 observer ended naturally. The original selector qualifier
 finished at R5; the902818-member map and disjoint new-name qualification are
-retained. Both Nightly trackers stopped at14:34EDT on actual SSD capacity, so
-that later unobserved interval is explicit. Namespace completeness alone does
-not prove body coverage, and a replacement observer cannot erase this gap.
+retained. Both earlier trackers stopped at14:34EDT on SSD capacity. The user authorized
+removing that dependency: six indexes are verified on native B, and the B-backed
+tracker is now ready. Its new epoch does not erase the earlier gap. A resumable
+B-only metadata reconciliation and supported durable barrier remain required.
+Namespace completeness alone does not prove body/SQL/runtime recoverability.
 
 Live MM scope/pointer and current owner guard were reconciled October26. B needs
 no Staging/MM allowance; E/Q/R STOP remains intact. Preserve actual B health,

@@ -8,7 +8,6 @@ finishes before output work, so it does not hold a read transaction across the
 qualifier's commits. Later completed qualifications are refreshed by keyset.
 """
 from contextlib import contextmanager
-import fcntl
 import json
 import os
 from pathlib import Path
@@ -18,7 +17,7 @@ import zlib
 
 from vk_nightly_qualification import decode_observation, encode_observation
 from vk_nightly_checkpoints import digest
-from vk_typed_recovery import key
+from vk_nightly_control_format import key
 
 FORMAT = 'vk-nightly-current-member-map-v1'
 READY = ('directory', 'symlink', 'verified-file')
@@ -145,6 +144,7 @@ class CurrentMap:
     @classmethod
     @contextmanager
     def held(cls, path, *, binding, create=False, maximum_bytes=768*1024**2):
+        import fcntl
         path = Path(path)
         if (path.resolve() != path or not path.is_absolute() or type(maximum_bytes) is not int
                 or maximum_bytes < 65536):
@@ -152,6 +152,13 @@ class CurrentMap:
         encoded = json.dumps(binding, sort_keys=True, separators=(',', ':'), allow_nan=False)
         if len(encoded) > 65536 or not isinstance(binding, dict):
             raise ValueError('bounded externally authenticated input binding required')
+        if not create:
+            probe=os.open(path,os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK)
+            try:
+                if not stat.S_ISREG(os.fstat(probe).st_mode):raise ValueError('regular current-map control required')
+                if os.read(probe,32).startswith(b'VK_NIGHTLY_B_CONTROL_POINTER_V1\n'):
+                    raise ValueError('current map relocated: use the authenticated native-B control provider, not local SQLite')
+            finally:os.close(probe)
         fd = os.open(path, os.O_RDWR | os.O_NOFOLLOW | os.O_NONBLOCK |
                      (os.O_CREAT | os.O_EXCL if create else 0), 0o600)
         db = None

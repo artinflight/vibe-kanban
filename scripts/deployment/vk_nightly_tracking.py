@@ -69,15 +69,21 @@ class TrackingStore:
             page=db.execute('pragma page_size').fetchone()[0]
             if db.execute('pragma max_page_count='+str(maximum_bytes//page)).fetchone()[0]>maximum_bytes//page:
                 raise ValueError('existing tracking control exceeds budget')
-            db.execute('create table if not exists epochs(instance text primary key,binding text not null,cursor integer not null,ready integer not null,terminal text) without rowid')
-            db.execute('create table if not exists changes(instance text,path text,sequence integer not null,mask integer not null,primary key(instance,path)) without rowid')
-            db.execute('create index if not exists changed_cursor on changes(instance,sequence)')
-            db.execute('create table if not exists faults(instance text,raw text,primary key(instance,raw)) without rowid')
+            cls.initialize(db)
             value=cls();value.path=path;value.fd=fd;value.db=db;value.inode=(before.st_dev,before.st_ino)
             value.check();yield value;value.check()
         finally:
             if db is not None:db.close()
             os.close(fd)
+
+    @staticmethod
+    def initialize(db):
+        db.execute('create table if not exists epochs(instance text primary key,binding text not null,cursor integer not null,ready integer not null,terminal text) without rowid')
+        db.execute('create table if not exists changes(instance text,path text,sequence integer not null,mask integer not null,primary key(instance,path)) without rowid')
+        db.execute('create index if not exists changed_cursor on changes(instance,sequence)')
+        db.execute('create table if not exists faults(instance text,raw text,primary key(instance,raw)) without rowid')
+
+    def byte_size(self):return self.path.stat().st_size
 
     def check(self):
         info=self.path.lstat()
@@ -107,10 +113,11 @@ class TrackingStore:
         # unknown epoch never becomes an empty incremental result.
         self.db.execute('begin immediate')
         try:
-            for path,mask in value['events'].items():
-                self.db.execute('insert into changes values(?,?,?,?) on conflict(instance,path) '
+            events=list(value['events'].items())
+            for offset in range(0,len(events),64):
+                self.db.executemany('insert into changes values(?,?,?,?) on conflict(instance,path) '
                                 'do update set sequence=excluded.sequence,mask=changes.mask|excluded.mask',
-                                (value['instance'],path,value['sequence'],mask))
+                                ((value['instance'],path,value['sequence'],mask) for path,mask in events[offset:offset+64]))
             for fault in value['errors']:
                 self.db.execute('insert or ignore into faults values(?,?)',(value['instance'],canonical(fault).decode()))
             fault=self.db.execute('select 1 from faults where instance=? limit 1',(value['instance'],)).fetchone()
@@ -145,10 +152,10 @@ class TrackingStore:
                     history_before_instance_proven=False,source_paths_scanned=0,source_payload_bytes_read=0)
 
 
-def request(endpoint,instance,since,*,maximum_paths=100000):
+def request(endpoint,instance,since,*,maximum_paths=100000,barrier=False):
     with socket.socket(socket.AF_UNIX) as client:
         client.settimeout(30);client.connect(str(endpoint))
-        client.sendall(canonical(dict(instance=instance,since=since,maximum_paths=maximum_paths)))
+        client.sendall(canonical(dict(instance=instance,since=since,maximum_paths=maximum_paths,barrier=barrier)))
         blocks=[];total=0
         while block:=client.recv(65536):
             total+=len(block)
@@ -159,7 +166,16 @@ def request(endpoint,instance,since,*,maximum_paths=100000):
     return value
 
 
-def serve(plan,path,endpoint,*,guard,status_path,stop=None):
+def discard_committed(journal,cursor):
+    """Caller holds the journal lock; retain events arriving during B commit."""
+    for path,sequence in list(journal.changed.items()):
+        if sequence<=cursor:
+            journal.changed.pop(path,None);journal.events.pop(path,None)
+        else:
+            journal.events[path]={mask:seq for mask,seq in journal.events[path].items() if seq>cursor}
+
+
+def serve(plan,path,endpoint,*,guard,status_path,stop=None,store_factory=None,status_writer=None):
     """Run one read-only observer. The caller owns package/plan/admission pins."""
     endpoint=Path(endpoint)
     if endpoint.exists() or endpoint.is_symlink():raise ValueError('existing tracking endpoint must not be replaced')
@@ -177,8 +193,9 @@ def serve(plan,path,endpoint,*,guard,status_path,stop=None):
                 journal.read()
             except BaseException as error:
                 failure.append(str(error));stop.set();return
-    with TrackingStore.held(path) as store:
-        store.start(binding);save(status_path,dict(binding,phase='enrolling',ready=False))
+    write_status=status_writer or (lambda value:save(status_path,value))
+    with (store_factory() if store_factory else TrackingStore.held(path)) as store:
+        store.start(binding);write_status(dict(binding,phase='enrolling',ready=False))
         pump=threading.Thread(target=drain,daemon=True);pump.start()
         try:
             for root in sorted(journal.roots):
@@ -198,15 +215,18 @@ def serve(plan,path,endpoint,*,guard,status_path,stop=None):
                                 error={'required_source_binding_changed':raw}
                                 if error not in journal.errors:journal.errors.append(error)
                         report=journal.report(0)
-                        if report['sequence']!=previous or journal.errors or not previous:
-                            store.commit(report);previous=report['sequence']
-                            # Commit precedes discard. No source change is lost
-                            # between snapshot/commit and clearing memory.
-                            journal.changed.clear();journal.events.clear()
+                        needs_commit=report['sequence']!=previous or journal.errors or not previous
+                    if needs_commit:
+                        # B may take time to commit. Keep draining the kernel
+                        # independently; a remote transaction must not hold the
+                        # inotify lock and manufacture queue overflow.
+                        store.commit(report);previous=report['sequence']
+                        with journal.lock:
+                            discard_committed(journal,report['sequence'])
                     if time.monotonic()-last_status>10:
-                        save(status_path,dict(binding,phase='tracking',sequence=previous,
+                        write_status(dict(binding,phase='tracking',sequence=previous,
                              watches=len(journal.watches),raw_errors=list(journal.errors),ready=report['ready'],
-                             heartbeat_utc=time.time(),metadata_bytes=Path(path).stat().st_size,
+                             heartbeat_utc=time.time(),metadata_bytes=store.byte_size(),
                              baseline_accepted=False));last_status=time.monotonic()
                     try:connection,_=server.accept()
                     except socket.timeout:continue
@@ -216,7 +236,25 @@ def serve(plan,path,endpoint,*,guard,status_path,stop=None):
                             query=json.loads(connection.recv(4096))
                             if query['instance']!=journal.instance:
                                 raise ValueError('observer epoch changed; current reconciliation required')
+                            barrier_sequence=None
+                            if query.get('barrier') is True:
+                                with journal.lock:
+                                    current_roots=source_bindings(plan)
+                                    for raw,expected in roots.items():
+                                        if current_roots[raw]!=expected:
+                                            error={'required_source_binding_changed':raw}
+                                            if error not in journal.errors:journal.errors.append(error)
+                                    latest=journal.report(0)
+                                store.commit(latest)
+                                with journal.lock:discard_committed(journal,latest['sequence'])
+                                barrier_sequence=latest['sequence']
+                            with journal.lock:
+                                if journal.errors or failure:
+                                    raise ValueError('live observer has a coverage fault; durable reconciliation required')
                             value=store.report(query['instance'],query['since'],maximum_paths=query.get('maximum_paths',100000))
+                            if barrier_sequence is not None:
+                                value['barrier']=dict(kernel_drain_completed=True,durable_sequence=barrier_sequence,
+                                                     instance=journal.instance)
                             raw=canonical(value)
                             if len(raw)>MAX_RESPONSE:raise ValueError('complete delta exceeds response budget')
                         except (ValueError,KeyError,TypeError) as error:raw=canonical(dict(request_error=str(error)))
@@ -225,7 +263,7 @@ def serve(plan,path,endpoint,*,guard,status_path,stop=None):
                 if failure:raise RuntimeError(failure[0])
         except BaseException as error:
             store.terminate(journal.instance,type(error).__name__+': '+str(error))
-            save(status_path,dict(binding,phase='failed',ready=False,reason=str(error),baseline_accepted=False))
+            write_status(dict(binding,phase='failed',ready=False,reason=str(error),baseline_accepted=False))
             raise
         finally:
             stop.set()

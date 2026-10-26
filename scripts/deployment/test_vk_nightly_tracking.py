@@ -7,11 +7,19 @@ import threading
 import time
 import unittest
 
-from vk_nightly_tracking import TrackingStore, FORMAT, request, serve,source_bindings
+from vk_nightly_tracking import TrackingStore, FORMAT, request, serve,source_bindings,discard_committed
 from vk_nightly_tracked_delta import select, ReconciliationRequired
 
 
 class TrackingTests(unittest.TestCase):
+    def test_B_commit_discards_only_durable_path_and_mask_generations(self):
+        from types import SimpleNamespace
+        journal=SimpleNamespace(changed={'old':4,'same-file':7,'new':8},
+            events={'old':{8:4},'same-file':{8:5,4:7},'new':{8:8}})
+        discard_committed(journal,5)
+        self.assertEqual(journal.changed,{'same-file':7,'new':8})
+        self.assertEqual(journal.events,{'same-file':{4:7},'new':{8:8}})
+
     def setUp(self):
         self.tmp=tempfile.TemporaryDirectory();self.addCleanup(self.tmp.cleanup)
         self.root=Path(self.tmp.name);self.path=self.root/'tracking.sqlite'
@@ -87,6 +95,11 @@ class TrackingTests(unittest.TestCase):
                 if time.monotonic()>deadline:self.fail('new file not durably observed')
                 time.sleep(.02)
             self.assertTrue(value['ready']);self.assertEqual(value['source_payload_bytes_read'],0)
+            from vk_nightly_observer_barrier import flush
+            before=value['sequence'];(source/'last-before-barrier').write_text('fixture')
+            value=flush(endpoint,instance,before,guard=lambda:None)
+            self.assertIn(str(source/'last-before-barrier'),value['changed'])
+            self.assertEqual(value['barrier']['durable_sequence'],value['sequence'])
             with self.assertRaises(ValueError):request(endpoint,'other',0)
         finally:stop.set();thread.join(timeout=10)
         self.assertFalse(thread.is_alive());self.assertEqual(errors,[])

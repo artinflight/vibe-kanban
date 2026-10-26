@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
+import time
 from unittest.mock import patch
 from types import SimpleNamespace
 
@@ -77,6 +78,17 @@ class TypedWorkerTests(unittest.TestCase):
         with patch.object(worker.os.path,'ismount',return_value=True),patch.object(worker.os,'statvfs') as fs:
             fs.return_value.f_bavail=0;fs.return_value.f_frsize=4096
             with self.assertRaisesRegex(worker.ResourceDeferred,'free space'):worker.host_guard(config,0)
+
+    def test_native_B_control_worker_does_not_require_unused_SSD_write_headroom(self):
+        config=self.config();config['format']='vk-nightly-typed-worker-B-v1';seen=[]
+        def statvfs(path):
+            seen.append(path)
+            if path=='/mnt/vk-storage':raise AssertionError('B control worker should not allocate an SSD index/temp journal')
+            return SimpleNamespace(f_bavail=100000000,f_frsize=4096)
+        with patch.object(worker.os.path,'ismount',return_value=True),patch.object(worker.os,'statvfs',side_effect=statvfs),\
+             patch.object(worker.Path,'read_text',return_value='MemAvailable: 16777216 kB\nSwapFree: 8388608 kB\n'):
+            worker.host_guard(config,time.monotonic())
+        self.assertEqual(seen,['/'])
 
     def test_owned_readback_pipe_is_closed_before_wait_on_aborted_session(self):
         class Pipe:

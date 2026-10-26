@@ -19,6 +19,7 @@ import sqlite3
 import stat
 import zlib
 import zipfile
+from vk_nightly_control_format import key
 
 
 FORMAT = 'vk-typed-current-recovery-v1'
@@ -41,14 +42,6 @@ def stream_checksum(stream):
     for block in iter(lambda: stream.read(BLOCK), b''):
         h.update(block)
     return h.hexdigest()
-
-
-def key(value):
-    if (not isinstance(value, str) or not value or '\0' in value
-            or PurePosixPath(value).is_absolute()
-            or any(p in ('', '.', '..') for p in value.split('/'))):
-        raise ValueError('invalid recovery member/selector')
-    return value
 
 
 def digest(value):

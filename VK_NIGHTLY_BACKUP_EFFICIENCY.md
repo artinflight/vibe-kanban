@@ -1,3 +1,78 @@
+# October26 — native B control storage,17:19EDT checkpoint
+
+The user explicitly requested removing growing Nightly control/temp dependence
+on the work SSD before commissioning. A task-only allocation measurement found
+4337319936allocatedB/30647files:2137374720B in commissioning controls,
+1101361152B in retained prefix recovery, plus older scale fixtures/evidence.
+The largest active indexes were842715136B current map,630657024B qualification,
+330051584B namespace,136626176B older recipes,79204352B base carriers and
+65990656B newer recipes. These six total2085244928logical bytes.
+
+All six now have immutable exact-byte checkpoints and native SQLite working
+copies on Desktop B under vk-backups/vk-nightly-efficiency-20261026/controls-v1.
+Actual chunk upload/reopened RAM verification, native complete checkpoint SHA/
+integrity, full independent streamed readback and working-copy verification
+passed. Existing accepted body/SQL archives were not recopied. Migration unit
+vk-nightly-native-B-control-migration-r1-20261026 ended after4543.4s.
+The long first-index check remained active; native process I/O proved progress.
+A2MiB cache caused excessive native index I/O; successor connections use an
+admitted128MiB cache ceiling and resource/STOP callbacks during long queries.
+No old running package was modified in place.
+
+The design runs SQLite on native Desktop NTFS, not through SSHFS. B owns DBs,
+rollback journals and temporary control work. Bounded framed requests preserve
+binary rows, FULL transactions and per-index native writer leases. A dropped
+client rolls back uncommitted work; a lost commit ACK leaves the committed
+cursor intact. Read-only committed health queries use normal native SQLite
+read locks. Actual B identity, health, explicit applicable stops, permissions,
+create-only checkpoints and operation-space checks remain. The withdrawn Disk
+B reserve/quota is not carried forward.
+
+Normal map/qualifier consumers passed against B. Exclusive source kernel leases
+then replaced only those two inactive SSD replicas with small read-only location
+pointers, recovering1473417216allocatedB. The exact raw checkpoints and original
+Linux UID/GID/mode/xattrs/nanosecond timestamps remain on B. Legacy direct SQLite
+calls fail closed; use the authenticated native-B reference. Optional original-
+byte recall is RAM-only with measured admission, complete reopened SHA/SQLite
+integrity and Linux metadata restoration before immutable read. Tests verify an
+active reader refuses retirement and preserves the raw source. Device/inode/
+kernel ctime remain recorded provenance, not falsely restorable metadata.
+
+The B tracker is ready under its separate control-index lease. Actual v3 service
+PID1396499/epoch69f5043bed464f1e86b718f6c639281b has107009watches/raw errors0 at
+17:19EDT,626688B B database. Its authoritative journal and health are on B;
+optional SSD status is capped64KiB and ENOSPC/EDQUOT/EROFS does not terminate
+observation. A missing SSD mount causes no fallback root write. New capture
+worker mode uses B map/cohort-state/leases and only a bounded status mirror;
+its unchanged root/RAM/swap, source-mount, native B and deadline guards remain.
+It does not inherit a free-SSD threshold for indexes it no longer allocates.
+
+RAM fixtures cover transactions, lost ACKs, kernel reader refusal, exact recall,
+large-row pagination, B-only SQL cohort state and completed-point reuse, full-SSD
+status handling and bounded source metadata reconciliation. The complete legacy
+suite cannot run under a /dev/shm TMPDIR because its older production-placement
+fixtures explicitly require a mounted secondary path; that failed harness run
+is retained, not called a production failure or a pass. The original runner
+placement check remains. Exact-head hosted full CI is still required for this
+new source, in addition to narrow RAM tests and actual B proofs.
+
+The14:34EDT gap remains explicit. The new observer only proves its own forward
+coverage. The prepared reconciliation records directories and metadata on B,
+resumes completed directories without another global restart, and keeps missing/
+changing names in an explicit replay queue. It reads no source bodies. A real
+kernel-drain/durable-commit barrier replaces guessed sleeps/cached snapshots;
+an endpoint lacking that protocol fails closed. Normal Nightly runs use changed
+names, never this gap/bootstrap walk. Current-version body/SQL completion, final
+journal suffix, runtime/frontend binding and independent composed restore still
+precede the one02:00Toronto calendar. No schedule or next run is accepted and
+no Vibe backend restart or Staging controller change occurred.
+
+Private evidence remains in commissioning-20261026/b-controls-v1:
+MIGRATION_VERIFIED, MIGRATED_INDEXES, B_CURRENT_MAP_CONSUMER_VERIFIED,
+B_QUALIFICATION_CONSUMER_VERIFIED, VERIFIED_RELOCATIONS,
+NATIVE_B_TRACKING_STORAGE_VERIFIED and B_STORAGE_CURRENT. All prior original
+proofs and failures remain; older sections below are dated historical evidence.
+
 # October26 — terminal qualification and installed phase checkpoint,15:29EDT
 
 Nightly is standalone Python; it needs no Vibe backend restart. No calendar is
@@ -1258,3 +1333,15 @@ consume another owner's cleanup/release authority or replace required human QA.
 See `scripts/deployment/VK_NIGHTLY_RESTART_CONTRACT.md`,
 `scripts/deployment/VK_BACKUP_CONTENT_AUDIT.md` and
 `scripts/deployment/VK_HISTORY_ARCHIVAL_CONTRACT.md` for the detailed contracts.
+
+### B-backed observer handover and tests (October26,17:44EDT)
+
+The owner closed v3 after durable cursor517705 and retained its native B database.
+Replacement v4 uses an immutable separate package with the tested actual
+kernel-drain/durable-commit barrier. Enrollment and gap reconciliation must
+finish before coverage acceptance; this handover does not repair the old gap.
+The focused RAM-only run passed56tests covering B storage, interrupted state,
+reader leases, barrier protocol, worker reuse and simulated SSD ENOSPC.
+`pnpm run ops:check` and diff checks pass. Required local formatting completed
+Rust and stopped because Prettier is absent; no dependency install or compile
+was launched. Full hosted exact-head recovery CI is still required.

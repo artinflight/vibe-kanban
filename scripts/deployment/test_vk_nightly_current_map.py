@@ -11,6 +11,12 @@ from vk_nightly_qualification import encode_observation,decode_observation
 
 
 class CurrentMapTests(unittest.TestCase):
+    def test_relocated_pointer_fails_closed_with_provider_instruction_before_SQLite_open(self):
+        with tempfile.TemporaryDirectory(dir='/dev/shm') as root:
+            p=Path(root)/'moved.sqlite';p.write_bytes(b'VK_NIGHTLY_B_CONTROL_POINTER_V1\n{}\n');p.chmod(0o400)
+            with self.assertRaisesRegex(ValueError,'relocated.*native-B'):
+                with CurrentMap.held(p,binding={}):pass
+
     def setUp(self):
         self.tmp=tempfile.TemporaryDirectory();self.addCleanup(self.tmp.cleanup)
         self.path=Path(self.tmp.name)/'map.sqlite';self.binding={'namespace_proof':'a'*64,'qualifier_owner':123}

@@ -5,6 +5,72 @@ Prepared source fix; not deployed. Tracked as VK Dev T72
 `a6f852f0-d00c-4dee-8864-1201d66ae6e1`. Original report: Operations T100
 (`b1fcd23b-b6b0-440c-80dd-ac646dbbec09`).
 
+## Review publication and authorized rollout preparation
+
+PR [282](https://github.com/artinflight/vibe-kanban/pull/282) targets staging and
+is ready for review. Repair commit `e5e7dfbf7` and the follow-up Clippy correction
+`a7312c35c` are pushed. The correction keeps synchronous text validation errors
+small and converts them into the existing API error at each async caller.
+
+[CI run 40392576373](https://github.com/artinflight/vibe-kanban/actions/runs/40392576373)
+passed on `a7312c35c`: backend Clippy, schema checks, Tauri, frontend, governance,
+branch policy, Dot contracts and turn Git preservation. Backend nextest passed
+609 tests with 14 skipped; a separate scheduling-enabled selection passed 15
+checks with 104 excluded/skipped. The combined capture-consent acceptance job was
+intentionally skipped. This supersedes the earlier local-only build limitation
+below; it does not prove compatibility with the deployed private package.
+
+The operator subsequently authorized rollout once backup, rollback and active-job
+readiness are verified. No additional approval request is implied by older
+preparation-only wording. The full objective still includes real deployed
+comments/reactions on desktop and the physical phone, with private integrations
+and agent jobs preserved.
+
+Fresh runtime discovery showed that a public staging binary/frontend would
+replace private backend behavior and newer frontend changes. Preparation instead
+applies only the published discussion changes to the manifest-verified live
+backend source and the exact currently served frontend source. Retained private
+reader files are hash-checked unchanged. A separate schema-compatible incumbent
+rollback source includes the new migration so a fresh rollback process can open
+the latest database without restoring old data. The executable is built; actual
+current-data rollback acceptance remains required. An uninstalled successor
+startup verifier pins all 90 existing migration checksums and permits only the reviewed 91st
+migration; its read-only baseline check passes.
+
+Current private build and release receipts remain in
+`/mnt/vk-storage/vk-issue-comments-rollout-20261026`. The source-verified private
+candidate compiled successfully. All 73 runnable private server tests pass,
+including the real discussion regression; three incident tests require private
+manifests and remain ignored. These fixtures require checkout-local debug
+storage and one fresh process per test. Test-only debug assertions/static
+embedding preserve that contract; the production candidate hash is unchanged.
+The initial wrong-profile and parallel-fixture failures remain in the receipts.
+The matched capacity guard compiled and its five library tests pass.
+
+The incumbent-compatible rollback binary also compiled; its source and artifact
+hash were reverified after the resource hold. Its additional database-test build
+hit the configured SSD floor and the guard stopped only this task's build unit.
+Those database tests, the bounded current-data migration/capacity/rollback
+rehearsal, and the compatible frontend checks/build/package remain unfinished.
+No shared cache, source original, history, user data or backup was deleted to
+continue. The prepared frontend uses task-local writable caches while reusing
+unchanged dependency contents. No candidate is deployment-ready from these
+partial build receipts alone. Freeing safe capacity requires the existing
+storage workflow; do not weaken the guard or bypass the backup owner.
+
+The sole Nightly owner's current evidence still reports missing body/SQLite
+coverage, a post-tracker observation gap and unaccepted composed current-data
+restore. Other agents are running. Those readiness gates block activation;
+preparation must not duplicate their backup, lower their guards or interrupt
+jobs. The backend, database, frontend pointer, gateway and private services have
+not been switched by this task.
+
+The existing Desktop native ADB pairing was non-disruptively reconnected using
+current discovery. A fresh maintained-helper status at 20:38 UTC reports the
+identity-verified S25 ready over the actual phone Tailscale route. No server/key,
+pairing, radio, network/security setting or listener changed. Wi-Fi was on; no
+off-LAN/cellular result is claimed. Physical UI acceptance remains pending rollout.
+
 ## Cause and repair
 
 Both `/v1/fallback/issue_comments?issue_id=...` and
@@ -48,7 +114,7 @@ It reproduces the outer SPA wildcard and verifies unknown local APIs return JSON
 The focused harness substitutes only Deployment/ApiError and the local participant
 constant; it imports the real API request types, handlers, migration and inline
 test. It does not boot LocalDeployment, migrate production, or execute an agent.
-The full Rust workspace was not built/tested: secondary SSD free capacity was
+At the initial investigation checkpoint, the full Rust workspace was not built/tested: secondary SSD free capacity was
 below 1 GiB after focused preparation. The initial broad server test build was
 stopped and replaced with this harness before risking capacity exhaustion.
 
@@ -80,7 +146,10 @@ workspace. The UI submit predicate depends on repository/branch, prompt and
 executor selection, not on comment/reaction sync readiness. Desktop and 393px mobile browser startup
 acceptance captures the linked-issue start request and blocks it at the HTTP
 boundary, deliberately restoring both original HTML discussion-feed failures.
-No actual Zonnic execution is launched or resumed by this investigation.
+No actual Zonnic execution is launched or resumed by this investigation. Existing linked-workspace execution records also show successful
+starts while both original live discussion feeds still return HTML; the current
+read-only observation confirms an agent is running. This is stronger evidence of
+startup independence than captured request construction alone.
 
 Separate baseline background HTML responses were observed in this branch-preview
 configuration for `/v1/fallback/user_workspaces`, `/api/dot-sidechat/session` and
@@ -97,16 +166,16 @@ No production backend restart, migration, frontend swap, service setting change,
 network reconfiguration, or unrelated issue/workspace modification occurred.
 Only the requested tracking issue and this workspace's issue link were created.
 
-The initial maintained `s25-adb status` returned unavailable:
+At the initial investigation checkpoint, maintained `s25-adb status` returned unavailable:
 `no_current_tls_port`, no advertised endpoints and `tailscaleVerified: false`.
 No resets, pairing, radio changes, listeners or access grants were attempted.
-Physical Android validation needs the existing authorized phone route to become
-available, then desktop/phone acceptance against the deployed candidate.
+The later verified reconnection is recorded above. Physical Android validation
+still needs desktop/phone acceptance against the deployed candidate.
 
-A normal approved backend release must include the new migration and routes;
+The authorized backend release must include the new migration and routes;
 a frontend-only swap cannot repair the missing server handlers. Follow the
 existing restart protocol for candidate construction, capacity, backup/rehearsal,
-operator approval and post-release acceptance. Production still has the original
+the existing conditional authorization and post-release acceptance. Production still has the original
 missing routes until that release is activated. Keep T72 open until live and
 physical acceptance are recorded; do not mark the current production repaired.
 

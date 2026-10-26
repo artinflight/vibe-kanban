@@ -1,15 +1,23 @@
-# October 26: Discussion compatibility source ready
+# October 26: PR282 published; conditional rollout not yet ready
 
-Pick up VK_ISSUE_COMMENTS.md. VK Dev T72 (`0da02ba1-7d50-4461-9a9b-0701e341c753`)
-is linked to workspace `a6f852f0-d00c-4dee-8864-1201d66ae6e1` on
-`vk/a6f8-create-and-link`. Both feeds returned byte-identical SPA root HTML because
-local routes were absent; explicit `/v1` wildcard isolation is required in Axum.
-Prepared migration/CRUD/feed routes and local identity pass focused HTTP/storage
-and real desktop/393px mobile browser acceptance. Correct linked startup requests
-are captured with both feeds failing; no agent is launched. Current production
-still lacks the routes. Physical S25 status is unavailable (`no_current_tls_port`).
-An approved normal backend release and physical post-release acceptance remain.
-Evidence: `/mnt/vk-storage/vk-issue-comments-20261026`. Other entries are history.
+Read [discussion repair evidence](VK_ISSUE_COMMENTS.md). PR282 targets staging,
+is ready for review and has passing full CI on `a7312c35c`. VK Dev T72 remains
+linked to workspace `a6f852f0-d00c-4dee-8864-1201d66ae6e1`.
+
+The operator authorized deployment when backup/rollback/active-job gates pass.
+Preserve the actual private backend and newer served frontend: isolated overlay
+builds and a migration-compatible rollback are prepared under
+`/mnt/vk-storage/vk-issue-comments-rollout-20261026`; inspect current receipts
+before acting. Candidate builds and 73 runnable private server tests pass
+(3 incident tests ignored); guard builds with 5 passing tests. Rollback compiles
+and its retained source/hash are reverified. Extra DB-test compilation hit the
+unchanged SSD floor; that suite, actual-data rollback rehearsal and compatible
+frontend validation/build/package remain pending. No shared cache or original
+was removed; safe capacity relief is required before resuming. Nightly owner604d
+reports current coverage/restore gaps, and other agents remain active. No production route/service/database/frontend was switched.
+S25 status now proves the existing Desktop-native Tailscale path; actual deployed
+desktop/physical phone comments/reactions still need acceptance. Preserve all
+jobs and private integrations. Remaining sections are historical context.
 
 # Pickup
 

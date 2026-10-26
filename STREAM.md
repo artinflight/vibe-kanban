@@ -1,13 +1,21 @@
-# October 26: Issue comments stream repair
+# October 26: Issue comments repair review and compatible rollout
 
-Current branch `vk/a6f8-create-and-link` is based on freshly fetched `fork/staging`.
-Repair the missing local discussion routes that return SPA HTML on Operations
-T100, add durable comments/reactions and API JSON isolation, preserve local
-participant identity and verify desktop/mobile interactions and independent
-workspace startup. Tracking: VK Dev T72, linked to this workspace.
-See VK_ISSUE_COMMENTS.md for evidence and release/device limits. No production
-restart, migration, asset swap, model change or Zonnic agent launch is part of
-this preparation. Older branch notes below are history.
+Branch `vk/a6f8-create-and-link` publishes the T100 discussion route repair as
+PR282 into staging. VK Dev T72 is linked to this workspace. Full CI passes on
+`a7312c35c`, including the original API/storage regression. The current request
+authorizes rollout only after backup, rollback and active-job readiness.
+
+Build from the manifest-verified private live backend plus the narrow published
+repair and preserve the currently served frontend base; a stock staging package
+would drop retained integrations. Candidate/guard and rollback binaries build;
+73 private server tests and 5 guard tests pass (3 private incident tests ignored).
+The extra rollback DB-test build hit the unchanged SSD floor. Complete its tests,
+current-data rollback rehearsal and compatible frontend checks/build/package
+after safe capacity relief. Nightly coverage/restore gaps and running jobs also
+prevent activation. Preserve the sole backup owner and all private services.
+Actual desktop/physical S25 feed
+acceptance remains required after rollout. See VK_ISSUE_COMMENTS.md. Other branch
+notes below are history, not a new approval requirement for this authorized task.
 
 # Collapsible Issues release stream
 

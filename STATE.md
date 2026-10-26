@@ -1,11 +1,16 @@
-## October 26: Local issue discussion compatibility prepared
+## October 26: Discussion repair published; rollout held by readiness
 
-The T100 comment/reaction HTML errors are reproduced and repaired in source on
-`vk/a6f8-create-and-link`; see VK_ISSUE_COMMENTS.md. VK Dev T72 is linked to this
-workspace. Actual HTTP/persistence and desktop/mobile viewport acceptance pass.
-The workspace-start request is captured successfully despite simulated feed
-failures. Production is not changed; physical S25 access is unavailable. Existing
-runtime statements below remain historical and require fresh discovery.
+VK Dev T72 tracks the T100 HTML-feed repair in PR282, ready for review with
+passing full CI on `a7312c35c`; see [evidence and pending gates](VK_ISSUE_COMMENTS.md).
+The operator authorized rollout after backup/rollback/active-job readiness.
+The private candidate builds, 73 runnable private server tests pass (3 ignored),
+and the matched guard builds with 5 passing tests. Rollback compiles; its extra
+DB tests hit the SSD floor. Current-data rollback rehearsal and compatible UI
+validation/build remain pending, as do backup coverage/restore and running-job
+gates. Preparation preserves the actual live backend and served UI; production
+is unchanged. S25 native ADB is now identity-verified over Tailscale; physical
+post-release UI acceptance remains pending. Older runtime/no-restart statements
+below describe their original scope; they do not revoke this conditional request.
 
 # Current-state index
 

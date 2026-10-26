@@ -1,3 +1,77 @@
+# October26 — running tracking and current qualification
+
+The existing Staging v11 observer ended at its own timeout. A complete report
+was durably checkpointed beforehand at16763824; no old raw fault or historical
+gap was erased. Nightly now owns `vk-nightly-change-tracking.service`, started
+09:06EDT, epoch `baac737a41704427bf540119d78afa84`:103117 watches enrolled,
+no initial errors, FULL-synchronous SQLite changed-path queue and bounded socket
+queries. Its exact installed package/config/unit hashes are in the private
+`commissioning-20261026/tracking-worker-v1/INSTALL.private.json` receipt.
+This is tracking preparation, not backup/current-set or calendar acceptance.
+The source now additionally checks root-alias identities; that newer source
+still needs a witnessed overlap/handover before adoption over the pinned v1.
+
+Metadata-only adoption authenticated206 older component dependencies,29973
+member versions/50391676474 raw version bytes. It read10335683 record bytes and
+copied0 archive/body bytes. The136626176-byte resumable catalog commits each
+component atomically. Existing41 newer components/148SQL images remain separate
+accepted dependencies with their own epochs. A79204352-byte accepted-base content
+lookup indexes1236019 original paths/325477 unique bodies, tied to full-restore
+receipt47b6ed80178a798c36b0eaab2ee2d0b43fbbbd29cf27cdcb90b71997c472b226.
+Null old hashes/original gaps are never turned into carriers.
+
+The first4096 current file versions all matched retained bodies after822632285
+bytes of necessary source hashing. The same durable qualifier now continues
+over all three composed request maps, using keyset continuation and those4096
+completed observations. Its unit is
+`vk-nightly-current-qualification-r2-20261026.service`; controller
+`/tmp/nightly-qualify-composed-r2-20261026.py`; authoritative progress/result/
+failure receipts are `SELECTED_QUALIFICATION_R2_*` in the same private area.
+Do not restart it or treat the old106.65GB request budget as transfer demand.
+Its finite control budget is1GiB, source-read phase bound160GiB; no backup payload
+is written on OS/work SSD. Control observations are bounded lossless compressed
+JSON with compatibility for the original4096 plain-JSON records.
+
+Bounded tracking selection does no stat/walk/hash for unchanged workspaces,
+expands only newly created/moved-in subtrees, and selects SQL API sources from
+main/WAL/SHM events. It refuses lost epochs, unknown faults and oversized deltas;
+it never treats a new observer as retrospective gap closure. Qualified-point
+transfer can recover exactly previously hashed bytes after later append and
+reuse an independently verified prefix, with full point digest verification.
+That distinct interface leaves ordinary live-stable capture checks unchanged.
+
+The final complete564-case regression run passed(one skip), including the
+qualified-point/tail transfer and eight existing file-version cases. Earlier
+557/560-case runs also passed(one skip). Initial full-suite failure was caused by
+an overlong fixture TMPDIR; both AF_UNIX cases and cron syntax pass at a short
+task-local fixture path. Required `pnpm run format` passed Rust formatting but
+frontend formatting cannot run because installed Prettier is missing. No full
+format result is claimed. No Rust/frontend source or live backend was changed.
+
+Actual qualified-point proof completed10:02EDT: a507753656-byte history version
+reused300831725 accepted prefix bytes and streamed206921931 new tail bytes to B.
+The complete independent RAM file matches its earlier qualified source SHA;
+recorded Linux metadata also passes. Component metadata and explicit epoch/recipe
+were persisted beside the B tail; `QUALIFIED_POINT_COMPONENT_BOUND.private.json`
+binds the byte proof. No source/history bytes were changed or normalized. An
+additional JSONL probe found a malformed record at line69521/offset401595602 in
+those exact qualified bytes. The semantic diagnostic remains explicit and native
+resume semantics are not claimed. This is accepted byte/metadata recovery for
+one defined point, not whole-current-baseline or original-history repair.
+Automatic review refused an earlier proposed `/var/tmp` restore destination;
+nothing ran. The admitted alternative materialized only in checked RAM tmpfs.
+The healthy readback's own ten-minute timeout was extended to twenty minutes by
+an exact owned-unit drop-in; PID/start and all memory/access/space controls stayed
+unchanged. The original semantic-probe failure and its complete RAM file remain.
+
+Remaining operational gates: finish current qualification and namespace/journal
+closure (newly observed retained-schema97 SQLite file requires the SQL API,
+not raw hashing); resolve actual pending bodies/tails and current SQL versions;
+compose/runtime-bind/independently accept the complete descriptor; integrate
+the new tracking/typed worker with interruption/restart-consumer proof; then
+install the one authorized02:00 Toronto calendar and record its next run.
+No production backup schedule or full current baseline is accepted yet.
+
 # October26 — real recovery progress and remaining commissioning
 
 The current B owner/live scope correction is verified, not merely accepted from

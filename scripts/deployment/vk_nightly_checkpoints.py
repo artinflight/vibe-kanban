@@ -234,6 +234,49 @@ def adopt(*, file_receipts, file_config, sql_result, sql_config, pins,
                 schedule_adoption_authorized=False, payload_bytes_copied=0)
 
 
+def retained_prefix_components(selector_raw, expected_sha256, *, backup_prefix):
+    """Authenticate older independently verified components without recopying.
+
+    The externally pinned selector selects exact original carriers and epochs.
+    The controller still checks native identities and reader leases. Present
+    source availability, failed-parent flags and old size budgets are not proof.
+    """
+    selector = authenticated(selector_raw, expected_sha256)
+    first = selector.get('verified_file_prefix')
+    additional = selector.get('additional_verified_file_prefixes')
+    require(isinstance(first, dict) and isinstance(additional, list),
+            'complete retained prefix dependency list required')
+    result = {}
+    for reference in [first, *additional]:
+        dependency = reference.get('dependency', {})
+        require(dependency.get('schema') == 'T17-verified-retained-file-prefix-v1'
+                and dependency.get('data_component_verified') is True
+                and dependency.get('prior_job_success') is False,
+                'retained independent component proof required')
+        digest(dependency.get('verification_receipt_sha256'))
+        root = under(dependency['root'], backup_prefix)
+        archive, records = seal(dependency['archive']), seal(dependency['records'])
+        proof = dependency.get('independent', {})
+        require(proof.get('event') == 'Linux_selected_files_decoded'
+                and proof.get('encoding') == 'zip-member'
+                and proof.get('all_member_hashes_and_Linux_metadata_match') is True
+                and proof.get('exact_Linux_metadata_in_sealed_records_and_ZIP_comments') is True
+                and seal(proof['archive']) == archive and seal(proof['records']) == records
+                and type(proof.get('members')) is int and proof['members'] > 0
+                and type(proof.get('decoded_source_file_bytes')) is int
+                and proof['decoded_source_file_bytes'] >= 0,
+                'retained native/independent component pairing differs')
+        component = dict(
+            archive={**archive, 'native_path': under(root+'/'+archive['name'], backup_prefix)},
+            records={**records, 'native_path': under(root+'/'+records['name'], backup_prefix)},
+            members=proof['members'], raw_bytes=proof['decoded_source_file_bytes'],
+            encoding='zip-member', independent_proof_sha256=dependency['verification_receipt_sha256'],
+            current_source_qualified=False, parent_backup_accepted=False)
+        identifier = sha256(json.dumps(component, sort_keys=True, separators=(',', ':')).encode())
+        result.setdefault(identifier, component)
+    return list(result.values())
+
+
 def typed_component_rows(component, records_raw, *, layer):
     """Map authenticated completed ZIP records into existing typed recipes.
 

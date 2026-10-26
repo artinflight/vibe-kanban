@@ -1,3 +1,12 @@
+# October26 — operational completion in progress
+
+Nightly-owned change tracking is running after v11's natural timeout; no backup
+calendar is enabled. The current qualifier reuses its first4096 observations and
+accepted bodies; follow its existing unit/receipts, never launch a duplicate.
+Read the latest section of VK_NIGHTLY_BACKUP_EFFICIENCY.md for exact jobs,
+component indexes, current gaps and required acceptance. The old observer's gap,
+all original restore/carrier epochs and tracked bytecode remain intact.
+
 # Live B correction and actual gap progress — October26 07:21 EDT
 
 This supersedes the earlier blanket B blocker below. Live STOP/state explicitly

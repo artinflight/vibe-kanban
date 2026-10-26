@@ -2047,3 +2047,11 @@ or operational Nightly acceptance, schedule or backend action.
   All14.118GB exactly matches old selected request metadata;0 archive/source
   body rereads/copies. Remaining419,570 old file actions need current version
   qualification; old106.65GB budget is not fresh transfer demand or acceptance.
+
+- 2026-10-26 Nightly: installed a pinned read-only durable tracking worker after
+  the old observer's natural timeout; current qualification resumes over retained
+  SQLite maps and accepted component bodies.206 older components and the accepted
+  base content catalog were adopted without payload copies. One507.75MB history
+  point independently restores using300.83MB old prefix+206.92MB new B tail;
+  its source JSONL diagnostic remains explicit.564 regression cases pass(one
+  skip). Whole current baseline/worker/calendar commissioning remains unfinished.

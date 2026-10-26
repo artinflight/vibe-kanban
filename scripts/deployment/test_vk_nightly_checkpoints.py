@@ -26,6 +26,59 @@ def sql(source, name, number):
                 Linux_reopen=independent)
 
 
+class RetainedPrefixes(unittest.TestCase):
+    def setUp(self):
+        self.archive = seal('old.zip')
+        self.records = seal('different-original-record-name.jsonl', 2)
+        proof = dict(event='Linux_selected_files_decoded', encoding='zip-member',
+                     archive=self.archive, records=self.records, members=3,
+                     decoded_source_file_bytes=987,
+                     all_member_hashes_and_Linux_metadata_match=True,
+                     exact_Linux_metadata_in_sealed_records_and_ZIP_comments=True)
+        dependency = dict(schema='T17-verified-retained-file-prefix-v1',
+                          root='B:/vk-backups/old-run', archive=self.archive,
+                          records=self.records, independent=proof,
+                          data_component_verified=True, prior_job_success=False,
+                          verification_receipt_sha256='8'*64)
+        self.reference = dict(dependency=dependency)
+        self.selector = dict(verified_file_prefix=self.reference,
+                             additional_verified_file_prefixes=[copy.deepcopy(self.reference)])
+
+    def adopt(self):
+        raw=encoded(self.selector)
+        return c.retained_prefix_components(raw,c.sha256(raw),backup_prefix='B:/vk-backups')
+
+    def test_exact_duplicate_dependencies_reuse_one_original_carrier(self):
+        with patch('builtins.open', side_effect=AssertionError('payload access')):
+            result=self.adopt()
+        self.assertEqual(len(result),1)
+        self.assertEqual(result[0]['raw_bytes'],987)
+        self.assertTrue(result[0]['records']['native_path'].endswith(self.records['name']))
+        self.assertFalse(result[0]['current_source_qualified'])
+        self.assertFalse(result[0]['parent_backup_accepted'])
+
+    def test_independent_pair_and_record_metadata_cannot_be_replaced(self):
+        for field in ('archive','records'):
+            previous=self.reference['dependency']['independent'][field]
+            self.reference['dependency']['independent'][field]=dict(previous,sha256='f'*64)
+            with self.assertRaises(ValueError):self.adopt()
+            self.reference['dependency']['independent'][field]=previous
+
+    def test_partial_parent_and_boolean_member_count_are_not_proofs(self):
+        for field,value in [('members',True),('all_member_hashes_and_Linux_metadata_match',False),
+                            ('exact_Linux_metadata_in_sealed_records_and_ZIP_comments',False)]:
+            proof=self.reference['dependency']['independent'];previous=proof[field];proof[field]=value
+            with self.assertRaises(ValueError):self.adopt()
+            proof[field]=previous
+
+    def test_other_drives_scope_escape_and_changed_external_pin_are_refused(self):
+        self.reference['dependency']['root']='E:/vk-backups/old-run'
+        with self.assertRaises(ValueError):self.adopt()
+        raw=encoded(self.selector)
+        with self.assertRaises(ValueError):
+            c.retained_prefix_components(raw,'0'*64,backup_prefix='B:/vk-backups')
+
+
 class Checkpoints(unittest.TestCase):
     def setUp(self):
         self.root = 'B:/vk-backups/fixture'

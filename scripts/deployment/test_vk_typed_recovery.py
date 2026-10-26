@@ -159,6 +159,16 @@ class TypedRecoveryTests(unittest.TestCase):
             self.assertTrue(h.verified)
         self.use(check)
 
+    def test_keyset_resume_preserves_exact_shadow_and_tombstone_semantics(self):
+        def check(handle):
+            complete=list(handle.index.entries())
+            for name,_ in complete:
+                self.assertEqual(list(handle.index.entries(after=name)),[(n,r) for n,r in complete if n>name])
+            self.assertNotIn('home/state/removed',dict(complete))
+            self.assertEqual(list(handle.index.entries(after='zzzz')),[])
+            with self.assertRaises(ValueError):list(handle.index.entries(after='../escape'))
+        self.use(check)
+
     def test_small_third_journal_patch_shadows_removes_and_checks_lower_content(self):
         other = b'lower overlay body'
         encoded = zlib.compress(other)

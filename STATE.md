@@ -61,7 +61,7 @@ Collapsible issue behavior and approved frontend release: [topic evidence](VK_CO
 ## Nightly integration commissioning — October 26
 
 Nightly remains a separate worker/config/scheduler; it does not require a backend
-restart. The accepted historical restore and later verified components remain
+restart. Durable tracking is running; the historical restore/components remain
 retained. Current commissioning is not accepted. Live MM scope explicitly excludes B;
 the old copied Staging-only guard is historical. Read the
 current branch [handoff](HANDOFF.md) and [Nightly contract](VK_NIGHTLY_BACKUP_EFFICIENCY.md).

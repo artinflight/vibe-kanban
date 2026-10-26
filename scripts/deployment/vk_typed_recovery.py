@@ -187,11 +187,12 @@ class ComposedIndex:
             raise ValueError('excessive recovery row')
         return json.loads(row[0])
 
-    def entries(self):
+    def entries(self, *, after=None):
         self.check()
-        base = (self.base.entries() if isinstance(self.base, ComposedIndex)
-                else self.base.execute('select name,row from entries order by name'))
-        yield from self._merge(base)
+        if after is not None:key(after)
+        base = (self.base.entries(after=after) if isinstance(self.base, ComposedIndex)
+                else self.base.execute('select name,row from entries where name>? order by name',(after or '',)))
+        yield from self._merge(base, after=after)
         self.check()
 
     def changed_entries(self):
@@ -201,10 +202,10 @@ class ComposedIndex:
         yield from self._merge(previous)
         self.check()
 
-    def _merge(self, previous):
+    def _merge(self, previous, *, after=None):
         base = iter(previous)
-        overlay = iter(self.overlay.execute('select name,row from puts order by name'))
-        removed = iter(self.overlay.execute('select name from removes order by name'))
+        overlay = iter(self.overlay.execute('select name,row from puts where name>? order by name',(after or '',)))
+        removed = iter(self.overlay.execute('select name from removes where name>? order by name',(after or '',)))
         a, b, c = next(base, None), next(overlay, None), next(removed, None)
         while a is not None or b is not None:
             if b is not None and (a is None or b[0] <= a[0]):

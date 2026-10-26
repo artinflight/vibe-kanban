@@ -32,8 +32,10 @@ Historical statements describe their dated checkpoint, not present authority.
 - Operational diagnostics, account values and private manifests stay private
   on local/B storage. Publish only reviewed public source. No secrets in Git.
 
-Direct launcher Claude selection and guarded handoff are source preparation only;
-see [the T68 contract](VK_DIRECT_LAUNCHER_CLAUDE.md). No live adoption is claimed.
+The approved Claude connector files are installed, but the persistent worker and
+Dot's cached schema have not adopted them; see [T68](VK_DIRECT_LAUNCHER_CLAUDE.md).
+One disposable initial turn passed; live continuation and Codex handoff remain
+unverified. No Vibe backend release is claimed.
 
 ## Topic map and present evidence boundaries
 

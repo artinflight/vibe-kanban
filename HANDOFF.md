@@ -9,16 +9,23 @@ repository overlay. Native Rust MCP already supports Claude. The new backend
 handoff requires the migration and existing serialized admission; long/incomplete
 history, unknown past approval settings and pending work fail closed.
 
-Live-release follow-up: the adapter is still the original CODEX-only file; the
-committed overlay was not installed. A hash-pinned private SSD package and rollback
-copy are prepared; real adapter discovery/read-only calls and 42+28 tests pass.
-Automatic review rejected live replacement, citing the earlier no-deployment
-boundary. Explicit connector-only install and two disposable Sonnet/low turns are
-pending approval. Verified unchanged live hash and HTTP200 health/readiness; no
-restart/model call/merge/global-setting or recovery-data change. Read the contract's
-live-preparation section before acting. Current execution is
-`1a22bd64-ede9-40a1-a9f0-759f65e14d74`; failed `72c2ade5` Git observation remains
-retained and is not eligible for the documented completed-owner repair.
+Live-release follow-up: Seamus approved the connector-only installation and two
+short disposable Claude turns. The exact adapter/launcher pair is installed;
+42+28 tests, fresh installed discovery/read-only calls and HTTP200 health pass.
+One live initial Sonnet/low/SUPERVISED turn returned ACK and completed successfully
+in T68 workspace `69a8415a-8e5f-4754-812f-f164490bdc43`, session
+`2f929b09-daab-4850-89b5-fcef4b0df29f`, execution
+`f75b7302-10b4-4596-aabd-3f4c8d76e0b4`. Do not repeat its start.
+The actual Dot continuation was rejected by the still-old persistent tunnel
+worker, before dispatch. Exactly one coding turn exists. Automatic review rejected
+restarting only vibe-dot-connector.service; explicit approval for that restart is
+pending. Do not bypass the denial. After reload, send only the privately retained
+continuation prompt and verify native context/selection and exactly two turns.
+Dot's old CODEX-only schema also needs the existing connection's metadata Refresh;
+that operator action was requested. No Vibe restart, Staging Check, billing/global
+configuration, production-session or recovery-data change occurred. Read the
+contract's installation section and private release manifest before acting.
+Native failed Git observations remain retained; no status rewrite/repair occurred.
 
 Validation follow-up: 14 focused Rust handoff fixtures, 42 connector tests and
 28 installed-source regressions plus schema/dispatch/allowlist checks pass offline.

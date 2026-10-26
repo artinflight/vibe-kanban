@@ -27,6 +27,18 @@ Actual new proof under existing commissioning-20261026 private area:
   retained partial was recovered with bounded hash, no second body transfer.
   All original failed bytes and148SQL/41file components remain preserved.
 
+Retained-member adoption now authenticates only8,011,716B of record metadata:
+41 components ->20,475 typed version recipes, including14,441 file versions/
+14,118,303,923raw file bytes. All14,441 exactly match their original selected
+request metadata/size; no completed ZIP payload was reread or recopied. There
+are0 duplicate-version paths and0 unresolved hardlinks in these records. The
+65,990,656B control index remains private, SHA
+5f19034096b712f53ff1ee1ee72f85adb105ffab20e2a3b19ab878658c8b9c37.
+The old final request index still has419,570 file actions without a completed
+recipe, with106,649,895,992B old raw budget. These are unresolved version requests,
+not measured current transfer/space demand; older carriers may qualify for reuse.
+Do not declare the single recovered rollout the whole remaining file phase.
+
 No full current baseline, historical-gap closure, installed capture worker or
 schedule is accepted. No backend restart is necessary or authorized. Generic
 Nightly store still has1,500,000entry ceiling versus retained selector1,683,438;

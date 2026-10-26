@@ -225,5 +225,61 @@ class Checkpoints(unittest.TestCase):
                 c.seal(row)
 
 
+class TypedComponentRowsTests(unittest.TestCase):
+    def setUp(self):
+        self.meta = dict(mode=0o644,uid=1000,gid=1000,mtime_ns=123,xattrs={})
+        self.rows = [dict(action='directory',path='/source',metadata=self.meta),
+                     dict(action='file',path='/source/a',metadata=self.meta,bytes=3,sha256='a'*64),
+                     dict(action='symlink',path='/source/b',metadata=self.meta,target='a')]
+
+    def component(self, rows=None):
+        rows = self.rows if rows is None else rows
+        raw = b''.join((json.dumps(row)+'\n').encode() for row in rows)
+        def seal(name, size, sha):
+            return dict(name=name,bytes=size,sha256=sha,file_identity=[1,2,size,123])
+        value = dict(encoding='zip-member',members=len(rows),raw_bytes=3,
+                     archive=seal('verified.zip',123,'f'*64),
+                     records=seal('verified.jsonl',len(raw),c.sha256(raw)))
+        return value, raw
+
+    def test_complete_records_produce_typed_recipes_without_payload_read(self):
+        component, raw = self.component()
+        rows = c.typed_component_rows(component, raw, layer='retained-original')
+        self.assertEqual(len(rows),3)
+        member = rows[1][1]
+        self.assertEqual(member['segments'][0]['member'],'source/a')
+        self.assertEqual(member['segments'][0]['encoded_sha256'],'f'*64)
+        self.assertFalse(member['component_provenance']['current_source_qualified'])
+        self.assertFalse(member['component_provenance']['parent_backup_accepted'])
+        self.assertEqual(rows,c.typed_component_rows(component,raw,layer='retained-original'))
+
+    def test_hash_count_rawbytes_and_component_encoding_tamper_refused(self):
+        component, raw = self.component()
+        for updates in (dict(members=4),dict(raw_bytes=4),dict(encoding='raw'),dict(members=True)):
+            with self.assertRaises(ValueError): c.typed_component_rows(dict(component,**updates),raw,layer='retained')
+        with self.assertRaises(ValueError): c.typed_component_rows(component,raw+b' ',layer='retained')
+
+    def test_duplicate_unsorted_paths_and_invalid_Linux_metadata_refused(self):
+        for rows in (self.rows+self.rows, list(reversed(self.rows)),
+                     [dict(self.rows[1],metadata=dict(self.meta,uid=-1))],
+                     [dict(self.rows[1],path='/source/../escape')]):
+            component,raw=self.component(rows)
+            with self.assertRaises(ValueError): c.typed_component_rows(component,raw,layer='retained')
+
+    def test_hardlink_resolution_is_explicitly_deferred(self):
+        rows=self.rows+[dict(action='hardlink',path='/source/c',metadata=self.meta,target='source/a')]
+        component,raw=self.component(rows)
+        link=c.typed_component_rows(component,raw,layer='retained')[-1][1]
+        self.assertTrue(link['hardlink_target_resolution_required'])
+        self.assertNotIn('sha256',link)
+
+    def test_unknown_action_missing_file_hash_and_bad_xattrs_refused(self):
+        bad=[dict(self.rows[1],action='socket'),dict(self.rows[1],sha256='bad'),
+             dict(self.rows[1],metadata=dict(self.meta,xattrs={'user.example':'not-base64!'}))]
+        for row in bad:
+            component,raw=self.component([row])
+            with self.assertRaises(ValueError): c.typed_component_rows(component,raw,layer='retained')
+
+
 if __name__ == '__main__':
     unittest.main()

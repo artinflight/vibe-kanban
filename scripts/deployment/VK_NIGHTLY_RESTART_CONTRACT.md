@@ -121,3 +121,18 @@ selection, final-delta/failure rehearsal and exact operational worker/config/
 calendar adoption remain open. No next run is promised or scheduled. The private
 capture watcher uses FD readiness; it neither repairs old gaps nor promises
 cross-run continuity by itself.
+
+## Exact retained member recipes
+
+`typed_component_rows` authenticates each completed component's exact JSONL
+records, complete member/raw-byte counts, Linux metadata and original ZIP name/
+encoding/hash. It emits existing typed-reader segment recipes and preserves
+failed-parent/original-version provenance. No ZIP bodies are reread or copied.
+Hardlink targets without content proof are explicitly unresolved for the complete
+map compiler. The caller externally pins the retained catalog, holds native carrier
+identities/leases and performs complete-map validation/current qualification.
+
+Actual adoption maps20,475 members across41 completed components,14,441 regular
+versions/14.118GB. These match their old selected requests, not present-source
+acceptance. The remaining old file-request count/budget is not a fresh transfer
+measurement; qualify older carriers and changed versions before admission.

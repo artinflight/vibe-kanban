@@ -232,3 +232,65 @@ def adopt(*, file_receipts, file_config, sql_result, sql_config, pins,
                 parent_failed=True, current_source_qualified=False,
                 full_backup_accepted=False, writer_fence_verified=False,
                 schedule_adoption_authorized=False, payload_bytes_copied=0)
+
+
+def typed_component_rows(component, records_raw, *, layer):
+    """Map authenticated completed ZIP records into existing typed recipes.
+
+    The catalog is externally pinned by the caller and already authenticates the
+    native/independent pair. Re-read records, not completed ZIP payloads. These
+    recipes preserve original component versions; current-source qualification,
+    all cross-component link checks and journal-gap closure remain separate.
+    """
+    require(isinstance(layer, str) and re.fullmatch('[A-Za-z0-9_.-]+', layer),
+            'explicit typed carrier layer required')
+    archive, records = component['archive'], component['records']
+    require(type(component.get('members')) is int and component['members'] > 0
+            and type(component.get('raw_bytes')) is int and component['raw_bytes'] >= 0,
+            'finite complete component counts required')
+    require(component.get('encoding') == 'zip-member', 'verified ZIP-member component required')
+    seal(archive); seal(records)
+    require(isinstance(records_raw, bytes) and len(records_raw) == records['bytes']
+            and len(records_raw) <= MAX_CONTROL and records_raw.endswith(b'\n')
+            and sha256(records_raw) == records['sha256'], 'exact retained component records differ')
+    rows = []; total = 0; previous = ''
+    for line in records_raw.splitlines():
+        require(0 < len(line) <= 65536, 'bounded complete retained member record required')
+        original = parse(line); path = source_path(original['path']); name = path.lstrip('/')
+        require(name and name > previous, 'record member ordering/uniqueness differs')
+        previous = name; action = original['action']; metadata = original['metadata']
+        require(action in ('file', 'directory', 'symlink', 'hardlink'), 'unsupported retained member')
+        require(set(metadata) == {'mode', 'uid', 'gid', 'mtime_ns', 'xattrs'}
+                and all(type(metadata[k]) is int and metadata[k] >= 0 for k in ('mode', 'uid', 'gid', 'mtime_ns'))
+                and metadata['mode'] <= 0o7777 and isinstance(metadata['xattrs'], dict),
+                'exact retained Linux metadata required')
+        import base64
+        for key, value in metadata['xattrs'].items():
+            require(isinstance(key, str) and '\x00' not in key, 'invalid retained xattr')
+            base64.b64decode(value, validate=True)
+        row = {'kind': action, **metadata, 'component_provenance': {
+            'record_sha256': records['sha256'], 'archive_sha256': archive['sha256'],
+            'current_source_qualified': False, 'parent_backup_accepted': False,
+            **({'source_read_view': original['source_read_view']} if 'source_read_view' in original else {})}}
+        if action == 'file':
+            size = original['bytes']; checksum = digest(original['sha256'])
+            require(type(size) is int and size >= 0, 'nonnegative retained member size required')
+            total += size
+            row.update(bytes=size, sha256=checksum, segments=[{
+                'layer': layer, 'selector': archive['name'], 'member': name,
+                'bytes': size, 'sha256': checksum, 'encoding': 'zip-member',
+                'encoded_bytes': archive['bytes'], 'encoded_sha256': archive['sha256']}])
+        elif action in ('symlink', 'hardlink'):
+            target = original['target']
+            require(isinstance(target, str) and target and '\x00' not in target,
+                    'retained link literal required')
+            row['target'] = target
+            if action == 'hardlink':
+                # Native records may not carry content hashes for a tar link.
+                # The complete-map compiler must resolve it against the retained
+                # target and add bytes/hash; do not invent them here.
+                row['hardlink_target_resolution_required'] = True
+        rows.append((name, row))
+    require(len(rows) == component['members'] and total == component['raw_bytes'],
+            'complete retained component member count/raw bytes differ')
+    return rows

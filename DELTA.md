@@ -2041,3 +2041,9 @@ or operational Nightly acceptance, schedule or backend action.
   Added/tested atomic durable journal controls and stable-file version handler.
   Recovered exact3.17MB B partial; native+independent RAM hash/JSONL/Linux metadata
   pass without recopy. No full baseline/schedule/backend acceptance claimed.
+
+- Nightly retained-member integration: authenticated8.01MB of records maps20,475
+  typed member recipes/14,441 file versions from41 already-verified components.
+  All14.118GB exactly matches old selected request metadata;0 archive/source
+  body rereads/copies. Remaining419,570 old file actions need current version
+  qualification; old106.65GB budget is not fresh transfer demand or acceptance.

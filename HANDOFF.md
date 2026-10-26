@@ -1,7 +1,9 @@
 # T68 pickup — direct launcher Claude support
 
 New issue T68 (`0eb31691-b6e1-406a-a2b9-a4b9bf5ca1f2`) is linked to the
-current dedicated workspace. Read [the contract](VK_DIRECT_LAUNCHER_CLAUDE.md).
+current dedicated workspace. [Draft PR281](https://github.com/artinflight/vibe-kanban/pull/281)
+is open into staging; implementation commit `6b1ee0270` is pushed. Read
+[the contract](VK_DIRECT_LAUNCHER_CLAUDE.md).
 The direct adapter is external; changes are prepared only as a hash-pinned
 repository overlay. Native Rust MCP already supports Claude. The new backend
 handoff requires the migration and existing serialized admission; long/incomplete

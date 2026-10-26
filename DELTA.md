@@ -1884,13 +1884,6 @@ the paid harness was not rerun. No live connector edit, restart or deployment.
 - Regression coverage includes AutoSwitch's resumed-parent failure and child
   reuse. This source merge is for the next backend restart, not live activation.
 
-## 2026-10-16 Nightly backup efficiency integration
-
-- Created local Vibe T40 and linked workspace604d90d0. Imported the PR235 backup-only dependency closure at240a7b2c7; routine restart automation remains separate.
-- Added opt-in independent chunked nightly storage, prefix reuse, complete-byte decoding, native readback and leased restart-baseline support. Exact rebuild proposals retain protected work and enable no live exclusion.
-- Unified isolated fixture validation:339 passed/1 opt-in skip; ops, Python syntax, historical source pins and whitespace checks pass. Full format reaches Rust then stops at missing Prettier.
-- No live schedule, production backup/restart, source retirement or whole-plan B restore acceptance. See VK_NIGHTLY_BACKUP_EFFICIENCY.md for adoption requirements and private evidence location.
-
 
 ## 2026-10-16 — Preserve existing Dot sidechat integration
 
@@ -2021,40 +2014,23 @@ authenticated-tab boundary; no retry/alternate route. Seamus's fresh paired-phon
 question/reply/notification confirmation remains. PR254 merged into staging28fdcfddf.
 See DOT_NOTIFICATION_ROLLOUT.md and the bounded live QA scripts for receipts.
 
-2026-10-17 nightly integration PR263: 359 backup tests (358 pass, one explicit skip), real B four-file/SQLite post-retirement restoration plus interrupted-job recovery pass. Whole-plan census/capacity acceptance still running; no production schedule activated and no historical recovery retired.
+## 2026-10-17 — Project sidebar preparation
 
-2026-10-17 00:56UTC nightly production admission: complete92-root census sealed SHAe026c85c,1,219,860paths/1,090,388files/156,501,564,345bytes/108SQLite including72required. Exact disabled package/runtime bindings validate. Admission blocked by1M-entry bound and36.2GiB Bfree versus98.25GiB configured cold envelope; no full production restore or schedule activation. Shared Staging handoff sent; unverified recovery and all18finals retained.
+Implemented private project Dot Chat/shared planning with canonical task links,
+revision/idempotency protection, separate project attention and responsive UI.
+Coordinated Preserve Dot/CU1.6 and Staging. No production adoption.
+See VK_PROJECT_COLLABORATION.md for validation and release requirements.
 
-## 2026-10-18 — collect retained-source failure and preserve recovery diagnostics
+## October26 — Nightly commissioning reconciliation
 
-Collected the actual3:44p.m. EDT child1 journal-validation terminal. Preserved all
-Nightly inputs; confirmed native/MCP leases are free and the unsealed archive has
-a truncated final zstd block. Corrected late-failure compression draining and
-bounded private watcher diagnostics without changing reviewed base pins.90 narrow
-regressions and ops governance pass; Rust format passes, frontend Prettier missing.
-Native small restore and metered proof preparation retained; full backup/restore,
-source coverage reconciliation, deployment and schedule remain unaccepted.
+Reconciled existing Nightly branch with Staging; preserved prior STATE/STREAM/
+HANDOFF/DELTA byte-for-byte in NIGHTLY_CONTINUITY_ARCHIVE_20261026.json. Actual
+current B STOP plus Staging-specific MM grant blocks Nightly payload/scheduling;
+no controller, security or data action. Reuse148SQL/41file v8i proofs without
+claiming its failed parent is accepted.
 
-2026-10-18 17:31 EDT: Preserved failed archive/111 sealed SQL images; corrected read-only prefix audit active. Native69-member direct restore and archive-only Git fixtures pass;55-file conditional exact-coverage/independent-restore follow-through sealed with fresh measured-space/access gates. No original/full-workload restore acceptance, recapture, deployment, timer or retirement.
-
-## October18 — completed retained-prefix audit and one independent restore
-
-Audit passed:1,377,791 complete members,112 sealed SQL bindings and13512 original
-pins;7783 exact gaps remain explicit. Measured162.70GB logical/42.42GB encoded
-object payload. Preserved original failed bytes and corrected a metadata LIKE scan
-to a tested indexed range; no archive reread or SQL recapture. One separately
-guarded recovered-set restore and durable collector started6:42p.m. EDT. Actual
-restore/full original epoch/production-generation acceptance remain pending.
-
-## October 18 — final-result acceptance cannot hide archived-Git errors
-
-Preserved the active restore/controller/collector and added a tested one-shot
-completion-event predicate outside its sealed bundle.16 acceptance cases,4 callback
-contracts and the real event fixture pass; full actual readback/Git results remain
-pending. Exact original gaps and separate-epoch recovery options are retained.
-
-The final check also catches actual exit-zero Git corruption diagnostics:23
-predicate cases,5 callback contracts and native diagnostic SHA/nofollow checks
-pass. The existing one-shot event is resealed; the original restore stays active.
-T63's7:35p.m. frontend delta is separately bound to existing audited files and its
-verified B ZIP, with current baseline adoption still pending.
+Authenticated v8i metadata adoption preserves148SQL carriers (104old/44fresh in
+that run) and41file-component pairs/14,118,303,923rawB, zero payload copied.
+23new adoption/9scheduler cases pass. Current v11 readback has9new enrollment
+errors; old five-error and17SQL notes are historical. No current whole-backup
+or operational Nightly acceptance, schedule or backend action.

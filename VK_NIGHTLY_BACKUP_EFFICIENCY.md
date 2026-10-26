@@ -1,3 +1,30 @@
+# October 26 — current commissioning and retained component reuse
+
+Seamus authorized operational completion in the existing Nightly workspace.
+Current source is reconciled with Staging; no backend restart is needed. All
+earlier source/integration history is preserved in the authenticated continuity
+archives, not discarded as stale output.
+
+The tested terminal-component adapter authenticates actual v8i metadata:148SQL
+images (104retained original carriers plus44fresh in that original run),41
+independent ZIP/records pairs and14,118,303,923raw file bytes. Actual metadata
+adoption produced a365,781-byte private catalog SHA
+874528027d15450a6b90521c6a3a5b41f4ba2cb53f0e1b301321d4cca37079d7,
+with zero payload copies and277,756KiB measured process peakRSS. It reuses proof,
+not current-source qualification. The accepted162.70GB restore,137older DB images
+and all supplements remain valid for their explicit epochs.
+
+Commissioning is blocked by the actual MM STOP latch plus a Staging-only B grant;
+Nightly cannot appropriate that grant or alter STOP/security. Current v11 journal
+readback also has nine errors in vanished test subtrees and observation_readyfalse.
+The old17SQL/one-file/five-error note is historical, not the new requirement list.
+See VK_NIGHTLY_RESTART_CONTRACT.md and HANDOFF.md for exact boundaries.
+
+No backup, payload readback/copy, schedule, production switch, controller change
+or observer replacement occurred. Baseline/journal/current-runtime/composed
+readback acceptance, bounded unchanged-source selection and installed worker/
+config/calendar proof remain required before claiming operational completion.
+
 # October 21 — restart requirement and actual integration readiness
 
 Nightly is a standalone Python worker/configuration plus unprivileged calendar/

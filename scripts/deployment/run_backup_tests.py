@@ -18,7 +18,8 @@ def main():
     suites += [loader.loadTestsFromName(module) for module in (
         'test_vk_rolling_backup', 'test_vk_desktop_backups', 'test_vk_archive_stream',
         'test_vk_b_disk_capture', 'test_vk_b_disk_snapshot',
-        'test_vk_candidate_direct_b', 'test_vk_candidate_scaffold')]
+        'test_vk_candidate_direct_b', 'test_vk_candidate_scaffold',
+        'test_vk_typed_recovery', 'test_vk_vanished_enrollment', 'test_vk_verified_cache')]
     return 0 if unittest.TextTestRunner(verbosity=2).run(unittest.TestSuite(suites)).wasSuccessful() else 1
 
 

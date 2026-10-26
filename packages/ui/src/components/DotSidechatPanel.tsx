@@ -18,6 +18,7 @@ export interface SidechatReceipt {
 
 export interface DotSidechatPanelProps {
   live?: boolean;
+  projectScope?: boolean;
   notificationsEnabled?: boolean;
   onRead?: (messages: string[]) => Promise<void>;
   onAttention?: (
@@ -187,7 +188,10 @@ export function DotSidechatPanel(props: DotSidechatPanelProps) {
       </header>
       <div className="dot-scope">
         <strong>{props.issueLabel}</strong>
-        <span>Workspace context: {props.workspaceLabel}</span>
+        <span>
+          {props.projectScope ? 'Scope' : 'Workspace context'}:{' '}
+          {props.workspaceLabel}
+        </span>
       </div>
       {!props.live && (
         <div className="dot-fixture">
@@ -213,12 +217,14 @@ export function DotSidechatPanel(props: DotSidechatPanelProps) {
             <span className="dot-empty-orb">●</span>
             <h3>A little space to think together.</h3>
             <p>
-              Talk through this issue with Dot. Your coding agent stays focused
-              on its own work.
+              Talk through {props.projectScope ? 'this project' : 'this issue'}{' '}
+              with Dot. Your coding agent stays focused on its own work.
             </p>
             <p className="dot-muted">
               {props.live
-                ? 'Messages stay in this private issue thread across workspaces.'
+                ? props.projectScope
+                  ? 'Messages stay private to you and Dot across this project’s issues and workspaces.'
+                  : 'Messages stay in this private issue thread across workspaces.'
                 : 'This preview stores fixture messages only.'}
             </p>
           </div>
@@ -330,7 +336,11 @@ export function DotSidechatPanel(props: DotSidechatPanelProps) {
           readOnly={props.draftLocked}
           value={props.draft}
           onChange={(event) => props.onDraft(event.target.value)}
-          placeholder="Think through this issue…"
+          placeholder={
+            props.projectScope
+              ? 'Think through this project…'
+              : 'Think through this issue…'
+          }
           rows={3}
           maxLength={15000}
           onKeyDown={(event) => {

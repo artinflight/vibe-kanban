@@ -11,7 +11,9 @@ import math
 import os
 from pathlib import Path
 import re
+import selectors
 import shutil
+import signal
 import sqlite3
 import stat
 import subprocess
@@ -21,11 +23,47 @@ import urllib.request
 import uuid
 
 from vk_prep_common import digest, identity, measured, save, storage
+from vk_job_outcome import outcome
 
 BUILD_ENVIRONMENT = ("PATH", "HOME", "LANG", "LC_ALL", "SSL_CERT_FILE", "RUSTUP_HOME",
                      "CARGO_HOME", "PNPM_HOME", "CC", "CXX", "RUSTC_WRAPPER", "RUSTFLAGS",
                      "CARGO_TARGET_DIR", "CARGO_INCREMENTAL", "SQLX_OFFLINE", "NODE_OPTIONS",
                      "NODE_ENV", "CI")
+
+
+def run_and_drain(command, output, *, cwd, env, timeout):
+    """Stream bounded chunks through EOF before sealing logs/artifacts.
+
+    Only this invocation gets a new process group. On timeout/failure, terminate
+    that owned group. EOF proves log drain, not arbitrary detached-producer
+    completion: asynchronous producers still need their owner's join/status gate.
+    """
+    deadline = time.monotonic() + timeout
+    process = subprocess.Popen(command, cwd=cwd, env=env, stdout=subprocess.PIPE,
+                               stderr=subprocess.STDOUT, start_new_session=True)
+    try:
+        with selectors.DefaultSelector() as selector:
+            selector.register(process.stdout, selectors.EVENT_READ)
+            while True:
+                remaining = deadline - time.monotonic()
+                if remaining <= 0 or not selector.select(remaining):
+                    raise subprocess.TimeoutExpired(command, timeout)
+                block = os.read(process.stdout.fileno(), 65536)
+                if not block:
+                    break
+                output.write(block)
+        return process.wait(timeout=max(0, deadline - time.monotonic()))
+    except BaseException:
+        # The direct child is not reaped until wait, retaining its group identity
+        # throughout pipe drain. Never signal an unrelated pre-existing group.
+        try:
+            os.killpg(process.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+        process.wait()
+        raise
+    finally:
+        process.stdout.close()
 
 
 def git(source, *args):
@@ -64,11 +102,15 @@ def output_hashes(paths):
         files = sorted(root.rglob("*")) if root.is_dir() else [root]
         if root.is_dir() and not files:
             raise ValueError("Required output directory is empty: " + str(root))
+        regular_files = 0
         for path in files:
             if path.is_symlink():
                 raise ValueError("Release outputs must not depend on mutable external symlinks: " + str(path))
             if path.is_file():
                 result[str(path)] = {"sha256": digest(path), "mode": path.stat().st_mode & 0o777}
+                regular_files += 1
+        if root.is_dir() and regular_files == 0:
+            raise ValueError("Required output directory is empty of regular artifacts: " + str(root))
     return result
 
 
@@ -85,6 +127,8 @@ def default_plan(source, root, deployed):
                for name in (".env", ".env.local", ".env.production", ".env.production.local")]
     context.extend(str(Path(source) / name) for name in (".cargo/config", ".cargo/config.toml", ".npmrc"))
     steps = [
+        {"id": "continuity", "command": ["python3", "scripts/continuity/pickup.py", "check"],
+         "tools": [python], "cacheable": True},
         {"id": "preparation-tests", "command": ["python3", "-m", "unittest", "discover", "-s", "scripts/deployment", "-p", "test_vk_*.py"],
          "tools": [python], "cacheable": True},
         {"id": "ops", "command": ["pnpm", "run", "ops:check"], "tools": node, "cacheable": True},
@@ -365,10 +409,13 @@ class Preparation:
                          "helpers_sha256": digest(Path(__file__).with_name("vk_prep_common.py"))})
 
     def run(self):
+        self.outcome = outcome(self.run_root, "running")
         with (self.cache / ".preparation.lock").open("a") as lock:
             try:
                 fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
             except BlockingIOError as error:
+                self.outcome = outcome(self.run_root, "blocked", phase="cache-ownership",
+                                       error_type=type(error).__name__)
                 raise RuntimeError("Preparation cache already has an owner; do not launch duplicate work") from error
             return self.run_locked()
 
@@ -453,6 +500,7 @@ class Preparation:
 
     def run_locked(self):
         started = time.monotonic()
+        save(self.root / "latest-outcome.json", self.outcome)
         save(self.root / "latest-result.json", {"passed": False, "state": "running-or-interrupted",
                                                "cutover_authorized": False, "run": str(self.run_root)})
         clock = self.root / "preparation-clock.json"
@@ -462,19 +510,26 @@ class Preparation:
         tree = None
         results = {}
         passed = False
+        phase = "source"
+        failure = None
         try:
             tree = self.source_tree()
+            phase = "plan"
             self.validate_plan()
             accepted = self.plan.get("accepted_artifact_manifest")
             if accepted:
+                phase = "accepted-artifacts"
                 verify_artifacts(accepted["path"], accepted["sha256"], tree)
             # Discover missing prerequisites before a long build, not afterwards.
             with measured(self.timings, "prerequisites"):
+                phase = "prerequisites"
                 for step in steps:
-                    for command in step.get("tools", []):
+                    for index, command in enumerate(step.get("tools", [])):
+                        phase = "prerequisites:" + step["id"] + ":" + str(index)
                         self.tool(command)
             for step in steps:
                 name = step["id"]
+                phase = "step:" + name
                 dependencies = {key: {"fingerprint": results[key]["fingerprint"], "outputs": results[key]["outputs"]}
                                 for key in step.get("depends_on", [])}
                 fingerprint = self.fingerprint(step, dependencies)
@@ -498,10 +553,9 @@ class Preparation:
                     log = self.run_root / (name + ".log")
                     self.materialize(step.get("materialize_source_outputs", []), results)
                     with log.open("wb") as output:
-                        completed = subprocess.run(step["command"], cwd=self.source, env=self.environment,
-                                                   stdout=output, stderr=subprocess.STDOUT,
-                                                   timeout=step.get("timeout_seconds", 1800))
-                    if completed.returncode:
+                        returncode = run_and_drain(step["command"], output, cwd=self.source,
+                                                   env=self.environment, timeout=step.get("timeout_seconds", 1800))
+                    if returncode:
                         raise RuntimeError("Preparation step failed: " + name + " (see " + str(log) + ")")
                     if self.source_tree() != tree:
                         raise ValueError("Preparation changed candidate source; invalidate evidence")
@@ -519,17 +573,28 @@ class Preparation:
                     if reusable:
                         save(cached, result)
             if accepted:
+                phase = "accepted-artifacts"
                 verify_artifacts(accepted["path"], accepted["sha256"], tree)
             passed = True
+            phase = "completed"
+        except BaseException as error:
+            failure = {"phase": phase[:256], "type": type(error).__name__}
+            raise
         finally:
             report = {"schema": 1, "passed": passed, "source_tree": tree, "steps": results,
+                      "plan_sha256": identity(self.plan),
                       "accepted_artifact_manifest": self.plan.get("accepted_artifact_manifest"),
                       "timings": self.timings, "total_preparation_seconds": time.monotonic() - started,
                       "elapsed_since_preparation_started_seconds": time.time() - json.loads(clock.read_text())["started_at"],
                       "runner_service_actions": [], "cutover_authorized": False,
                       "functional_readiness": "Separate release QA, backups and volatile preflight remain required"}
+            if failure:
+                report["failure"] = failure
             save(self.run_root / "result.json", report)
             save(self.root / "latest-result.json", report)
+            self.outcome = outcome(self.run_root, "completed" if passed else "failed", report=report,
+                                   phase=phase, error_type=failure["type"] if failure else None)
+            save(self.root / "latest-outcome.json", self.outcome)
         return report
 
 
@@ -547,6 +612,8 @@ def main():
     run.add_argument("--source", required=True, type=Path)
     run.add_argument("--root", required=True, type=Path)
     run.add_argument("--plan", required=True, type=Path)
+    run.add_argument("--compact", action="store_true",
+                     help="Print the bounded durable outcome; preserve the full existing result on disk")
     kind = commands.add_parser("classify")
     kind.add_argument("--source", required=True, type=Path)
     kind.add_argument("--deployed", required=True)
@@ -585,7 +652,24 @@ def main():
             raise ValueError("Existing preparation plan must not be replaced")
         save(target, result)
     elif args.action == "run":
-        result = Preparation(args.source, args.root, json.loads(args.plan.read_text())).run()
+        preparation = Preparation(args.source, args.root, json.loads(args.plan.read_text()))
+        try:
+            result = preparation.run()
+        except Exception as error:
+            if not args.compact:
+                raise
+            # Failure/blocked remains nonzero. Do not substitute an older pass
+            # or claim that an external UI/message delivery was acknowledged.
+            receipt = getattr(preparation, "outcome", None)
+            if receipt is None or receipt["state"] not in ("failed", "blocked"):
+                receipt = {"kind": "preparation-outcome", "job_id": preparation.run_root.name,
+                           "state": "failed", "passed": False, "outcome_record_complete": False,
+                           "error_type": type(error).__name__, "cutover_authorized": False,
+                           "next_action": "Outcome recording failed; inspect this job and existing evidence."}
+            print(json.dumps(receipt, indent=2))
+            return 1
+        if args.compact:
+            result = preparation.outcome
     elif args.action == "classify":
         clean_tree(args.source)
         result = {"deployment_kind": deployment_kind(args.source, args.deployed), "cutover_authorized": False}
@@ -597,7 +681,8 @@ def main():
         result = pending_sessions(args.origin, database_sessions(args.database), args.workers)
         save(storage(args.out), result)
     print(json.dumps(result, indent=2))
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

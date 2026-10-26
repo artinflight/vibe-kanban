@@ -1,0 +1,27 @@
+{
+  "schema": "nightly-continuity-archive-v1",
+  "parent_commit": "116732331e277edfd5e31efa9945318e6d6919df",
+  "staging_parent": "5b43524ea35b2eb5dd80d0881dc8445489f4442f",
+  "files": {
+    "STATE.md": {
+      "archive": "STATE_NIGHTLY_HISTORY_20261026.md",
+      "bytes": 224088,
+      "sha256": "9903a0b14068b6ef9715ab150d998a19b7c82acdd84725b3b566247de619ab95"
+    },
+    "STREAM.md": {
+      "archive": "STREAM_NIGHTLY_HISTORY_20261026.md",
+      "bytes": 163017,
+      "sha256": "1e0452b40553bed097891ea2253e1a9e9ec4796df5a5f3ef15548c1c4553669a"
+    },
+    "HANDOFF.md": {
+      "archive": "HANDOFF_NIGHTLY_HISTORY_20261026.md",
+      "bytes": 803844,
+      "sha256": "e77e5bb166191a67a6a1bb013a171a89ef7cd377654c67e762bf98b2653e9f8a"
+    },
+    "DELTA.md": {
+      "archive": "DELTA_NIGHTLY_HISTORY_20261026.md",
+      "bytes": 146201,
+      "sha256": "8add96f6e2f74a47948970acc97ca7d39a8fdca7a67049656a59cc88e22a7c6f"
+    }
+  }
+}

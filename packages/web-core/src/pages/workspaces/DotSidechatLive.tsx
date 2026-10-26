@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   DotSidechatPanel,
   type SidechatMessage,
@@ -6,8 +6,17 @@ import {
 } from '@vibe/ui/components/DotSidechatPanel';
 import './dot-sidechat.css';
 
-type Session = { csrf: string; expires: number | null; session_id: string };
-type Pending = { workspace: string; request: string; body: string };
+export type Session = {
+  csrf: string;
+  expires: number | null;
+  session_id: string;
+};
+type Pending = {
+  workspace?: string;
+  project?: string;
+  request: string;
+  body: string;
+};
 type Snapshot = {
   thread: { id: string };
   scope: { issue_label: string; workspace_label: string };
@@ -17,9 +26,9 @@ type Snapshot = {
   next_after: number | null;
   capabilities?: { notifications: boolean };
 };
-class PairingRequired extends Error {}
+export class PairingRequired extends Error {}
 
-async function api(
+export async function dotApi(
   path: string,
   signal: AbortSignal,
   body?: unknown,
@@ -40,6 +49,17 @@ async function api(
   });
   if (response.status === 401)
     throw new PairingRequired('Pair this browser to continue.');
+  if (response.status === 409)
+    throw new Error(
+      'This entry changed elsewhere. Cancel this edit, refresh, and review the latest version before saving.'
+    );
+  if (
+    !response.ok &&
+    (path.startsWith('project-') || path.startsWith('thread?project='))
+  )
+    throw new Error(
+      'Project collaboration is unavailable. This feature requires the project sidebar Dot service release and access to this project.'
+    );
   if (!response.ok)
     throw new Error(
       'Private chat is unavailable or this workspace is outside your access. Your pending message is retained.'
@@ -47,7 +67,20 @@ async function api(
   return response.json();
 }
 
-export function DotSidechatLive({ workspaceId }: { workspaceId?: string }) {
+export function DotSidechatLive({
+  workspaceId,
+  projectId,
+}: {
+  workspaceId?: string;
+  projectId?: string;
+}) {
+  const contextId = projectId ?? workspaceId;
+  const targetKey = projectId ? 'project' : 'workspace';
+  const target = useMemo(
+    () => (projectId ? { project: projectId } : { workspace: workspaceId }),
+    [projectId, workspaceId]
+  );
+  const query = targetKey + '=' + encodeURIComponent(contextId ?? '');
   const [session, setSession] = useState<Session | null>(null);
   const [checking, setChecking] = useState(true);
   const [code, setCode] = useState('');
@@ -61,14 +94,18 @@ export function DotSidechatLive({ workspaceId }: { workspaceId?: string }) {
   const refreshing = useRef(false);
   const lifetime = useRef(new AbortController());
   const storageKey =
-    session && workspaceId
-      ? 'vibe-dot-pending:' + session.session_id + ':' + workspaceId
+    session && contextId
+      ? 'vibe-dot-pending:' +
+        session.session_id +
+        ':' +
+        (projectId ? 'project:' : '') +
+        contextId
       : null;
 
   useEffect(() => {
     const controller = new AbortController();
     lifetime.current = controller;
-    void api('session', controller.signal)
+    void dotApi('session', controller.signal)
       .then((value: Session) => {
         if (!controller.signal.aborted) setSession(value);
       })
@@ -91,7 +128,9 @@ export function DotSidechatLive({ workspaceId }: { workspaceId?: string }) {
       if (saved) {
         const value = JSON.parse(saved) as Pending;
         if (
-          value.workspace === workspaceId &&
+          (projectId
+            ? value.project === projectId && !value.workspace
+            : value.workspace === workspaceId && !value.project) &&
           typeof value.body === 'string' &&
           typeof value.request === 'string'
         ) {
@@ -104,23 +143,20 @@ export function DotSidechatLive({ workspaceId }: { workspaceId?: string }) {
         'This browser cannot retain an uncertain send across reloads. Enable tab storage before sending.'
       );
     }
-  }, [storageKey, workspaceId]);
+  }, [storageKey, workspaceId, projectId]);
 
   const refresh = useCallback(async () => {
-    if (!session || !workspaceId || refreshing.current) return;
+    if (!session || !contextId || refreshing.current) return;
     refreshing.current = true;
     const signal = lifetime.current.signal;
     try {
-      let page: Snapshot = await api(
-        'thread?workspace=' + encodeURIComponent(workspaceId),
-        signal
-      );
+      let page: Snapshot = await dotApi('thread?' + query, signal);
       const messages = [...page.messages];
       const receipts = { ...page.receipts };
       while (page.next_after !== null) {
-        page = await api(
-          'thread?workspace=' +
-            encodeURIComponent(workspaceId) +
+        page = await dotApi(
+          'thread?' +
+            query +
             '&after=' +
             page.next_after +
             '&through=' +
@@ -147,7 +183,7 @@ export function DotSidechatLive({ workspaceId }: { workspaceId?: string }) {
       refreshing.current = false;
       if (!signal.aborted) setLoading(false);
     }
-  }, [session, workspaceId]);
+  }, [session, contextId, query]);
 
   useEffect(() => {
     void refresh();
@@ -159,12 +195,12 @@ export function DotSidechatLive({ workspaceId }: { workspaceId?: string }) {
 
   const readReplies = useCallback(
     async (messages: string[]) => {
-      if (!session || !workspaceId) return;
+      if (!session || !contextId) return;
       try {
-        await api(
+        await dotApi(
           'seen',
           lifetime.current.signal,
-          { workspace: workspaceId, messages },
+          { ...target, messages },
           session.csrf
         );
         setSnapshot((previous) =>
@@ -184,19 +220,19 @@ export function DotSidechatLive({ workspaceId }: { workspaceId?: string }) {
         throw failure;
       }
     },
-    [session, workspaceId]
+    [session, contextId, target]
   );
 
   async function attention(
     message: string,
     action: 'action' | 'resolve' | 'reopen'
   ) {
-    if (!session || !workspaceId) return;
+    if (!session || !contextId) return;
     try {
-      await api(
+      await dotApi(
         'attention',
         lifetime.current.signal,
-        { workspace: workspaceId, message, action },
+        { ...target, message, action },
         session.csrf
       );
       window.dispatchEvent(new CustomEvent('dot-sidechat-changed'));
@@ -212,7 +248,7 @@ export function DotSidechatLive({ workspaceId }: { workspaceId?: string }) {
     busy.current = true;
     setSending(true);
     try {
-      const value: Session = await api('pair', lifetime.current.signal, {
+      const value: Session = await dotApi('pair', lifetime.current.signal, {
         code,
       });
       setCode('');
@@ -232,26 +268,20 @@ export function DotSidechatLive({ workspaceId }: { workspaceId?: string }) {
   }
 
   async function send() {
-    if (
-      !session ||
-      !workspaceId ||
-      !storageKey ||
-      busy.current ||
-      !draft.trim()
-    )
+    if (!session || !contextId || !storageKey || busy.current || !draft.trim())
       return;
     busy.current = true;
     setSending(true);
     try {
       const outgoing = pending.current ?? {
-        workspace: workspaceId,
+        ...target,
         request: crypto.randomUUID(),
         body: draft,
       };
       // Persist BEFORE submitting; retries after a lost response reuse the exact key/body.
       sessionStorage.setItem(storageKey, JSON.stringify(outgoing));
       pending.current = outgoing;
-      await api('send', lifetime.current.signal, outgoing, session.csrf);
+      await dotApi('send', lifetime.current.signal, outgoing, session.csrf);
       sessionStorage.removeItem(storageKey);
       pending.current = null;
       setDraft('');
@@ -272,7 +302,7 @@ export function DotSidechatLive({ workspaceId }: { workspaceId?: string }) {
     if (!session || busy.current) return;
     busy.current = true;
     try {
-      await api('logout', lifetime.current.signal, {}, session.csrf);
+      await dotApi('logout', lifetime.current.signal, {}, session.csrf);
       lifetime.current.abort();
       lifetime.current = new AbortController();
       if (storageKey) sessionStorage.removeItem(storageKey);
@@ -334,7 +364,7 @@ export function DotSidechatLive({ workspaceId }: { workspaceId?: string }) {
           Disconnect
         </button>
       </div>
-      {!workspaceId ? (
+      {!contextId ? (
         <div className="dot-access">
           Select an issue-linked workspace to chat with Dot.
         </div>
@@ -346,8 +376,12 @@ export function DotSidechatLive({ workspaceId }: { workspaceId?: string }) {
           onAttention={(message, action) => void attention(message, action)}
           messages={snapshot?.messages ?? []}
           receipts={snapshot?.receipts ?? {}}
-          issueLabel={snapshot?.scope.issue_label ?? 'Issue conversation'}
-          workspaceLabel={snapshot?.scope.workspace_label ?? workspaceId}
+          projectScope={!!projectId}
+          issueLabel={
+            snapshot?.scope.issue_label ??
+            (projectId ? 'Project conversation' : 'Issue conversation')
+          }
+          workspaceLabel={snapshot?.scope.workspace_label ?? contextId ?? ''}
           threadId={snapshot?.thread.id ?? ''}
           loading={loading}
           sending={sending}

@@ -350,6 +350,8 @@
     "noCommands": "此代理沒有可用的指令。"
   },
   "kanban": {
+    "collapseIssue": "摺疊問題 {{displayId}}",
+    "expandIssue": "展開問題 {{displayId}}",
     "noVisibleStatuses": "所有狀態已隱藏。請使用顯示設定或切換到其他標籤頁查看問題。",
     "noProjectFound": "找不到專案",
     "unassigned": "未指派",

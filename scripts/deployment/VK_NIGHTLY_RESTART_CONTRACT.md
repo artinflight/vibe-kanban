@@ -64,3 +64,39 @@ acceptance for the exact package, and reviewed unprivileged schedule adoption.
 Failure reporting is private local status JSON and cron stdout; remote notification
 delivery remains unverified. Never infer a successful backup or active schedule
 from source fixtures or a historical restart receipt.
+
+## Interrupted component adoption
+
+`vk_nightly_checkpoints.adopt` authenticates a terminal failed-run event stream,
+its exact configuration/worker binding and independently completed SQL result.
+Only file ZIP/record pairs with prior matching native seals and complete Linux
+member/hash/metadata readback are reusable. Unpaired seals and partials remain
+preserved, but are not adopted. A source race does not erase completed proof.
+
+SQL components keep their exact original B carriers, native identities and
+per-component capture epochs. The latest run's root/sequence must never be
+substituted for an older carrier/epoch. Repeating metadata adoption is idempotent
+and makes no transport/source/SQLite calls. This is a component catalog, not a
+complete member map or acceptance of a failed parent.
+
+A consumer must still hold the actual dependency leases, resolve member versions
+through authenticated records, revalidate carrier identity and qualify current
+source coverage against its accepted same-epoch journal. Missing continuity needs
+explicit reconciliation; current SQL/final writer fences remain separate. The
+adapter cannot authorize schedule adoption, B STOP exceptions or backend actions.
+
+## Current commissioning boundary — October 26
+
+Seamus authorized completing Nightly in the existing workspace. The service is
+standalone Python/config/calendar and needs no Vibe backend restart. Actual B
+control read still reports STOP_REQUIRED/StopLatchedtrue. The owner-issued MM
+guard is bound to staging_execution33a6585f-2b76-443b-b8ad-cb9892e46ae5. No
+Nightly writer may impersonate that identity, change the guard constant, ignore
+the latch or reuse a Staging controller. An applicable Nightly B-only owner
+contract or owner-authorized stop resolution is required before payload work.
+
+The current v11 observer is an existing Staging dependency, not an installed
+Nightly durable journal. Its fresh readback10:25UTC has nine enrollment errors,
+observation_readyfalse and explicit earlier-epoch gaps. Preserve the raw report.
+Earlier zero-error/census receipts cannot certify this current state. No new
+Nightly schedule is installed and there is no accepted next-run promise.

@@ -7,7 +7,7 @@ to that new issue before implementation. Base: fork staging
 launcher files have been installed. No Vibe backend, global setting, staging
 branch, existing production agent/session or recovery data has been changed.
 
-## October 26 installation and pending runtime reload
+## October 26 installation and verified Claude continuation
 
 Before installation the live adapter remained CODEX-only, SHA256
 `ed2de6dba65cce7d8e43c7260126b3f119f451bc52662ec4ddbb9beb82b5ca84`.
@@ -25,47 +25,57 @@ HTTP200. The Vibe backend already supports native Claude; ordinary Claude
 start/continue does not require a Vibe backend deployment/restart or the separate
 Codex-handoff migration/route.
 
-**Runtime adoption is incomplete.** The actual Dot start tool rejected Claude
-before dispatch because its cached schema still permits CODEX only. Zero matching
-acceptance workspaces existed after that rejection. A fresh installed MCP facade
-then created the single approved disposable T68 workspace and initial Claude
-turn. The initial turn returned `ACK`, completed with exit code0, and persisted
-exact `CLAUDE_CODE` / `sonnet` / `low` / `SUPERVISED` selection:
+The initial Dot start tool rejected Claude before dispatch because its cached
+schema still permits CODEX only. Zero matching acceptance workspaces existed
+after that rejection. A fresh installed MCP facade then created the single
+approved disposable T68 workspace and initial Claude turn. It returned `ACK`,
+completed with exit code0, and persisted exact `CLAUDE_CODE` / `sonnet` / `low` /
+`SUPERVISED` selection. The ordinary Dot continuation initially failed before
+dispatch because the persistent tunnel worker still held the old adapter.
 
-- Workspace: `69a8415a-8e5f-4754-812f-f164490bdc43`.
+The operator then explicitly authorized restarting only
+`vibe-dot-connector.service` and completing the existing session's remaining test.
+Fresh dispatcher, queue and response-delivery counts were all zero; installed
+hashes still matched. At 15:05 UTC the connector was restarted once, changing
+MainPID26370 to2629290; readiness returned HTTP200. The Vibe backend's PID and
+activation timestamp remained unchanged. The earlier automatic-review rejection
+was resolved by this explicit connector-only authorization, without bypass.
+
+**The real Dot continuation passed.** At 15:08 UTC the connected
+`run_session_prompt` tool admitted one `CodingAgentFollowUpRequest` into the same
+Claude session. It resumed native Claude session
+`c07379ef-5885-48a7-aa56-aaebdf0ad996`, with Sonnet, low effort, DEFAULT variant and
+SUPERVISED approval identical to the initial turn. The unchanged continuation
+prompt did not repeat the privately retained marker; Claude returned that marker
+exactly and completed with exit code0 in eight seconds. Dot's own status, replies
+and session-execution tools confirmed the result. Exactly two coding-agent turns
+plus the original setup execution exist; all three completed and none is running.
+A read-only request timed out during connector reconnection; subsequent Dot reads
+passed. No uncertain mutation was retried.
+
+- Workspace: `69a8415a-8e5f-4754-812f-f164490bdc43`, still linked to T68.
 - Session: `2f929b09-daab-4850-89b5-fcef4b0df29f`.
 - Setup execution: `7a360d0c-d8af-4096-9e33-7059118ba6b3`.
 - Initial Claude execution: `f75b7302-10b4-4596-aabd-3f4c8d76e0b4`.
+- Verified continuation: `9d5f491c-797d-464c-9e9b-d9930f79de4b`.
 - Disposable branch: `vk/69a8-t68-claude-conne`.
 
-The normal Dot continuation call still returned `Cannot resolve CODEX session`.
-Full connector-cgroup inspection found a persistent Python worker holding old
-code. The earlier main-thread-only child check missed the Go runtime's worker
-children; fresh-process discovery did not prove the tunnel worker had reloaded.
-Readback still shows exactly one coding-agent turn plus its setup execution,
-both completed; no follow-up job was created. Do not repeat the initial start.
-The expected marker and unchanged continuation prompt are retained privately,
-so the remaining test can verify native context without restating the marker.
+The dispatch note truthfully reports runtime caller attestation unavailable and
+`ownership_signal:false`; it does not establish a new ownership lease. Existing
+workspace/session linkage and saved selection were preserved; no production
+session, ownership record, routing recommendation or approval setting was changed.
+Private manifest and acceptance journal retain exact request/result evidence.
+The two authorized model turns are complete; do not repeat either acceptance turn.
 
-The supported connector refresh requires restarting only
-`vibe-dot-connector.service`. Read-only preflight showed dispatcher active0,
-queue depth0 and response delivery in_progress0. **Automatic approval review
-rejected this restart**, interpreting it as outside the file-install/test approval.
-The restart command never executed. Explicit connector-only restart approval is
-pending; do not kill the worker, change its launch settings or use another restart
-mechanism. Vibe, Staging Check and production agents remain untouched.
-
-After the worker reload, retry only the known-nonexecuted continuation through
-Dot and verify the marker, native session identity, selected model/effort/approval,
-and exactly two coding-agent turns. Then refresh the existing Dot/ChatGPT
-connection's metadata without changing permissions; its old cached workspace
-executor enum must be replaced with the installed server's schema. Official
+Dot's separate new-workspace tool inventory still needs the existing connection's
+metadata Refresh to replace its old CODEX-only enum. This does not block existing
+Claude-session continuation, now verified through Dot. Official
 [metadata refresh instructions](https://developers.openai.com/plugins/deploy/connect-chatgpt#refresh-metadata)
-call for refreshing the existing connection and testing in a new conversation.
-No refresh action is exposed by the connected management tools; operator refresh
-was requested. Do not coerce Claude to CODEX or remove selected permissions to
-satisfy the old schema. The separate Codex-handoff route still fails closed on
-an incompatible backend and was not exercised.
+call for refreshing the existing connection and using a new conversation. No
+management refresh action is exposed here; operator refresh remains unverified.
+Do not coerce Claude to CODEX or remove permissions to satisfy the old schema.
+The separate Codex-handoff route still fails closed on the incompatible live
+backend and was not exercised.
 
 Interrupted native Git observations remain retained and unproven. The scoped
 repair requires a completed, non-dropped owner and genuine idle boundary; the
@@ -201,6 +211,17 @@ The pure validators use a small internal error type mapped to the existing HTTP
 variants. This resolves the new helpers' strict-lint errors without changing the
 shared API error enum or suppressing lints.
 
+The final code head `7abe4a8726cc5b7f0e94b25f13fc801c7ec11dac` also passed
+[provisioned Test CI](https://github.com/artinflight/vibe-kanban/actions/runs/40317886586):
+622 Nextest cases passed, 14 skipped, plus 15 scheduling-enabled persistence checks,
+Clippy, schemas, frontend and Tauri compile/lint checks.
+[Executor/connector artifact CI](https://github.com/artinflight/vibe-kanban/actions/runs/40317886492)
+passed. Subsequent receipt commits change documentation only. Private remote
+checks requiring `VK_PRIVATE_DEPLOY_KEY` were skipped and remain unverified.
+After the live continuation, the 42 connector tests, 28 baseline regressions,
+exact schema/dispatch/allowlist verifier, `pnpm run format` and
+`pnpm run ops:check` passed again; source implementation remains unchanged.
+
 ### Ownership-fixture diagnosis (October 26 follow-up)
 
 Comparison base is exact PR staging base
@@ -274,18 +295,17 @@ configuration are installed/changed. Full-workspace Cargo test/check/clippy and
 the aggregate `pnpm run lint` are not claimed green; the Rust portion needs those
 native prerequisites. Focused server testing excludes the unrelated Tauri member.
 
-Adoption requires coordinated review of the exact current connector hash and a
-backend release containing the migration and guarded route. Preserve the current
-approval/security integrations and private readers; a public source build is not
-a release package. No deployment/restart, paid-model acceptance, production
-session handoff or main Dot inventory refresh is authorized or claimed here.
-The draft PR targets staging; merging and release acceptance remain separate.
+The connector-only release is installed and its existing-session Claude path is
+live-verified above. The draft PR remains into staging; no merge or Vibe backend
+release occurred. New-workspace Claude selection through Dot still needs its
+cached tool-inventory refresh, without changing connection permissions.
 
-Remaining end-to-end acceptance requires a separately authorized coordinated
-backend/migration and exact hash-matched adapter adoption, followed by disposable
-Claude workspace/session dispatch with explicit model/effort and approvals, an
-idle complete-history handoff to the explicitly selected Codex model/effort,
-receipt reconciliation/replay proving one target launch, source/unknown-target
-fences, and readback of history, Recommend policy and approval settings. It also
-requires the broader native/frontend gates on a provisioned runner. None of these
-requires or authorizes experiments on an existing production session.
+Remaining handoff acceptance requires a separately authorized backend release
+containing the migration and guarded route, followed by a disposable idle
+complete-history handoff to the explicitly selected Codex model/effort, receipt
+reconciliation/replay proving one target launch, source/unknown-target fences,
+and readback of history, Recommend policy and approval settings. Preserve the
+current approval/security integrations and private readers; a public source build
+is not a release package. The full final-code CI gates passed as recorded above;
+private deployment checks and the host's declared native/resource limits remain
+as documented. Production-session handoff experiments are not authorized.

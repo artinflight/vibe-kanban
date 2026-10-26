@@ -4,28 +4,25 @@ New issue T68 (`0eb31691-b6e1-406a-a2b9-a4b9bf5ca1f2`) is linked to the
 current dedicated workspace. [Draft PR281](https://github.com/artinflight/vibe-kanban/pull/281)
 is open into staging; implementation commit `6b1ee0270` is pushed. Read
 [the contract](VK_DIRECT_LAUNCHER_CLAUDE.md).
-The direct adapter is external; changes are prepared only as a hash-pinned
-repository overlay. Native Rust MCP already supports Claude. The new backend
+The direct adapter is external; its hash-pinned repository overlay is now
+installed and the connector-only runtime adoption is verified below. Native Rust MCP already supports Claude. The new backend
 handoff requires the migration and existing serialized admission; long/incomplete
 history, unknown past approval settings and pending work fail closed.
 
-Live-release follow-up: Seamus approved the connector-only installation and two
-short disposable Claude turns. The exact adapter/launcher pair is installed;
-42+28 tests, fresh installed discovery/read-only calls and HTTP200 health pass.
-One live initial Sonnet/low/SUPERVISED turn returned ACK and completed successfully
-in T68 workspace `69a8415a-8e5f-4754-812f-f164490bdc43`, session
-`2f929b09-daab-4850-89b5-fcef4b0df29f`, execution
-`f75b7302-10b4-4596-aabd-3f4c8d76e0b4`. Do not repeat its start.
-The actual Dot continuation was rejected by the still-old persistent tunnel
-worker, before dispatch. Exactly one coding turn exists. Automatic review rejected
-restarting only vibe-dot-connector.service; explicit approval for that restart is
-pending. Do not bypass the denial. After reload, send only the privately retained
-continuation prompt and verify native context/selection and exactly two turns.
-Dot's old CODEX-only schema also needs the existing connection's metadata Refresh;
-that operator action was requested. No Vibe restart, Staging Check, billing/global
-configuration, production-session or recovery-data change occurred. Read the
-contract's installation section and private release manifest before acting.
-Native failed Git observations remain retained; no status rewrite/repair occurred.
+Live connector follow-up completed: Seamus explicitly authorized the connector
+file installation, its service-only restart, and two short disposable Claude
+turns. Restarted only `vibe-dot-connector.service`; Vibe backend identity stayed
+unchanged and readiness passed. Dot's actual `run_session_prompt` continued
+session `2f929b09-daab-4850-89b5-fcef4b0df29f` in T68 test workspace
+`69a8415a-8e5f-4754-812f-f164490bdc43`. Follow-up execution
+`9d5f491c-797d-464c-9e9b-d9930f79de4b` completed exit0 and recalled the exact
+prior marker without restatement. Sonnet/low/SUPERVISED selection stayed exact;
+Dot reads confirm two model turns plus setup, all completed. Do not repeat tests.
+New-workspace Dot schema metadata Refresh remains separate and unverified;
+existing-session continuation works. Codex handoff still needs a separately
+approved compatible backend/migration release. No Staging Check, production
+session, billing/global setting or recovery-data changes occurred. Native failed
+Git observations remain retained. Read the contract for complete evidence.
 
 Validation follow-up: 14 focused Rust handoff fixtures, 42 connector tests and
 28 installed-source regressions plus schema/dispatch/allowlist checks pass offline.
@@ -47,7 +44,9 @@ while the supported CI/preparation heap is 8,192 MiB. Full Cargo workspace build
 exits 101 at missing `glib-2.0 >= 2.70` (`glib-sys`); GTK/WebKit development packages
 are also absent. No resource/guard threshold, system package, security policy or
 global configuration was changed. Full check/lint/workspace-test gates remain
-unverified on this host. No live handoff, paid-model call or deployment is exercised.
+unverified on this host. No live Codex handoff or Vibe backend deployment was
+exercised. The two approved Claude acceptance turns and connector-only release
+passed as recorded above.
 
 Inherited pickup/release history follows; its old release ownership remains intact.
 

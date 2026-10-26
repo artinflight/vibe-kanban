@@ -6,12 +6,13 @@ created and linked before code work. Scope: direct connector executor/schema and
 Claude dispatch, plus an explicit idempotent idle-checkpoint Codex handoff.
 See [contract, limits and validation](VK_DIRECT_LAUNCHER_CLAUDE.md).
 Draft PR281 remains open into staging. The approved adapter/launcher files are
-installed; a live disposable Claude initial turn passed. Runtime adoption is
-pending a connector-only worker restart (separately blocked by automatic review)
-and refresh of Dot's cached workspace schema. One approved continuation remains;
-do not duplicate the initial turn. No Vibe restart, Staging Check/control,
-production-session experiment, billing/global-setting, merge or recovery-data
-change is part of this connector-only action.
+installed and only the connector service was restarted with explicit permission.
+The disposable initial Claude turn and Dot's real existing-session continuation
+both passed, preserving context and Sonnet/low/SUPERVISED selection; exactly two
+model turns completed. Do not replay them. New-workspace cached schema refresh
+and separately authorized backend/migration handoff acceptance remain distinct
+boundaries. No Vibe restart, Staging Check/control, production-session experiment,
+billing/global-setting, merge or recovery-data change occurred.
 
 The following inherited stream notes describe earlier work, not this branch's
 implementation or release authority.

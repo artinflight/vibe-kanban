@@ -16,6 +16,7 @@ import { useOrgContext } from '@/shared/hooks/useOrgContext';
 import { useProjectContext } from '@/shared/hooks/useProjectContext';
 import { useUserSystem } from '@/shared/hooks/useUserSystem';
 import { useCurrentUser } from '@/shared/hooks/auth/useCurrentUser';
+import { useLocalParticipants } from '@/shared/hooks/useLocalParticipants';
 import { useAzureAttachments } from '@/shared/hooks/useAzureAttachments';
 import {
   commitCommentAttachments,
@@ -64,7 +65,10 @@ function IssueCommentsSectionContent() {
   const { sharedApiBase } = useUserSystem();
   const useLocalAttachments = sharedApiBase === null;
   const { data: currentUser } = useCurrentUser();
-  const currentUserId = currentUser?.user_id ?? '';
+  const participants = useLocalParticipants();
+  const currentUserId = participants.isLocalOnlySession
+    ? (participants.data?.current_user_id ?? '')
+    : (currentUser?.user_id ?? '');
 
   // Check if current user is admin
   const currentUserMember = currentUserId

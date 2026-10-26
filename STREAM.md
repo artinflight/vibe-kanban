@@ -1,3 +1,14 @@
+# October 26: Issue comments stream repair
+
+Current branch `vk/a6f8-create-and-link` is based on freshly fetched `fork/staging`.
+Repair the missing local discussion routes that return SPA HTML on Operations
+T100, add durable comments/reactions and API JSON isolation, preserve local
+participant identity and verify desktop/mobile interactions and independent
+workspace startup. Tracking: VK Dev T72, linked to this workspace.
+See VK_ISSUE_COMMENTS.md for evidence and release/device limits. No production
+restart, migration, asset swap, model change or Zonnic agent launch is part of
+this preparation. Older branch notes below are history.
+
 # Collapsible Issues release stream
 
 Current branch prepares the accepted collapsible issue UI for rebase-merge

@@ -2319,7 +2319,9 @@ async fn get_project(
 
 pub fn router() -> Router<DeploymentImpl> {
     Router::new()
+        .merge(super::local_comments::router())
         .merge(super::local_assignments::router())
+        .merge(super::local_comments::api_fallback())
         .route("/projects/{project_id}", get(get_project))
         .route("/fallback/projects", get(list_fallback_projects))
         .route(

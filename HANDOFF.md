@@ -1,3 +1,16 @@
+# October 26: Discussion compatibility source ready
+
+Pick up VK_ISSUE_COMMENTS.md. VK Dev T72 (`0da02ba1-7d50-4461-9a9b-0701e341c753`)
+is linked to workspace `a6f852f0-d00c-4dee-8864-1201d66ae6e1` on
+`vk/a6f8-create-and-link`. Both feeds returned byte-identical SPA root HTML because
+local routes were absent; explicit `/v1` wildcard isolation is required in Axum.
+Prepared migration/CRUD/feed routes and local identity pass focused HTTP/storage
+and real desktop/393px mobile browser acceptance. Correct linked startup requests
+are captured with both feeds failing; no agent is launched. Current production
+still lacks the routes. Physical S25 status is unavailable (`no_current_tls_port`).
+An approved normal backend release and physical post-release acceptance remain.
+Evidence: `/mnt/vk-storage/vk-issue-comments-20261026`. Other entries are history.
+
 # Pickup
 
 Current bounded follow-up: [compact durable job outcomes](USAGE_JOB_OUTCOMES.md).

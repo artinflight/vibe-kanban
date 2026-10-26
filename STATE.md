@@ -1,3 +1,12 @@
+## October 26: Local issue discussion compatibility prepared
+
+The T100 comment/reaction HTML errors are reproduced and repaired in source on
+`vk/a6f8-create-and-link`; see VK_ISSUE_COMMENTS.md. VK Dev T72 is linked to this
+workspace. Actual HTTP/persistence and desktop/mobile viewport acceptance pass.
+The workspace-start request is captured successfully despite simulated feed
+failures. Production is not changed; physical S25 access is unavailable. Existing
+runtime statements below remain historical and require fresh discovery.
+
 # Current-state index
 
 Read this index, [STREAM](STREAM.md) and [HANDOFF](HANDOFF.md), then only the

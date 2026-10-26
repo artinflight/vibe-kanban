@@ -4,6 +4,10 @@ on:
     branches: [staging]
     paths:
       - 'crates/executors/src/executors/codex/client.rs'
+      - 'crates/executors/src/executors/claude/**'
+      - 'crates/executors/src/approvals.rs'
+      - 'crates/services/src/services/approvals/**'
+      - 'crates/services/src/services/approvals.rs'
       - 'scripts/dot-connector/**'
       - '.github/workflows/dot-steering-acceptance.yml'
   workflow_dispatch:
@@ -31,6 +35,10 @@ jobs:
           cache-key: backend-test-Linux-X64-ubuntu-24.04
       - name: Verify steering protocol fixture without account access
         run: cargo test --locked -p executors --lib steering_
+      - name: Verify Claude approval preview and genuine consent bridge
+        run: |
+          cargo test --locked -p executors --lib approval_context::tests
+          cargo test --locked -p services --lib claude_approval_tests -- --test-threads=1
       - name: Test connector and overlay preparation
         run: python3 -B -m unittest discover -s scripts/dot-connector -p 'test_*.py' -v
       - name: Export source-bound executor test binary

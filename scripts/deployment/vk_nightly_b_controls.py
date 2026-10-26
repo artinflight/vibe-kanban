@@ -346,6 +346,17 @@ class Store:
                     largest.append((row['bytes'],member));largest=sorted(largest,reverse=True)[:10]
             return dict(unresolved_counts_and_logical_bytes=totals,largest_qualified_pending_files=largest,
                         source_body_bytes_read=0,backup_payload_bytes_copied=0)
+        if op=='accept-file-point':
+            import vk_nightly_current_map as current
+            value=current.CurrentMap();value.db=db;value.path=path;value.inode=tuple(inode)
+            return value.accept_file(q['member_name'],q['original_sha256'],q['accepted'],q['proof'],
+                checkpoint=lambda:self.guard(path.stat().st_size+LIMIT))
+        if op=='defer-file-point':
+            import vk_nightly_current_map as current
+            value=current.CurrentMap();value.db=db;value.path=path;value.inode=tuple(inode)
+            value.defer_file(q['member_name'],q['original_sha256'],q['reason'],
+                checkpoint=lambda:self.guard(path.stat().st_size+LIMIT))
+            return dict(deferred=True)
         if op in ('execute','executemany'):
             # A rollback journal can touch any existing page. This is actual
             # operation headroom, not a withdrawn fixed B reserve.
@@ -475,6 +486,18 @@ def current_map(client,key,digest,*,binding):
     from vk_nightly_current_map import CurrentMap,FORMAT
     class RemoteMap(CurrentMap):
         def check(self):self.db.request('check')
+        def source_phase_check(self):
+            # Each fetch and final atomic acceptance revalidates the native
+            # inode and held writer lease. Source streaming needs the host
+            # guard, without an extra network round trip for every tiny file.
+            client.guard()
+        def accept_file(self,name,original_sha256,accepted,proof,*,checkpoint):
+            checkpoint()
+            return self.db.request('accept-file-point',member_name=name,original_sha256=original_sha256,
+                                   accepted=accepted,proof=proof)
+        def defer_file(self,name,original_sha256,reason,*,checkpoint):
+            checkpoint()
+            return self.db.request('defer-file-point',member_name=name,original_sha256=original_sha256,reason=reason)
     value=RemoteMap();value.db=client.connect(key,digest)
     class RemotePath:
         def stat(self):return type('Size',(),{'st_size':value.db.request('check')['bytes']})()

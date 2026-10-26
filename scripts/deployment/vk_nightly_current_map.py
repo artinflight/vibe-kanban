@@ -9,6 +9,7 @@ qualifier's commits. Later completed qualifications are refreshed by keyset.
 """
 from contextlib import contextmanager
 import json
+import hashlib
 import os
 from pathlib import Path
 import sqlite3
@@ -398,6 +399,79 @@ class CurrentMap:
                     namespace_composed=bool(self.db.execute('select complete from metadata').fetchone()[0]),
                     source_paths_scanned=0, source_payload_bytes_read=0, backup_payload_bytes_copied=0,
                     current_baseline_accepted=False)
+
+    def pending_files(self,maximum):
+        """Bounded keyset batches; accepted rows can safely leave the index."""
+        after='';count=0
+        while count<maximum:
+            self.check()
+            rows=self.db.execute("select name,row from members where state='file-needs-capture' and name>? order by name limit ?",
+                                 (after,min(128,maximum-count))).fetchall()
+            if not rows:return
+            for name,raw in rows:
+                yield name,raw
+                after=name;count+=1
+
+    def source_phase_check(self):self.check()
+
+    def accept_file(self,name,original_sha256,accepted,proof,*,checkpoint):
+        """One guarded atomic acceptance, also used next to native B SQLite.
+
+        The source transfer and independent ordered readback precede this call.
+        Bind their exact original pending row, full digest, length and metadata;
+        a lost acknowledgement can replay only the identical accepted result.
+        """
+        key(name);digest(original_sha256);self.check();db=self.db
+        found=db.execute('select state,row from members where name=?',(name,)).fetchone()
+        if found is None:raise ValueError('pending file disappeared from member map')
+        encoded=encode_member(accepted)
+        if found[0]=='verified-file' and found[1]==encoded:return dict(already_accepted=True)
+        if found[0]!='file-needs-capture' or hashlib.sha256(found[1]).hexdigest()!=original_sha256:
+            raise ValueError('pending file ownership/version changed')
+        original=decode_member(found[1]);member=accepted['member'];point=original['qualification']
+        expected=dict(original,member=member,qualification=dict(point,row=member,state='qualified-retained-body'),
+                      independent_file_proof=proof)
+        if (accepted!=expected or member!=dict(original['member'],segments=member.get('segments'))
+                or proof.get('independent_ordered_B_readback_sha256')!=member['sha256']
+                or proof.get('independent_ordered_B_readback_bytes')!=member['bytes']
+                or proof.get('source_metadata')!={k:member[k] for k in ('mode','uid','gid','mtime_ns','xattrs')}):
+            raise ValueError('file acceptance/readback differs from qualified point')
+        classify(name,dict(member,identity=point['source_identity']),accepted['qualification'],SQL_sources=set())
+        checkpoint();db.execute('begin immediate')
+        try:
+            db.execute('create table if not exists file_acceptance_history(name text,version_sha256 text,proof blob,accepted_row blob,primary key(name,version_sha256)) without rowid')
+            old=db.execute('select proof from file_acceptance where name=?',(name,)).fetchone()
+            if old and db.execute('select 1 from file_acceptance_history where name=? and proof=? limit 1',(name,old[0])).fetchone() is None:
+                db.execute('insert or ignore into file_acceptance_history values(?,?,?,NULL)',(name,hashlib.sha256(b'legacy-proof\0'+old[0]).hexdigest(),old[0]))
+            encoded_proof=encode_member(proof)
+            db.execute('insert or ignore into file_acceptance_history values(?,?,?,?)',(name,hashlib.sha256(encoded).hexdigest(),encoded_proof,encoded))
+            db.execute('insert into file_acceptance values(?,?) on conflict(name) do update set proof=excluded.proof',(name,encoded_proof))
+            updated=db.execute("update members set state='verified-file',row=? where name=? and state='file-needs-capture'",(encoded,name))
+            if updated.rowcount!=1:raise ValueError('pending file ownership changed')
+            self.check();checkpoint();db.execute('commit')
+        except BaseException:
+            if db.in_transaction:db.execute('rollback')
+            raise
+        return dict(already_accepted=False)
+
+    def defer_file(self,name,original_sha256,reason,*,checkpoint):
+        """Preserve an unavailable point while other independently valid files finish."""
+        key(name);digest(original_sha256);self.check();db=self.db
+        found=db.execute('select state,row from members where name=?',(name,)).fetchone()
+        if not found or found[0]!='file-needs-capture' or hashlib.sha256(found[1]).hexdigest()!=original_sha256:
+            raise ValueError('deferred source ownership/version changed')
+        value=decode_member(found[1]);point=value['qualification'];row=value['member']
+        value.update(transfer_deferred=dict(reason=reason,qualified_point_sha256=original_sha256,requires_fresh_source_observation=True),
+            namespace=dict(kind='file',identity=point['source_identity'],**{k:row[k] for k in ('mode','uid','gid','mtime_ns','bytes','xattrs')}))
+        checkpoint();db.execute('begin immediate')
+        try:
+            db.execute('create table if not exists file_transfer_deferred(name text,point_sha256 text,row blob,reason text,primary key(name,point_sha256)) without rowid')
+            db.execute('insert or ignore into file_transfer_deferred values(?,?,?,?)',(name,original_sha256,found[1],reason))
+            db.execute("update members set state='current-namespace-replay-required',row=? where name=?",(encode_member(value),name))
+            self.check();checkpoint();db.execute('commit')
+        except BaseException:
+            if db.in_transaction:db.execute('rollback')
+            raise
 
     def refresh_unresolved(self,qualified,*,checkpoint,maximum_paths,SQL_sources=(),after='',progress=lambda _:None):
         """Refresh only unresolved exact names from newer retained observations.

@@ -231,6 +231,41 @@ class BControlTests(unittest.TestCase):
         self.assertEqual(second['completed_members'],1);self.assertFalse(second['more_pending'])
         self.assertFalse((self.root/'SQL_STATE.private.json').exists());self.assertFalse((self.root/'SQL_PHASE.lease').exists())
 
+    def test_native_file_acceptance_lost_reply_reopens_without_duplicate_completed_copy(self):
+        from vk_nightly_current_map import CurrentMap
+        from vk_nightly_namespace import observe
+        from vk_nightly_qualification import qualify_file,encode_observation
+        from vk_nightly_typed_capture import capture_pending
+        source=self.root/'new-point';source.write_bytes(b'actual new point')
+        point=qualify_file(source,maximum_bytes=1024,journal=dict(ready=True,errors=[],instance='fixture',
+            sequence=1,scope_sha256='a'*64,plan_sha256='b'*64),carriers=lambda *_:[],guard=lambda:None)
+        namespace=sqlite3.connect(':memory:');self.addCleanup(namespace.close)
+        namespace.execute('create table namespace(name text primary key,row blob)')
+        namespace.execute('insert into namespace values(?,?)',(str(source)[1:],encode_observation(observe(source))))
+        path=self.root/'pending-map.sqlite';binding={'fixture':'native file point'}
+        with CurrentMap.held(path,binding=binding,create=True) as m:
+            m.compile(namespace,lambda _:point,SQL_sources=[],checkpoint=lambda:None,maximum_paths=10)
+        digest=self.import_other(path)
+        folder=str(Path(__file__).parent)
+        code='import sys;sys.path.insert(0,'+repr(folder)+');from vk_nightly_objects import receive;receive('+repr(str(self.objects))+',sys.stdin.buffer,sys.stdout.buffer,guard=lambda n:None,maximum_object_bytes=65536)'
+        p=subprocess.Popen([sys.executable,'-B','-u','-c',code],stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+        try:
+            body=ObjectClient(p.stdout,p.stdin,guard=lambda:None,ram_root=self.root,maximum_object_bytes=65536)
+            with current_map(self.client,'file-point',digest,binding=binding) as m:
+                accept=m.accept_file
+                def lost(*args,**kwargs):
+                    accept(*args,**kwargs);raise EOFError('synthetic lost reply after native atomic commit')
+                m.accept_file=lost
+                with self.assertRaisesRegex(EOFError,'lost reply'):
+                    capture_pending(m,body,guard=lambda:None,maximum_members=2,maximum_source_bytes=1024,chunk_bytes=64)
+            uploaded=body.payload_bytes_sent
+            with current_map(self.client,'file-point',digest,binding=binding) as m:
+                result=capture_pending(m,body,guard=lambda:None,maximum_members=2,maximum_source_bytes=1024,chunk_bytes=64)
+                self.assertEqual(result['completed_members'],0);self.assertFalse(result['more_pending'])
+                self.assertEqual(m.db.execute('select count(*) from file_acceptance_history').fetchone()[0],1)
+            self.assertEqual(body.payload_bytes_sent,uploaded)
+        finally:p.stdin.close();p.wait(timeout=10);p.stdout.close();p.stderr.close()
+
     def relocation(self):
         from vk_nightly_file_version import fingerprint
         result=dict(source=str(self.original),sha256=self.sha,bytes=len(self.raw),

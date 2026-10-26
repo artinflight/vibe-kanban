@@ -72,8 +72,40 @@ class TypedCaptureTests(unittest.TestCase):
             self.assertEqual(self.run_batch(m,maximum_source_bytes=1)['next_point_bytes'],12288)
             self.assertEqual(self.client.payload_bytes_sent,0)
             self.source.write_bytes(b'c'*12288)
-            with self.assertRaisesRegex(ValueError,'digest/inode differs'):self.run_batch(m)
-            self.assertEqual(m.db.execute('select state from members').fetchone()[0],'file-needs-capture')
+            result=self.run_batch(m)
+            self.assertTrue(result['requires_source_requalification']);self.assertTrue(result['more_pending'])
+            self.assertEqual(result['deferred_source_points'],1)
+            self.assertEqual(m.db.execute('select state from members').fetchone()[0],'current-namespace-replay-required')
+            self.assertEqual(m.db.execute('select count(*) from file_transfer_deferred').fetchone()[0],1)
+            self.assertEqual(m.db.execute('select count(*) from file_acceptance').fetchone()[0],0)
+
+    def test_one_rewritten_point_does_not_block_other_valid_files_or_weaken_real_guard_failures(self):
+        other=self.source.with_name('source-z');other.write_bytes(b'valid other')
+        journal=dict(ready=True,errors=[],instance='one',sequence=2,scope_sha256='a'*64,plan_sha256='b'*64)
+        point=qualify_file(other,maximum_bytes=16384,journal=journal,carriers=lambda sha,size:[],guard=lambda:None)
+        self.ns.execute('insert into namespace values(?,?)',(str(other)[1:],encode_observation(observe(other))))
+        with CurrentMap.held(self.path,binding=self.binding,create=True) as m:
+            m.compile(self.ns,lambda name:self.point if name==self.name else point,SQL_sources=[],checkpoint=lambda:None,maximum_paths=10)
+            def actual_stop():raise ValueError('explicit B stop fixture')
+            with self.assertRaisesRegex(ValueError,'explicit B stop'):self.run_batch(m,guard=actual_stop)
+            self.assertIsNone(m.db.execute("select 1 from sqlite_master where name='file_transfer_deferred'").fetchone())
+            self.source.write_bytes(b'c'*12288)
+            result=capture_pending(m,self.client,guard=lambda:None,maximum_members=2,maximum_source_bytes=32768,chunk_bytes=4096)
+            self.assertEqual(result['completed_members'],1);self.assertEqual(result['deferred_source_points'],1)
+            self.assertTrue(result['requires_source_requalification'])
+            self.assertEqual(m.db.execute('select state from members where name=?',(str(other)[1:],)).fetchone()[0],'verified-file')
+
+    def test_new_point_same_name_preserves_both_accepted_versions_and_exact_duplicate_replay(self):
+        with CurrentMap.held(self.path,binding=self.binding,create=True) as m:
+            self.prepare(m);pending=m.db.execute('select row from members').fetchone()[0];self.run_batch(m)
+            accepted=decode_member(m.db.execute('select row from members').fetchone()[0]);proof=accepted['independent_file_proof']
+            replay=m.accept_file(self.name,hashlib.sha256(pending).hexdigest(),accepted,proof,checkpoint=lambda:None)
+            self.assertTrue(replay['already_accepted'])
+            self.source.write_bytes(b'new point')
+            q=qualify_file(self.source,maximum_bytes=16384,journal=dict(ready=True,errors=[],instance='one',sequence=3,scope_sha256='a'*64,plan_sha256='b'*64),carriers=lambda sha,size:[],guard=lambda:None)
+            m.db.execute("update members set state='file-needs-capture',row=?",(encode_member(dict(member=q['row'],qualification=q)),))
+            self.run_batch(m)
+            self.assertEqual(m.db.execute('select count(*) from file_acceptance_history where accepted_row is not null').fetchone()[0],2)
 
     def prefix(self,m,raw):
         prefix=dict(bytes=len(raw),sha256=hashlib.sha256(raw).hexdigest(),independent_proof_sha256='a'*64,

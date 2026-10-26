@@ -10,9 +10,9 @@ namespace, SQL cohort, runtime binding or calendar on its own.
 """
 import hashlib
 
-from vk_nightly_current_map import decode_member,encode_member
+from vk_nightly_current_map import decode_member
 from vk_nightly_objects import ChunkSink
-from vk_nightly_file_version import capture_qualified_version,PrefixMismatch
+from vk_nightly_file_version import capture_qualified_version,PrefixMismatch,QualifiedVersionUnavailable
 from vk_nightly_checkpoints import digest
 
 
@@ -32,13 +32,11 @@ def capture_pending(current_map,client,*,guard,maximum_members,maximum_source_by
     if not db.execute('select complete from metadata').fetchone()[0]:
         raise ValueError('finish retained namespace composition before its capture batch')
     db.execute('create table if not exists file_acceptance(name text primary key,proof blob not null) without rowid')
-    done=0;source_bytes=0;initial_upload=client.payload_bytes_sent
+    done=0;deferred=0;source_bytes=0;initial_upload=client.payload_bytes_sent
     reused_before=client.native_receipts_reused
-    while done<maximum_members:
-        guard();current_map.check()
-        found=db.execute("select name,row from members where state='file-needs-capture' order by name limit 1").fetchone()
-        if found is None:break
-        name,raw=found;value=decode_member(raw);point=value['qualification'];row=value['member']
+    for name,raw in current_map.pending_files(maximum_members):
+        guard();current_map.source_phase_check()
+        value=decode_member(raw);point=value['qualification'];row=value['member']
         if (point.get('source')!='/'+name or point.get('row')!=row
                 or point.get('state')!='qualified-pending-body' or row.get('segments')):
             raise ValueError('exact unresolved qualified member required')
@@ -56,11 +54,19 @@ def capture_pending(current_map,client,*,guard,maximum_members,maximum_source_by
                         next_point_bytes=row['bytes'],more_pending=True,current_baseline_accepted=False)
         sink=ChunkSink(client,chunk_bytes=chunk_bytes)
         prefix_retry_bytes=0
-        try:transfer=capture_qualified_version(point,sink,guard=guard,prefix=prefix)
-        except PrefixMismatch as error:
-            if sink.raw_bytes or sink.segments or sink.buffer:raise ValueError('prefix mismatch emitted unexpected bytes')
-            prefix_retry_bytes=error.bytes_read;prefix=None
-            transfer=capture_qualified_version(point,sink,guard=guard)
+        try:
+            try:transfer=capture_qualified_version(point,sink,guard=guard,prefix=prefix)
+            except PrefixMismatch as error:
+                if sink.raw_bytes or sink.segments or sink.buffer:raise ValueError('prefix mismatch emitted unexpected bytes')
+                prefix_retry_bytes=error.bytes_read;prefix=None
+                transfer=capture_qualified_version(point,sink,guard=guard)
+        except QualifiedVersionUnavailable as error:
+            current_map.defer_file(name,hashlib.sha256(raw).hexdigest(),str(error),checkpoint=guard)
+            source_bytes+=error.bytes_read+prefix_retry_bytes;deferred+=1
+            on_progress(dict(completed_members=done,deferred_source_points=deferred,last_name=name,
+                             source_bytes_read=source_bytes,requires_source_requalification=True,
+                             encoded_payload_bytes_sent=client.payload_bytes_sent-initial_upload))
+            continue
         new_segments=sink.finish();segments=(prefix['segments'] if prefix else [])+new_segments
         independent=HashSink()
         if prefix is not None:
@@ -81,23 +87,15 @@ def capture_pending(current_map,client,*,guard,maximum_members,maximum_source_by
                    original_epoch_repaired=False,current_baseline_accepted=False)
         accepted=dict(value,member=member,qualification=dict(point,row=member,state='qualified-retained-body'),
                       independent_file_proof=proof)
-        guard();current_map.check();db.execute('begin immediate')
-        try:
-            # Failure here leaves all native objects/proofs available and the
-            # original pending row intact. Never publish half a file recipe.
-            db.execute('insert into file_acceptance values(?,?)',(name,encode_member(proof)))
-            updated=db.execute("update members set state='verified-file',row=? where name=? and state='file-needs-capture'",
-                               (encode_member(accepted),name))
-            if updated.rowcount!=1:raise ValueError('pending file ownership changed')
-            guard();current_map.check();db.execute('commit')
-        except BaseException:
-            if db.in_transaction:db.execute('rollback')
-            raise
+        current_map.accept_file(name,hashlib.sha256(raw).hexdigest(),accepted,proof,checkpoint=guard)
         done+=1;source_bytes+=row['bytes']+prefix_retry_bytes
         on_progress(dict(completed_members=done,last_name=name,source_bytes_read=source_bytes,
                          encoded_payload_bytes_sent=client.payload_bytes_sent-initial_upload))
     more=db.execute("select 1 from members where state='file-needs-capture' limit 1").fetchone() is not None
+    deferred_table=db.execute("select 1 from sqlite_master where name='file_transfer_deferred'").fetchone()
+    requalify=bool(deferred_table and db.execute("select 1 from members m join file_transfer_deferred d on m.name=d.name where m.state='current-namespace-replay-required' limit 1").fetchone())
     return dict(completed_members=done,source_bytes_read=source_bytes,
                 encoded_payload_bytes_sent=client.payload_bytes_sent-initial_upload,
                 native_receipts_reused=client.native_receipts_reused-reused_before,
-                more_pending=more,current_baseline_accepted=False)
+                more_pending=more or requalify,requires_source_requalification=requalify,deferred_source_points=deferred,
+                current_baseline_accepted=False)

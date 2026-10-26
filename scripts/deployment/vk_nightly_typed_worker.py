@@ -236,15 +236,19 @@ def run_B(config):
             finally:db.close()
         with current_map(controls.client,config['B_index_name'],config['B_checkpoint_sha256'],binding=config['map_binding']) as current:
             current.db.execute('create table if not exists tracking_health(id integer primary key,row text not null)')
-            def report(value):
+            last_status=[0]
+            def report(value,*,force=False):
+                if not force and time.monotonic()-last_status[0]<5:return
                 write_health(current.db,Path(config['status']),dict(value,worker_PID=os.getpid(),
                     control_storage='native-Desktop-B',baseline_accepted=False,schedule_enabled=False,
                     OS_SSD_payload_bytes=0,OS_SSD_index_journal_bytes=0,elapsed_seconds=time.monotonic()-started))
+                last_status[0]=time.monotonic()
             with DesktopObjects(config['desktop'],guard=guard) as remote:
+                report(dict(phase='capturing-qualified-file-points'),force=True)
                 result=capture_pending(current,remote.client,guard=guard,maximum_members=config['maximum_members'],
                     maximum_source_bytes=config['maximum_source_bytes'],chunk_bytes=config['chunk_bytes'],
                     read_prefix=lambda prefix,sink:read_prefix(remote,prefix,sink),on_progress=report)
-                report(dict(result,native_admission=remote.ready))
+                report(dict(result,native_admission=remote.ready),force=True)
             return result
 
 

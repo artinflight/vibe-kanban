@@ -1376,3 +1376,17 @@ DB or repeats uploaded payload. Low RAM defers before allocation and preserves
 all B inputs.51focused tests and22native gap-map tests pass. Namespace adoption
 reuses only exact nine-field source identity and xattrs, retains absent names
 explicitly, and its sealed-reader gate rejects an unfinished journal suffix.
+
+### Finite file-phase recovery and native acceptance
+
+The file phase fetches pending names in bounded keyset pages, then commits each
+qualified point and ordered independent readback in one native B transaction.
+The exact original pending-row hash prevents a changed owner/version from being
+overwritten. A lost reply reopens the same B working index and skips the already
+accepted point; accepted version history remains on B across later updates.
+Only actual lost/rewritten source-point errors enter a preserved targeted replay
+queue, allowing other valid files to finish. Genuine access, resource, sink,
+integrity and STOP failures still propagate. This queue cannot accept a baseline.
+Progress mirrors are sampled while each actual file acceptance remains durable.
+The60focused RAM cases passed, including native lost-reply/reopen, changed-point
+continuation, guard propagation, prior-version preservation and prefix restore.

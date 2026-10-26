@@ -20,6 +20,12 @@ class PrefixMismatch(ValueError):
         self.bytes_read=bytes_read
 
 
+class QualifiedVersionUnavailable(ValueError):
+    """Only a lost/rewritten source point; not a sink/guard/access failure."""
+    def __init__(self,reason,bytes_read=0):
+        super().__init__(reason);self.bytes_read=bytes_read
+
+
 def fingerprint(st):
     return [st.st_dev, st.st_ino, st.st_mode, st.st_size, st.st_mtime_ns,
             st.st_ctime_ns, st.st_uid, st.st_gid, st.st_nlink]
@@ -98,23 +104,26 @@ def capture_qualified_version(observation, sink, *, guard, prefix=None):
     row=observation['row'];size=row['bytes'];expected=row['sha256'];path=Path(observation['source'])
     from vk_nightly_checkpoints import digest
     digest(expected)
-    if type(size) is not int or size<0 or path.resolve()!=path:
+    if type(size) is not int or size<0:
         raise ValueError('finite canonical qualified source required')
+    if path.resolve()!=path:raise QualifiedVersionUnavailable('qualified source alias changed')
     start=0 if prefix is None else prefix['bytes']
     if type(start) is not int or not 0<=start<=size:raise ValueError('bounded accepted prefix required')
     if prefix is not None:
         digest(prefix['sha256']);digest(prefix['independent_proof_sha256'])
-    guard();fd=os.open(path,os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK|os.O_CLOEXEC)
+    guard()
+    try:fd=os.open(path,os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK|os.O_CLOEXEC)
+    except FileNotFoundError as error:raise QualifiedVersionUnavailable('qualified source point is absent') from error
     complete=hashlib.sha256();first=hashlib.sha256();tail=hashlib.sha256();offset=0
     with os.fdopen(fd,'rb',buffering=0) as source:
         before=os.fstat(source.fileno())
         if (not stat.S_ISREG(before.st_mode) or before.st_size<size
                 or [before.st_dev,before.st_ino]!=observation['source_identity'][:2]):
-            raise ValueError('qualified source inode/length unavailable')
+            raise QualifiedVersionUnavailable('qualified source inode/length unavailable')
         while offset<size:
             guard();limit=start-offset if offset<start else size-offset
             block=source.read(min(65536,limit))
-            if not block:raise ValueError('qualified point version truncated; preserve partial')
+            if not block:raise QualifiedVersionUnavailable('qualified point version truncated; preserve partial',offset)
             if offset==0 and block.startswith(b'SQLite format 3\x00'):
                 raise ValueError('SQLite requires its consistent snapshot API')
             complete.update(block)
@@ -129,11 +138,13 @@ def capture_qualified_version(observation, sink, *, guard, prefix=None):
                     if type(written) is not int or not 0<written<=len(view):raise OSError('qualified sink short write')
                     view=view[written:]
             offset+=len(block)
-        after=os.fstat(source.fileno());current=path.lstat()
+        after=os.fstat(source.fileno())
+        try:current=path.lstat()
+        except FileNotFoundError as error:raise QualifiedVersionUnavailable('qualified source path disappeared',offset) from error
         if (complete.hexdigest()!=expected or after.st_size<size
                 or [after.st_dev,after.st_ino]!=observation['source_identity'][:2]
                 or [current.st_dev,current.st_ino]!=observation['source_identity'][:2]):
-            raise ValueError('qualified point digest/inode differs; preserve unaccepted partial')
+            raise QualifiedVersionUnavailable('qualified point digest/inode differs; preserve unaccepted partial',offset)
     if prefix is not None and start==0 and first.hexdigest()!=prefix['sha256']:
         raise ValueError('empty accepted prefix digest differs')
     guard()

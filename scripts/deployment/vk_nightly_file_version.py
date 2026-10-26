@@ -14,6 +14,12 @@ from pathlib import Path
 import stat
 
 
+class PrefixMismatch(ValueError):
+    def __init__(self,bytes_read):
+        super().__init__('accepted prefix differs; no tail accepted')
+        self.bytes_read=bytes_read
+
+
 def fingerprint(st):
     return [st.st_dev, st.st_ino, st.st_mode, st.st_size, st.st_mtime_ns,
             st.st_ctime_ns, st.st_uid, st.st_gid, st.st_nlink]
@@ -115,7 +121,7 @@ def capture_qualified_version(observation, sink, *, guard, prefix=None):
             if offset<start:
                 first.update(block)
                 if offset+len(block)==start and first.hexdigest()!=prefix['sha256']:
-                    raise ValueError('accepted prefix differs; no tail accepted')
+                    raise PrefixMismatch(start)
             else:
                 tail.update(block);view=memoryview(block)
                 while view:

@@ -1,3 +1,102 @@
+# October26 — terminal qualification and installed phase checkpoint,15:29EDT
+
+Nightly is standalone Python; it needs no Vibe backend restart. No calendar is
+installed/enabled and no next run exists. A tested capture phase is not an
+operational incremental cycle or a current accepted baseline. Historical sections
+below retain their original dates, epochs, faults and observations.
+
+The original selected-request qualification finished at R5,13:43:44EDT. It
+resumed the same committed SQLite cursor across R3 observer invalidation and R4
+metadata-ceiling failure; completed source hashes and body carriers were reused.
+R5 alone qualified107461 paths, reusing105182 bodies and leaving2279 pending.
+These are phase counters, not whole-set or copied-byte totals. The completed
+current map has902818 paths. Its disjoint new-name phase ended14:22:02EDT:
+349562 names processed,190227 prior qualifications reused,140236 retained-body
+matches,15984 new pending bodies and48853935952 source bytes necessarily hashed.
+It copied no backup payload and enumerated no source tree. Its draft states are:
+
+| State | Paths |
+| --- | ---: |
+| Verified file body |579761|
+| Directory / symlink |103472 /38371|
+| Needs qualified-name refresh |109839|
+| Needs body capture or older-carrier reconciliation |68074|
+| Needs current SQLite API point / bound sidecar |204 /246|
+| Needs namespace/journal reconciliation |2851|
+
+The109839 refresh queue includes the completed R5 suffix: merge those committed
+observations by name instead of hashing them again. The68074 body requests are
+not measured transfer demand; check the206 authenticated older components and
+accepted-base content lookup first. Directory/absence replay must preserve old
+recovery epochs. Current Git resolution does not establish original inclusion.
+
+Actual direct-to-B tests completed, retaining exact private receipts:
+-12:54:34EDT: native object crash before ACK, same-inode candidate recovered with
+  zero resent bytes; independent reopened RAM hash passed. An orphan after final
+  rename is independently revalidated before adoption, never overwritten.
+-13:04:25EDT: four current source files,46527 raw bytes,19087 encoded B bytes,
+  ordered independent full readback; the second batch selected/read/copied zero.
+-13:18:23EDT: installed capture-worker-v2, two files15314 raw/6723 encoded B
+  bytes; actual identity/STOP/SMART/PHY/temperature/capacity checks passed.
+-14:16:39EDT: accepted-prefix reader independently read an old B-backed body
+  through the original numeric-UID Linux route and held recovery lease. Failed
+  startup/incorrect named-user probes remain diagnostics, not payload evidence.
+-147 old SQL source names were checked for the safe cold-image fast path; two
+  exact existing images qualify. WAL/nonidentical headers defer to the normal
+  SQLite API; they do not prove all other logical databases changed.
+
+Installed prepared SQL entrypoint is
+`commissioning-20261026/capture-worker-v3/vk_nightly_typed_worker.py`, with19 pinned
+Python modules. Its config SHA is
+`48514ac87191516ac4e8bb3e45041e215921f7e1e4f6e9e8f48832451fbccad8`.
+It processes the frozen147-source cohort,512MiB API working image cap, separate
+independent RAM restore,16MiB chunks, CPU25%, MemoryHigh1536MiB/Max2GiB/Swap0.
+Bodies stream only to Desktop B; no backup data stages on OS/work SSD. API images
+larger than admitted RAM remain explicit measured deferrals. The largest retained
+SQL image is2871189504B, requiring a separately measured larger RAM phase; do not
+silently omit it or recapture completed small points. RAM fixture tests cover WAL
+capture, independent SQL/schema/hash/metadata checks, unchanged-image reuse and
+interrupted API-point resume after the live source advances. This new SQL path
+has not passed its actual current-production cohort yet.
+
+`vk-nightly-installed-SQL-phase-20261026.service` exited75 at15:10:15EDT before
+any API image, global writer admission or B copy: SSD floor failed. Both tracking
+services had already stopped at14:34:11/21EDT for the same capacity reason.
+Their committed SQLite queues remain; later changes are a genuine unobserved
+interval, not an empty delta. No automatic retry or replacement observer is armed.
+Future source now preserves the first terminal cause through tracking cleanup.
+
+At15:22:35EDT SSD free1029611520B left1184980993B short of the configured strict
+floor+64MiB control margin. The next64MiB map-growth plus32MiB control planning
+allowance needs2315255809B free, short1285644289B then. This allowance is not a
+measured minimum/reservation and does not charge resident indexes twice. Exact
+private receipt: `DISK_CURRENT_NIGHTLY_ADMISSION_BLOCK_20261026.private.json`.
+Do not lower the active guard, replay completed work, delete originals or start
+another producer to get around it. Coordinate recoverable relief with the existing
+Disk owner. B is not the blocker: October25 policy withdrew Disk's old8GiB reserve,
+quotas and serial/rate blanket rules; real identity, capacity, health, applicable
+STOP, access, create-only and source preservation still apply. Sealed old packages
+remain unchanged; reconcile outstanding writes in a successor invocation.
+
+Exact current source passed108 focused RAM-only cases, including tracking queue
+reopen/failure provenance, source-substitution refusal, current-map reader,
+SQL/WAL independent restore and resume, and native interruption recovery.
+Earlier complete regression642passed(one skip) predates the last SQL/health
+changes, so it is not an exact-current-head full-suite claim. Ops and whitespace
+checks pass. Required formatting ran Rust format then failed at missing Prettier;
+no frontend or compiled-runtime validation is claimed. Private test/status receipts
+remain in the existing commissioning area; all prior failing receipts remain.
+
+Remaining commissioning work is concrete: merge qualified suffix/older carriers;
+close the post-tracker gap and current namespace residuals; complete current API
+SQL points and missing file bodies; bind current runtime/frontend and all layers;
+run independent composed restore/Git/metadata acceptance; wire the accepted map
+and bounded durable journal delta into the operational cycle and health reporting;
+then adopt the one02:00 America/Toronto calendar and record exact next run. The
+162704613801B independent forensic restore,137DB catch-up,148 later images,
+41 newer and206 older components remain retained with original gaps and epochs.
+No source test or small component proof substitutes for whole current acceptance.
+
 # October26 — move-aware observer handover and namespace reconciliation
 
 The bootstrap audit completed11:23EDT:902818 paths/760975 regular files,

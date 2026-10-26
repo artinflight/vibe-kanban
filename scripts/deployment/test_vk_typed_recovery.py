@@ -94,6 +94,40 @@ class TypedRecoveryTests(unittest.TestCase):
             handle = HeldRecoverySet(d, checksum(d), self.provider, index)
             return callback(handle)
 
+    def current_map_descriptor(self):
+        from vk_nightly_current_map import FORMAT as MAP_FORMAT,encode_member
+        # Construct the sealed complete current representation with the same
+        # real body dependencies as the existing composed-restore fixture.
+        p=self.new/'current.sqlite';db=sqlite3.connect(p)
+        db.execute('create table metadata(format text,complete integer)')
+        db.execute('insert into metadata values(?,1)',(MAP_FORMAT,))
+        db.execute('create table members(name text primary key,state text,row blob) without rowid')
+        for name,row in self.rows.items():
+            state='verified-file' if row['kind'] in ('file','hardlink') else row['kind']
+            db.execute('insert into members values(?,?,?)',(name,state,encode_member({'member':row})))
+        db.commit();db.close();d=self.descriptor()
+        d['indexes']=[dict(self.reference(self.new,'current.sqlite','current'),format=MAP_FORMAT)]
+        return d
+
+    def test_authenticated_current_map_full_consumer_and_actual_body_restore(self):
+        d=self.current_map_descriptor()
+        def check(h):
+            self.assertTrue(self.validate(h)['member_map_validated'])
+            self.assertEqual(b''.join(h.blocks('home/state/log')),self.body)
+        self.use(check,d)
+
+    def test_current_map_accepts_only_one_current_patch_without_rebuilding_base(self):
+        d=self.current_map_descriptor()
+        # Existing overlay replaces the same selected members and tombstones
+        # an already absent name; accepted current content remains identical.
+        d['indexes'].append(self.reference(self.new,'overlay.sqlite','current'))
+        def check(h):
+            self.validate(h)
+            self.assertEqual(b''.join(h.blocks('home/state/log')),self.body)
+        self.use(check,d)
+        d['indexes'].append(d['indexes'][-1])
+        with self.assertRaisesRegex(ValueError,'at most one'):self.use(check,d)
+
     def resolved_enrollment(self):
         from vk_vanished_enrollment import seal, VanishedEnrollmentCoverage
         observer = {'PID': 12, 'start_ticks': 34, 'fd': 3}

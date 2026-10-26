@@ -6,11 +6,55 @@ The old carrier epoch and the later source observation remain distinct. This is
 not a namespace scan, SQL snapshot, complete descriptor or activation receipt.
 """
 from pathlib import Path
+import hashlib
 import json
 import zlib
 
 from vk_nightly_file_version import capture_version
 from vk_nightly_checkpoints import digest,source_path
+
+
+def reanchor_unchanged(version, report, *, guard):
+    """Adopt an existing hashed point under a new, independently ready observer.
+
+    This is a new identity observation, never a repair of the old journal. The
+    exact inode, size, mtime, kernel ctime, owner, mode, link count and xattrs
+    must still match the successful hash bracket. A changed version needs its
+    own qualification; no content is inferred from mtime/length alone.
+    """
+    from vk_nightly_file_version import fingerprint, attributes
+    import os
+    import stat
+    if version.get('state') not in ('qualified-retained-body', 'qualified-pending-body'):
+        raise ValueError('successful original point qualification required')
+    anchor=version['journal']
+    if (report.get('ready') is not True or report.get('errors') or report.get('terminal')
+            or report.get('scope_sha256')!=anchor['scope_sha256']
+            or report.get('plan_sha256')!=anchor['plan_sha256']
+            or type(report.get('since')) is not int or report['since']!=0
+            or type(report.get('sequence')) is not int or report['sequence']<0
+            or not report.get('instance')):
+        raise ValueError('complete ready new observer window with unchanged plan/scope required')
+    path=Path(version['source']);source_path(str(path));guard()
+    if path.resolve()!=path:raise ValueError('qualified source alias changed')
+    if any(str(path)==p or str(path).startswith(p.rstrip('/')+'/') for p in report['changed']):
+        raise ValueError('new observer records a source/ancestor change')
+    before=path.lstat()
+    if not stat.S_ISREG(before.st_mode) or fingerprint(before)!=version['source_identity']:
+        raise ValueError('qualified source identity changed; requalification required')
+    fd=os.open(path,os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK|os.O_CLOEXEC)
+    try:
+        if (fingerprint(os.fstat(fd))!=version['source_identity']
+                or attributes(path)!=version['row']['xattrs']
+                or fingerprint(path.lstat())!=version['source_identity']):
+            raise ValueError('qualified source metadata changed during handover')
+    finally:os.close(fd)
+    guard()
+    old_hash=hashlib.sha256(json.dumps(version,sort_keys=True,separators=(',',':'),allow_nan=False).encode()).hexdigest()
+    return dict(version,journal={k:report[k] for k in ('instance','sequence','scope_sha256','plan_sha256')},
+                observer_handover=dict(original_qualification_sha256=old_hash,original_journal=anchor,
+                    source_identity_reobserved=True,source_payload_bytes_reread=0,
+                    original_journal_gap_repaired=False))
 
 
 class HashOnly:

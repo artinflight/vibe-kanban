@@ -6,7 +6,7 @@ import tempfile
 import unittest
 
 from vk_nightly_qualification import (qualify_file,still_covered,encode_observation,decode_observation,
-                                     index_accepted_base,accepted_base_carrier)
+                                     index_accepted_base,accepted_base_carrier,reanchor_unchanged)
 
 
 class QualificationTests(unittest.TestCase):
@@ -86,6 +86,28 @@ class QualificationTests(unittest.TestCase):
         def fail():raise RuntimeError('interrupted metadata derivation')
         with self.assertRaises(RuntimeError):index_accepted_base(source,output,source_catalog_sha256='b'*64,restore_proof_sha256='c'*64,checkpoint=fail)
         self.assertEqual(output.execute("select name from sqlite_master where type='table'").fetchall(),[])
+
+    def test_new_ready_observer_reuses_exact_hashed_identity_without_repairing_old_gap(self):
+        version=self.qualify()
+        report=dict(self.journal,instance='new',since=0,changed=[],sequence=6)
+        adopted=reanchor_unchanged(version,report,guard=lambda:None)
+        self.assertEqual(adopted['row'],version['row'])
+        self.assertEqual(version['journal']['instance'],'one')
+        self.assertEqual(adopted['journal']['instance'],'new')
+        self.assertEqual(adopted['observer_handover']['source_payload_bytes_reread'],0)
+        self.assertFalse(adopted['observer_handover']['original_journal_gap_repaired'])
+
+    def test_handover_refuses_gap_scope_change_changed_ancestor_and_restored_mtime_rewrite(self):
+        version=self.qualify();report=dict(self.journal,instance='new',since=0,changed=[],sequence=6)
+        for update in [dict(ready=False),dict(errors=[{'overflow':True}]),dict(since=1),
+                       dict(scope_sha256='c'*64),dict(changed=[str(self.path.parent)])]:
+            with self.assertRaises(ValueError):reanchor_unchanged(version,dict(report,**update),guard=lambda:None)
+        # Ensure the fixture rewrite is on a later filesystem timestamp tick.
+        import time
+        before=self.path.stat();time.sleep(0.03);self.path.write_bytes(b'changed bytes!')
+        os.utime(self.path,ns=(before.st_atime_ns,before.st_mtime_ns))
+        with self.assertRaisesRegex(ValueError,'identity changed'):
+            reanchor_unchanged(version,report,guard=lambda:None)
 
 
 if __name__=='__main__':unittest.main()

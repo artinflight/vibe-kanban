@@ -122,7 +122,10 @@ class TrackingStore:
             raise
 
     def terminate(self,instance,reason):
-        self.check();self.db.execute('update epochs set terminal=?,ready=0 where instance=?',(reason,instance))
+        # Keep the actual first failure when final cleanup also closes the
+        # epoch. A generic owner-terminal message must not erase the guard or
+        # reader error needed to reconcile the unobserved interval.
+        self.check();self.db.execute('update epochs set terminal=coalesce(terminal,?),ready=0 where instance=?',(reason,instance))
 
     def report(self,instance,since,*,maximum_paths=100000):
         self.check()

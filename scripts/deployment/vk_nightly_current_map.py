@@ -1,0 +1,330 @@
+"""Resumable current member map over namespace and version qualifications.
+
+Only control metadata is read/written. Required bodies, SQL images and replay
+gaps stay explicit; a draft cannot be published as an accepted recovery set.
+The controller authenticates inputs, retains their leases and enforces actual
+capacity/health. The qualification reader may be live: each exact-name lookup
+finishes before output work, so it does not hold a read transaction across the
+qualifier's commits. Later completed qualifications are refreshed by keyset.
+"""
+from contextlib import contextmanager
+import fcntl
+import json
+import os
+from pathlib import Path
+import sqlite3
+import stat
+import zlib
+
+from vk_nightly_qualification import decode_observation, encode_observation
+from vk_nightly_checkpoints import digest
+from vk_typed_recovery import key
+
+FORMAT = 'vk-nightly-current-member-map-v1'
+READY = ('directory', 'symlink', 'verified-file')
+ROW_DICTIONARY = (b'source namespace identity member source_identity source_observed_at qualification '
+    b'scoped_qualification_coverage directory kind uid gid mode mtime_ns xattrs bytes sha256 segments '
+    b'layer selector encoding encoded_bytes encoded_sha256 raw_journal_ready whole_scope_accepted '
+    b'required_reconciliation_roots backup_payload_bytes_copied carrier_epoch_preserved journal '
+    b'instance plan_sha256 scope_sha256 sequence namespace_or_whole_baseline_accepted '
+    b'original_epoch_repaired row source_payload_bytes_hashed state qualified-retained-body '
+    b'qualified-pending-body /home/mcp/.local/share/vibe-kanban-green-codex-home/ '
+    b'/mnt/vk-storage/worktrees/ /home/mcp/.cache/ accepted-base verified-file')
+
+
+def encode_member(value):
+    raw=json.dumps(value,sort_keys=True,separators=(',', ':'),allow_nan=False).encode()
+    if len(raw)>1024**2:raise ValueError('bounded member control required')
+    encoder=zlib.compressobj(9,zdict=ROW_DICTIONARY)
+    return b'VKM1\0'+encoder.compress(raw)+encoder.flush()
+
+
+def decode_member(raw):
+    if not isinstance(raw,bytes) or not raw.startswith(b'VKM1\0'):
+        return decode_observation(raw)
+    decoder=zlib.decompressobj(zdict=ROW_DICTIONARY)
+    value=decoder.decompress(raw[5:],1024**2+1)
+    if len(value)>1024**2 or not decoder.eof or decoder.unused_data or decoder.unconsumed_tail:
+        raise ValueError('incomplete/excessive member control')
+    return json.loads(value)
+
+
+class SealedMemberIndex:
+    """Typed-reader view of one authenticated complete current-map image.
+
+    No second million-row JSON/SQLite copy is required. The holder authenticates
+    exact sealed bytes and holds provider leases. Unresolved states fail closed;
+    only explicitly bound consistent-SQL sidecars may be omitted from restore.
+    """
+    def __init__(self,connection,check,reference):
+        self.db=connection;self.check=check;self.references=(reference,)
+        connection.execute('pragma query_only=on')
+        if connection.execute('select format,complete from metadata').fetchall()!=[(FORMAT,1)]:
+            raise ValueError('complete authenticated current member map required')
+        self.sidecars=reference.get('consistent_SQL_sidecars',{})
+        actual={name:decode_member(raw)['required_SQL_source'] for name,raw in connection.execute(
+            "select name,row from members where state='SQLite-sidecar'")}
+        if set(actual)!=set(self.sidecars):raise ValueError('exact consistent-SQL sidecar disposition required')
+        for name,source in actual.items():
+            proof=self.sidecars[name]
+            if proof.get('source')!=source:raise ValueError('SQL sidecar/main source differs')
+            main=self.entry(source[1:])
+            if main['sha256']!=proof.get('snapshot_sha256'):raise ValueError('SQL sidecar image binding differs')
+
+    def _entry(self,name):
+        key(name)
+        row=self.db.execute('select state,row from members where name=?',(name,)).fetchone()
+        if row is None or row[0]=='SQLite-sidecar' and name in self.sidecars:raise KeyError(name)
+        if row[0] not in READY:raise ValueError('unresolved current recovery member: '+name+' ('+row[0]+')')
+        return decode_member(row[1])['member']
+
+    def entry(self,name):self.check();return self._entry(name)
+
+    def entries(self,*,after=None):
+        self.check()
+        if after is not None:key(after)
+        for name,state,raw in self.db.execute('select name,state,row from members where name>? order by name',(after or '',)):
+            if state=='SQLite-sidecar' and name in self.sidecars:continue
+            if state not in READY:raise ValueError('unresolved current recovery member: '+name+' ('+state+')')
+            yield name,decode_member(raw)['member']
+        self.check()
+
+    def changed_entries(self):yield from self.entries()
+
+
+def classify(name, observation, qualification, *, SQL_sources):
+    key(name)
+    source = '/' + name
+    kind = observation.get('kind')
+    metadata = {k: observation[k] for k in ('mode', 'uid', 'gid', 'mtime_ns', 'xattrs')}
+    if kind in ('directory', 'symlink'):
+        row = dict(metadata, kind=kind)
+        if kind == 'symlink': row['target'] = observation['target']
+        return kind, dict(member=row, namespace_identity=observation['identity'])
+    if kind != 'file':
+        return 'special-needs-disposition', dict(namespace=observation)
+    if source in SQL_sources:
+        return 'SQLite-needs-image', dict(source=source, namespace=observation)
+    database = next((source[:-len(suffix)] for suffix in ('-wal', '-shm', '-journal')
+                     if source.endswith(suffix) and source[:-len(suffix)] in SQL_sources), None)
+    if database is not None:
+        return 'SQLite-sidecar', dict(source=source, required_SQL_source=database, namespace=observation)
+    if qualification is None:
+        return 'file-needs-qualification', dict(source=source, namespace=observation)
+    if qualification.get('source') != source:
+        raise ValueError('qualification source/name differs')
+    state = qualification.get('state')
+    if state == 'current-version-deferred' and 'SQLite requires' in qualification.get('reason', ''):
+        return 'SQLite-needs-image', dict(source=source, namespace=observation,
+                                         detected_by='qualified-source SQLite header refusal')
+    if state not in ('qualified-retained-body', 'qualified-pending-body'):
+        return 'current-namespace-replay-required', dict(source=source, qualification=qualification,
+                                                       namespace=observation)
+    row = qualification['row']
+    if (row.get('kind') != 'file' or type(row.get('bytes')) is not int or row['bytes'] < 0
+            or len(qualification.get('source_identity', [])) != 9):
+        raise ValueError('complete qualified source version required')
+    digest(row.get('sha256'))
+    identity = qualification['source_identity']
+    if (identity[2:5] != [stat.S_IFREG | row['mode'], row['bytes'], row['mtime_ns']]
+            or identity[6:8] != [row['uid'], row['gid']]):
+        raise ValueError('qualified member/identity metadata differ')
+    if state == 'qualified-retained-body':
+        segments = row.get('segments')
+        if not isinstance(segments, list) or not segments or sum(s['bytes'] for s in segments) != row['bytes']:
+            raise ValueError('complete independently accepted carrier recipe required')
+        for segment in segments:
+            digest(segment['sha256']); key(segment['selector'])
+        return 'verified-file', dict(member=row, qualification=qualification)
+    if row.get('segments'):
+        raise ValueError('pending body cannot claim sealed segments')
+    return 'file-needs-capture', dict(member=row, qualification=qualification)
+
+
+class CurrentMap:
+    @classmethod
+    @contextmanager
+    def held(cls, path, *, binding, create=False, maximum_bytes=768*1024**2):
+        path = Path(path)
+        if (path.resolve() != path or not path.is_absolute() or type(maximum_bytes) is not int
+                or maximum_bytes < 65536):
+            raise ValueError('canonical finite current-map control required')
+        encoded = json.dumps(binding, sort_keys=True, separators=(',', ':'), allow_nan=False)
+        if len(encoded) > 65536 or not isinstance(binding, dict):
+            raise ValueError('bounded externally authenticated input binding required')
+        fd = os.open(path, os.O_RDWR | os.O_NOFOLLOW | os.O_NONBLOCK |
+                     (os.O_CREAT | os.O_EXCL if create else 0), 0o600)
+        db = None
+        try:
+            info = os.fstat(fd)
+            if (not stat.S_ISREG(info.st_mode) or info.st_uid != os.getuid() or info.st_nlink != 1
+                    or info.st_size > maximum_bytes):
+                raise ValueError('owned single current-map inode required')
+            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            db = sqlite3.connect(path, timeout=0, isolation_level=None)
+            db.execute('pragma synchronous=FULL'); db.execute('pragma journal_mode=DELETE')
+            db.execute('pragma cache_size=-2048'); db.execute('pragma mmap_size=0')
+            page = db.execute('pragma page_size').fetchone()[0]
+            if db.execute('pragma max_page_count='+str(maximum_bytes//page)).fetchone()[0] > maximum_bytes//page:
+                raise ValueError('existing current-map exceeds control budget')
+            if create:
+                db.execute('begin immediate')
+                db.execute('create table metadata(format text,binding text,last_name text,complete integer)')
+                db.execute('insert into metadata values(?,?,?,0)', (FORMAT, encoded, ''))
+                db.execute('create table members(name text primary key,state text not null,row blob not null) without rowid')
+                db.execute('create index member_states on members(state,name)')
+                db.execute('create table SQL_sources(path text primary key) without rowid')
+                db.execute('commit')
+            if db.execute('select format,binding from metadata').fetchall() != [(FORMAT, encoded)]:
+                raise ValueError('current-map input binding differs')
+            value = cls(); value.path=path; value.fd=fd; value.db=db
+            value.inode=(info.st_dev, info.st_ino)
+            value.check(); yield value; value.check()
+        finally:
+            if db is not None: db.close()
+            os.close(fd)
+
+    def check(self):
+        info = self.path.lstat()
+        if (not stat.S_ISREG(info.st_mode) or info.st_nlink != 1
+                or (info.st_dev, info.st_ino) != self.inode or self.path.resolve() != self.path):
+            raise ValueError('current-map inode replaced')
+
+    def compile(self, namespace, qualified, *, SQL_sources, checkpoint, maximum_paths,
+                special_versions=None, progress=lambda _: None):
+        """Resume after committed names; never stat/hash/open a source body.
+
+        Namespace is immutable and held by the caller. qualified(name) performs
+        a short live lookup, returning a decoded complete observation or None.
+        special_versions supplies separately verified later points (e.g. the
+        small Printshop/append recovery), not invented current-source hashes.
+        """
+        self.check()
+        if type(maximum_paths) is not int or maximum_paths < 1:
+            raise ValueError('bounded metadata composition required')
+        if self.db.execute('select complete from metadata').fetchone()[0]:
+            return dict(already_complete=True, processed=0, **self.summary())
+        SQL_sources = set(SQL_sources)
+        self.db.executemany('insert or ignore into SQL_sources values(?)', ((p,) for p in SQL_sources))
+        SQL_sources.update(p for p, in self.db.execute('select path from SQL_sources'))
+        last = self.db.execute('select last_name from metadata').fetchone()[0]
+        processed = 0
+        while True:
+            checkpoint(); self.check()
+            limit=min(128,max(1,maximum_paths-processed))
+            batch = namespace.execute('select name,row from namespace where name>? order by name limit ?', (last,limit)).fetchall()
+            if not batch: break
+            if processed + len(batch) > maximum_paths:
+                return dict(already_complete=False, processed=processed, more_members=True, **self.summary())
+            prepared=[]; newSQL=[]
+            for name, raw in batch:
+                observation=decode_observation(raw)
+                version=(special_versions or {}).get(name)
+                if version is None and observation.get('kind')=='file': version=qualified(name)
+                state, value=classify(name, observation, version, SQL_sources=SQL_sources)
+                if state=='SQLite-needs-image': SQL_sources.add('/'+name); newSQL.append('/'+name)
+                prepared.append((name,state,encode_member(value)))
+            self.db.execute('begin immediate')
+            try:
+                self.db.executemany('insert into members values(?,?,?)', prepared)
+                self.db.executemany('insert or ignore into SQL_sources values(?)', ((p,) for p in newSQL))
+                self.db.execute('update metadata set last_name=?', (batch[-1][0],))
+                self.check(); checkpoint(); self.db.execute('commit')
+            except BaseException:
+                if self.db.in_transaction:self.db.execute('rollback')
+                raise
+            last=batch[-1][0]; processed+=len(batch)
+            if processed%4096==0:progress(dict(processed=processed,last_name=last,control_bytes=self.path.stat().st_size))
+        self.db.execute('update metadata set complete=1')
+        return dict(already_complete=False, processed=processed, more_members=False, **self.summary())
+
+    def reencode(self, *, checkpoint, maximum_paths, progress=lambda _:None):
+        """Lossless in-place control compaction; retain compile cursor and values.
+
+        This touches only this owner's unaccepted draft. No source/body read,
+        VACUUM copy, accepted carrier mutation or replay of qualification work.
+        Per-batch digest chain and cursor survive interruption transactionally.
+        """
+        import hashlib
+        if type(maximum_paths) is not int or maximum_paths<1:raise ValueError('finite control rewrite required')
+        self.db.execute('create table if not exists row_encoding(id integer primary key,last_name text,chain text,complete integer)')
+        self.db.execute('insert or ignore into row_encoding values(1,?,?,0)', ('','0'*64))
+        last,chain,complete=self.db.execute('select last_name,chain,complete from row_encoding where id=1').fetchone()
+        count=0
+        if complete:return dict(already_complete=True,processed=0,logical_digest_chain=chain)
+        while count<maximum_paths:
+            checkpoint();self.check()
+            batch=self.db.execute('select name,row from members where name>? order by name limit ?',
+                                  (last,min(128,maximum_paths-count))).fetchall()
+            if not batch:
+                self.db.execute('update row_encoding set complete=1 where id=1')
+                return dict(already_complete=False,processed=count,complete=True,logical_digest_chain=chain)
+            prepared=[];newchain=chain
+            for name,raw in batch:
+                value=decode_member(raw);packed=encode_member(value)
+                if decode_member(packed)!=value:raise ValueError('lossless member rewrite failed')
+                logical=json.dumps(value,sort_keys=True,separators=(',', ':'),allow_nan=False).encode()
+                newchain=hashlib.sha256(bytes.fromhex(newchain)+name.encode()+b'\0'+hashlib.sha256(logical).digest()).hexdigest()
+                prepared.append((packed,name))
+            self.db.execute('begin immediate')
+            try:
+                self.db.executemany('update members set row=? where name=?',prepared)
+                self.db.execute('update row_encoding set last_name=?,chain=? where id=1',(batch[-1][0],newchain))
+                checkpoint();self.check();self.db.execute('commit')
+            except BaseException:
+                if self.db.in_transaction:self.db.execute('rollback')
+                raise
+            last=batch[-1][0];chain=newchain;count+=len(batch)
+            if count%4096==0:progress(dict(reencoded_paths=count,last_reencoded_name=last))
+        return dict(already_complete=False,processed=count,complete=False,logical_digest_chain=chain)
+
+    def summary(self):
+        self.check()
+        return dict(format=FORMAT, member_states=dict(self.db.execute('select state,count(*) from members group by state')),
+                    namespace_composed=bool(self.db.execute('select complete from metadata').fetchone()[0]),
+                    source_paths_scanned=0, source_payload_bytes_read=0, backup_payload_bytes_copied=0,
+                    current_baseline_accepted=False)
+
+    def refresh_unresolved(self,qualified,*,checkpoint,maximum_paths,SQL_sources=(),after='',progress=lambda _:None):
+        """Refresh only unresolved exact names from newer retained observations.
+
+        An explicit keyset permits bounded continuation even when a name still
+        has no body qualification. Ready members are never rehashed/replayed.
+        The controller verifies the observation's epoch/coverage. Namespace
+        moves/absence still require their separate journal closure.
+        """
+        if type(maximum_paths) is not int or maximum_paths<1:raise ValueError('finite unresolved refresh required')
+        self.check()
+        if not self.db.execute('select complete from metadata').fetchone()[0]:
+            raise ValueError('namespace composition must finish before refresh')
+        sources=set(SQL_sources)|{p for p, in self.db.execute('select path from SQL_sources')}
+        states=('file-needs-qualification','current-namespace-replay-required','SQLite-sidecar')
+        placeholders=','.join('?' for _ in states);last=after;processed=0;resolved=0
+        while processed<maximum_paths:
+            checkpoint();self.check()
+            batch=self.db.execute('select name,state,row from members where state in ('+placeholders+
+                ') and name>? order by name limit ?',(*states,last,min(128,maximum_paths-processed))).fetchall()
+            if not batch:break
+            prepared=[];newSQL=[]
+            for name,old_state,raw in batch:
+                value=decode_member(raw);observation=value.get('namespace')
+                if observation is None:raise ValueError('unresolved namespace observation missing')
+                version=qualified(name)
+                if version is None or version.get('state') not in ('qualified-retained-body','qualified-pending-body','current-version-deferred'):
+                    continue
+                state,new=classify(name,observation,version,SQL_sources=sources)
+                if state=='SQLite-needs-image':sources.add('/'+name);newSQL.append('/'+name)
+                if state!=old_state or new!=value:
+                    prepared.append((state,encode_member(new),name));resolved+=int(state in READY or state=='file-needs-capture')
+            self.db.execute('begin immediate')
+            try:
+                self.db.executemany('update members set state=?,row=? where name=?',prepared)
+                self.db.executemany('insert or ignore into SQL_sources values(?)',((p,) for p in newSQL))
+                checkpoint();self.check();self.db.execute('commit')
+            except BaseException:
+                if self.db.in_transaction:self.db.execute('rollback')
+                raise
+            last=batch[-1][0];processed+=len(batch)
+            if processed%4096==0:progress(dict(refreshed_names=processed,resolved_versions=resolved,last_refresh_name=last))
+        more=self.db.execute('select 1 from members where state in ('+placeholders+') and name>? limit 1',(*states,last)).fetchone() is not None
+        return dict(processed=processed,resolved_versions=resolved,last_name=last,more_names=more,**self.summary())

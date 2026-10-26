@@ -39,6 +39,17 @@ class TrackingTests(unittest.TestCase):
             value=store.report('one',1)
             self.assertFalse(value['ready']);self.assertEqual(value['errors'],[{'coverage_lost':16384}])
 
+    def test_failure_reason_and_committed_cursor_survive_cleanup_and_reopen(self):
+        with TrackingStore.held(self.path) as store:
+            store.start(self.binding);store.commit(self.report(9,{'/source/preserved':8}))
+            store.terminate('one','actual SSD floor reached')
+            store.terminate('one','owner terminal; new observer requires explicit reconciliation')
+        with TrackingStore.held(self.path) as store:
+            value=store.report('one',0)
+            self.assertFalse(value['ready']);self.assertEqual(value['sequence'],9)
+            self.assertEqual(value['changed'],['/source/preserved'])
+            self.assertEqual(value['terminal'],'actual SSD floor reached')
+
     def test_bound_and_future_cursor_fail_without_truncating_or_mutating(self):
         with TrackingStore.held(self.path) as store:
             store.start(self.binding);store.commit(self.report(2,{'/source/a':8,'/source/b':8}))

@@ -178,7 +178,7 @@ class ComposedIndex:
         if row is None:
             if self.overlay.execute('select 1 from removes where name=?', (name,)).fetchone():
                 raise KeyError(name)
-            if isinstance(self.base, ComposedIndex):
+            if not isinstance(self.base, sqlite3.Connection):
                 return self.base._entry(name)
             row = self.base.execute('select row from entries where name=?', (name,)).fetchone()
         if row is None:
@@ -190,7 +190,7 @@ class ComposedIndex:
     def entries(self, *, after=None):
         self.check()
         if after is not None:key(after)
-        base = (self.base.entries(after=after) if isinstance(self.base, ComposedIndex)
+        base = (self.base.entries(after=after) if not isinstance(self.base, sqlite3.Connection)
                 else self.base.execute('select name,row from entries where name>? order by name',(after or '',)))
         yield from self._merge(base, after=after)
         self.check()
@@ -198,7 +198,7 @@ class ComposedIndex:
     def changed_entries(self):
         """Selected replacements from either overlay, including shadow/removal."""
         self.check()
-        previous = self.base.changed_entries() if isinstance(self.base, ComposedIndex) else ()
+        previous = self.base.changed_entries() if not isinstance(self.base, sqlite3.Connection) else ()
         yield from self._merge(previous)
         self.check()
 
@@ -242,7 +242,10 @@ def held_index(provider, *references):
     Two indexes are the ordinary base/map pair. An optional third is a bounded,
     consolidated current journal patch, not an unbounded history chain.
     """
-    if len(references) not in (2, 3):
+    current_map=(bool(references) and references[0].get('format')=='vk-nightly-current-member-map-v1')
+    if current_map and len(references) not in (1,2):
+        raise ValueError('complete current map allows at most one bounded journal patch')
+    if not current_map and len(references) not in (2, 3):
         raise ValueError('recovery requires base/map and at most one current journal patch')
     with ExitStack() as stack:
         streams = []
@@ -264,9 +267,15 @@ def held_index(provider, *references):
             if any(fingerprint(os.fstat(f.fileno())) != before for f, before in streams):
                 raise ValueError('authenticated index changed during lease')
 
-        index = connections[0]
-        for overlay in connections[1:]:
-            index = ComposedIndex(index, overlay, check)
+        if current_map:
+            from vk_nightly_current_map import SealedMemberIndex
+            index=SealedMemberIndex(connections[0],check,references[0])
+            for overlay in connections[1:]:
+                index=ComposedIndex(index,overlay,check)
+        else:
+            index = connections[0]
+            for overlay in connections[1:]:
+                index = ComposedIndex(index, overlay, check)
         index.references = tuple(references)
         check()
         yield index

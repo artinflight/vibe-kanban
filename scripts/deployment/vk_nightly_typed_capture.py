@@ -1,0 +1,103 @@
+"""Bounded capture/readback of only unresolved qualified member-map points.
+
+The controller holds CurrentMap's exclusive lease and the sole admitted native
+B object session. No global source inventory or accepted-carrier copy occurs.
+Each completed file is committed only after an ordered independent B readback
+matches its full qualified digest. Native candidates/completed chunks survive
+interruption before this commit and are reused by content identity on resume.
+The resulting points retain their epochs; this worker cannot accept the final
+namespace, SQL cohort, runtime binding or calendar on its own.
+"""
+import hashlib
+
+from vk_nightly_current_map import decode_member,encode_member
+from vk_nightly_objects import ChunkSink
+from vk_nightly_file_version import capture_qualified_version,PrefixMismatch
+from vk_nightly_checkpoints import digest
+
+
+class HashSink:
+    def __init__(self):self.hash=hashlib.sha256();self.bytes=0
+
+    def write(self,block):
+        self.hash.update(block);self.bytes+=len(block);return len(block)
+
+
+def capture_pending(current_map,client,*,guard,maximum_members,maximum_source_bytes,
+                    chunk_bytes,on_progress=lambda _:None,read_prefix=None):
+    if (type(maximum_members) is not int or maximum_members<1
+            or type(maximum_source_bytes) is not int or maximum_source_bytes<1):
+        raise ValueError('finite admitted file/byte capture batch required')
+    current_map.check();db=current_map.db
+    if not db.execute('select complete from metadata').fetchone()[0]:
+        raise ValueError('finish retained namespace composition before its capture batch')
+    db.execute('create table if not exists file_acceptance(name text primary key,proof blob not null) without rowid')
+    done=0;source_bytes=0;initial_upload=client.payload_bytes_sent
+    reused_before=client.native_receipts_reused
+    while done<maximum_members:
+        guard();current_map.check()
+        found=db.execute("select name,row from members where state='file-needs-capture' order by name limit 1").fetchone()
+        if found is None:break
+        name,raw=found;value=decode_member(raw);point=value['qualification'];row=value['member']
+        if (point.get('source')!='/'+name or point.get('row')!=row
+                or point.get('state')!='qualified-pending-body' or row.get('segments')):
+            raise ValueError('exact unresolved qualified member required')
+        prefix=value.get('candidate_accepted_prefix')
+        if prefix is not None:
+            digest(prefix['sha256']);digest(prefix['independent_proof_sha256'])
+            if (type(prefix['bytes']) is not int or not 0<prefix['bytes']<row['bytes']
+                    or not prefix.get('segments') or sum(s['bytes'] for s in prefix['segments'])!=prefix['bytes']):
+                raise ValueError('exact independently accepted prefix recipe required')
+            if read_prefix is None:raise ValueError('accepted prefix requires its authenticated B reader; no full recopy fallback')
+        worst_source_bytes=row['bytes']+(prefix['bytes'] if prefix else 0)
+        if source_bytes+worst_source_bytes>maximum_source_bytes:
+            return dict(completed_members=done,source_bytes_read=source_bytes,
+                        encoded_payload_bytes_sent=client.payload_bytes_sent-initial_upload,
+                        next_point_bytes=row['bytes'],more_pending=True,current_baseline_accepted=False)
+        sink=ChunkSink(client,chunk_bytes=chunk_bytes)
+        prefix_retry_bytes=0
+        try:transfer=capture_qualified_version(point,sink,guard=guard,prefix=prefix)
+        except PrefixMismatch as error:
+            if sink.raw_bytes or sink.segments or sink.buffer:raise ValueError('prefix mismatch emitted unexpected bytes')
+            prefix_retry_bytes=error.bytes_read;prefix=None
+            transfer=capture_qualified_version(point,sink,guard=guard)
+        new_segments=sink.finish();segments=(prefix['segments'] if prefix else [])+new_segments
+        independent=HashSink()
+        if prefix is not None:
+            before=independent.bytes;read_prefix(prefix,independent)
+            if independent.bytes-before!=prefix['bytes']:raise ValueError('authenticated prefix reader length differs')
+        for segment in new_segments:client.verify(segment,independent)
+        if (independent.bytes!=row['bytes'] or independent.hash.hexdigest()!=row['sha256']
+                or sum(s['bytes'] for s in segments)!=row['bytes']):
+            raise ValueError('ordered independently restored full file differs; keep pending point')
+        member=dict(row,segments=segments)
+        proof=dict(qualified_journal=point.get('journal'),transfer=transfer,
+                   accepted_prefix_bytes_reused=prefix['bytes'] if prefix else 0,
+                   prefix_retry_source_bytes=prefix_retry_bytes,
+                   independent_ordered_B_readback_bytes=independent.bytes,
+                   independent_ordered_B_readback_sha256=independent.hash.hexdigest(),
+                   source_metadata=dict(mode=row['mode'],uid=row['uid'],gid=row['gid'],
+                                        mtime_ns=row['mtime_ns'],xattrs=row['xattrs']),
+                   original_epoch_repaired=False,current_baseline_accepted=False)
+        accepted=dict(value,member=member,qualification=dict(point,row=member,state='qualified-retained-body'),
+                      independent_file_proof=proof)
+        guard();current_map.check();db.execute('begin immediate')
+        try:
+            # Failure here leaves all native objects/proofs available and the
+            # original pending row intact. Never publish half a file recipe.
+            db.execute('insert into file_acceptance values(?,?)',(name,encode_member(proof)))
+            updated=db.execute("update members set state='verified-file',row=? where name=? and state='file-needs-capture'",
+                               (encode_member(accepted),name))
+            if updated.rowcount!=1:raise ValueError('pending file ownership changed')
+            guard();current_map.check();db.execute('commit')
+        except BaseException:
+            if db.in_transaction:db.execute('rollback')
+            raise
+        done+=1;source_bytes+=row['bytes']+prefix_retry_bytes
+        on_progress(dict(completed_members=done,last_name=name,source_bytes_read=source_bytes,
+                         encoded_payload_bytes_sent=client.payload_bytes_sent-initial_upload))
+    more=db.execute("select 1 from members where state='file-needs-capture' limit 1").fetchone() is not None
+    return dict(completed_members=done,source_bytes_read=source_bytes,
+                encoded_payload_bytes_sent=client.payload_bytes_sent-initial_upload,
+                native_receipts_reused=client.native_receipts_reused-reused_before,
+                more_pending=more,current_baseline_accepted=False)

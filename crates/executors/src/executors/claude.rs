@@ -1,4 +1,5 @@
 // SDK submodules
+mod approval_context;
 pub mod client;
 pub mod protocol;
 pub mod slash_commands;

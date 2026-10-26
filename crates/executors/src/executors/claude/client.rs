@@ -68,7 +68,11 @@ impl ClaudeAgentClient {
             .as_ref()
             .ok_or(ExecutorApprovalError::ServiceUnavailable)?;
 
-        let approval_id = match approval_service.create_tool_approval(&tool_name).await {
+        let context = super::approval_context::summary(&tool_name, &tool_input);
+        let approval_id = match approval_service
+            .create_tool_approval_with_context(&tool_name, &context)
+            .await
+        {
             Ok(id) => id,
             Err(err) => {
                 self.handle_approval_error(&tool_name, &tool_use_id, &err)
@@ -307,15 +311,15 @@ impl ClaudeAgentClient {
             self.handle_approval(latest_tool_use_id, tool_name, input)
                 .await
         } else {
-            // Auto approve tools with no matching tool_use_id
-            // tool_use_id is undocumented so this may not be possible
+            // Missing correlation cannot establish permission for a supervised
+            // call. Keep it denied instead of silently bypassing the bridge.
             tracing::warn!(
                 "No tool_use_id available for tool '{}', cannot request approval",
                 tool_name
             );
-            Ok(PermissionResult::Allow {
-                updated_input: input,
-                updated_permissions: None,
+            Ok(PermissionResult::Deny {
+                message: "Cannot request supervised approval without a tool_use_id".to_string(),
+                interrupt: Some(false),
             })
         }
     }

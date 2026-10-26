@@ -14,6 +14,12 @@ and separately authorized backend/migration handoff acceptance remain distinct
 boundaries. No Vibe restart, Staging Check/control, production-session experiment,
 billing/global-setting, merge or recovery-data change occurred.
 
+The MP approval follow-up prepares bounded native action context for Dot and
+closes an uncorrelated supervised allow fallback. Proposed native permission
+routing was rejected by automatic review, including an opt-in alternative;
+no permission policy, profile, live source or MP session has changed. See
+[approval evidence and exact pending decision](VK_CLAUDE_APPROVAL_ROUTING.md).
+
 The following inherited stream notes describe earlier work, not this branch's
 implementation or release authority.
 

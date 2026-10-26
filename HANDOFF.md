@@ -9,6 +9,17 @@ installed and the connector-only runtime adoption is verified below. Native Rust
 handoff requires the migration and existing serialized admission; long/incomplete
 history, unknown past approval settings and pending work fail closed.
 
+Current approval follow-up: [MP approval routing and command previews](VK_CLAUDE_APPROVAL_ROUTING.md).
+Native SUPERVISED hooks force routine Bash calls to human review; notifier drops
+native tool/action details. Prepared display-context and redacted preview fix,
+plus denial of uncorrelated supervised calls. Routing changes (including opt-in)
+were rejected by automatic review and have NOT executed. No live MP action or
+service/settings change occurred. 49 connector +28 installed regressions and
+three standalone Rust preview tests pass; full bridge CI is pending. Local cold
+Cargo build was stopped at3.8GiB SSD free (exit130, not a test pass). Complete
+review/CI, then obtain the explicit routing decision and coordinated release
+authorization described in that guide; never disable genuine security approvals.
+
 Live connector follow-up completed: Seamus explicitly authorized the connector
 file installation, its service-only restart, and two short disposable Claude
 turns. Restarted only `vibe-dot-connector.service`; Vibe backend identity stayed

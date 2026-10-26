@@ -10,16 +10,13 @@ handoff requires the migration and existing serialized admission; long/incomplet
 history, unknown past approval settings and pending work fail closed.
 
 Current approval follow-up: [MP approval routing and command previews](VK_CLAUDE_APPROVAL_ROUTING.md).
-Native SUPERVISED hooks force routine Bash calls to human review; notifier drops
-native tool/action details. Prepared display-context and redacted preview fix,
-plus denial of uncorrelated supervised calls. Routing changes (including opt-in)
-were rejected by automatic review and have NOT executed. No live MP action or
-service/settings change occurred. 49 connector +28 installed regressions and
-three preview/four production bridge tests pass in focused CI at1b4049e6f.
-Standard CI is green:629 Nextest passed/14 skipped,15 scheduling checks and
-Clippy/schema/frontend/Tauri gates pass. Local cold Cargo build stopped at3.8GiB
-SSD free (exit130, not a pass). Obtain the explicit routing decision and release
-authorization described in that guide; never disable genuine security approvals.
+The user explicitly authorized native approval handling across Vibe. Claude now
+uses native Default/AcceptEdits/Plan, with real owner fallback, safe plan exit and
+no blanket asks/bypass; Codex native-review behavior is retained. No live policy,
+MP turn, service or global profile changed. Read the
+[rollout/rollback gates](VK_CLAUDE_APPROVAL_ROLLOUT.md) for current tested head and
+remaining activation boundary. Do not rebuild locally: SSD has only2.8GiB free;
+use existing hosted artifacts and preserve all data/caches.
 
 Live connector follow-up completed: Seamus explicitly authorized the connector
 file installation, its service-only restart, and two short disposable Claude

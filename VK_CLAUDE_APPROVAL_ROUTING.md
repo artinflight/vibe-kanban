@@ -32,7 +32,7 @@ those inspected files.
 
 The sources explain two independent defects:
 
-1. In SUPERVISED mode, `ClaudeCode::get_hooks` forces `ask` for nearly every tool,
+1. Before this fix, in SUPERVISED mode `ClaudeCode::get_hooks` forced `ask` for nearly every tool,
    including all Bash commands. `on_hook_callback` forwards that decision to
    Vibe's human approval bridge. Task authorization in conversation is not a
    persisted command permission. An unconditional hook ask prevents ordinary
@@ -79,33 +79,49 @@ No live source, service, permission configuration, pending request, subscription
 credential, approval outcome or MP task turn has been modified by this follow-up.
 The existing successful Claude continuation release remains installed unchanged.
 
-## Routing boundary requiring explicit decision
+## Authorized native routing correction
 
-Automatic approval review rejected the broad native-routing patch because it
-would change approval semantics across Claude sessions. It also rejected the
-narrower proposed per-profile opt-in, stating that native rules could bypass Vibe
-review and that the new security-control setting/rollout lacked authorization.
-Neither routing patch executed; there is no new flag to enable in this branch.
-Do not retry them indirectly, disable approvals, apply AUTO/bypassPermissions,
-add broad Bash/MCP grants, change global profiles or impersonate a Codex reviewer.
+The later user instruction explicitly authorizes correcting approval handling
+across Vibe with supported provider mechanisms, preserving genuine approvals and
+denials. It supersedes the earlier security-control authorization blocker. The
+two earlier proposals did not execute; this source change implements the newly
+authorized common routing contract without a new profile flag or global edit.
 
-The concrete proposed narrower change is an optional per-profile
-`native_permission_rules` setting, absent/false by default. Only an explicitly
-selected MP-specific profile would opt in. It would start in default mode,
-retain SUPERVISED, let Claude's native deny/ask/scoped allow evaluation handle
-ordinary tools, and retain Vibe's interactive fallback for unresolved commands,
-questions and plan transitions. All existing profiles would retain their current
-hook matching. This requires explicit approval before implementation, then tests
-against the pinned CLI and exact per-session activation at a natural idle
-boundary. Do not infer arbitrary shell/script authorization from an allow rule.
+| Saved/selected policy | Claude Code 2.1.62 | Codex existing native path |
+| --- | --- | --- |
+| Supervised | `default`, native read-only/scoped allow evaluation | `on-request`, native reviewer, workspace-write or retained read-only |
+| Auto / legacy default | `acceptEdits`, native edits plus normal unresolved approvals | Same native reviewer, never blanket acceptance |
+| Plan | `plan`, no SDK auto-grant for ordinary tools | Read-only sandbox plus native reviewer |
 
-The prepared notification context also needs a compatible backend artifact and
-coordinated connector/notifier adoption. This turn does not authorize restarting
-Vibe, the notifier or the connector, changing Staging Check, merging, stopping
-agents or exercising a production handoff. The prior connector-only restart
-permission was for the already-completed Claude continuation test. The release
-owner must admit and authorize a concrete compatible package; preserve current
-reader integrations, rollback sources and all subscriptions/credentials.
+Only questions and plan exits retain a forced interactive hook. Other tools reach
+native deny/ask/allow evaluation. Explicit deny and ask rules survive broad allow
+rules. Every unresolved callback requires a real interactive owner and nonempty
+call ID; missing/no-op service fails closed. Approval is request/execution bound,
+keeps original input and never persists suggested grants. Approved plan exit
+changes only session mode to `default`, never bypass. Legacy unknown auto-approve
+callbacks abstain. Commit-reminder hooks retain their existing behavior.
+
+Initial and resumed commands start with the effective native mode already in
+argv. There is no unsafe startup bypass or unacknowledged late policy setter.
+Old `dangerously_skip_permissions` profile fields remain readable but are
+constrained by that policy with a warning, like Codex's stale full-access clamp.
+Explicit bypass/mode/transport flags in custom command overrides are refused
+before spawn instead of silently replacing them; custom model, effort, agent,
+scoped permission rules and environment survive. Stored profiles are not edited.
+
+Actual pinned CLI help and isolated mock-API fixtures, rather than latest docs
+alone, establish compatibility. This version has no newer Claude `auto` risk
+classifier. Prompt authorization does not invent a native allow rule, and
+`acceptEdits` does not authorize arbitrary shell/network/MCP actions. Some genuine
+unresolved actions can therefore still need human review where Codex can use its
+native reviewer. No Codex reviewer flag, blanket Bash grant or bypass is applied
+to Claude. Both providers retain explicit requirements and denials.
+
+[Rollout, rollback and live verification](VK_CLAUDE_APPROVAL_ROLLOUT.md) binds the
+candidate to its exact source and keeps deployment separate from source tests.
+No live policy, MP turn, service, database, subscription or credential changed.
+The prior connector restart permission was consumed by the earlier continuation
+acceptance; it does not authorize a new backend/notifier restart.
 
 ## Validation and remaining acceptance
 
@@ -140,7 +156,9 @@ reader integrations, rollback sources and all subscriptions/credentials.
   existing provisioned CI verifies the bridge; it does not turn the interrupted
   local build into a pass. No further local Cargo build is admitted here.
 
-Live acceptance is still required after authorized activation: the same MP
+The following historical checks precede the native-routing correction. Updated
+exact-head evidence is recorded in the rollout guide. Live acceptance is still
+required after authorized activation: the same MP
 session must retain its native identity/model/effort/history/owner, a bounded
 routine authorized action must proceed through the chosen supported routing,
 and a synthetic genuine approval must remain pending until its exact owner

@@ -2034,3 +2034,10 @@ that run) and41file-component pairs/14,118,303,923rawB, zero payload copied.
 23new adoption/9scheduler cases pass. Current v11 readback has9new enrollment
 errors; old five-error and17SQL notes are historical. No current whole-backup
 or operational Nightly acceptance, schedule or backend action.
+
+- October26 Nightly: reconciled live MM E/Q/R-only scope/current7578195baa guard;
+  withdrew old copied-guard blanket blocker. Actual v2 absence proof covers9
+  ENOENT errors/3 temporary trees against3 authenticated maps and kernel watches.
+  Added/tested atomic durable journal controls and stable-file version handler.
+  Recovered exact3.17MB B partial; native+independent RAM hash/JSONL/Linux metadata
+  pass without recopy. No full baseline/schedule/backend acceptance claimed.

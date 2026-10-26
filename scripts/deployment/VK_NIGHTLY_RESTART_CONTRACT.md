@@ -1,3 +1,19 @@
+## October26 current boundary
+
+MM's all-agent B pointer and explicit live E/Q/R scope supersede the copied
+Staging-only guard. No MM allowance is required for B; genuine B health/access,
+capacity, applicable pauses and finite writer ownership remain.
+
+V2 watched-ancestor enrollment certificates preserve raw errors and verify
+current absence against authenticated maps and same-process kernel watches;
+`WatchedAncestorCoverage` supplies the typed reader's existing validation hook.
+Do not set a raw journal's ready flag or infer historical body-gap closure.
+Durable journal control checkpoints resume exact committed cursors and do not
+crawl source. The actual3.17MB history supplement has a later explicit epoch,
+not a repaired original v8i capture. Accepted162.70GB/148SQL/41file-component
+proofs remain reusable for their own epochs. Final current descriptor, qualified
+selection, application rehearsal and operational Nightly adoption remain open.
+
 # Nightly baseline and restart integration
 
 The October16 integration also supports explicit `chunked-zlib-1-v1` objects.
@@ -85,23 +101,23 @@ source coverage against its accepted same-epoch journal. Missing continuity need
 explicit reconciliation; current SQL/final writer fences remain separate. The
 adapter cannot authorize schedule adoption, B STOP exceptions or backend actions.
 
-## Current commissioning boundary — October 26
+## Current commissioning boundary — October26
 
-Seamus authorized completing Nightly in the existing workspace. The service is
-standalone Python/config/calendar and needs no Vibe backend restart. Actual B
-control read still reports STOP_REQUIRED/StopLatchedtrue. The owner-issued MM
-guard is bound to staging_execution33a6585f-2b76-443b-b8ad-cb9892e46ae5. No
-Nightly writer may impersonate that identity, change the guard constant, ignore
-the latch or reuse a Staging controller. An applicable Nightly B-only owner
-contract or owner-authorized stop resolution is required before payload work.
+The standalone Python/config/calendar needs no Vibe backend restart. Actual
+B controls now explicitly exclude B from the E/Q/R stop; current owner guard
+7578195baa accepts each real owner binding. The old afd390eba copied package
+is historical. No extra MM allowance is required. Preserve target identity,
+health/capacity, applicable pauses, OS access and real writer ownership.
 
-The current v11 observer is an existing Staging dependency, not an installed
-Nightly durable journal. Its fresh readback10:25UTC has nine enrollment errors,
-observation_readyfalse and explicit earlier-epoch gaps. Preserve the raw report.
-Earlier zero-error/census receipts cannot certify this current state. No new
-Nightly schedule is installed and there is no accepted next-run promise.
+V11 remains Staging-owned. Its raw errors and earlier epoch gaps remain visible.
+Separately authenticated current-absence proofs can disposition vanished test
+subtrees against the retained map/kernel watches; a new error invalidates the
+previous certificate and requires a refreshed bounded proof, not a raw-ready
+rewrite. The new durable journal store atomically checkpoints reports/cursors
+but is not yet a live Nightly observer/collector installation.
 
-The private backup-only watcher now waits on inotify FD readiness instead of
-imposing50ms drain latency. Queue overflow still invalidates coverage, and idle
-reader failures still become explicit errors. This is not a durable cross-run
-journal and does not repair the live Staging observer's earlier gaps.
+Full version-qualified body coverage, current runtime/descriptor, bounded source
+selection, final-delta/failure rehearsal and exact operational worker/config/
+calendar adoption remain open. No next run is promised or scheduled. The private
+capture watcher uses FD readiness; it neither repairs old gaps nor promises
+cross-run continuity by itself.

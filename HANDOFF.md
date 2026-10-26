@@ -1,3 +1,44 @@
+# Live B correction and actual gap progress — October26 07:21 EDT
+
+This supersedes the earlier blanket B blocker below. Live STOP/state explicitly
+scope E/Q/R and exclude B; CURRENT-B-ACCESS is all-agent v2. Current MM guard
+7578195baa0191aaba950cc674e7fb9c4f7f46e4503a4bc9f0beb3e5a231c59f
+replaces the old captured afd390eba Staging-only package for future invocations.
+The10:47 report omitted scope fields; its blanket inference was wrong. Do not
+edit old packages, impersonate Staging or clear any real stop. Fresh native B
+identity/SMART/PHY/read access passed11:15UTC, free1,563,256,545,280B.
+
+Actual new proof under existing commissioning-20261026 private area:
+- V11_ENROLLMENT_ANCESTOR_CERTIFICATE and CURRENT_PROOF: all9 ENOENT failures
+  refer to3 absent test trees. Their surviving ancestor's real inotify watch
+  covers recreation; all3 authenticated retained indexes contain0 such members.
+  v2 current-absence certificate keeps raw9 errors and historical gaps intact.
+  A later poll correctly refused additional rustc scratch ENOENT errors. R2
+  proves11 raw failures against5 absent subtrees; it preserves the earlier
+  certificate and reuses unchanged authenticated map inodes. Durable cursor
+  advanced to16,696,288 while remaining explicitly unready.
+- v11-durable-control.sqlite commits report+cursor atomically, reopens at
+  16,639,821 and idempotently recognizes its last batch. Control metadata only;
+  no new watcher/service or source scan. It remains unready, never a baseline.
+- CHANGING_HISTORY_LATER_VERSION_VERIFIED: exact v8i failing history now has
+  a3,168,932B later version on B, SHA556ab9427d59002d3840ce10bafc7e5cc509521a0e205d0b48271d8092c67aae.
+  Native B hash, independent RAM restore/reopened hash,1127JSONL records and
+  Linux metadata pass07:21:39EDT. Native Python3.9 lacked file_digest; exact
+  retained partial was recovered with bounded hash, no second body transfer.
+  All original failed bytes and148SQL/41file components remain preserved.
+
+No full current baseline, historical-gap closure, installed capture worker or
+schedule is accepted. No backend restart is necessary or authorized. Generic
+Nightly store still has1,500,000entry ceiling versus retained selector1,683,438;
+its global inventory/content-hash selection remains engineering to replace,
+not an external permission blocker or justification for another full capture.
+Next: compose explicit version-qualified current descriptor and bounded journal
+selector over accepted carriers, test restart/failure consumer integration, then
+commission exact finite worker/config/calendar only after actual acceptance.
+
+Generated-bytecode commit7fdce926d is retained. Ignore rule prevents additional
+untracked bytecode churn; no existing tracked artifact or recovery file removed.
+
 # Nightly commissioning pickup — October 26
 
 Read STATE.md, STREAM.md and VK_NIGHTLY_BACKUP_EFFICIENCY.md. Work only in existing

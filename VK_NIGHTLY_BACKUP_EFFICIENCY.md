@@ -1,3 +1,31 @@
+# October26 — real recovery progress and remaining commissioning
+
+The current B owner/live scope correction is verified, not merely accepted from
+chat. Earlier MM-scope conclusions are superseded; original receipts remain.
+The9 vanished enrollment errors now have separately authenticated current-absence
+proof against3 retained metadata maps and the same observer's kernel watches.
+Raw reports stay unready; this does not recover transient history or close the
+broader cross-epoch gap. The typed consumer has an explicit v2 certificate adapter.
+
+New FULL-synchronous SQLite journal control checkpoints commit complete report
+and cursor together. Reopen/idempotent retry and injected-commit/full-disk failure
+cases preserve prior proof. Actual retained v11 reports were checkpointed once;
+no replacement watcher or automatic capture was started. Batches retain raw
+errors; later apparently clean reports never erase a coverage fault.
+
+Stable online single-file versions stream through a controller-supplied B sink,
+with open/fstat/path/xattr checks and bounded buffers. A changing source leaves
+an unaccepted partial, never a seal or silent retry. Actual failed v8i history
+received an explicit later3,168,932B version. Native hash and independent RAM
+restore/hash/1127JSONL/metadata checks pass; the recovered partial was not recopied.
+
+Operational acceptance is unfinished: version-qualify the complete typed current
+map against retained carriers and observer gaps, integrate bounded unchanged-source
+selection and final restart delta/failure rehearsals, resolve generic store's
+1.5M-entry bound for the1,683,438-member selector if that storage path is used,
+and commission exact worker/config/schedule/readback. No permission, MM quota or
+backend restart is needed for this engineering. No next production run is armed.
+
 # October 26 — current commissioning and retained component reuse
 
 Seamus authorized operational completion in the existing Nightly workspace.
@@ -14,14 +42,18 @@ with zero payload copies and277,756KiB measured process peakRSS. It reuses proof
 not current-source qualification. The accepted162.70GB restore,137older DB images
 and all supplements remain valid for their explicit epochs.
 
-Commissioning is blocked by the actual MM STOP latch plus a Staging-only B grant;
-Nightly cannot appropriate that grant or alter STOP/security. Current v11 journal
-readback also has nine errors in vanished test subtrees and observation_readyfalse.
+The earlier blanket MM blocker is withdrawn: actual owner source and live scope
+exclude B and remove the Staging-only pin. Native identity/health/access checks
+pass; genuine B faults, pauses, capacity and OS controls remain. Current v11
+readback retains nine raw errors; an authenticated v2 current-absence certificate
+witnesses all three vanished test trees against kernel watches and retained maps.
 The old17SQL/one-file/five-error note is historical, not the new requirement list.
 See VK_NIGHTLY_RESTART_CONTRACT.md and HANDOFF.md for exact boundaries.
 
-No backup, payload readback/copy, schedule, production switch, controller change
-or observer replacement occurred. Baseline/journal/current-runtime/composed
+Only the exact3.17MB failing history received a later-epoch direct-B supplement
+and independent RAM readback/restore; its retained partial was recovered without
+a second transfer. No schedule, production switch, controller change or observer
+replacement occurred. Baseline/journal/current-runtime/composed
 readback acceptance, bounded unchanged-source selection and installed worker/
 config/calendar proof remain required before claiming operational completion.
 

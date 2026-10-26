@@ -62,8 +62,8 @@ Collapsible issue behavior and approved frontend release: [topic evidence](VK_CO
 
 Nightly remains a separate worker/config/scheduler; it does not require a backend
 restart. The accepted historical restore and later verified components remain
-retained. Current commissioning is not accepted: the active Desktop MM STOP and
-its Staging-only B transaction grant do not authorize a Nightly writer. Read the
+retained. Current commissioning is not accepted. Live MM scope explicitly excludes B;
+the old copied Staging-only guard is historical. Read the
 current branch [handoff](HANDOFF.md) and [Nightly contract](VK_NIGHTLY_BACKUP_EFFICIENCY.md).
 All earlier Nightly continuity is preserved byte-for-byte in
 [the archive manifest](NIGHTLY_CONTINUITY_ARCHIVE_20261026.json).

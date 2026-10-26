@@ -19,9 +19,10 @@ components from failed v8i without relabeling its parent as accepted. Historical
 The current v11 observer is Staging-owned and is not replaced or reconfigured.
 A new observer epoch or namespace census is not proof of complete body coverage.
 
-The active MM STOP latch and Staging-only finite B grant currently block Nightly
-payload commissioning. Preserve them; only their owner can issue an applicable
-Nightly contract or resolve the stop. Continue bounded source/test integration.
+Live MM scope/pointer and current owner guard were reconciled October26. B needs
+no Staging/MM allowance; E/Q/R STOP remains intact. Preserve actual B health,
+access, capacity, applicable owner pauses and writer ownership. Current-set body
+qualification, durable journal integration and exact service adoption remain open.
 
 Prior branch intent and evidence remain in
 [STREAM history](STREAM_NIGHTLY_HISTORY_20261026.md), authenticated by

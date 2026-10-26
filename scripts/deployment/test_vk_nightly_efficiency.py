@@ -113,6 +113,7 @@ assert hashlib.sha256(data).hexdigest()==sys.argv[2]
 '''
         completed = subprocess.run([sys.executable, '-B', '-c', code, str(path),
                                     row['sha256'], str(row['bytes'])],
+                                   cwd=Path(__file__).resolve().parent,
                                    text=True, capture_output=True, timeout=15)
         self.assertEqual(completed.returncode, 0, completed.stderr)
 

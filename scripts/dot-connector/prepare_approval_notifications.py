@@ -77,7 +77,7 @@ def main():
     manifest = {'source_commit': revision, 'source_tree': tree, 'rollback': rollback,
                 'backend_artifact': None, 'cutover_ready': False, 'phase': 'prepared_not_installed', 'files': records, 'baseline': BASELINE,
                 'backend_required': 'Claude action-context bridge; current backend has no native action details in ApprovalInfo',
-                'routing_changes': 'Source candidate uses native Claude default/acceptEdits/plan evaluation, interactive unresolved callbacks and safe plan exit; no live policy/profile changes performed',
+                'routing_changes': 'Source candidate qualifies exact Claude2.1.77 for scoped per-call workspace hooks in Default/Plan; native ask/deny and genuine owner fallback remain; no native allow rule or persistent grant; no live policy/profile changes performed',
                 'backend_compatibility': {'api_schema_change': False, 'notification_fields': 'additive; legacy actions unavailable', 'automatic_install': False},
                 'activation_requires': 'Exact coordinated backend/connector/notifier release authorization and owner admission; no restarts are performed by this script',
                 'preserve': ['selected model/effort', 'SUPERVISED', 'native histories/ownership', 'subscriptions/principals/credentials', 'approval IDs/outcomes', 'genuine security decisions']}

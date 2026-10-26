@@ -81,47 +81,61 @@ The existing successful Claude continuation release remains installed unchanged.
 
 ## Authorized native routing correction
 
-The later user instruction explicitly authorizes correcting approval handling
-across Vibe with supported provider mechanisms, preserving genuine approvals and
-denials. It supersedes the earlier security-control authorization blocker. The
-two earlier proposals did not execute; this source change implements the newly
-authorized common routing contract without a new profile flag or global edit.
+The later user instruction explicitly authorizes supported approval parity across
+Vibe. It supersedes the earlier security-control authorization blocker; those
+rejected proposals did not execute. No global profile flag or setting is added.
 
-| Saved/selected policy | Claude Code 2.1.62 | Codex existing native path |
+| Selected policy | Claude | Existing Codex path |
 | --- | --- | --- |
-| Supervised | `default`, native read-only/scoped allow evaluation | `on-request`, native reviewer, workspace-write or retained read-only |
-| Auto / legacy default | `acceptEdits`, native edits plus normal unresolved approvals | Same native reviewer, never blanket acceptance |
-| Plan | `plan`, no SDK auto-grant for ordinary tools | Read-only sandbox plus native reviewer |
+| Supervised | Native `default`, qualified per-call workspace edit hook | `on-request`, native reviewer, workspace-write or retained read-only |
+| Auto / legacy default | Same scoped hook and genuine native owner fallback | Same native reviewer, never blanket acceptance |
+| Plan | Native `plan`; workspace hook abstains while planning | Read-only sandbox plus native reviewer |
 
-Only questions and plan exits retain a forced interactive hook. Other tools reach
-native deny/ask/allow evaluation. Explicit deny and ask rules survive broad allow
-rules. Every unresolved callback requires a real interactive owner and nonempty
-call ID; missing/no-op service fails closed. Approval is request/execution bound,
-keeps original input and never persists suggested grants. Approved plan exit
-changes only session mode to `default`, never bypass. Legacy unknown auto-approve
-callbacks abstain. Commit-reminder hooks retain their existing behavior.
+Ordinary commands reach native deny/ask/allow evaluation instead of a blanket
+human hook. On qualified Claude2.1.77, the supported fast PreToolUse hook can allow
+an ordinary edit only inside this execution's canonical workspace. It resolves
+existing ancestors for new files, rejects symlink escapes, and abstains for
+protected `.git`, `.claude`, `.codex`, `.agents`, `.aws` metadata, outside or
+ambiguous paths, unknown modes/roots and native Plan. The native engine still
+enforces explicit ask/deny rules after a hook allow. Explicit external native
+grants are preserved. Questions and plan transitions remain interactive.
 
-Initial and resumed commands start with the effective native mode already in
-argv. There is no unsafe startup bypass or unacknowledged late policy setter.
-Old `dangerously_skip_permissions` profile fields remain readable but are
-constrained by that policy with a warning, like Codex's stale full-access clamp.
-Explicit bypass/mode/transport flags in custom command overrides are refused
-before spawn instead of silently replacing them; custom model, effort, agent,
-scoped permission rules and environment survive. Stored profiles are not edited.
+No automatic native allow rule, bypass mode, owner-waiting hook or persistent
+grant is installed. Hook failure/timeout abstains into Default's real owner
+callback; if that service is missing/no-op/unavailable, permission fails closed.
+Native callback inputs stay unchanged, permission suggestions are never persisted,
+and missing/empty or mismatched correlation is refused. This leaves one native
+permission request for a genuine ask, without another turn/job or hidden retry.
+An approved plan exits only to Default; the hook sees the actual native mode.
 
-Actual pinned CLI help and isolated mock-API fixtures, rather than latest docs
-alone, establish compatibility. This version has no newer Claude `auto` risk
-classifier. Prompt authorization does not invent a native allow rule, and
-`acceptEdits` does not authorize arbitrary shell/network/MCP actions. Some genuine
-unresolved actions can therefore still need human review where Codex can use its
-native reviewer. No Codex reviewer flag, blanket Bash grant or bypass is applied
-to Claude. Both providers retain explicit requirements and denials.
+Runtime qualification is essential. The actual pinned2.1.62 fixture proved a
+hook allow could bypass an explicit ask rule. Anthropic's
+[2.1.77 changelog](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#2177)
+records a hook permission security fix, and our actual runtime tests verify both
+ask and deny precedence. The default command is updated to exactly2.1.77. Until
+the native system-init message reports that exact qualified version, workspace
+hook grants are disabled. Old, unknown, newer or custom/router runtimes retain
+native Default/manual fallback, preserving model/effort and genuine denials.
+An absent or malformed capability report never enables automatic authorization.
 
-[Rollout, rollback and live verification](VK_CLAUDE_APPROVAL_ROLLOUT.md) binds the
-candidate to its exact source and keeps deployment separate from source tests.
-No live policy, MP turn, service, database, subscription or credential changed.
-The prior connector restart permission was consumed by the earlier continuation
-acceptance; it does not authorize a new backend/notifier restart.
+A newer2.1.302 candidate was tested but rejected for this rollout: it changes the
+standard Sonnet/Opus/Haiku aliases to different canonical models. The selected
+minimum fix must instead pass old/new alias equality, not just retain the alias
+string. No selected model/effort is changed to gain an approval feature. No
+native risk classifier or additional billed reviewer is enabled. Shell operations
+that native rules cannot authorize can still require a real human; no unsupported
+Codex reviewer flag or blanket Bash grant is substituted.
+
+Initial and resumed commands start in the effective mode before any prompt;
+there is no startup bypass or unacknowledged late mode switch. Legacy stored
+bypass fields remain readable but are constrained with a warning. Contradictory
+custom permission flags refuse before spawn; custom models, effort, agent,
+allow/deny rules and environment remain intact. Stored profiles are not edited.
+
+[Rollout/rollback/live acceptance](VK_CLAUDE_APPROVAL_ROLLOUT.md) binds the reviewed
+candidate and dependency. No live MP turn, approval, service, credential,
+subscription, global profile or database changed. Previous connector restart and
+paid test permissions were consumed by the earlier launcher acceptance.
 
 ## Validation and remaining acceptance
 

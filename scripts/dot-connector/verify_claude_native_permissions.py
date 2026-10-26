@@ -17,11 +17,13 @@ import threading
 import time
 import uuid
 
-PIN = "2.1.62"
+PIN = "2.1.77"
 MODEL = "claude-sonnet-4-5-20250929"
 HISTORY_MARKER = "synthetic-prior-context-7f4c"
 HOOKS = {"PreToolUse": [{"matcher": "^(ExitPlanMode|AskUserQuestion)$",
-                         "hookCallbackIds": ["tool_approval"]}]}
+                         "hookCallbackIds": ["tool_approval"]},
+                         {"matcher": "^(Write|Edit|MultiEdit|NotebookEdit)$",
+                          "hookCallbackIds": ["workspace_edit_boundary"]}]}
 
 
 class MockAPI(http.server.BaseHTTPRequestHandler):
@@ -76,7 +78,7 @@ class MockAPI(http.server.BaseHTTPRequestHandler):
 
 
 def run_case(node, cli, root, mode, tool, tool_input, *, rules=None, extra=(),
-             resume=None, text_only=False, approve=False):
+             resume=None, text_only=False, approve=False, hook_error=False, owner_error=False):
     fixture = {"tool": tool, "input": tool_input, "requests": [], "results": [], "text_only": text_only}
     server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), MockAPI)
     server.daemon_threads = True
@@ -116,8 +118,23 @@ def run_case(node, cli, root, mode, tool, tool_input, *, rules=None, extra=(),
         process.stdin.flush()
 
     requests = []
+    decisions = {}
+
+    def owner_decision(request):
+        call_id = request.get("tool_use_id")
+        assert call_id, "No uncorrelated owner request"
+        signature = (request["tool_name"], request["input"])
+        if call_id in decisions:
+            assert decisions[call_id] == signature, "Changed invocation reused a call ID"
+        else:
+            decisions[call_id] = signature
+            requests.append(request)
+        return ({"behavior": "allow", "updatedInput": request["input"]} if approve
+                else {"behavior": "deny", "message": "Synthetic owner denial", "interrupt": False})
+
     final = None
     initialized = False
+    qualified_runtime = False
     try:
         send({"type": "control_request", "request_id": "fixture-init",
               "request": {"subtype": "initialize", "hooks": HOOKS}})
@@ -137,21 +154,47 @@ def run_case(node, cli, root, mode, tool, tool_input, *, rules=None, extra=(),
                     assert response["subtype"] == "success", response
                     initialized = True
             if message.get("type") == "system" and message.get("subtype") == "init":
+                qualified_runtime = message.get("claude_code_version") == PIN
+                fixture["runtime_version"] = message.get("claude_code_version")
                 assert message["session_id"] == session
                 assert message["permissionMode"] == mode
-                assert message["model"] == MODEL
+                fixture["effective_model"] = message["model"]
+                if MODEL.startswith("claude-"):
+                    assert message["model"] == MODEL
             if message.get("type") == "control_request":
                 request = message["request"]
                 if request["subtype"] == "hook_callback":
-                    assert request["callback_id"] == "tool_approval"
-                    response = {"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "ask"}}
+                    fixture.setdefault("hook_events", []).append(request["input"])
+                    callback = request["callback_id"]
+                    if callback == "workspace_edit_boundary":
+                        if hook_error:
+                            send({"type":"control_response", "response":{"subtype":"error", "request_id":message["request_id"], "error":"Synthetic hook unavailable"}})
+                            continue
+                        event = request["input"]
+                        tool_input = event.get("tool_input", {})
+                        raw = tool_input.get("notebook_path" if event.get("tool_name") == "NotebookEdit" else "file_path")
+                        try:
+                            path = Path(raw)
+                            requested = path if path.is_absolute() else root / path
+                            resolved = requested.resolve()
+                            allow = (qualified_runtime and event.get("permission_mode") == "default" and resolved.is_relative_to(root)
+                                     and not any(part.lower() in {".git", ".claude", ".codex", ".agents", ".aws"} for part in resolved.parts))
+                        except (TypeError, OSError, RuntimeError):
+                            allow = False
+                        response = ({"hookSpecificOutput": {"hookEventName":"PreToolUse", "permissionDecision":"allow",
+                                    "permissionDecisionReason":"Synthetic authorized workspace edit"}} if allow else {})
+                    else:
+                        assert callback == "tool_approval"
+                        response = {"hookSpecificOutput": {"hookEventName":"PreToolUse", "permissionDecision":"ask"}}
                 else:
                     assert request["subtype"] == "can_use_tool"
                     assert request["tool_name"] == tool
                     assert request.get("tool_use_id"), "No uncorrelated approvals"
-                    requests.append(request)
-                    response = ({"behavior": "allow", "updatedInput": request["input"]} if approve
-                                else {"behavior": "deny", "message": "Synthetic owner denial", "interrupt": False})
+                    fixture["native_permission_requests"] = fixture.get("native_permission_requests", 0) + 1
+                    if owner_error:
+                        send({"type":"control_response", "response":{"subtype":"error", "request_id":message["request_id"], "error":"Synthetic owner unavailable"}})
+                        continue
+                    response = owner_decision(request)
                 send({"type": "control_response", "response": {"subtype": "success", "request_id": message["request_id"], "response": response}})
             if message.get("type") == "result":
                 final = message
@@ -178,9 +221,11 @@ def run_case(node, cli, root, mode, tool, tool_input, *, rules=None, extra=(),
 
 
 def main():
+    global MODEL
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--cli", type=Path, required=True)
     parser.add_argument("--node", required=True)
+    parser.add_argument("--legacy-cli", type=Path)
     args = parser.parse_args()
     package = json.loads((args.cli.parent / "package.json").read_text())
     assert package["name"] == "@anthropic-ai/claude-code" and package["version"] == PIN
@@ -191,12 +236,12 @@ def main():
         ("default-deny", "default", "Bash", {"command": "ls"}, {"deny": ["Bash(ls)"]}, False, True),
         ("default-ask-beats-allow", "default", "Bash", {"command": "ls"}, {"allow": ["Bash(ls)"], "ask": ["Bash(ls)"]}, True, True),
         ("default-deny-beats-allow", "default", "Bash", {"command": "ls"}, {"allow": ["Bash(ls)"], "deny": ["Bash(ls)"]}, False, True),
-        ("auto-question", "acceptEdits", "AskUserQuestion", {"questions": [{"question": "Synthetic choice?", "header": "Fixture", "options": [{"label": "A", "description": "Fixture A"}, {"label": "B", "description": "Fixture B"}], "multiSelect": False}]}, {"allow": ["AskUserQuestion"]}, True, True),
+        ("auto-question", "default", "AskUserQuestion", {"questions": [{"question": "Synthetic choice?", "header": "Fixture", "options": [{"label": "A", "description": "Fixture A"}, {"label": "B", "description": "Fixture B"}], "multiSelect": False}]}, {"allow": ["AskUserQuestion"]}, True, True),
         ("plan-exit", "plan", "ExitPlanMode", {}, {"allow": ["ExitPlanMode"]}, True, True),
-        ("default-edit", "default", "Write", {"content": "fixture"}, {}, True, True),
-        ("auto-edit", "acceptEdits", "Write", {"content": "fixture"}, {}, False, False),
-        ("auto-ask", "acceptEdits", "Write", {"content": "fixture"}, {"ask": ["Write"]}, True, True),
-        ("auto-deny", "acceptEdits", "Write", {"content": "fixture"}, {"deny": ["Write"]}, False, True),
+        ("supervised-workspace-edit", "default", "Write", {"content": "fixture"}, {}, False, False),
+        ("auto-edit", "default", "Write", {"content": "fixture"}, {}, False, False),
+        ("auto-ask", "default", "Write", {"content": "fixture"}, {"ask": ["Write"]}, True, True),
+        ("auto-deny", "default", "Write", {"content": "fixture"}, {"deny": ["Write"]}, False, True),
         ("plan-read", "plan", "Bash", {"command": "ls"}, {}, False, False),
         ("plan-edit", "plan", "Write", {"content": "fixture"}, {}, True, True),
     ]
@@ -215,17 +260,123 @@ def main():
                 assert (root / "fixture.txt").exists() != denied, f"{name}: unexpected file side effect"
             print(f"PASS {name}", flush=True)
             passed += 1
+    for name in ["outside", "symlink", ".git", ".claude", ".codex", ".agents", ".aws"]:
+        with tempfile.TemporaryDirectory(prefix="vk-native-file-boundary-") as temp:
+            parent = Path(temp)
+            root = parent / "work space"
+            root.mkdir()
+            if name == "outside":
+                target = parent / "new.txt"
+                actual = target
+            elif name == "symlink":
+                external = parent / "external"
+                external.mkdir()
+                (root / "linked").symlink_to(external, target_is_directory=True)
+                target = root / "linked/new.txt"
+                actual = external / "new.txt"
+            else:
+                target = root / name / "config"
+                target.parent.mkdir()
+                actual = target
+            requests, fixture, _ = run_case(args.node, args.cli, root, "default", "Write",
+                                              {"file_path": str(target), "content": "fixture"})
+            assert len(requests) == 1 and fixture["results"][0].get("is_error"), name
+            assert not actual.exists(), name
+            print("PASS file-boundary-" + name, flush=True)
+            passed += 1
+    with tempfile.TemporaryDirectory(prefix="vk-native-external-allow-") as temp:
+        parent = Path(temp)
+        root = parent / "workspace"
+        root.mkdir()
+        target = parent / "explicit.txt"
+        rule = "Edit(/" + target.as_posix() + ")"
+        requests, fixture, _ = run_case(args.node, args.cli, root, "default", "Write",
+                                          {"file_path": str(target), "content": "fixture"}, rules={"allow": [rule]})
+        assert not requests and target.read_text() == "fixture"
+        print("PASS existing-explicit-external-allow", flush=True)
+        passed += 1
+    with tempfile.TemporaryDirectory(prefix="vk-native-boundary-deny-") as temp:
+        root = Path(temp)
+        target = root / ".codex/config.toml"
+        target.parent.mkdir()
+        requests, fixture, _ = run_case(args.node, args.cli, root, "default", "Write",
+                                          {"file_path": str(target), "content": "fixture"}, rules={"deny": ["Write"]}, approve=True)
+        assert not requests and fixture["results"][0].get("is_error") and not target.exists()
+        print("PASS native-deny-removes-tool-before-owner-request", flush=True)
+        passed += 1
+    for outcome in ["ask", "deny"]:
+        with tempfile.TemporaryDirectory(prefix="vk-native-scoped-rule-") as temp:
+            root = Path(temp)
+            target = root / "scoped-file.txt"
+            rule = "Edit(/" + target.as_posix() + ")"
+            requests, fixture, _ = run_case(args.node, args.cli, root, "default", "Write",
+                                              {"file_path": str(target), "content": "fixture"},
+                                              rules={outcome: [rule]}, approve=True)
+            assert len(requests) <= 1, "Duplicate owner request for hook/native fallback"
+            if outcome == "ask":
+                assert len(requests) == 1 and target.read_text() == "fixture"
+            else:
+                assert fixture["results"][0].get("is_error") and not target.exists()
+            print("PASS scoped-native-" + outcome + "-with-boundary-owner-allow", flush=True)
+            passed += 1
+    for owner_unavailable in [False, True]:
+        with tempfile.TemporaryDirectory(prefix="vk-native-hook-failure-") as temp:
+            root = Path(temp)
+            target = root / "new.txt"
+            requests, fixture, _ = run_case(args.node, args.cli, root, "default", "Write",
+                                              {"file_path": str(target), "content": "fixture"},
+                                              hook_error=True, owner_error=owner_unavailable)
+            assert fixture.get("native_permission_requests") == 1
+            assert not target.exists() and fixture["results"][0].get("is_error")
+            print("PASS hook-failure-requires-owner-" + ("unavailable" if owner_unavailable else "denied"), flush=True)
+            passed += 1
     with tempfile.TemporaryDirectory(prefix="vk-native-resume-") as temp:
         root = Path(temp)
         _, _, session = run_case(args.node, args.cli, root, "default", "Bash", {}, text_only=True)
         requests, fixture, resumed = run_case(args.node, args.cli, root, "default", "Write",
                                               {"file_path": str(root / "fixture.txt"), "content": "fixture"},
-                                              resume=session, approve=True)
+                                              resume=session, approve=True, rules={"ask": ["Write"]})
         assert resumed == session and len(requests) == 1
         assert HISTORY_MARKER in json.dumps(fixture["requests"][0]["messages"]), "Resume lost prior context"
         assert (root / "fixture.txt").read_text() == "fixture"
         print("PASS resume-context-and-owner-approval", flush=True)
         passed += 1
+    if args.legacy_cli:
+        legacy_package = json.loads((args.legacy_cli.parent / "package.json").read_text())
+        assert legacy_package["name"] == "@anthropic-ai/claude-code" and legacy_package["version"] == "2.1.62"
+        with tempfile.TemporaryDirectory(prefix="vk-native-legacy-fallback-") as temp:
+            root = Path(temp)
+            target = root / "new.txt"
+            requests, fixture, _ = run_case(args.node, args.legacy_cli, root, "default", "Write",
+                                              {"file_path": str(target), "content": "fixture"})
+            assert fixture["runtime_version"] == "2.1.62" and len(requests) == 1 and not target.exists()
+            print("PASS legacy-runtime-keeps-native-owner-fallback", flush=True)
+            passed += 1
+        for first_cli, next_cli, name in [(args.legacy_cli, args.cli, "upgrade"), (args.cli, args.legacy_cli, "rollback")]:
+            with tempfile.TemporaryDirectory(prefix="vk-native-version-resume-") as temp:
+                root = Path(temp)
+                _, _, session = run_case(args.node, first_cli, root, "default", "Bash", {}, text_only=True)
+                requests, fixture, resumed = run_case(args.node, next_cli, root, "default", "Write",
+                                                       {"file_path": str(root / "new.txt"), "content": "fixture"},
+                                                       resume=session, rules={"ask": ["Write"]}, approve=True)
+                assert resumed == session and len(requests) == 1 and (root / "new.txt").exists()
+                assert HISTORY_MARKER in json.dumps(fixture["requests"][0]["messages"])
+                print("PASS legacy-history-" + name + "-retains-context-and-owner-ask", flush=True)
+                passed += 1
+        original_model = MODEL
+        try:
+            for alias in ["sonnet", "opus", "haiku", "opus[1m]"]:
+                MODEL = alias
+                models = []
+                for cli in [args.legacy_cli, args.cli]:
+                    with tempfile.TemporaryDirectory(prefix="vk-native-model-preservation-") as temp:
+                        _, fixture, _ = run_case(args.node, cli, Path(temp), "default", "Bash", {}, text_only=True)
+                        models.append((fixture["effective_model"], fixture["requests"][0]["model"]))
+                assert models[0] == models[1], f"Runtime update silently changes selected alias {alias}: {models}"
+                print("PASS selected-model-alias-preserved-" + alias, flush=True)
+                passed += 1
+        finally:
+            MODEL = original_model
     print(f"Verified {passed} pinned native Claude fixtures; no provider account or deployment exercised.")
 
 

@@ -1,6 +1,7 @@
 // SDK submodules
 mod approval_context;
 pub mod client;
+mod permission_boundary;
 #[cfg(test)]
 mod permission_tests;
 pub mod protocol;
@@ -65,7 +66,7 @@ fn base_command(claude_code_router: bool) -> &'static str {
     if claude_code_router {
         "npx -y @musistudio/claude-code-router@1.0.66 code"
     } else {
-        "npx -y @anthropic-ai/claude-code@2.1.62"
+        "npx -y @anthropic-ai/claude-code@2.1.77"
     }
 }
 
@@ -229,10 +230,8 @@ impl ClaudeCode {
     pub fn permission_mode(&self) -> PermissionMode {
         if self.plan.unwrap_or(false) {
             PermissionMode::Plan
-        } else if self.approvals.unwrap_or(false) {
-            PermissionMode::Default
         } else {
-            PermissionMode::AcceptEdits
+            PermissionMode::Default
         }
     }
 
@@ -253,10 +252,16 @@ impl ClaudeCode {
         // the request-bound Vibe callback, even with a broad native allow rule.
         hooks.insert(
             "PreToolUse".to_string(),
-            serde_json::json!([{
-                "matcher": "^(ExitPlanMode|AskUserQuestion)$",
-                "hookCallbackIds": ["tool_approval"],
-            }]),
+            serde_json::json!([
+                {
+                    "matcher": "^(ExitPlanMode|AskUserQuestion)$",
+                    "hookCallbackIds": ["tool_approval"],
+                },
+                {
+                    "matcher": "^(Write|Edit|MultiEdit|NotebookEdit)$",
+                    "hookCallbackIds": [permission_boundary::CALLBACK_ID],
+                }
+            ]),
         );
 
         Some(serde_json::Value::Object(hooks))
@@ -356,9 +361,10 @@ impl StandardCodingAgentExecutor for ClaudeCode {
         prompt: &str,
         env: &ExecutionEnv,
     ) -> Result<SpawnedChild, ExecutorError> {
+        let current_dir = current_dir.canonicalize()?;
         let command_builder = self.build_command_builder().await?;
         let command_parts = command_builder.build_initial()?;
-        self.spawn_internal(current_dir, prompt, command_parts, env)
+        self.spawn_internal(&current_dir, prompt, command_parts, env)
             .await
     }
 
@@ -370,6 +376,7 @@ impl StandardCodingAgentExecutor for ClaudeCode {
         reset_to_message_id: Option<&str>,
         env: &ExecutionEnv,
     ) -> Result<SpawnedChild, ExecutorError> {
+        let current_dir = current_dir.canonicalize()?;
         let command_builder = self.build_command_builder().await?;
 
         let mut args = vec!["--resume".to_string(), session_id.to_string()];
@@ -382,7 +389,7 @@ impl StandardCodingAgentExecutor for ClaudeCode {
         }
 
         let command_parts = command_builder.build_follow_up(&args)?;
-        self.spawn_internal(current_dir, prompt, command_parts, env)
+        self.spawn_internal(&current_dir, prompt, command_parts, env)
             .await
     }
 
@@ -669,14 +676,16 @@ impl ClaudeCode {
         let repo_context = env.repo_context.clone();
         let commit_reminder_prompt = env.commit_reminder_prompt.clone();
         let cancel_for_task = cancel.clone();
+        let permission_root = Some(current_dir.to_path_buf());
         tokio::spawn(async move {
             let log_writer = LogWriter::new(new_stdout);
-            let client = ClaudeAgentClient::new(
+            let client = ClaudeAgentClient::new_scoped(
                 log_writer.clone(),
                 approvals_clone,
                 repo_context,
                 commit_reminder_prompt,
                 cancel_for_task.clone(),
+                permission_root,
             );
             let protocol_peer =
                 ProtocolPeer::spawn(child_stdin, child_stdout, client.clone(), cancel_for_task);

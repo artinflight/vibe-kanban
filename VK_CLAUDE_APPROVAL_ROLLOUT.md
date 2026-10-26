@@ -9,18 +9,28 @@ cutover, merge, live MP experiment or global permission edit is performed here.
 ## Compatibility contract
 
 Read [the policy matrix and diagnosis](VK_CLAUDE_APPROVAL_ROUTING.md).
-Claude uses pinned 2.1.62 supported native rules, modes and stdio callbacks;
-Codex retains its own native reviewer, sandbox, protocol alias and human fallback.
-The goal is equivalent treatment of authorized work and preserved real denials,
-not an invented Claude risk classifier. No model, effort, owner, native history,
-Recommend-only policy, allowlist, capacity/collision threshold or billing changes.
+Claude uses the qualified2.1.77 native Default/Plan modes, a fast per-call
+workspace-edit hook and genuine stdio owner callbacks. Codex retains its own native
+reviewer/sandbox/human fallback. No bypass, broad native allow rule, silent model
+change, approval-service disablement or additional billed classifier is used.
 
-No new executor field, generated schema, API endpoint or permission migration
-is required for this approval delta. Existing profiles deserialize unchanged.
-Legacy bypass fields are constrained at execution, not rewritten in storage.
-Custom conflicting permission flags fail before process creation; never silently
-switch that custom preset to DEFAULT. Initial/follow-up use the same mode argv,
-and continuation retains the exact native session ID/history.
+The approval delta needs no API/executor field, generated schema or migration.
+Existing profiles still deserialize. Initial/resume retain exact selected fields
+and native identity. Native explicit ask/deny rules override ordinary workspace
+hook allows. Symlink escapes, outside/ambiguous paths and protected metadata get
+native evaluation/owner fallback; native explicit external grants survive. Plan
+and unknown modes get no automatic workspace grant. Missing/no-op owner services
+and uncorrelated calls fail closed. No per-call approval persists a permission.
+Hook errors/timeouts leave Default mode in place; no native allow rule remains to
+bypass fallback. The scope check is not a claim of identical OS sandboxing or an
+atomic fence against concurrent same-account filesystem mutation.
+
+The native system-init version gates automatic workspace authorization: only the
+exact qualified2.1.77 enables it. Missing, old, unknown or newer/custom/router
+versions keep safe manual fallback with the selected model/effort intact. The
+inspected2.1.62 hook allow bypassed explicit ask rules; it cannot safely supply
+this parity. The newer2.1.302 changed model aliases and is not a rollout input.
+The chosen dependency must pass alias equality and bidirectional history tests.
 
 Notifications use the existing optional approval context plus an additive
 bounded `action` payload. Install preview helpers before engines/readers import
@@ -34,7 +44,7 @@ cannot prove notification detail. Human-visible delivery requires all components
 The final source-bound receipts and workflow links are recorded in draft PR281
 and the private package manifest. Check their exact source SHA before use. Earlier
 CI evidence in the diagnosis guide is historical and does not validate this delta.
-Local native fixtures use the installed pinned CLI, an empty dedicated HOME,
+Local native fixtures use the task-local prepared official CLI, an empty dedicated HOME,
 synthetic key and loopback mock Messages API. They make no paid/provider request
 and exercise actual native rules and resume history, independently of Rust unit
 fixtures. This is native compatibility evidence, not live connector acceptance.
@@ -60,9 +70,11 @@ verified external frontend; never replace live assets with the placeholder.
   match `540eeadc46f1670301d28e70a79e4d7cbdbf7443929742b18ada250138947e23`;
   reader matches `b0ef05682f34e20259da38930465999467d99711ecc1aa838860cf3949e3d1f9`.
 
-The live private source commit is absent from this checkout and its build
-namespace source directory is empty after completion. This branch is not proven
-to include every private/live integration at that source. A hosted artifact is an isolated acceptance candidate, not permission to
+The incumbent sealed source was located and all2,524 manifest entries verified.
+The reviewed approval-only patch is applied only to copied files in a private
+workspace overlay and reverse-checked. Originals remain untouched. This is source
+compatibility evidence, not a compiled/integrated acceptance receipt. This public
+branch alone is not proven to contain every private/live integration. A hosted artifact is an isolated acceptance candidate, not permission to
 replace the current backend wholesale. Release owner must reconcile the precise
 source delta and retained private integrations against the current combined
 candidate, then rerun exact integrated-head checks. Approval-only delta adds no
@@ -108,7 +120,12 @@ blanket Claude prompts and must be reported as a rollback limitation.
    current runtime homes, native permissions, frontend routing, accounts and
    history contracts. Require explicit release-owner cutover authorization under
    `VK_BACKEND_RESTART_PROTOCOL.md`; preparation is not restart approval.
-3. At an admitted idle checkpoint, activate only the approved backend and paired
+3. Before cutover, prepare the official pinned2.1.77 dependency through the
+   existing launcher/package mechanism, with exact registry integrity, Node/platform
+   and mounted-SSD capacity admission. No global profile, account, overage or model
+   setting change is permitted. Verify actual selected aliases/efforts and native
+   version readback. Keep the old dependency for rollback; never restore old data.
+   At an admitted idle checkpoint, activate only the approved backend and paired
    connector/notifier modules through their existing owners. Read back exact
    file/binary hashes, PIDs, health, no duplicate watchers/deliveries and current
    API schema. No broad global grants or permission-service disablement.
@@ -116,7 +133,10 @@ blanket Claude prompts and must be reported as a rollback limitation.
    and owner. Establish a private marker in the first turn; continue the same
    native session without restating it. Confirm exact context/selection/owner,
    one coding job per requested turn, and no generated hidden retry. Test a
-   routine authorized read and a scoped native allow. Equivalent Codex fixture
+   routine authorized read and workspace edit, a scoped native allow, protected
+   metadata and a new file beneath an external symlink (not an existing-file
+   read-before-write error). Verify native ask/deny still win after a workspace hook
+   allow, plus hook failure and missing owner service denial. Equivalent Codex fixture
    must retain native-review evidence and effective sandbox/reviewer, not merely
    a successful in-sandbox command. Set an explicit turn/time/cost ceiling before
    any paid acceptance; previous two-turn authorization was already consumed.

@@ -87,6 +87,11 @@ impl ProtocolPeer {
                                     self.handle_control_request(&client, request_id, request)
                                         .await;
                                 }
+                                Ok(CLIMessage::System { subtype, claude_code_version }) => {
+                                    if subtype == "init" {
+                                        client.observe_runtime_version(claude_code_version.as_deref());
+                                    }
+                                }
                                 Ok(CLIMessage::Result(_)) => {
                                     break;
                                 }

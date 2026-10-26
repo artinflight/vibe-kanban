@@ -11,7 +11,7 @@ history, unknown past approval settings and pending work fail closed.
 
 Current approval follow-up: [MP approval routing and command previews](VK_CLAUDE_APPROVAL_ROUTING.md).
 The user explicitly authorized native approval handling across Vibe. Claude now
-uses native Default/AcceptEdits/Plan, with real owner fallback, safe plan exit and
+uses qualified2.1.77 Default/Plan, scoped per-call edits and genuine owner fallback with
 no blanket asks/bypass; Codex native-review behavior is retained. No live policy,
 MP turn, service or global profile changed. Read the
 [rollout/rollback gates](VK_CLAUDE_APPROVAL_ROLLOUT.md) for current tested head and

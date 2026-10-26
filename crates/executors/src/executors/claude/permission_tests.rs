@@ -22,7 +22,7 @@ async fn native_permissions_cover_existing_profiles_and_resume_without_bypass() 
     ];
     for profile in profiles {
         for (policy, mode) in [
-            (PermissionPolicy::Auto, PermissionMode::AcceptEdits),
+            (PermissionPolicy::Auto, PermissionMode::Default),
             (PermissionPolicy::Supervised, PermissionMode::Default),
             (PermissionPolicy::Plan, PermissionMode::Plan),
         ] {
@@ -51,7 +51,12 @@ async fn native_permissions_cover_existing_profiles_and_resume_without_bypass() 
             assert!(initial.windows(2).any(|p| p == ["--effort", "high"]));
             let hooks = agent.get_hooks(true).unwrap();
             let pre = hooks["PreToolUse"].as_array().unwrap();
-            assert_eq!(pre.len(), 1);
+            assert_eq!(pre.len(), 2);
+            assert_eq!(
+                pre[1]["hookCallbackIds"][0],
+                super::permission_boundary::CALLBACK_ID
+            );
+            assert!(!initial.iter().any(|arg| arg.starts_with("--allowedTools")));
             assert_eq!(pre[0]["matcher"], "^(ExitPlanMode|AskUserQuestion)$");
             assert!(hooks["Stop"].is_array());
         }
@@ -61,7 +66,7 @@ async fn native_permissions_cover_existing_profiles_and_resume_without_bypass() 
 #[test]
 fn native_permissions_preserve_legacy_selection_and_plan_precedence() {
     for (value, expected) in [
-        (json!({}), PermissionMode::AcceptEdits),
+        (json!({}), PermissionMode::Default),
         (
             json!({"approvals":true,"dangerously_skip_permissions":true}),
             PermissionMode::Default,
@@ -111,5 +116,28 @@ async fn native_permissions_keep_custom_rules_but_refuse_conflicting_controls() 
         agent.cmd.base_command_override = Some(format!("synthetic-claude {flag}"));
         assert!(agent.build_command_builder().await.is_err(), "base {flag}");
         agent.cmd.base_command_override = Some("synthetic-claude".into());
+    }
+}
+
+#[test]
+fn native_permission_wire_preserves_qualified_version_and_blocked_path_aliases() {
+    use super::types::{CLIMessage, ControlRequestType};
+    assert!(super::base_command(false).ends_with(super::permission_boundary::QUALIFIED_VERSION));
+    let init: CLIMessage = serde_json::from_value(json!({
+        "type":"system", "subtype":"init", "claude_code_version":"2.1.77", "session_id":"unchanged"
+    }))
+    .unwrap();
+    assert!(
+        matches!(init, CLIMessage::System { subtype, claude_code_version:Some(version) } if subtype == "init" && version == super::permission_boundary::QUALIFIED_VERSION)
+    );
+    for field in ["blocked_path", "blocked_paths"] {
+        let mut request = json!({"type":"control_request", "request_id":"native-correlation", "request":{
+            "subtype":"can_use_tool", "tool_name":"Write", "input":{"file_path":"/outside/new.txt"}, "tool_use_id":"tool-id"
+        }});
+        request["request"][field] = json!("/outside/new.txt");
+        let decoded: CLIMessage = serde_json::from_value(request).unwrap();
+        assert!(
+            matches!(decoded, CLIMessage::ControlRequest { request_id, request:ControlRequestType::CanUseTool { blocked_paths:Some(path), tool_use_id:Some(id), .. } } if request_id == "native-correlation" && id == "tool-id" && path == "/outside/new.txt")
+        );
     }
 }

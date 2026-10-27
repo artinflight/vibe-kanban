@@ -121,5 +121,23 @@ class FileCycleTests(unittest.TestCase):
         self.assertFalse(reports[0]['producer_terminal_proven'])
         self.assertEqual([c.args[0][3] for c in commands.call_args_list],[reference['unit']]*3)
 
+    def test_runtime_successor_requires_actual_SQL_receipt_and_does_no_work_on_failure(self):
+        import vk_nightly_runtime_cycle as runtime
+        result,_=self.write('SQL-result',dict(actual_independent_B_SQL_cycle_receipt_reopen_verified=True,
+            final_B_delivery={'instance':'source-epoch'},phase='current-SQL-cohort-points-integrated'))
+        config,sha=self.write('SQL-controller',{'exact':True})
+        ref=dict(unit='vk-nightly-existing-SQL.service',config=config,config_sha256=sha,result=result,
+            verification_field='actual_independent_B_SQL_cycle_receipt_reopen_verified',
+            result_binding={'phase':'current-SQL-cohort-points-integrated'})
+        with patch.object(cycle.subprocess,'check_output',return_value='MainPID=0\nExecMainStatus=0\nActiveState=inactive\n'):
+            self.assertEqual(cycle.predecessor(ref,self.source,maximum_seconds=60,report=lambda _:None)['phase'],ref['result_binding']['phase'])
+        with patch.object(runtime,'host_guard'),patch.object(runtime,'Source',return_value=self.source),\
+             patch.object(runtime,'predecessor',side_effect=ValueError('actual SQL phase failure')),\
+             patch.object(runtime,'sample_runtime_files') as sample,patch.object(runtime,'run_B') as capture:
+            with self.assertRaisesRegex(ValueError,'SQL phase failure'):
+                runtime.run(dict(source_observer={},SQL_predecessor=ref,maximum_predecessor_seconds=60),
+                    dict(B_controls={}),report=lambda _:None)
+            sample.assert_not_called();capture.assert_not_called()
+
 
 if __name__=='__main__':unittest.main()

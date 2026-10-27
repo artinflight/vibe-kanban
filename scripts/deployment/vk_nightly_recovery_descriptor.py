@@ -105,6 +105,30 @@ def build(database,reference,contract,*,checkpoint):
         raise ValueError('authenticated immutable current-map reference required')
     digest(reference['sha256']);key(reference['selector'])
     SQL_points={};sidecars={};aliases=SQL_aliases(database)
+    request=contract.get('current_SQL_request')
+    qualification=None
+    if request is not None:
+        # The installed consumer obtains this exact request through an
+        # independent normal B reopen of the SQL phase, never a live-source
+        # list or a boolean saying that old points are current.
+        wanted=digest(request['cohort_id'])
+        if checksum({k:v for k,v in request.items() if k!='cohort_id'})!=wanted:
+            raise ValueError('current SQL request digest differs')
+        rb=request['binding'];selected=request['sources'];all_sources=request['SQL_scope_sources']
+        always=request['always_SQL_API_sources']
+        if (request.get('format')!='vk-nightly-current-SQL-cohort-request-v1'
+                or rb.get('source_instance')!=binding['instance']
+                or any(rb.get(k)!=binding[k] for k in ('plan_sha256','scope_sha256'))
+                or rb.get('source_root_bindings')!=binding['required_root_bindings']
+                or any(not isinstance(v,list) or len(v)!=len(set(v)) for v in (selected,all_sources,always))
+                or set(all_sources)!=set(SQL) or not set(always)<=set(selected)<=set(all_sources)
+                or not set(aliases.values())<=set(always)
+                or request.get('unchanged_SQL_points_reused')!=len(set(all_sources)-set(selected))
+                or set(contract.get('always_SQL_API_sources',[]))!=set(always)):
+            raise ValueError('current SQL request scope/epoch/mandatory API binding differs')
+        qualification=dict(format='vk-nightly-current-SQL-qualification-v1',cohort_id=wanted,
+            selected_sources=sorted(selected),unchanged_sources=sorted(set(all_sources)-set(selected)),
+            always_SQL_API_sources=sorted(always),source_instance=binding['instance'])
     for name,raw in database.execute("select m.name,m.row from members m join SQL_sources s on s.path='/'||m.name where m.state!='symlink' order by m.name"):
         checkpoint();value=decode_member(raw);point=value.get('SQL_point');source='/'+name
         if not point or source not in SQL:raise ValueError('current SQL point missing or outside exact consumer cohort: '+source)
@@ -114,9 +138,13 @@ def build(database,reference,contract,*,checkpoint):
                 or type(epoch) not in (int,float) or not math.isfinite(epoch) or epoch<=0
                 or proof.get('integrity')!='ok' or any(point.get(k)!=member.get(k) or proof.get(k)!=member.get(k) for k in ('bytes','sha256'))):
             raise ValueError('complete independently accepted SQL API point required: '+source)
+        if qualification and source in qualification['selected_sources'] and point.get('SQL_cohort_id')!=qualification['cohort_id']:
+            raise ValueError('selected SQL point does not belong to the independently reopened current request: '+source)
         SQL_points[source]=dict(bytes=member['bytes'],sha256=member['sha256'],method='SQLite-backup-API',integrity='ok',
             epoch=dict(original_source_API_point_at=epoch,later_than_original_failed_archive=True),
             independent_proof_sha256=digest(point['B_acceptance_object']['sha256']))
+        if point.get('SQL_cohort_id') is not None:
+            SQL_points[source]['SQL_cohort_id']=digest(point['SQL_cohort_id'])
     if set(SQL_points)!=set(SQL):raise ValueError('exact independently accepted SQL cohort is incomplete')
     for name,raw in database.execute("select name,row from members where state='SQLite-sidecar' order by name"):
         source=decode_member(raw)['required_SQL_source']
@@ -165,6 +193,7 @@ def build(database,reference,contract,*,checkpoint):
         root_aliases=contract.get('root_aliases',{}),always_runtime_files=runtime,always_SQL_API_sources=always_SQL,
         installed_consumer_contract_sha256=checksum(contract),
         independent_current_restore_accepted=False,scheduling_authorized=False)
+    if qualification is not None:descriptor['current_SQL_qualification']=qualification
     # Reuse the ordinary complete-member validator for scope, recipes, root
     # aliases, SQL and pins. This metadata-only interface cannot open bodies or
     # assert dependency leases/readability; the independent consumer still must.
@@ -174,5 +203,6 @@ def build(database,reference,contract,*,checkpoint):
     handle=HeldRecoverySet(descriptor,checksum(descriptor),MetadataContract(),index)
     handle.validate(plan_sha256=contract['plan_sha256'],scope_sha256=contract['scope_sha256'],
         required_sources=required,original_sources=original,required_pins=pins,required_SQL=SQL,
-        required_root_aliases=contract.get('root_aliases',{}),required_runtime_files=runtime)
+        required_root_aliases=contract.get('root_aliases',{}),required_runtime_files=runtime,
+        required_SQL_qualification=qualification)
     return descriptor

@@ -160,6 +160,68 @@ class RecoveryDescriptorTests(unittest.TestCase):
             finally:independent.close()
             self.assertEqual(d['indexes'][0]['consistent_SQL_aliases']['home/state/live.sqlite']['source'],'/home/state/state.sqlite')
 
+    def test_current_SQL_request_requires_actual_cohort_and_reader_contract(self):
+        db,path,c,_,body,controls=self.use(SQL=True)
+        binding=json.loads(db.execute('select binding from namespace_reconciliation').fetchone()[0])
+        source=c['required_SQL'][0]
+        request=dict(format='vk-nightly-current-SQL-cohort-request-v1',
+            binding=dict(source_instance=binding['instance'],plan_sha256=c['plan_sha256'],
+                scope_sha256=c['scope_sha256'],source_root_bindings=binding['required_root_bindings']),
+            sources=[source],SQL_scope_sources=[source],always_SQL_API_sources=[source],unchanged_SQL_points_reused=0)
+        request['cohort_id']=checksum(request);c['current_SQL_request']=request;c['always_SQL_API_sources']=[source]
+        with self.assertRaisesRegex(ValueError,'does not belong'):build(db,reference(path),c,checkpoint=lambda:None)
+        raw=db.execute('select row from members where name=?',(source[1:],)).fetchone()[0]
+        point=decode_member(raw);point['SQL_point']['SQL_cohort_id']=request['cohort_id']
+        db.execute('update members set row=? where name=?',(encode_member(point),source[1:]))
+        d=build(db,reference(path),c,checkpoint=lambda:None)
+        provider=LocalDependencies({'accepted-base':body,'nightly-controls-v1':controls},c['dependencies'],admission_check=lambda:None)
+        args=dict(plan_sha256=c['plan_sha256'],scope_sha256=c['scope_sha256'],required_sources=c['sources'],
+            original_sources=c['original_sources'],required_pins=c['required_pins'],required_SQL=c['required_SQL'])
+        with provider.held(),held_index(provider,*d['indexes']) as index:
+            h=HeldRecoverySet(d,checksum(d),provider,index)
+            with self.assertRaisesRegex(ValueError,'qualification contract'):h.validate(**args)
+            h.validate(**args,required_SQL_qualification=d['current_SQL_qualification'])
+            self.assertEqual(b''.join(h.blocks(source[1:])),(body/'state.sqlite').read_bytes())
+            old=copy.deepcopy(d);old['SQLite'][source]['SQL_cohort_id']='a'*64
+            with self.assertRaisesRegex(ValueError,'cohort differs'):
+                HeldRecoverySet(old,checksum(old),provider,index).validate(**args,
+                    required_SQL_qualification=d['current_SQL_qualification'])
+            missing=copy.deepcopy(d);del missing['current_SQL_qualification']
+            with self.assertRaisesRegex(ValueError,'qualification contract'):
+                HeldRecoverySet(missing,checksum(missing),provider,index).validate(**args,
+                    required_SQL_qualification=d['current_SQL_qualification'])
+        corrupt=copy.deepcopy(c);corrupt['current_SQL_request']['sources']=[]
+        with self.assertRaisesRegex(ValueError,'request digest'):build(db,reference(path),corrupt,checkpoint=lambda:None)
+        wrong=copy.deepcopy(c);wrong['current_SQL_request']['binding']['source_instance']='another'
+        r=wrong['current_SQL_request'];r['cohort_id']=checksum({k:v for k,v in r.items() if k!='cohort_id'})
+        with self.assertRaisesRegex(ValueError,'scope/epoch'):build(db,reference(path),wrong,checkpoint=lambda:None)
+
+    def test_current_SQL_request_cannot_label_always_API_target_unchanged(self):
+        db,path,c,_,_,_=self.use(SQL=True);source=c['required_SQL'][0]
+        binding=json.loads(db.execute('select binding from namespace_reconciliation').fetchone()[0])
+        request=dict(format='vk-nightly-current-SQL-cohort-request-v1',
+            binding=dict(source_instance=binding['instance'],plan_sha256=c['plan_sha256'],
+                scope_sha256=c['scope_sha256'],source_root_bindings=binding['required_root_bindings']),
+            sources=[],SQL_scope_sources=[source],always_SQL_API_sources=[],unchanged_SQL_points_reused=1)
+        request['cohort_id']=checksum(request);c['current_SQL_request']=request;c['always_SQL_API_sources']=[]
+        with self.assertRaisesRegex(ValueError,'scope/epoch'):build(db,reference(path),c,checkpoint=lambda:None)
+
+    def test_current_SQL_request_reuses_unchanged_point_with_original_API_epoch(self):
+        db,path,c,_,_,_=self.use(SQL=True);source=c['required_SQL'][0]
+        db.execute("delete from members where name='home/state/live.sqlite'")
+        db.execute("delete from SQL_sources where path='/home/state/live.sqlite'")
+        binding=json.loads(db.execute('select binding from namespace_reconciliation').fetchone()[0])
+        point=decode_member(db.execute('select row from members where name=?',(source[1:],)).fetchone()[0])['SQL_point']
+        request=dict(format='vk-nightly-current-SQL-cohort-request-v1',
+            binding=dict(source_instance=binding['instance'],plan_sha256=c['plan_sha256'],
+                scope_sha256=c['scope_sha256'],source_root_bindings=binding['required_root_bindings']),
+            sources=[],SQL_scope_sources=[source],always_SQL_API_sources=[],unchanged_SQL_points_reused=1)
+        request['cohort_id']=checksum(request);c['current_SQL_request']=request;c['always_SQL_API_sources']=[]
+        d=build(db,reference(path),c,checkpoint=lambda:None)
+        self.assertEqual(d['current_SQL_qualification']['unchanged_sources'],[source])
+        self.assertEqual(d['SQLite'][source]['epoch']['original_source_API_point_at'],point['original_source_API_point_at'])
+        self.assertNotIn('SQL_cohort_id',d['SQLite'][source])
+
     def test_normal_reader_derives_legacy_SQL_alias_dependency_and_rejects_explicit_drop(self):
         db,path,c,_,body,controls=self.use(SQL=True)
         d=build(db,reference(path),c,checkpoint=lambda:None)

@@ -114,7 +114,8 @@ def predecessor(reference,source,*,maximum_seconds,report,clock=time.monotonic,s
     if type(maximum_seconds) is not int or maximum_seconds<1:raise ValueError('finite predecessor wait required')
     proof_field=reference.get('verification_field','actual_independent_normal_B_composition_reopen_verified')
     if proof_field not in ('actual_independent_normal_B_composition_reopen_verified',
-                           'actual_independent_B_file_cycle_receipt_reopen_verified'):
+                           'actual_independent_B_file_cycle_receipt_reopen_verified',
+                           'actual_independent_B_SQL_cycle_receipt_reopen_verified'):
         raise ValueError('fixed independent predecessor acceptance field required')
     started=clock()
     while True:

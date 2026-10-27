@@ -252,6 +252,56 @@ class BControlTests(unittest.TestCase):
         self.assertEqual(descriptor['sources'],['/home/state']);self.assertFalse(descriptor['independent_current_restore_accepted'])
         view.close()
 
+    def test_serial_runtime_capture_normal_readback_adoption_and_completed_reuse(self):
+        import vk_nightly_runtime_cycle as cycle
+        import vk_nightly_typed_worker as worker
+        from test_vk_nightly_recovery_descriptor import fixture,runtime_fixture
+        from vk_nightly_current_map import decode_member,encode_member
+        root=self.root/'runtime-cycle';root.mkdir()
+        main,path,_,_,body,_=fixture(root);main.close();mainsha=self.import_other(path)
+        component,cp,_,source,_=runtime_fixture(root,body)
+        binding=json.loads(component.execute('select binding from metadata').fetchone()[0])
+        component.execute('update metadata set binding=?',(json.dumps(binding,sort_keys=True,separators=(',',':')),))
+        row=decode_member(component.execute('select row from members').fetchone()[0]);row.pop('independent_file_proof')
+        row['member'].pop('segments');row['qualification']['row']=row['member'];row['qualification']['state']='qualified-pending-body'
+        component.execute("update members set state='file-needs-capture',row=?",(encode_member(row),));component.close()
+        componentsha=self.import_other(cp)
+        self.client.connect('runtime-cycle-component',componentsha).close()
+        config=dict(format='vk-nightly-typed-worker-B-v1',B_controls={},B_index_name='runtime-cycle-component',
+            B_checkpoint_sha256=componentsha,map_binding=binding,status=str(self.root/'runtime-cycle-status'),
+            desktop={},maximum_members=2,maximum_source_bytes=1024,chunk_bytes=4096)
+        controls=dict(source_observer={},SQL_predecessor={'config':'fixture','config_sha256':'a'*64},
+            maximum_predecessor_seconds=60,runtime_paths=[str(source)],component_layer='nightly-controls-v1',
+            main_map=dict(index_name='runtime-cycle-main',checkpoint_sha256=mainsha))
+        source_owner=SimpleNamespace(check=lambda:None,deliver=lambda:{'instance':'fixture-current'})
+        @contextmanager
+        def native(*_,**__):yield SimpleNamespace(client=self.client)
+        code=('import sys;sys.path.insert(0,'+repr(str(Path(__file__).parent))+');from vk_nightly_objects import receive;receive('
+            +repr(str(self.objects))+',sys.stdin.buffer,sys.stdout.buffer,guard=lambda n:None,maximum_object_bytes=65536)')
+        process=subprocess.Popen([sys.executable,'-B','-u','-c',code],stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+        objects=ObjectClient(process.stdout,process.stdin,guard=lambda:None,ram_root=self.root,maximum_object_bytes=65536)
+        @contextmanager
+        def remote(*_,**__):yield SimpleNamespace(client=objects,ready={'fixture':'normal object protocol'})
+        try:
+            with patch.object(cycle,'Source',return_value=source_owner),patch.object(cycle,'read_owned'),\
+                 patch.object(cycle,'predecessor'),patch.object(cycle,'host_guard'),patch.object(cycle,'DesktopControls',native),\
+                 patch.object(worker,'host_guard'),patch.object(worker,'DesktopControls',native),patch.object(worker,'DesktopObjects',remote):
+                result=cycle.run(controls,config,report=lambda _:None)
+                self.assertTrue(result['actual_independent_B_runtime_component_reopen_verified'])
+                self.assertEqual(result['captured']['completed_members'],1)
+                self.assertFalse(result['kernel_journal_coverage_claimed']);self.assertFalse(result['baseline_accepted'])
+                sent=objects.payload_bytes_sent
+                resumed=cycle.run(controls,config,report=lambda _:None)
+                self.assertEqual(resumed['captured']['completed_members'],0)
+                self.assertEqual(objects.payload_bytes_sent,sent)
+                source.write_bytes(b'new actual source version')
+                with patch.object(cycle,'run_B') as capture:
+                    with self.assertRaisesRegex(ValueError,'prepared runtime point changed'):
+                        cycle.run(controls,config,report=lambda _:None)
+                    capture.assert_not_called()
+        finally:
+            process.stdin.close();self.assertEqual(process.wait(timeout=10),0);process.stdout.close();process.stderr.close()
+
     def test_actual_native_immutable_provider_builds_complete_descriptor_and_refuses_draft(self):
         from test_vk_nightly_recovery_descriptor import fixture
         from vk_nightly_b_controls import NativeControlError

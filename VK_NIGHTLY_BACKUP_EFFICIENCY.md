@@ -1854,3 +1854,19 @@ unresolved template. Native-protocol tests cover that next unchanged night as
 well as mandatory isolated-file/alias/exclusion cases. Observation timeouts only
 re-poll the same predecessor within its finite window; they never prove death or
 launch a replacement. Retained API points cannot have their cohort ID stripped.
+
+The final descriptor can require the independently reopened current SQL request.
+It checks that request's full digest, source epoch, roots, exact SQL scope and
+mandatory API targets. Each selected point must carry that cohort ID; unchanged
+accepted points retain their original API timestamp. The ordinary restore reader
+also requires the installed consumer's explicit qualification contract, rejecting
+its removal or substitution. Legacy descriptors remain explicitly legacy reads.
+
+`vk_nightly_runtime_cycle` follows only the exact successful SQL predecessor. It
+freshly hashes the finite outside-journal dependencies, checks their prepared
+points, captures them through the normal direct-B worker, seals/readbacks the
+component and adopts it into the main map. A normal independent B reopen verifies
+the adopted recipe. Changed runtime points require a new explicit component;
+they cannot overwrite the old qualification. Tests exercise actual capture,
+readback, interrupted/completed reuse, adoption and changed-source refusal.
+This does not broaden kernel coverage or accept the whole baseline/calendar.

@@ -351,7 +351,8 @@ class HeldRecoverySet:
     def validate(self, *, plan_sha256, scope_sha256, required_sources,
                  original_sources, required_pins, required_SQL,
                  journal_scope_sha256=None, immutable_sources=None, enrollment_resolution=None,
-                 required_root_aliases=None, required_runtime_files=None):
+                 required_root_aliases=None, required_runtime_files=None,
+                 required_SQL_qualification=None):
         """Validate the complete namespace and exact caller-selected contract.
 
         Required sets come from the consumer's authenticated package, not from
@@ -513,6 +514,22 @@ class HeldRecoverySet:
         # Legacy descriptors remain readable. Their actual sealed alias points
         # still derive the mandatory target list for bounded restart consumers.
         self.always_SQL_API_sources=sorted(set(always)|set(inherited))
+        qualification=d.get('current_SQL_qualification')
+        if qualification!=required_SQL_qualification:
+            raise ValueError('explicit current SQL qualification contract differs')
+        if qualification is not None:
+            selected=qualification['selected_sources'];unchanged=qualification['unchanged_sources']
+            current_always=qualification['always_SQL_API_sources']
+            if (qualification.get('format')!='vk-nightly-current-SQL-qualification-v1'
+                    or qualification.get('source_instance')!=journal['instance']
+                    or any(not isinstance(v,list) or len(v)!=len(set(v)) for v in (selected,unchanged,current_always))
+                    or set(selected)&set(unchanged) or set(selected)|set(unchanged)!=set(required_SQL)
+                    or not set(current_always)<=set(selected)
+                    or set(current_always)!=set(self.always_SQL_API_sources)):
+                raise ValueError('current SQL qualification scope/mandatory targets differ')
+            cohort=digest(qualification['cohort_id'])
+            if any(sql[path].get('SQL_cohort_id')!=cohort for path in selected):
+                raise ValueError('selected SQL point cohort differs from current qualification')
         bounded=d.get('bounded_delta_start_sequence')
         if bounded is not None:
             if (type(bounded) is not int or bounded!=journal['end']

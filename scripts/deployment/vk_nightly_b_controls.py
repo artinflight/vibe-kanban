@@ -401,6 +401,39 @@ class Store:
                 if self.objects.file_identity(path)!=self.readonly_identities[key]:
                     raise ValueError('immutable descriptor image changed')
             return build(db,reference,contract,checkpoint=checked)
+        if op=='audit-current-content':
+            if key not in self.readonly_identities:
+                raise ValueError('independently accepted immutable current map required for content audit')
+            reference=q['reference']
+            if (reference.get('sha256')!=path.stem or reference.get('bytes')!=path.stat().st_size
+                    or reference.get('selector')!=path.name or reference.get('format')!='vk-nightly-current-member-map-v1'):
+                raise ValueError('exact immutable content-audit map reference required')
+            catalogs=q['recipe_indexes'];base=name(q['base_index'])
+            if (not isinstance(catalogs,list) or len(catalogs)>8 or len(catalogs)!=len(set(catalogs))
+                    or not {base,*catalogs}<=self.readonly_identities.keys()):
+                raise ValueError('explicit independently accepted immutable proof catalogs required')
+            keys={key,base,*catalogs}
+            def checked():
+                self.guard(0)
+                for selected in keys:
+                    actual=self.handles[selected][1]
+                    if self.objects.file_identity(actual)!=self.readonly_identities[selected]:
+                        raise ValueError('immutable content-audit dependency changed')
+            from vk_nightly_composed_proofs import audit
+            object_root=self.root.parent/'objects-v1'
+            self.objects.regular(object_root/'OBJECT_STORE.lease')
+            # A read-only audit cannot run alongside an admitted body writer,
+            # create missing store state or change any accepted receipt.
+            with self.objects.store_lease(object_root):
+                result=audit(db,reference,base_catalog=self.handles[base][0],
+                    recipe_catalogs=[self.handles[n][0] for n in catalogs],objects=self.objects,
+                    objects_root=object_root,guard=checked)
+                def catalog_reference(selected):
+                    value=self.handles[selected][1]
+                    return dict(sha256=value.stem,selector=value.name,bytes=value.stat().st_size)
+                result['base_catalog_reference']=catalog_reference(base)
+                result['recipe_catalog_references']=[catalog_reference(selected) for selected in catalogs]
+                checked();return result
         if op=='check':return dict(in_transaction=db.in_transaction,bytes=path.stat().st_size)
         if op=='storage-status':
             temporary=str(self.temporary_directory)

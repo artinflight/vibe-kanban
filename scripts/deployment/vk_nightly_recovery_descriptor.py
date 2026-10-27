@@ -145,6 +145,8 @@ def build(database,reference,contract,*,checkpoint):
             independent_proof_sha256=digest(point['B_acceptance_object']['sha256']))
         if point.get('SQL_cohort_id') is not None:
             SQL_points[source]['SQL_cohort_id']=digest(point['SQL_cohort_id'])
+        if proof.get('schema_sha256') is not None:
+            SQL_points[source]['schema_sha256']=digest(proof['schema_sha256'])
     if set(SQL_points)!=set(SQL):raise ValueError('exact independently accepted SQL cohort is incomplete')
     for name,raw in database.execute("select name,row from members where state='SQLite-sidecar' order by name"):
         source=decode_member(raw)['required_SQL_source']

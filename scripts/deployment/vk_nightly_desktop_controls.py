@@ -13,7 +13,7 @@ import select
 import subprocess
 
 from vk_nightly_b_controls import Client,send,recv
-from vk_nightly_desktop_objects import NATIVE,validate,ssh_command
+from vk_nightly_desktop_objects import NATIVE,validate,ssh_command,native_admission_timeout
 from vk_nightly_objects import read_control
 from vk_nightly_transport_diagnostics import Diagnostics,finish
 
@@ -29,10 +29,12 @@ def validate_control(config,folder):
     modules=('vk_nightly_control_format','vk_nightly_file_version','vk_nightly_checkpoints',
              'vk_nightly_qualification','vk_nightly_current_map')
     descriptor=('vk_typed_recovery','vk_nightly_recovery_descriptor')
+    proofs=('vk_nightly_composed_proofs',)
     declared=set(config['portable_source_sha256'])
-    if declared-set(modules)-set(descriptor) or bool(declared&set(descriptor)) and not set(descriptor)<=declared:
+    if declared-set(modules)-set(descriptor)-set(proofs) or bool(declared&set(descriptor)) and not set(descriptor)<=declared:
         raise ValueError('exact fixed portable descriptor source closure required')
     if set(descriptor)<=declared:modules+=descriptor
+    if set(proofs)<=declared:modules+=proofs
     for module in modules:
         code=(folder/(module+'.py')).read_text()
         if hashlib.sha256(code.encode()).hexdigest()!=config['portable_source_sha256'][module]:
@@ -68,7 +70,7 @@ class DesktopControls:
         self.diagnostics=Diagnostics(self.process.stderr)
         try:
             p=self.process;p.stdin.write(base64.b64encode(program.encode())+b'\n');p.stdin.flush()
-            if not select.select([p.stdout],[],[],90)[0]:raise TimeoutError('native B control readiness')
+            if not select.select([p.stdout],[],[],native_admission_timeout(config))[0]:raise TimeoutError('native B control readiness')
             self.ready=read_control(p.stdout)
             if not self.ready or self.ready.get('status')!='ready':raise ValueError('native B control readiness unavailable')
             self.client=Client(p.stdout,p.stdin,guard=self.guard);return self

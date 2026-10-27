@@ -436,12 +436,13 @@ class HeldRecoverySet:
                 plan_sha256=plan_sha256, required_sources=required_sources)
         elif enrollment_resolution is not None:
             raise ValueError('unexpected enrollment certificate for error-free journal')
-        h = hashlib.sha256(); count = 0; source_members = set(); target_members = set()
+        h = hashlib.sha256(); count = 0; file_count = 0; file_bytes = 0; source_members = set(); target_members = set()
         frozen = {root: [hashlib.sha256(), 0] for root in immutable_sources}
         lookup = lru_cache(maxsize=8192)(self.index._entry)
         for name, row in self.index.entries():
             validate_member(name, row, lookup)
             if row['kind'] == 'file':
+                file_count += 1; file_bytes += row['bytes']
                 if 'pending_content_request' in row or 'prefix_segments' in row:
                     raise ValueError('current content request has not been independently sealed')
                 segments = row.get('segments', [{'layer': 'accepted-base', 'selector': name,
@@ -543,6 +544,7 @@ class HeldRecoverySet:
         self.check(); self.verified = True
         return {'format': FORMAT, 'descriptor_sha256': self.expected_sha256,
                 'member_count': count, 'member_map_sha256': h.hexdigest(),
+                'regular_file_count': file_count, 'regular_file_bytes': file_bytes,
                 'writer_fence_verified': False, 'activation_authorized': False,
                 'member_map_validated': True, 'independent_current_restore_accepted': False}
 

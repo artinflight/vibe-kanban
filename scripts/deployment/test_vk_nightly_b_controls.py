@@ -322,6 +322,39 @@ class BControlTests(unittest.TestCase):
             draft.request('build-current-descriptor',reference=reference,consumer_contract=contract)
         draft.close()
 
+    def test_native_composed_audit_requires_immutable_map_and_accepted_object_identities(self):
+        from vk_nightly_current_map import FORMAT,encode_member
+        from vk_nightly_b_controls import NativeControlError
+        path=self.root/'proof-map.sqlite';db=sqlite3.connect(path)
+        db.execute('create table members(name text primary key,state text,row blob)')
+        member=dict(kind='file',mode=0o600,uid=os.getuid(),gid=os.getgid(),mtime_ns=123,xattrs={},
+            bytes=len(self.raw),sha256=self.sha,segments=self.segments)
+        db.execute('insert into members values(?,?,?)',('home/accepted','verified-file',encode_member(dict(member=member))))
+        db.commit();db.close();mapsha=self.import_other(path)
+        base=self.root/'proof-base.sqlite';db=sqlite3.connect(base)
+        db.execute('create table provenance(source_catalog_sha256 text,restore_proof_sha256 text)')
+        db.execute('insert into provenance values(?,?)',('a'*64,'b'*64))
+        db.execute('create table bodies(sha256 text,bytes integer,name text)');db.commit();db.close();basesha=self.import_other(base)
+        view=self.client.connect('proof-map',mapsha,readonly=True);catalog=self.client.connect('proof-base',basesha,readonly=True)
+        reference=dict(format=FORMAT,sha256=mapsha,selector=mapsha+'.sqlite',bytes=path.stat().st_size)
+        query=dict(op='audit-current-content',name=view.key,reference=reference,base_index=catalog.key,recipe_indexes=[])
+        before={p.name:(p.stat().st_ino,p.stat().st_size,p.stat().st_mtime_ns) for p in self.objects.iterdir()}
+        result=self.client.call(**query)
+        self.assertEqual(result['file_points'],1);self.assertEqual(result['accepted_native_object_references'],1)
+        self.assertEqual(result['SQL_control_bytes_read'],0);self.assertFalse(result['fresh_full_body_decode_claimed'])
+        self.assertEqual(before,{p.name:(p.stat().st_ino,p.stat().st_size,p.stat().st_mtime_ns) for p in self.objects.iterdir()})
+        self.assertEqual(result,self.client.call(**query))
+        draft=self.client.connect('proof-draft',mapsha)
+        with self.assertRaisesRegex(NativeControlError,'immutable current map'):
+            self.client.call(**dict(query,name=draft.key))
+        draft.close();view.close();catalog.close()
+        accepted=self.objects/(self.sha+'.accepted.json');raw=accepted.read_bytes();old=json.loads(raw)
+        old['identity']=[0]*5;accepted.write_text(json.dumps(old))
+        view=self.client.connect('proof-map',mapsha,readonly=True);catalog=self.client.connect('proof-base',basesha,readonly=True)
+        try:
+            with self.assertRaisesRegex(NativeControlError,'object/identity changed'):self.client.call(**query)
+        finally:view.close();catalog.close();accepted.write_bytes(raw)
+
     def test_sealed_current_map_consumed_by_normal_typed_reader_without_second_index(self):
         from vk_nightly_current_map import FORMAT,SealedMemberIndex,encode_member
         db=self.client.connect('ready-map',self.sha)
@@ -997,6 +1030,24 @@ class BControlTests(unittest.TestCase):
         self.assertEqual(pending,[str(self.original)]);self.assertEqual(always,pending);self.assertEqual(unchanged,0)
         self.assertEqual(cycle.selected_SQL([(str(self.original),state,raw)],roots,{'logical-alias':str(self.original)})[1],pending)
         self.assertEqual(cycle.selected_SQL([(str(self.original),state,raw)],roots,{},excluded=[str(self.root)])[1],pending)
+        # Feed the actual independently restored API result, not a synthetic
+        # integrity boolean, into the immutable composed content consumer.
+        current=self.client.connect('current-sql-main',map_sha)
+        sealed=self.client.seal_checkpoint(current.key,{'test':'actual SQL composed proof closure'});current.close()
+        base=self.root/'SQL-proof-base.sqlite';db=sqlite3.connect(base)
+        db.execute('create table provenance(source_catalog_sha256 text,restore_proof_sha256 text)')
+        db.execute('insert into provenance values(?,?)',('a'*64,'b'*64))
+        db.execute('create table bodies(sha256 text,bytes integer,name text)');db.commit();db.close()
+        basesha=self.import_other(base)
+        current=self.client.connect('current-sql-independent-map',sealed['sha256'],readonly=True)
+        base=self.client.connect('sql-independent-base-catalog',basesha,readonly=True)
+        try:
+            proof=current.request('audit-current-content',reference=dict(format='vk-nightly-current-member-map-v1',
+                sha256=sealed['sha256'],selector=sealed['sha256']+'.sqlite',bytes=sealed['bytes']),base_index=base.key,recipe_indexes=[])
+            self.assertEqual(proof['SQL_acceptance_records_independently_decoded'],1)
+            self.assertEqual(proof['file_points'],1);self.assertEqual(proof['new_backup_payload_bytes'],0)
+            self.assertGreater(proof['SQL_control_bytes_read'],0)
+        finally:current.close();base.close()
 
     def test_actual_worker_serial_boundaries_and_completed_body_recovery_before_upload(self):
         import vk_nightly_typed_worker as worker

@@ -110,7 +110,7 @@ print(json.dumps(dict(status='prefix_verified',bytes=total,sha256=h.hexdigest())
 
 def read_prefix(session,prefix,sink):
     """Run serially within the exact active DesktopObjects writer admission."""
-    from vk_nightly_desktop_objects import NATIVE,ssh_command
+    from vk_nightly_desktop_objects import NATIVE,ssh_command,native_admission_timeout
     settings=session.config.get('prefix_reader')
     if (not isinstance(settings,dict) or settings.get('distribution')!='VK-Candidate-20261009'
             or settings.get('expected_uid')!=1000
@@ -140,7 +140,7 @@ def read_prefix(session,prefix,sink):
                        pass_fds=(session.lease.fileno(),))
     try:
         p.stdin.write(base64.b64encode(program.encode())+b'\n');p.stdin.close()
-        if not select.select([p.stdout],[],[],90)[0]:raise TimeoutError('accepted-prefix reader admission')
+        if not select.select([p.stdout],[],[],native_admission_timeout(session.config))[0]:raise TimeoutError('accepted-prefix reader admission')
         ready=read_control(p.stdout)
         if not ready or ready.get('status')!='ready':raise ValueError('accepted-prefix native readiness failed')
         left=prefix['bytes'];h=hashlib.sha256()

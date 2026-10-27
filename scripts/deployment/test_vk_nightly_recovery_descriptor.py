@@ -127,6 +127,12 @@ class RecoveryDescriptorTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,'fixed portable descriptor source closure'):validate_control(incomplete,folder)
         changed=copy.deepcopy(config);changed['portable_source_sha256'][optional[1]]='f'*64
         with self.assertRaisesRegex(ValueError,'source pin changed'):validate_control(changed,folder)
+        extended=copy.deepcopy(config)
+        extended['portable_source_sha256']['vk_nightly_composed_proofs']=hashlib.sha256((folder/'vk_nightly_composed_proofs.py').read_bytes()).hexdigest()
+        _,actual=validate_control(extended,folder)
+        self.assertEqual(tuple(actual),core+optional+('vk_nightly_composed_proofs',))
+        extended['portable_source_sha256']['vk_nightly_composed_proofs']='e'*64
+        with self.assertRaisesRegex(ValueError,'source pin changed'):validate_control(extended,folder)
 
     def test_descriptor_metadata_import_does_not_fake_or_require_POSIX_leases(self):
         folder=str(Path(__file__).parent)

@@ -1870,3 +1870,42 @@ the adopted recipe. Changed runtime points require a new explicit component;
 they cannot overwrite the old qualification. Tests exercise actual capture,
 readback, interrupted/completed reuse, adoption and changed-source refusal.
 This does not broaden kernel coverage or accept the whole baseline/calendar.
+
+### Complete composed content closure and ordinary restore
+
+The immutable-map `audit-current-content` operation authenticates every selected
+file recipe using exact accepted-base/catalog entries, retained ZIP member records,
+native object receipts/current NTFS identities and ordered whole-file proofs.
+It independently decodes each SQL acceptance record and checks its equality with
+the selected API point. Multi-segment files cannot pass using part hashes alone.
+The audit requires immutable accepted map/catalog handles and the real object-store
+lease. It copies no source/backup payload and cannot accept a mutable draft.
+
+`vk_nightly_composed_restore.verify` then uses the ordinary leased complete reader.
+It matches the exact map, file/SQL counts and externally pinned proof catalogs,
+validates the full metadata/dependency graph, and actually materializes required
+runtime/always-API integration samples one at a time in admitted Linux tmpfs.
+Each sample gets independent output readback, numeric Linux metadata verification
+and, for SQLite, real integrity/schema checks. Only successfully verified temporary
+duplicates are released. Failed samples retain their path/data for recovery.
+The accepted162.70GB and later exact body/SQL proofs are reused; this never claims
+a second full copy, original-epoch completeness, a live writer fence or scheduling.
+These new consumer primitives still require actual current-map production adoption.
+
+### Native health observation ownership
+
+V4 and V5 stopped on repeated15s `smartctl` command observation timeouts. Their
+completed file points and object candidates remain reusable. Three later quiet
+native checks passed in1.17–1.41s with unchanged hardware counters; this does not
+establish the underlying cause of the slow calls or attribute a physical fault.
+The old15s number was an implementation deadline, never an owner safety policy.
+
+New control/object sessions serialize their reads of the same B drive through a
+Windows named mutex and allow a finite90s health observation. No data I/O runs
+while health is unknown. Actual separate Windows-process serialization and fresh
+native admission passed; STOP/MM and identity are checked again after the read.
+Counter/identity changes, denied controls, active stops and failed SMART still fail
+closed. No cached health or weaker counter predicate is introduced. Transport
+admission patience derives from those finite child waits; whole-phase deadlines
+still apply. Operational capture reliability must be collected from the resumed
+retained-map producer, not inferred from the quiet diagnosis or source tests.

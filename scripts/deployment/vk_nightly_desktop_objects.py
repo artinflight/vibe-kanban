@@ -21,7 +21,7 @@ from vk_nightly_transport_diagnostics import Diagnostics,finish
 
 
 NATIVE = r'''
-import base64,datetime,hashlib,json,os,pathlib,shutil,subprocess,sys,time,types
+import base64,contextlib,datetime,hashlib,json,os,pathlib,shutil,subprocess,sys,time,types
 mm=types.ModuleType('current_MM_guard');exec(MM_SOURCE,mm.__dict__)
 job=pathlib.Path(CONFIG['B_root']);baseline=CONFIG['baseline']
 admitted_identity=None
@@ -51,8 +51,32 @@ def kernel_identity():
  match=re.fullmatch(r'\\\\\?\\Volume\{([0-9a-fA-F-]{36})\}\\',guid.value)
  assert match,'native B volume GUID malformed'
  return dict(disk_number=int(number[1]),partition_number=int(number[2]),volume_guid=match[1].lower())
-def actual_guard(remaining):
- global admitted_identity,health_timeout_used
+@contextlib.contextmanager
+def health_gate():
+ # Control and object sessions poll the SAME drive. Serialize our native
+ # commands without a disk cache, stale health receipt or another worker.
+ import ctypes,ctypes.wintypes as wt
+ api=ctypes.WinDLL('kernel32',use_last_error=True)
+ api.CreateMutexW.argtypes=[ctypes.c_void_p,wt.BOOL,wt.LPCWSTR];api.CreateMutexW.restype=wt.HANDLE
+ api.WaitForSingleObject.argtypes=[wt.HANDLE,wt.DWORD];api.WaitForSingleObject.restype=wt.DWORD
+ api.ReleaseMutex.argtypes=[wt.HANDLE];api.ReleaseMutex.restype=wt.BOOL
+ api.CloseHandle.argtypes=[wt.HANDLE];api.CloseHandle.restype=wt.BOOL
+ handle=api.CreateMutexW(None,False,'Local\\VK-Nightly-B-Health-ZFN13YZ8-2360624474')
+ if not handle:raise ctypes.WinError(ctypes.get_last_error())
+ acquired=False
+ try:
+  wait=api.WaitForSingleObject(handle,(CONFIG.get('native_health_read_timeout_seconds',90)+15)*1000)
+  if wait==0x102:raise TimeoutError('finite native health observation ownership wait; no payload IO admitted')
+  if wait not in (0,0x80):raise ctypes.WinError(ctypes.get_last_error())
+  # An abandoned owner's result is never reused: always perform a fresh read.
+  acquired=True;yield
+ finally:
+  try:
+   if acquired and not api.ReleaseMutex(handle):raise ctypes.WinError(ctypes.get_last_error())
+  finally:
+   if not api.CloseHandle(handle):raise ctypes.WinError(ctypes.get_last_error())
+def control_identity():
+ global admitted_identity
  records={p:mm.parse(mm.bounded_read(p)) for p in (mm.STOP_PATH,mm.STATE_PATH)}
  for record in records.values():mm.pause(record)
  assert mm.b_outside_monitor_scope(records[mm.STOP_PATH],records[mm.STATE_PATH]),'B scope changed'
@@ -73,9 +97,17 @@ def actual_guard(remaining):
    actual=kernel_identity()
    assert all(identity[k]==v for k,v in actual.items()),'kernel/full admission identity mismatch'
    admitted_identity=dict(identity)
+ return identity
+def actual_guard(remaining):
+ global admitted_identity,health_timeout_used
+ # Observation patience is an implementation bound, not an owner safety
+ # threshold. Keep data IO stopped while waiting for a successful fresh read.
+ deadline=CONFIG.get('native_health_read_timeout_seconds',90)
  try:
-  p=subprocess.run(['C:/ProgramData/MediaArchiveMonitor/smartctl/bin/smartctl.exe',
-     '-j','-i','-H','-A','-l','sataphy','/dev/pd3'],capture_output=True,timeout=15)
+  with health_gate():
+   identity=control_identity()
+   p=subprocess.run(['C:/ProgramData/MediaArchiveMonitor/smartctl/bin/smartctl.exe',
+      '-j','-i','-H','-A','-l','sataphy','/dev/pd3'],capture_output=True,timeout=deadline)
  except subprocess.TimeoutExpired:
   # A missing observation never authorizes I/O. One read-only requalification
   # per finite session may recover a transient command timeout. No work runs
@@ -84,7 +116,7 @@ def actual_guard(remaining):
   if health_timeout_used:raise
   health_timeout_used=True;admitted_identity=None
   print(json.dumps(dict(event='native-health-read-timeout-requalification',
-      timeout_seconds=15,UTC=datetime.datetime.now(datetime.timezone.utc).isoformat(),
+      timeout_seconds=deadline,UTC=datetime.datetime.now(datetime.timezone.utc).isoformat(),
       data_IO_permitted=False,remaining_requalifications=0)),file=sys.stderr,flush=True)
   return actual_guard(remaining)
  p.check_returncode();j=json.loads(p.stdout)
@@ -97,6 +129,9 @@ def actual_guard(remaining):
              phy={str(k):v for k,v in phy.items()},temperature=j.get('temperature',{}).get('current'),
              smart_passed=True,exit=0)
  mm.check_health(health)
+ # STOP/MM and kernel identity may change during a slow read/ownership wait.
+ # Recheck them before the caller may resume any data transfer.
+ identity=control_identity()
  assert os.stat('B:/').st_dev==CONFIG['volume_device'] and identity['disk_number']==3
  free=shutil.disk_usage('B:/').free
  assert free>CONFIG['protected_B_bytes']+remaining+1048576,'actual B protected floor/commitment'
@@ -171,6 +206,21 @@ def validate(config,objects):
         raise ValueError('unknown native identity continuity mode')
     if config.get('native_identity_mode') and config.get('identity_admission_timeout_seconds') not in (15,45):
         raise ValueError('finite reviewed identity admission deadline required')
+    if type(config.get('native_health_read_timeout_seconds',90)) is not int or config.get('native_health_read_timeout_seconds',90) not in (15,90):
+        raise ValueError('finite native health observation deadline required')
+
+
+def native_admission_timeout(config):
+    """Cover the same two finite, serialized guard attempts, without IO grace.
+
+    Transport patience cannot expire before the child's admitted health wait.
+    No attempt extends the caller's whole-job/resource deadline.
+    """
+    health=config.get('native_health_read_timeout_seconds',90)
+    identity=config.get('identity_admission_timeout_seconds',15)
+    if type(health) is not int or health not in (15,90) or type(identity) is not int or identity not in (15,45):
+        raise ValueError('finite native observation budgets required')
+    return 2*((health+15)+identity+health)+30
 
 
 class DesktopObjects:
@@ -199,7 +249,7 @@ class DesktopObjects:
                                           pass_fds=(fd,))
             self.diagnostics=Diagnostics(self.process.stderr)
             self.process.stdin.write(base64.b64encode(native.encode())+b'\n');self.process.stdin.flush()
-            if not select.select([self.process.stdout],[],[],90)[0]:raise TimeoutError('native B readiness')
+            if not select.select([self.process.stdout],[],[],native_admission_timeout(self.config))[0]:raise TimeoutError('native B readiness')
             self.ready=read_control(self.process.stdout)
             if not self.ready:raise RuntimeError('native B readiness stream ended')
             if self.ready.get('status')!='ready' or self.ready.get('object_module_sha256')!=self.config['object_module_sha256']:

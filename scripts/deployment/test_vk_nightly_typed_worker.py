@@ -7,6 +7,7 @@ import tempfile
 import unittest
 import time
 import io
+import subprocess
 from unittest.mock import patch
 from types import SimpleNamespace
 
@@ -71,8 +72,8 @@ class TypedWorkerTests(unittest.TestCase):
     def test_native_receiver_source_is_syntactically_valid(self):compile(NATIVE,'native','exec')
 
     def test_actual_native_health_record_preserves_MM_temperature_and_hardware_fields(self):
-        node=next(n for n in ast.parse(NATIVE).body if isinstance(n,ast.FunctionDef) and n.name=='actual_guard')
-        code=ast.get_source_segment(NATIVE,node)
+        nodes=[n for n in ast.parse(NATIVE).body if isinstance(n,ast.FunctionDef) and n.name in ('control_identity','actual_guard')]
+        code='\n'.join(ast.get_source_segment(NATIVE,node) for node in nodes)
         hardware=dict(serial_number='verified',smart_status={'passed':True},temperature={'current':31},
             ata_smart_attributes={'table':[{'id':5,'raw':{'value':0}}]},sata_phy_event_counters={'table':[{'id':1,'value':0}]})
         identity={'disk_number':3,'partition_number':2,'volume_guid':'fixture'};records=[]
@@ -85,14 +86,15 @@ class TypedWorkerTests(unittest.TestCase):
         class Child:
             def __init__(self,value):self.stdout=json.dumps(value).encode()
             def check_returncode(self):pass
-        answers=iter([Child(identity),Child(hardware)])
+        answers=iter([Child(identity),Child(hardware),Child(identity)])
         namespace=dict(mm=mm,job=Job(),baseline={'NativeSerial':'verified','Attributes':[{'id':5,'raw':{'value':0}}],
             'Phy':[{'id':1,'value':0}]},CONFIG={'identity_ps':'probe','volume_device':123,'protected_B_bytes':100},
-            subprocess=SimpleNamespace(run=lambda *a,**k:next(answers)),base64=base64,json=json,
+            subprocess=SimpleNamespace(run=lambda *a,**k:next(answers),TimeoutExpired=subprocess.TimeoutExpired),base64=base64,json=json,
             os=SimpleNamespace(stat=lambda p:SimpleNamespace(st_dev=123)),
             shutil=SimpleNamespace(disk_usage=lambda p:SimpleNamespace(free=10000000)),
             datetime=__import__('datetime'))
-        namespace['health_timeout_used']=False
+        namespace['health_timeout_used']=False;namespace['admitted_identity']=None
+        namespace['health_gate']=__import__('contextlib').nullcontext
         exec(code,namespace);namespace['actual_guard'](1024)
         self.assertEqual(records[0]['temperature'],31);self.assertTrue(records[0]['smart_passed'])
         self.assertEqual(records[0]['attributes'],{'5':0})
@@ -101,7 +103,7 @@ class TypedWorkerTests(unittest.TestCase):
         namespace['CONFIG'].update(native_identity_mode='admission-plus-kernel-continuity-v1',identity_admission_timeout_seconds=45)
         namespace['admitted_identity']=None;namespace['kernel_identity']=lambda:dict(identity)
         calls=[];answers=iter([Child(identity),Child(hardware),Child(hardware)])
-        namespace['subprocess']=SimpleNamespace(run=lambda *a,**k:(calls.append((a,k)) or next(answers)))
+        namespace['subprocess']=SimpleNamespace(run=lambda *a,**k:(calls.append((a,k)) or next(answers)),TimeoutExpired=subprocess.TimeoutExpired)
         mm.check_identity=lambda value: self.assertEqual(value,identity)
         namespace['actual_guard'](1024);namespace['actual_guard'](1024)
         self.assertEqual(len(calls),3)

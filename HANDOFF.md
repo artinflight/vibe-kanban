@@ -22,18 +22,12 @@ health/package files. No OS/work-SSD backup payload or fallback is allowed.
   INODE_V10_TERMINAL_GAP_20261027.private.json. Preserve the epoch and spools.
   A later corrected observer and metadata gap reconciliation must precede
   current baseline acceptance; prior journal component proof stays historical.
-- Composition V13 is successfully terminal at12:10:30EDT, unit
-  vk-nightly-B-current-composition-inodes-v13-20261027.service, MainPID0/exit0.
-  Source2b540cf4dd826414fa25b00688fc0776d4dc2638; package current-composition-B-inodes-v13,
+- V13 composition is terminal12:10:30EDT/exit0. Its retained RESULT under
+  current-composition-B-inodes-v13 independently reopened B and reused8624file
+  points/44269832049raw bytes with0source-body reads. Source2b540cf4d,
   configSHAd9f06f90af8b5742e0687371ff65d367c3c568bd12b34f80bfcc09ab24ed8b72.
-  Normal independent B reopen passed; native map1284141056B. It consumed
-  actual epoch suffix284178..3944253:3225changed/7065replayed paths,
-  unchanged source paths scanned0. Reused8624file points/44269832049raw B
-  bytes without any body recapture/copy. All4398accepted history points remain.
-  Initial residual demand:61251pending files/23247891411logical B,
-  6928unqualified/1503231416logical B,218SQL sources (not net transfer).
-  First index/reuse completed file-history bodies too; later qualification can
-  otherwise demote the same completed body to pending. Do not repeat namespace.
+  Retain its suffix284178..3944253 and4398accepted history points. V14 derives
+  current demand; V13 logical residuals are not a net transfer estimate.
 
 ## Retained component inputs
 
@@ -67,18 +61,21 @@ mutation rounds. Do not overwrite old packages or claim old epochs repaired.
 Current successor V11: vk-nightly-bounded-inode-observer-v11-20261027.service,
 PID3849155/start32997998, epoch31ab8db49caf4f9699c7c0bd75c363a2, source17c43149a,
 configSHAe4bb83f02c2e71f8aebc768cb35d6feda255a181bf1cd24aa85d7dbe2c2641ed.
-Memory collector R2 targets this exact unit; original wrong-target collector is
-retained terminal. Read tracking-worker-local-inodes-v11/MEMORY_ENROLLMENT_R2.
-Sole recovery controller vk-nightly-B-terminal-gap-recovery-v11-20261027.service
-PID3861771, configSHA16fa6d86dee2ad18b79ccdd33dd56f89ad2f637177dcf1dc4b006c060e50eae7;
-package terminal-gap-recovery-inodes-v11/recover.private.py. It waits for V11,
-then seals the old terminal proof and resumes its own B-only metadata index.
-Do not duplicate it. It never recaptures old body versions; deadline16:33EDT.
-Latest actual ownership/progress is in LATEST_STATUS.private.json.
+Memory collector R2 completed: peakRSS480186368B/cgroup1023799296B,
+no high/max/OOM events. The sole gap reader is now terminal14:11EDT/exit0:
+terminal-gap-recovery-inodes-v11/RESULT.private.json independently reopened
+785371paths/98703directories/errors0 on B. Terminal proofa2e87a3471b10066116ce5de194e3bac29a99b8fbd86f94d5ead90576f1ce0fc
+preserves the old stopped epoch rather than repairing it.
+Current sole composition: vk-nightly-B-current-composition-inodes-v14-20261027.service,
+PID63270, source20ff90110fb513b29efd7737329c0ca30079380f,
+configSHA41fc79ad371a0ffe261d7c3fa0fad9a5b6787078c7c0680992e841df07a7f8bf.
+Read current-composition-B-inodes-v14/{STATUS,STOP,RESULT}.private.json.
+It adopts that completed namespace and retained hashes/history, then uses the
+normal changed-only delta helper. No second namespace or body capture is running.
 
 ## Baseline/commissioning work still required
 
-Reuse the accepted V13 namespace/suffix result; next perform the finite
+Await V14, retaining V13 and the new namespace proofs; then perform the finite
 completed-file-history lookup and residual-only qualification/capture.
 Inspect exact residual states and the single deferred point. Reuse accepted
 body matches and existing SQL points; capture only unresolved current versions.
@@ -90,8 +87,8 @@ Retain accepted162.70GB independent restore, all137/148/204SQL evidence and late
 supplements. Original7783archive gaps/6546loose-object IDs stay explicit;
 current source resolution never proves original archive inclusion. Current
 runtime/served frontend remain a separate later binding. Old runtime observations are preparation, not final-current acceptance.
-The runtime-dependencies-20261027-v1 component still needs gateway.mjs3048B
-and route.json152B; always sample them outside the117-root kernel plan.
+The separate runtime-dependencies-20261027-v1 component still needs gateway/route
+3200B outside the117-root kernel plan.
 Fresh13:02EDT 3200B source qualification is in b-controls-v1/
 RUNTIME_DEPENDENCY_CURRENT_SAMPLE_20261027.private.json; no B body copied.
 

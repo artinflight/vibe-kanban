@@ -1801,3 +1801,25 @@ restore image. Missing receipts, candidate-only bodies, same-length rewrites,
 encoding mismatches, STOP/access or admission failures remain failures. This is
 retained-proof authentication, never a fresh decode or whole-restore receipt.
 New/unproven bodies still require the existing complete independent readback.
+
+
+### Serial current-file phase and selected qualification
+
+`vk_nightly_file_cycle` binds the actual live source PID/start, epoch, plan,
+root set and barrier to the durable B prefix. It serially delivers events,
+advances only the retained map's new suffix, qualifies unresolved exact names,
+then transfers and independently reads back only pending bodies. Catalog hash
+matches and completed-point history preserve older carrier epochs. Optional
+accepted prefixes remain candidates until source/hash and ordered B readback
+succeed. An interrupted qualification commit is reused without another source
+hash; completed CAS objects are never silently duplicated. Explicit deferrals
+remain pending rather than becoming successful empty phases.
+
+During commissioning it may await one pinned existing metadata predecessor.
+It only observes that unit and accepts its successful independently reopened
+result; failure or deadline preserves the cursor and prevents capture. It never
+starts/restarts the predecessor or performs a replacement census. All growing
+state, temporary SQLite work and bodies stay on B. Local outputs are bounded
+control/status files. The final file-phase receipt is independently reopened
+through the normal B reader, but SQL/runtime/composed restore and calendar
+adoption remain separate gates. This file controller does not enable scheduling.

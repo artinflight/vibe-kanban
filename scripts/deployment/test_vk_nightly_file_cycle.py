@@ -1,0 +1,88 @@
+import hashlib
+import errno
+import json
+import os
+from pathlib import Path
+import tempfile
+import time
+import unittest
+from types import SimpleNamespace
+from unittest.mock import patch
+
+import vk_nightly_file_cycle as cycle
+from vk_change_journal import scope
+from vk_prep_common import identity
+
+
+class FileCycleTests(unittest.TestCase):
+    def setUp(self):
+        self.tmp=tempfile.TemporaryDirectory(dir='/dev/shm');self.addCleanup(self.tmp.cleanup)
+        self.root=Path(self.tmp.name);self.plan={'sources':[str(self.root/'source')]}
+        def write(name,value):
+            path=self.root/name;path.write_text(json.dumps(value));path.chmod(0o600)
+            return str(path),hashlib.sha256(path.read_bytes()).hexdigest()
+        self.write=write;plan,sha=write('plan',self.plan)
+        self.health=dict(ready=True,raw_errors=[],coverage_model='all-selected-inodes-v1',instance='source-epoch',
+            plan_sha256=identity(self.plan),scope_sha256=identity(scope(self.plan)),
+            required_root_bindings={self.plan['sources'][0]:{}},heartbeat_utc=time.time(),
+            owner_pid=os.getpid(),owner_start_ticks=int(Path('/proc/self/stat').read_text().rsplit(')',1)[1].split()[19]))
+        status,_=write('status',self.health)
+        config=dict(plan=plan,plan_sha256=sha,status=status,endpoint=str(self.root/'socket'),
+            B_delivery_target=dict(B_root='B:/vk-backups/test/controls-v1'))
+        path,sha=write('config',config)
+        self.source=cycle.Source(dict(config=path,sha256=sha,instance='source-epoch'),
+            {'B_root':'B:/vk-backups/test/controls-v1'},guard=lambda:None)
+
+    def test_actual_current_process_owner_and_exact_source_bindings(self):
+        self.assertEqual(self.source.check()['owner_pid'],os.getpid())
+        for changes in [dict(ready=False),dict(raw_errors=[{'gap':'overflow'}]),dict(instance='old'),
+                        dict(heartbeat_utc=time.time()-100),dict(owner_start_ticks=1),
+                        dict(plan_sha256='a'*64),dict(scope_sha256='b'*64),dict(required_root_bindings={})]:
+            self.write('status',dict(self.health,**changes))
+            with self.subTest(changes=changes),self.assertRaises(ValueError):self.source.check()
+
+    def test_owned_control_rejects_collision_permissions_and_hash_mismatch(self):
+        path,sha=self.write('control',{'exact':True})
+        self.assertEqual(cycle.read_owned(path,sha),{'exact':True})
+        with self.assertRaisesRegex(ValueError,'binding'):cycle.read_owned(path,'0'*64)
+        Path(path).chmod(0o666)
+        with self.assertRaisesRegex(ValueError,'owned'):cycle.read_owned(path,sha)
+        link=self.root/'link';link.symlink_to(path)
+        with self.assertRaisesRegex(ValueError,'canonical'):cycle.read_owned(link,sha)
+
+    def test_optional_low_SSD_mirror_never_becomes_payload_fallback_or_access_bypass(self):
+        with patch.object(cycle,'health_mirror',side_effect=OSError(errno.ENOSPC,'fixture SSD full')),patch.object(cycle.sys,'stderr'):
+            cycle.optional_report(self.root/'optional-cache',{'phase':'B work remains durable'})
+        self.assertFalse((self.root/'optional-cache').exists())
+        with patch.object(cycle,'health_mirror',side_effect=PermissionError(errno.EACCES,'fixture denied')):
+            with self.assertRaises(PermissionError):cycle.optional_report(self.root/'status',{'phase':'denied'})
+
+    def test_predecessor_is_only_observed_and_exact_terminal_receipt_required(self):
+        result,_=self.write('result',dict(actual_independent_normal_B_composition_reopen_verified=True,
+            source_instance='source-epoch',namespace_core_identity='a'*64))
+        reference=dict(unit='vk-nightly-existing-metadata.service',result=result,result_binding={'namespace_core_identity':'a'*64})
+        states=['MainPID=123\nExecMainStatus=0\nActiveState=active\n','MainPID=0\nExecMainStatus=0\nActiveState=inactive\n']
+        reports=[]
+        with patch.object(cycle.subprocess,'check_output',side_effect=states) as commands:
+            got=cycle.predecessor(reference,self.source,maximum_seconds=60,report=reports.append,sleep=lambda _:None)
+        self.assertEqual(got['source_instance'],'source-epoch');self.assertEqual(len(reports),1)
+        for call in commands.call_args_list:self.assertEqual(call.args[0][:3],['systemctl','--user','show'])
+        with patch.object(cycle.subprocess,'check_output',return_value='MainPID=0\nExecMainStatus=1\nActiveState=failed\n'):
+            with self.assertRaisesRegex(ValueError,'not complete successfully'):
+                cycle.predecessor(reference,self.source,maximum_seconds=60,report=reports.append)
+        self.write('result',dict(actual_independent_normal_B_composition_reopen_verified=True,source_instance='other'))
+        with patch.object(cycle.subprocess,'check_output',return_value=states[1]):
+            with self.assertRaisesRegex(ValueError,'result differs'):
+                cycle.predecessor(reference,self.source,maximum_seconds=60,report=reports.append)
+
+    def test_failed_predecessor_never_delivers_or_captures(self):
+        config=dict(source_observer=self.source.reference,metadata_predecessor={},maximum_predecessor_seconds=1)
+        config['metadata_predecessor']={'unit':'vk-nightly-failed.service'}
+        with patch.object(cycle,'host_guard'),patch.object(cycle,'predecessor',side_effect=ValueError('failed retained metadata')),\
+             patch.object(cycle.Source,'deliver') as deliver,patch.object(cycle,'run_B') as capture:
+            with self.assertRaisesRegex(ValueError,'failed retained metadata'):
+                cycle.run(config,dict(B_controls=self.source.controls),report=lambda _:None)
+            deliver.assert_not_called();capture.assert_not_called()
+
+
+if __name__=='__main__':unittest.main()

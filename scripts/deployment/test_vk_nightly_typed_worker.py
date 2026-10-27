@@ -46,6 +46,12 @@ class TypedWorkerTests(unittest.TestCase):
                     with DesktopObjects(config,guard=lambda:None):pass
                 start.assert_not_called()
 
+    def test_selected_qualification_without_authenticated_source_refuses_before_B_access(self):
+        with patch.object(worker,'DesktopControls') as remote:
+            with self.assertRaisesRegex(ValueError,'authenticated current source'):
+                worker.run_B(dict(qualification={}))
+            remote.assert_not_called()
+
     def test_native_receiver_source_is_syntactically_valid(self):compile(NATIVE,'native','exec')
 
     def test_actual_native_health_record_preserves_MM_temperature_and_hardware_fields(self):

@@ -28,6 +28,8 @@ from vk_nightly_desktop_controls import DesktopControls,validate_control
 from vk_nightly_b_controls import current_map,NativeControlDeferred
 from vk_nightly_b_tracker import write_health
 from vk_nightly_sql_cohort import inherit,statistics as SQL_statistics
+from vk_nightly_qualification_worker import qualify_selected
+from vk_nightly_inode_journal import require_full_coverage
 
 
 class ResourceDeferred(OSError):pass
@@ -93,6 +95,24 @@ def configuration(path,expected):
         raise ValueError('file-phase configuration cannot claim whole-cycle acceptance or calendar adoption')
     validate_desktop(value['desktop'],Path(__file__).with_name('vk_nightly_objects.py').read_text())
     if value.get('phase_kind','file-points') not in ('file-points','SQL-points'):raise ValueError('unknown prepared phase')
+    if 'qualification' in value:
+        qualification=value['qualification']
+        if value['format']!='vk-nightly-typed-worker-B-v1' or value.get('phase_kind','file-points')!='file-points':
+            raise ValueError('selected qualification requires the native B file phase')
+        for field in ('maximum_paths','maximum_source_bytes'):
+            if type(qualification[field]) is not int or qualification[field]<1:
+                raise ValueError('finite selected qualification admission required')
+        if type(qualification.get('attach_base_prefixes',False)) is not bool:
+            raise ValueError('explicit accepted prefix selection required')
+        if not isinstance(qualification['recipes'],list) or len(qualification['recipes'])>8:
+            raise ValueError('bounded explicit qualification carrier catalogs required')
+        references=[qualification['base']]+qualification['recipes']
+        from vk_nightly_b_controls import name as index_name,sha
+        for reference in references:
+            index_name(reference['index_name']);sha(reference['checkpoint_sha256'])
+        names=[r['index_name'] for r in references]
+        if len(set(names))!=len(names) or value['B_index_name'] in names:
+            raise ValueError('distinct accepted carrier and current map indexes required')
     if value.get('phase_kind')=='SQL-points':
         sources=value['SQL_sources']
         if (not isinstance(sources,list) or not sources or len(sources)>1024 or len(sources)!=len(set(sources))
@@ -227,9 +247,48 @@ def run_SQL(config,*,backend=None,at_component_boundary=lambda:None):
         if fd is not None:os.close(fd)
 
 
-def run_B(config,*,at_component_boundary=lambda:None):
+def qualify_B(current,client,qualification,*,journal,guard,on_progress):
+    """Adopt unresolved source points on B; the controller authenticates journal.
+
+    Accepted rows and interrupted adoptions are reused by the normal map
+    operations. No second staging database or source namespace scan is needed.
+    """
+    catalogs=[]
+    try:
+        for reference in [qualification['base']]+qualification['recipes']:
+            catalogs.append(client.connect(reference['index_name'],reference['checkpoint_sha256'],readonly=True,working=True))
+        def actual_report():
+            guard();report=journal();require_full_coverage(report);return report
+        def adopt(records):
+            actual_report()
+            from vk_nightly_b_controls import retry_native_busy
+            return retry_native_busy(lambda:client.call(op='adopt-qualifications',name=current.db.key,
+                base_index=qualification['base']['index_name'],
+                recipe_indexes=[r['index_name'] for r in qualification['recipes']],records=records),guard=guard)
+        result=qualify_selected(current,journal=actual_report,adopt=adopt,guard=guard,
+            maximum_paths=qualification['maximum_paths'],maximum_source_bytes=qualification['maximum_source_bytes'],
+            on_progress=on_progress)
+        if qualification.get('attach_base_prefixes'):
+            after='';count=raw_bytes=0
+            while True:
+                actual_report()
+                value=client.call(op='attach-base-prefixes',name=current.db.key,
+                    base_index=qualification['base']['index_name'],maximum_paths=8192,after=after)
+                count+=value['processed'];raw_bytes+=value['candidate_prefix_bytes'];after=value['last_name']
+                on_progress(dict(value,phase='attaching-accepted-prefix-candidates',processed_this_phase=count))
+                if not value['more_names']:break
+            result['candidate_prefix_bytes']=raw_bytes
+            result['prefix_candidates_require_source_and_independent_B_readback']=True
+        return result
+    finally:
+        for catalog in reversed(catalogs):catalog.close()
+
+
+def run_B(config,*,at_component_boundary=lambda:None,source_report=None):
     """Authoritative prepared phase on B, with only a bounded health mirror."""
     started=time.monotonic();guard=lambda:host_guard(config,started)
+    if 'qualification' in config and not callable(source_report):
+        raise ValueError('selected qualification requires the authenticated current source controller')
     guard()
     with DesktopControls(config['B_controls'],guard=guard) as controls:
         if config.get('phase_kind')=='SQL-points':
@@ -273,6 +332,11 @@ def run_B(config,*,at_component_boundary=lambda:None):
                 # body upload/readback is streaming. Journal delivery can use
                 # this serial boundary without another native health poller.
                 at_component_boundary()
+            qualification=None
+            if 'qualification' in config:
+                qualification=qualify_B(current,controls.client,config['qualification'],journal=source_report,
+                    guard=guard,on_progress=lambda v:report(dict(v,phase=v.get('phase','qualifying-only-unresolved-current-names'))))
+                report(dict(qualification,phase='selected-current-qualification-complete'),force=True)
             with DesktopObjects(config['desktop'],guard=guard) as remote:
                 reuse=controls.client.recover_completed_files(config['B_index_name'],
                     on_progress=lambda value:report(value,force=True))
@@ -281,6 +345,11 @@ def run_B(config,*,at_component_boundary=lambda:None):
                     maximum_source_bytes=config['maximum_source_bytes'],chunk_bytes=config['chunk_bytes'],
                     read_prefix=lambda prefix,sink:read_prefix(remote,prefix,sink),on_progress=report)
                 result['completed_file_reuse']=reuse
+                if qualification is not None:
+                    result['selected_qualification']=qualification
+                    if qualification['more_names'] or qualification['deferred_points']:
+                        result['more_pending']=True
+                    if qualification['deferred_points']:result['requires_source_requalification']=True
                 report(dict(result,native_admission=remote.ready),force=True)
             return result
 

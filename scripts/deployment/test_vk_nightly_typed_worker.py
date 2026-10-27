@@ -113,6 +113,64 @@ class TypedWorkerTests(unittest.TestCase):
             worker.host_guard(config,time.monotonic())
         self.assertEqual(seen,['/'])
 
+    def test_SQL_serial_boundary_fault_retains_completed_point_and_resume_never_recaptures(self):
+        import sqlite3,subprocess,sys
+        from contextlib import contextmanager
+        from vk_nightly_objects import ObjectClient
+        with tempfile.TemporaryDirectory(dir='/dev/shm') as tmp:
+            root=Path(tmp);source=root/'source.sqlite';objects=root/'objects';objects.mkdir()
+            with sqlite3.connect(source) as db:
+                db.execute('create table saved(value)');db.execute("insert into saved values('current')")
+            catalog=root/'catalog.json';catalog.write_text(json.dumps(dict(sql_images={})))
+            config=dict(self.config(),SQL_sources=[str(source)],SQL_catalog=str(catalog),
+                SQL_catalog_sha256=worker.checksum(catalog),maximum_SQL_image_bytes=1024**2,
+                SQL_image_timeout_seconds=15,status=str(root/'status.json'))
+            ledger=sqlite3.connect(root/'ledger.sqlite');self.addCleanup(ledger.close)
+            ledger.execute('create table state(row text)');ledger.commit()
+            class Backend:
+                def load(self,default):
+                    row=ledger.execute('select row from state').fetchone()
+                    return json.loads(row[0]) if row else default
+                def save(self,state,status):
+                    ledger.execute('delete from state')
+                    ledger.execute('insert into state values(?)',(json.dumps(state),));ledger.commit()
+            backend=Backend();folder=str(Path(worker.__file__).parent)
+            code='import sys;sys.path.insert(0,'+repr(folder)+');from vk_nightly_objects import receive;receive('+repr(str(objects))+',sys.stdin.buffer,sys.stdout.buffer,guard=lambda n:None,maximum_object_bytes=65536)'
+            child=subprocess.Popen([sys.executable,'-B','-u','-c',code],stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+            client=ObjectClient(child.stdout,child.stdin,guard=lambda:None,ram_root=root,maximum_object_bytes=65536)
+            @contextmanager
+            def remote(*_,**__):yield SimpleNamespace(client=client)
+            def deliver():
+                state=backend.load({})
+                if state.get('completed'):raise RuntimeError('injected serial delivery failure')
+            try:
+                with patch.object(worker,'host_guard',lambda *_:None),patch.object(worker,'DesktopObjects',remote):
+                    with self.assertRaisesRegex(RuntimeError,'serial delivery'):
+                        worker.run_SQL(config,backend=backend,at_component_boundary=deliver)
+                    state=backend.load({});point=state['completed'][str(source)]
+                    self.assertEqual(point['independent']['integrity'],'ok')
+                    before={p.name:p.stat().st_ino for p in objects.iterdir()}
+                    called=[]
+                    with patch.object(worker,'capture_SQL_point',side_effect=AssertionError('completed point recaptured')):
+                        result=worker.run_SQL(config,backend=backend,at_component_boundary=lambda:called.append(True))
+                    self.assertFalse(result['more_pending']);self.assertTrue(called)
+                    self.assertEqual(backend.load({})['completed'][str(source)],point)
+                    self.assertEqual({p.name:p.stat().st_ino for p in objects.iterdir()},before)
+            finally:
+                child.stdin.close();child.wait(timeout=5);child.stdout.close();child.stderr.close()
+
+    def test_B_native_SQL_path_passes_the_same_serial_boundary_without_background_work(self):
+        import sqlite3
+        from contextlib import contextmanager
+        database=sqlite3.connect(':memory:');self.addCleanup(database.close)
+        @contextmanager
+        def remote(*_,**__):yield SimpleNamespace(client=SimpleNamespace(connect=lambda *_:database))
+        boundary=lambda:None
+        config=dict(self.config(),phase_kind='SQL-points',B_controls={},B_index_name='fixture',B_checkpoint_sha256='a'*64)
+        with patch.object(worker,'host_guard',lambda *_:None),patch.object(worker,'DesktopControls',remote),patch.object(worker,'run_SQL',return_value={'completed':True}) as run:
+            self.assertEqual(worker.run_B(config,at_component_boundary=boundary),{'completed':True})
+        self.assertIs(run.call_args.kwargs['at_component_boundary'],boundary)
+
     def test_owned_readback_pipe_is_closed_before_wait_on_aborted_session(self):
         class Pipe:
             closed=False

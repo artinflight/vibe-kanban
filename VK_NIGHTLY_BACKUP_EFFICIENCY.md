@@ -1762,3 +1762,11 @@ callbacks, real symlink ABA, lost-parent/refusal checks and5000 concurrent mixed
 replacement/unlink/open-writer rounds. Whole current restore/calendar acceptance
 remains separate. A successor must record the terminal gap, establish a new
 healthy epoch, reconcile stopped-interval metadata and reuse completed B bodies.
+
+The SQL phase now exposes the same serial component-boundary delivery hook as
+the file phase. It runs only after its B state transaction and object frames
+finish. A 26-test SQL/worker run includes an actual SQLite API capture and
+independent decode/integrity check, injected source-delivery failure after the
+completed point was committed, and successful resumption without recapture or
+new object inodes. This prepares durable journal delivery during SQL catch-up;
+it does not qualify an older SQL epoch as current or accept a whole baseline.

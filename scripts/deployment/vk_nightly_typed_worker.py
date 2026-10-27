@@ -147,7 +147,7 @@ def run(config):
     return result
 
 
-def run_SQL(config,*,backend=None):
+def run_SQL(config,*,backend=None,at_component_boundary=lambda:None):
     """One frozen prepared cohort, resuming points rather than live recapture."""
     started=time.monotonic();guard=lambda:host_guard(config,started)
     folder=Path(config['status']).parent;state_path=folder/'SQL_STATE.private.json'
@@ -173,6 +173,10 @@ def run_SQL(config,*,backend=None):
                 OS_SSD_payload_bytes=0,elapsed_seconds=time.monotonic()-started)
             if backend is None:save(state_path,state);save(Path(config['status']),status)
             else:backend.save(state,status)
+            # All object/control frames and the component state transaction
+            # are complete. Serial source delivery may run here; never add a
+            # second background native health/transport poller during SQL I/O.
+            at_component_boundary()
         def check_accepted(client,record):
             output=io.BytesIO();client.verify(record['B_acceptance_object'],output)
             actual=json.loads(output.getvalue())
@@ -254,7 +258,7 @@ def run_B(config,*,at_component_boundary=lambda:None):
                             if row is None:raise ValueError('previous SQL state unavailable; preserve target')
                             return json.loads(row[0])
                         finally:older.close()
-                return run_SQL(config,backend=Backend())
+                return run_SQL(config,backend=Backend(),at_component_boundary=at_component_boundary)
             finally:db.close()
         with current_map(controls.client,config['B_index_name'],config['B_checkpoint_sha256'],binding=config['map_binding']) as current:
             current.db.execute('create table if not exists tracking_health(id integer primary key,row text not null)')

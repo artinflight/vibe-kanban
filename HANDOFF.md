@@ -91,14 +91,12 @@ consumer on existing B-backed VK-Candidate-20261009. Retain111historical/117curr
 root coverage and explicit Monitor retirement/oldimages. Original7783gaps/6546raw
 Git gaps remain distinct from later repairs/current recovery.
 
-New source cycle_state/current_cycle/remote_consumer implement B durable phase
-receipts, original whole8h deadline, completed-phase reuse, bounded recorded final
-file delta after SQL selection, actual fixed UID1000 B-backed normal consumer,
-and transactional accepted-pointer publication ONLY after matching restore proof.
-Actual RAM native-protocol interruption/restore/publication tests pass. These
-helpers are NOT installed as an operational complete-cycle service or timer;
-production whole-cycle/overnight acceptance remains required. Do not enable the
-legacy calendar, which still calls the former supervisor. ScheduleOFF/nextNONE.
+Whole-cycle source helpers have RAM-native interruption/restore/publication
+integration proof; they are NOT installed as a complete operational service.
+Production composed restore, whole-cycle/overnight acceptance and calendar
+adoption remain required. Never enable the legacy supervisor calendar.
+ScheduleOFF/nextNONE. Read the detailed overnight contract for the fixed
+B ledger, absolute deadline, bounded final delta and normal-consumer interface.
 
 Read [overnight acceptance](VK_NIGHTLY_OVERNIGHT_ACCEPTANCE.md),
 [prior exact pickup](HANDOFF_NIGHTLY_HISTORY_20261027_1847.md),

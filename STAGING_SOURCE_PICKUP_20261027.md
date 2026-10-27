@@ -174,3 +174,4 @@ capture, descendant and legacy-journal custody also gate POST. Added migration
 fences passed in-memory; new Rust race/reopen/journal tests await hosted checks.
 No lease, owner binding or runtime flag was changed on the live installation.
 
+<!-- End retained source notes. -->

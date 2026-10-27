@@ -31,13 +31,20 @@ from vk_nightly_b_tracker import health_mirror,write_health
 from vk_prep_common import identity
 
 
-def read_owned(path,expected=None):
+def read_owned(path,expected=None,*,pinned_group_data=False):
     path=Path(path)
     if not path.is_absolute() or path.resolve()!=path:raise ValueError('canonical owned control required')
     fd=os.open(path,os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK|os.O_CLOEXEC)
     with os.fdopen(fd,'rb') as source:
         info=os.fstat(source.fileno())
-        if not stat.S_ISREG(info.st_mode) or info.st_uid!=os.getuid() or info.st_mode&0o022:
+        # Existing shared source plans are data, not executable configuration.
+        # Their explicit full digest permits group-write mode without changing
+        # filesystem permissions. Dynamic controls remain private and all data
+        # still reject another owner, symlinks, world writes or a digest change.
+        if pinned_group_data and (not isinstance(expected,str) or not re.fullmatch('[0-9a-f]{64}',expected)):
+            raise ValueError('full source-plan digest required for shared data')
+        mask=0o002 if pinned_group_data else 0o022
+        if not stat.S_ISREG(info.st_mode) or info.st_uid!=os.getuid() or info.st_mode&mask:
             raise ValueError('owned control file required')
         raw=source.read(1024**2+1)
     if len(raw)>1024**2 or expected is not None and hashlib.sha256(raw).hexdigest()!=expected:
@@ -58,7 +65,7 @@ class Source:
     def __init__(self,reference,controls,*,guard):
         self.reference=reference;self.controls=controls;self.guard=guard
         self.config=read_owned(reference['config'],reference['sha256'])
-        self.plan=read_owned(self.config['plan'],self.config['plan_sha256'])
+        self.plan=read_owned(self.config['plan'],self.config['plan_sha256'],pinned_group_data=True)
         if self.config['B_delivery_target']['B_root']!=controls['B_root']:
             raise ValueError('source/consumer B recovery root differs')
 

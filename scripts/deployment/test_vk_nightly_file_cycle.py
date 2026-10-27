@@ -50,6 +50,15 @@ class FileCycleTests(unittest.TestCase):
         link=self.root/'link';link.symlink_to(path)
         with self.assertRaisesRegex(ValueError,'canonical'):cycle.read_owned(link,sha)
 
+    def test_existing_group_writable_plan_requires_full_digest_without_permission_change(self):
+        plan=Path(self.source.config['plan']);plan.chmod(0o664)
+        self.assertEqual(cycle.read_owned(plan,self.source.config['plan_sha256'],pinned_group_data=True),self.plan)
+        self.assertEqual(plan.stat().st_mode&0o777,0o664)
+        with self.assertRaisesRegex(ValueError,'owned'):cycle.read_owned(plan,self.source.config['plan_sha256'])
+        with self.assertRaisesRegex(ValueError,'binding'):cycle.read_owned(plan,'0'*64,pinned_group_data=True)
+        with self.assertRaisesRegex(ValueError,'digest'):cycle.read_owned(plan,pinned_group_data=True)
+        self.assertTrue(self.source.check()['ready'])
+
     def test_optional_low_SSD_mirror_never_becomes_payload_fallback_or_access_bypass(self):
         with patch.object(cycle,'health_mirror',side_effect=OSError(errno.ENOSPC,'fixture SSD full')),patch.object(cycle.sys,'stderr'):
             cycle.optional_report(self.root/'optional-cache',{'phase':'B work remains durable'})

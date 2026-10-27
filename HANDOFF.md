@@ -12,32 +12,36 @@ proof; SSD replicas became pointers, releasing2085306368allocatedB. The latest
 2321969152B cold task footprint is mostly retained prefix/scale evidence; it was
 not deleted. No backup payload or growing index is staged on OS/work SSD.
 
-Source observation is separate from Desktop: one8MiB local database plus9MiB
-preallocated PERSIST/FULL journal, native allocation overhead and two64KiB health
-files. V7 PID3632010/start26998675,epocha685913e7c07452cb13efc761f0a64b0,
-107010watches/errors0; tracking-worker-local-v7 configSHA
- d0213d97077dce0175fafe49d11f2f4fe59b4ecbdc5f0e77d0958825bc0cc255.
-Actual B copy/reopen then generation-safe ACK passed through25692. The normal
-B-prefix/live reader returned279names with0inventory/body reads. Preserve the
-original pre-ACK result flag; local_acknowledged establishes actual compaction.
-V6 closed normally only after its completed gap and real new/old/new barriers
-were stored/read back on B: V6_V7_VERIFIED_HANDOVER proof8c4e3c1e4111dcb1d479906e67cfce517bf8def9e2670522d844bc7fafff65a5.
-Old source DB/journal remain preserved pending verified B relocation. No old
-SSD-growing observers are enabled. Never query an acknowledged local prefix
-as empty; use retained_prefix_report through the authenticated B provider.
+Current source observation is V9, Desktop-independent: fixed8MiB local DB
+plus9MiB preallocated PERSIST/FULL rollback journal; growing controls remain B.
+The owner-raised1048576watch ceiling is live. V7 closed only after authenticated
+V9 overlap; all previous raw spools/faults remain preserved. Earlier V6/V7
+handover8c4e3c1e4111dcb1d479906e67cfce517bf8def9e2670522d844bc7fafff65a5
+is historical, not a substitute for the current additive V7/V9 proof below.
 
-Later gap enumeration and map adoption COMPLETE:919022paths/errors0,
-753699qualified versions reused,0source-body bytes. V6_GAP_NAMESPACE_RESULT
-and MAP_V6_RECONCILIATION_STATUS retain exact epochs. All147 SQL points in
-capture-worker-B-v6 are independently accepted:137old images reused,10new,
-831428846encodedB. The large API image passed independent RAM fullSHA/SQLite/
-Linuxmetadata. Original failed unsealed RAM inode33476 remains preserved.
-SQL_V6_MAP_ADOPTION adopted138selected points without recapture/recopy.
-The204-regular-source successor finished1390.2s/exit0:138points inherited,
-66new API points/214269952rawB/59438743encodedB,0deferred/partials. Collector
-CURRENT_SQL_V7_COLLECTED_V2 adopted66more points and verified all204records
-against the B map. No capture/restore/body writer remains active. Preserve the
-original failed collector assertion and corrected version separately.
+At07:35EDT, metadata suffix1965408 independently reopened on B:
+4529changed names,0unchanged scans,proof/input
+fb002e341a2a6dd253635d46a885c07269c97809a2cf225b6749cb7c87311b15.
+Later events remain next-suffix work. Full baseline/calendar are unaccepted.
+The sole file phase PID565691/start30924042 uses source5691baa74 and configs
+in file-points-worker-B-inodes-v1. It first bound2.810GB possible accepted base
+prefixes; actual source-prefix/full-B-readback checks decide reuse, not that
+candidate total. It forwards source events while capturing directly to B.
+Read actual phase STATUS/RESULT/STOP and LATEST_STATUS; do not duplicate it.
+
+Selected qualification/adoption is now source-tested against native B protocol,
+with exact pending-row ownership, current epoch, retained global hash matching,
+explicit deferred/SQL promotion and no rehash after a committed lost reply.
+It is not yet applied alongside this file phase: both require the same map lease.
+Its next finite phase must reuse the current map and all accepted file points.
+
+Historical V6 namespace919022/753699reuse and all147 SQL points remain
+accepted component evidence. The204-regular SQL successor completed exit0,
+138old points inherited/66new API points/214269952rawB/59438743encodedB.
+CURRENT_SQL_V7_COLLECTED_V2 independently adopted/compared all204 records.
+The3GB point passed independent RAM fullSHA/SQLite/Linuxmetadata. Preserve
+failed unsealed RAM inode33476 and all original failed/collector receipts.
+Current qualification remains distinct from those earlier component epochs.
 
 The205th enrolled SQL name is the live logical DB symlink. Its actual working90
 outside-target is not in the current member map. V8i already retains an
@@ -95,11 +99,6 @@ body/SQL/current runtime/composed restore remain separate. Read actual private
 LATEST_STATUS and phase receipts before claiming this source work was applied.
 Only after current restore and finite worker acceptance may02:00Toronto enable.
 Calendar remains disabled; next run null. Prettier remains unavailable.
-
-Directory event preservation now reaches616165/2458names, normal B readback
-SHA077bd796277dd50065f27ed29d78657743940c2bbe3218d17016b788284ea356.
-Keep its raw pre-ACK local_changes_pruned=false field; actual local_acknowledged
-616165 proves the nonce-bound ACK. This is namespace proof, not alias-gap repair.
 
 Cold own-root census remains in SSD_OWN_ALLOCATION_CURRENT_20261027;
 all originals/spools are preserved and charged once. New V9/control metadata

@@ -534,6 +534,70 @@ class CurrentMap:
                 yield name,raw
                 after=name;count+=1
 
+    def adopt_qualifications(self,records,carriers,*,checkpoint):
+        """Adopt only successful stable source points or explicit deferred work.
+
+        Inputs come from the pinned Linux qualifier. Retained recipes are
+        resolved on B by full content hash, preserving carrier epochs; every
+        new row keeps its source/hash bracket and exact original pending row.
+        Lost replies are idempotent and never rehash an already adopted point.
+        """
+        if not isinstance(records,list) or not 1<=len(records)<=128:raise ValueError('bounded qualification records required')
+        self.check();db=self.db
+        if not db.execute('select complete from metadata').fetchone()[0]:raise ValueError('complete namespace required before qualification')
+        epoch=json.loads(db.execute('select binding from namespace_reconciliation where id=1').fetchone()[0])
+        db.execute('create table if not exists qualification_adoptions(name text,request_sha256 text,result blob,primary key(name,request_sha256)) without rowid')
+        sources={p for p, in db.execute('select path from SQL_sources')};prepared=[];prior=0
+        for request in records:
+            name=key(request['name']);expected=digest(request['original_sha256']);version=request['version']
+            request_sha=hashlib.sha256(json.dumps(request,sort_keys=True,separators=(',',':'),allow_nan=False).encode()).hexdigest()
+            old_proof=db.execute('select result from qualification_adoptions where name=? and request_sha256=?',(name,request_sha)).fetchone()
+            if old_proof:prior+=1;continue
+            old=db.execute('select state,row from members where name=?',(name,)).fetchone()
+            if (not old or old[0] not in ('file-needs-qualification','current-namespace-replay-required')
+                    or hashlib.sha256(old[1]).hexdigest()!=expected or version.get('source')!='/'+name):
+                raise ValueError('exact unresolved source/version ownership required')
+            anchor=version.get('journal',{})
+            if (any(anchor.get(k)!=epoch.get(k) for k in ('instance','scope_sha256','plan_sha256'))
+                    or type(anchor.get('sequence')) is not int or anchor['sequence']<epoch['start_sequence']):
+                raise ValueError('qualification must use the current full-inode source epoch')
+            observation=decode_member(old[1]).get('namespace')
+            if version.get('state')=='qualified-pending-body':
+                row=version['row'];identity=version['source_identity']
+                if len(identity)!=9 or version.get('source_payload_bytes_hashed')!=row['bytes'] or row.get('segments'):
+                    raise ValueError('new successful stable full hash bracket required')
+                # Validate the complete point before asking the authenticated
+                # carrier provider; its metadata must never substitute for it.
+                observation=dict(row,identity=identity)
+                classify(name,observation,version,SQL_sources=set())
+                candidate=next(iter(carriers(row['sha256'],row['bytes'])),None)
+                if candidate is not None:
+                    if candidate.get('kind')!='file' or (candidate.get('sha256'),candidate.get('bytes'))!=(row['sha256'],row['bytes']):
+                        raise ValueError('accepted carrier/full point differs')
+                    version=dict(version,state='qualified-retained-body',row=dict(row,segments=candidate['segments']))
+            elif version.get('state')!='current-version-deferred':raise ValueError('successful or explicitly deferred point required')
+            state,value=classify(name,observation,version,SQL_sources=sources)
+            if state=='SQLite-needs-image':sources.add('/'+name)
+            prepared.append((name,expected,old[0],old[1],request_sha,state,encode_member(value)))
+        checkpoint();db.execute('begin immediate')
+        try:
+            db.execute('create table if not exists qualification_replaced_members(name text,sha256 text,state text,row blob,primary key(name,sha256)) without rowid')
+            for name,expected,old_state,old_raw,request_sha,state,encoded in prepared:
+                db.execute('insert or ignore into qualification_replaced_members values(?,?,?,?)',(name,expected,old_state,old_raw))
+                db.execute('insert into qualification_adoptions values(?,?,?)',(name,request_sha,encoded))
+                db.execute('update members set state=?,row=? where name=?',(state,encoded,name))
+                if state=='SQLite-needs-image':db.execute('insert or ignore into SQL_sources values(?)',('/'+name,))
+            checkpoint();self.check();db.execute('commit')
+        except BaseException:
+            if db.in_transaction:db.execute('rollback')
+            raise
+        return dict(adopted=len(prepared),already_adopted=prior,
+            retained_body_matches=sum(state=='verified-file' for *_,state,encoded in prepared),
+            qualified_pending_bodies=sum(state=='file-needs-capture' for *_,state,encoded in prepared),
+            deferred_points=sum(state=='current-namespace-replay-required' for *_,state,encoded in prepared),
+            SQL_API_sources_discovered=sum(state=='SQLite-needs-image' for *_,state,encoded in prepared),
+            backup_payload_bytes_copied=0,current_baseline_accepted=False)
+
     def attach_base_prefixes(self,base,*,checkpoint,maximum_paths,after=''):
         """Reference smaller accepted same-name bodies; never copy or assume append.
 

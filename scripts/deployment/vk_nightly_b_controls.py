@@ -456,6 +456,29 @@ class Store:
             if json.loads(saved).get('barrier')!=report.get('barrier'):raise ValueError('replay barrier differs from actual B delivery')
             mapped=current.CurrentMap();mapped.db=db;mapped.path=path;mapped.inode=tuple(inode)
             return mapped.apply_metadata_replay(report,value['replay'],checkpoint=lambda:self.guard(path.stat().st_size+LIMIT),maximum_paths=q['maximum_paths'])
+        if op=='adopt-qualifications':
+            import vk_nightly_current_map as current
+            base,bp,bi,_=self.handles[name(q['base_index'])]
+            recipes=[]
+            if not isinstance(q['recipe_indexes'],list) or len(q['recipe_indexes'])>8:raise ValueError('finite retained recipe indexes required')
+            for key in q['recipe_indexes']:
+                recipe,rp,ri,_=self.handles[name(key)]
+                if self.objects.file_identity(rp)[:2]!=ri:raise ValueError('recipe catalog substituted')
+                recipes.append(recipe)
+            if self.objects.file_identity(bp)[:2]!=bi:raise ValueError('base catalog substituted')
+            provenance=base.execute('select source_catalog_sha256,restore_proof_sha256 from provenance').fetchall()
+            if len(provenance)!=1:raise ValueError('exact accepted base provenance required')
+            for digest in provenance[0]:sha(digest)
+            def carriers(digest,size):
+                found=base.execute('select name from bodies where sha256=? and bytes=?',(digest,size)).fetchone()
+                if found:
+                    yield dict(kind='file',sha256=digest,bytes=size,segments=[dict(layer='accepted-base',selector=found[0],sha256=digest,bytes=size)])
+                    return
+                for catalog in recipes:
+                    found=catalog.execute("select row from versions where json_extract(row,'$.sha256')=? and json_extract(row,'$.bytes')=? order by name,layer limit 1",(digest,size)).fetchone()
+                    if found:yield json.loads(found[0]);return
+            value=current.CurrentMap();value.db=db;value.path=path;value.inode=tuple(inode)
+            return value.adopt_qualifications(q['records'],carriers,checkpoint=lambda:self.guard(path.stat().st_size+LIMIT))
         if op=='attach-base-prefixes':
             import vk_nightly_current_map as current
             base,bp,bi,_=self.handles[name(q['base_index'])]

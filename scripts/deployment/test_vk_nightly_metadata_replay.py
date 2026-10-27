@@ -129,6 +129,63 @@ class MetadataReplayTests(unittest.TestCase):
             self.apply(m,pair)
             self.assertEqual(m.db.execute('select suffix_complete from namespace_reconciliation').fetchone(),(1,))
 
+    def qualification_request(self,m):
+        old=encode_member(dict(source='/home/a',namespace=self.obs))
+        m.db.execute("update members set state='file-needs-qualification',row=? where name='home/a'",(old,))
+        version=copy.deepcopy(self.version);version['state']='qualified-pending-body';version['row'].pop('segments')
+        version.update(source_payload_bytes_hashed=3,source_observed_at='2026-10-27T11:00:00+00:00',journal={k:self.epoch[k] for k in ('instance','plan_sha256','scope_sha256')})
+        version['journal']['sequence']=17
+        return dict(name='home/a',original_sha256=hashlib.sha256(old).hexdigest(),version=version)
+
+    def test_new_qualification_reuses_full_hash_carrier_without_copy_and_lost_reply(self):
+        with CurrentMap.held(self.path,binding=self.binding) as m:
+            request=self.qualification_request(m);calls=[]
+            def carriers(sha,size):calls.append((sha,size));yield self.version['row']
+            result=m.adopt_qualifications([request],carriers,checkpoint=lambda:None)
+            self.assertEqual(result['retained_body_matches'],1);self.assertEqual(result['backup_payload_bytes_copied'],0)
+            self.assertEqual(m.db.execute("select state from members where name='home/a'").fetchone(),('verified-file',))
+            retry=m.adopt_qualifications([request],lambda *_:self.fail('completed point looked up again'),checkpoint=lambda:None)
+            self.assertEqual(retry['already_adopted'],1);self.assertEqual(len(calls),1)
+            self.assertEqual(m.db.execute('select count(*) from qualification_replaced_members').fetchone(),(1,))
+
+    def test_qualification_does_not_drop_new_bytes_or_deferred_SQL(self):
+        with CurrentMap.held(self.path,binding=self.binding) as m:
+            request=self.qualification_request(m)
+            result=m.adopt_qualifications([request],lambda *_:[],checkpoint=lambda:None)
+            self.assertEqual(result['qualified_pending_bodies'],1)
+            request=self.qualification_request(m);request['version']=dict(source='/home/a',state='current-version-deferred',
+                reason='SQLite requires its consistent snapshot API',journal=request['version']['journal'])
+            result=m.adopt_qualifications([request],lambda *_:[],checkpoint=lambda:None)
+            self.assertEqual(result['SQL_API_sources_discovered'],1)
+            self.assertEqual(m.db.execute('select path from SQL_sources').fetchall(),[('/home/a',)])
+
+    def test_qualification_rejects_wrong_source_epoch_old_cursor_changed_row_or_carrier(self):
+        with CurrentMap.held(self.path,binding=self.binding) as m:
+            good=self.qualification_request(m);variants=[]
+            bad=copy.deepcopy(good);bad['version']['source']='/home/other';variants.append(bad)
+            bad=copy.deepcopy(good);bad['version']['journal']['instance']='old';variants.append(bad)
+            bad=copy.deepcopy(good);bad['version']['journal']['sequence']=16;variants.append(bad)
+            bad=copy.deepcopy(good);bad['original_sha256']='f'*64;variants.append(bad)
+            bad=copy.deepcopy(good);bad['version']['source_identity'][3]=100;variants.append(bad)
+            for bad in variants:
+                with self.subTest(request=bad),self.assertRaises(ValueError):m.adopt_qualifications([bad],lambda *_:[],checkpoint=lambda:None)
+            with self.assertRaisesRegex(ValueError,'carrier/full point'):
+                m.adopt_qualifications([good],lambda *_:[dict(self.version['row'],sha256='f'*64)],checkpoint=lambda:None)
+            self.assertEqual(m.db.execute('select count(*) from qualification_adoptions').fetchone(),(0,))
+
+    def test_qualification_commit_failure_retains_exact_pending_row_and_no_acceptance(self):
+        with CurrentMap.held(self.path,binding=self.binding) as m:
+            request=self.qualification_request(m);calls=0
+            def fail():
+                nonlocal calls
+                calls+=1
+                if calls==2:raise OSError('synthetic qualification commit failure')
+            with self.assertRaisesRegex(OSError,'qualification commit'):
+                m.adopt_qualifications([request],lambda *_:[],checkpoint=fail)
+            self.assertEqual(m.db.execute('select count(*) from qualification_adoptions').fetchone(),(0,))
+            self.assertEqual(m.db.execute("select state from members where name='home/a'").fetchone(),('file-needs-qualification',))
+            self.assertEqual(m.adopt_qualifications([request],lambda *_:[],checkpoint=lambda:None)['adopted'],1)
+
     def test_next_suffix_requires_previous_exact_cursor(self):
         with CurrentMap.held(self.path,binding=self.binding) as m:
             self.apply(m,self.inputs())

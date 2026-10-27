@@ -404,20 +404,36 @@ class BControlTests(unittest.TestCase):
         obs=dict(meta,kind='file',bytes=3,identity=[1,2,stat.S_IFREG|0o600,3,123,456,1000,1000,1])
         ns.execute('insert into namespace values(?,?)',('home/a',encode_observation(obs)))
         point=dict(source='/home/a',source_identity=obs['identity'],state='qualified-pending-body',row=dict(meta,kind='file',bytes=3,sha256='a'*64))
+        ns.execute('create table namespace_errors(name text primary key,error blob)')
+        ns.execute('create table gap_meta(id integer primary key,binding text,complete integer)')
+        epoch=dict(instance='source-inodes',plan_sha256='b'*64,scope_sha256='c'*64,start_sequence=17,
+                   required_root_bindings={'/home':dict(resolved='/home',literal=None)},original_epoch_repaired=False)
+        ns.execute('insert into gap_meta values(1,?,1)',(json.dumps(epoch),))
         with CurrentMap.held(source,binding={'test':'prefix'},create=True) as m:
             m.compile(ns,lambda n:point,SQL_sources=[],checkpoint=lambda:None,maximum_paths=10)
+            m.reconcile_namespace(ns,lambda n:point,checkpoint=lambda:None,maximum_paths=10)
         digest=self.import_other(source)
         bp=self.root/'base.sqlite';base=sqlite3.connect(bp)
         base.execute('create table provenance(source_catalog_sha256 text,restore_proof_sha256 text)')
         base.execute('insert into provenance values(?,?)',('b'*64,'c'*64))
         base.execute('create table bodies(sha256 text,bytes integer,name text)')
-        base.execute('insert into bodies values(?,?,?)',('d'*64,2,'home/a'));base.commit();base.close()
+        base.executemany('insert into bodies values(?,?,?)',[('d'*64,2,'home/a'),('a'*64,3,'home/a')]);base.commit();base.close()
         bdigest=self.import_other(bp);base=self.client.connect('base-prefixes',bdigest,readonly=True)
         db=self.client.connect('pending-map',digest)
         result=self.client.call(op='attach-base-prefixes',name='pending-map',base_index='base-prefixes',maximum_paths=128)
         self.assertEqual(result['candidate_prefix_bytes'],2);self.assertEqual(result['backup_payload_bytes_copied'],0)
         state,raw=db.execute('select state,row from members').fetchone()
         self.assertEqual(state,'file-needs-capture');self.assertEqual(decode_member(raw)['candidate_accepted_prefix']['independent_proof_sha256'],'c'*64)
+        from vk_nightly_current_map import encode_member
+        original=encode_member(dict(source='/home/a',namespace=obs))
+        db.execute("update members set state='file-needs-qualification',row=? where name='home/a'",(original,))
+        point.update(source_payload_bytes_hashed=3,journal={k:epoch[k] for k in ('instance','plan_sha256','scope_sha256')})
+        point['journal']['sequence']=17
+        records=[dict(name='home/a',original_sha256=hashlib.sha256(original).hexdigest(),version=point)]
+        adopted=self.client.call(op='adopt-qualifications',name='pending-map',base_index='base-prefixes',recipe_indexes=[],records=records)
+        self.assertEqual(adopted['retained_body_matches'],1)
+        self.assertEqual(self.client.call(op='adopt-qualifications',name='pending-map',base_index='base-prefixes',recipe_indexes=[],records=records)['already_adopted'],1)
+        self.assertEqual(db.execute("select state from members where name='home/a'").fetchone(),('verified-file',))
         db.close();base.close()
 
     def test_prepared_SQL_worker_keeps_state_on_B_and_reuses_completed_API_point(self):

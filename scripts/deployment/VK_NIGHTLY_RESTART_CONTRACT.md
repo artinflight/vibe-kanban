@@ -191,3 +191,23 @@ and the completed file must pass ordered independent B readback. A mismatch
 emits no tail and falls back to the qualified full point. The prefix retains
 its original restore proof and carrier; candidate byte totals are potential
 reuse, never reported as measured transfer savings.
+
+`qualify_selected` consumes only unresolved map names. Stable source hash brackets
+are adopted against the exact pending-row digest and current tracker epoch;
+native B resolves accepted carriers by complete hash/length across retained
+catalogs. Unmatched versions remain pending bodies. Missing/changing paths remain
+explicit replay work, and SQLite headers require the consistent API. Committed
+adoptions recover lost replies without rehashing completed points. Access and
+resource failures propagate. Its read ceiling includes unsuccessful attempts;
+reported successful-hash bytes are not represented as total physical IO.
+
+## October27 operational evidence boundary
+
+The full-inode V9 observer is live; the earlier V11/directory-only observations
+above are historical. Actual native-B namespace adoption completed920540 names,
+reusing753622 existing qualifications without source/body scans. Its first
+changed-name suffix4529 independently reopened through sequence1965408, with
+original gaps and later events still explicit. The retained-point file phase is
+running separately, with direct-B bodies and periodic verified journal delivery.
+It is not a commissioned ordinary calendar. Current SQL/runtime binding,
+composed current restore and final ordinary-worker acceptance remain required.

@@ -75,3 +75,49 @@ payload or production reader was created for these fixtures.
 Current progress, exact live owners and the pending baseline/service integration
 are in [the handoff](HANDOFF.md). This document claims neither production adoption
 of the performance changes nor overnight completion.
+
+## Executable restore integration and recovered dependency
+
+`vk_nightly_finalize_current.finalize` now uses the normal native B protocol to
+refuse unresolved map/journal states before making a checkpoint, independently
+read back/accept the sealed image, build its typed descriptor and run complete
+body-recipe proof closure against exact immutable catalogs. A required SQL cohort
+comes from an independent normal reopen, with matching map/plan/scope and required
+API selection. The returned candidate cannot publish an accepted baseline.
+
+`vk_nightly_composed_consumer.py --packet-sha256 <full-digest>` reads the owner's
+bounded JSON packet from stdin in the admitted B-backed Linux reader. The packet
+binds the external scope/retirement/runtime/SQL contract, descriptor, actual
+provider device/inode placements, existing leases, native content proof, catalogs,
+selected readbacks, RAM demand and original absolute whole-cycle deadline. It
+rejects root and mismatched UID/GID. It opens the normal leased complete reader,
+hashes/opens the immutable index without copying it, independently restores the
+required samples sequentially in tmpfs, and reports SQLite/schema, Linux metadata
+and actual elapsed time. Missing leases, changed placements, low RAM, STOP or
+expired deadlines fail closed; failed RAM outputs remain preserved. Replaying an
+old packet cannot reset the whole-cycle deadline. The caller must retain the
+existing native B identity/STOP/health/capacity admission and actual source pins;
+the Linux entrypoint does not claim to establish physical B admission itself.
+
+An actual isolated native-protocol fixture passes seal, independent metadata
+readback, immutable content audit and this executable consumer together; replay
+reuses its completed checkpoint. Separate real SQLite/API/protocol fixtures pass
+SQL integrity/schema and lost-RAM layout recovery. These are component/integration
+evidence, not production current-set or overnight acceptance.
+
+Retained SQL layout recovery now paces its extra health RPCs at the same five
+seconds as normal capture. Every-block host guards and native streamed-read
+controls remain. One actual 8,192-byte retained API fixture (two chunks) used one
+extra health RPC instead of four, with identical full SHA/SQLite integrity, zero
+source API reads and zero new body payload. RAM elapsed times were about 48/52 ms;
+no speedup or production timing is inferred from that noise.
+
+The runtime V2 controller genuinely stopped while waiting at 17:33 EDT: its
+one-hour capture timeout was incorrectly applied to its separately declared
+sixteen-hour predecessor wait. The fixed controller uses the existing wait limit
+while waiting, then resets only its original one-hour capture clock. Runtime V3
+was admitted at 17:51 EDT after V2 was proven terminal; it preserves the same
+prepared component, SQL predecessor, source epoch and original absolute wait/
+unit deadlines. All memory/CPU/swap/access guards remain. File V6 and SQL V4 were
+not stopped or replaced. This is recovery of a waiting dependency, not a second
+capture or a claim of runtime/baseline completion.

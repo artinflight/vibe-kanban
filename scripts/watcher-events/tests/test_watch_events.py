@@ -162,6 +162,16 @@ class WatchEventsTests(unittest.TestCase):
         self.assertEqual(row[0], 'pending')
         self.assertEqual(self.run_drain(), 'accepted')
 
+    def test_unsettled_native_reservation_keeps_delivery_pending(self):
+        self.ingest(event()); self.fixture.result = 'deferred'
+        def unsettled(method, path, body):
+            reply = self.fixture(method, path, body)
+            reply['reason'] = reply['receipt']['reason'] = 'owner_admission_unsettled'
+            return reply
+        self.assertEqual(events.drain(self.store, self.registry, 'disk-space', time.time(), idle, unsettled), 'deferred')
+        self.assertEqual(self.store.db.execute('SELECT delivery FROM incidents').fetchone()[0], 'deferred')
+        self.assertEqual(len(self.store.pending(self.store.fresh(time.time()))), 1)
+
     def test_lost_reply_reopen_reconciles_without_another_post(self):
         self.fixture.lose = True; self.ingest(event())
         self.assertEqual(self.run_drain(), 'unknown')

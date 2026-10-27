@@ -230,6 +230,13 @@ with a new attempt only after strictly newer, still eligible observations.
 A confirmed native `owner_busy` or active independent-job receipt covers that
 incident episode; it does not wake again when the owner later becomes idle.
 Unknown/unsettled lifetime evidence keeps delivery pending.
+A durable in-flight reservation without execution binding is
+`owner_admission_unsettled`, not proof of activity. Controlled child activity is
+positive only after a real native thread/turn acknowledgment has been journaled
+and while its lease object is still owned by the producer. Drop or backend restart
+clears that live projection but retains the durable exclusion. Unsettled leases
+are never cleared from history/status guesses; original-owner authoritative
+terminal or definite no-execution evidence is required for reviewed recovery.
 A config edit or execution failure cannot create a fresh incident to evade that.
 
 The generic runner takes one nonblocking flock for its private state root.

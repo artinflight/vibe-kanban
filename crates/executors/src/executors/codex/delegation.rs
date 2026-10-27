@@ -700,6 +700,13 @@ impl Delegation {
             r.pending_failure = false;
             let r = r.clone();
             self.save(&state).await?;
+            if let Some(lease) = state
+                .permits
+                .get(task)
+                .and_then(|permit| permit.lease.as_ref())
+            {
+                lease.mark_running()?;
+            }
             r
         };
         if let Some(binding) = crate::routing_telemetry::NativeBinding::new(

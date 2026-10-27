@@ -371,8 +371,20 @@ where
         .await?;
     let queued: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM turn_github_sync_user_queue WHERE workspace_id = ?) OR EXISTS(SELECT 1 FROM turn_github_sync_incoming WHERE workspace_id = ? AND state = 'received')")
         .bind(binding.workspace_id).bind(binding.workspace_id).fetch_one(&mut *tx).await?;
-    let running: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM execution_processes e JOIN sessions s ON s.id = e.session_id WHERE s.workspace_id = ? AND e.status = 'running' AND e.run_reason != 'devserver') OR EXISTS(SELECT 1 FROM storage_alert_batches b JOIN storage_alert_attempts a ON a.attempt_id = b.latest_attempt_id WHERE b.workspace_id = ? AND (a.state = 'in_flight' OR (a.state = 'accepted' AND NOT EXISTS(SELECT 1 FROM execution_processes e WHERE e.id = a.execution_id))))")
-        .bind(binding.workspace_id).bind(binding.workspace_id).fetch_one(&mut *tx).await?;
+    let running: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM execution_processes e JOIN sessions s ON s.id=e.session_id WHERE s.workspace_id=? AND e.status='running' AND e.run_reason != 'devserver')")
+        .bind(binding.workspace_id).fetch_one(&mut *tx).await?;
+    let reserved:bool=sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM storage_alert_batches b JOIN storage_alert_attempts a ON a.attempt_id=b.latest_attempt_id WHERE b.workspace_id=? AND (a.state='in_flight' OR (a.state='accepted' AND NOT EXISTS(SELECT 1 FROM execution_processes e WHERE e.id=a.execution_id))))")
+        .bind(binding.workspace_id).fetch_one(&mut *tx).await?;
+    let active_jobs = executors::workspace_admission::running_jobs(binding.workspace_id)
+        .map_err(sqlx::Error::Protocol)?;
+    if state == "in_flight" && (running || active_jobs) {
+        state = "deferred";
+        reason = if running {
+            "owner_busy"
+        } else {
+            "owner_independent_jobs_active"
+        };
+    }
     if state == "in_flight" && (queued || sessions.iter().any(|id| queue.has_queued(*id))) {
         state = "deferred";
         reason = "owner_user_work_pending";
@@ -383,9 +395,9 @@ where
         state = "deferred";
         reason = "independent_job_lifetime_unsettled";
     }
-    if state == "in_flight" && running {
+    if state == "in_flight" && reserved {
         state = "deferred";
-        reason = "owner_busy";
+        reason = "owner_admission_unsettled";
     }
     for incident in &request.intent.incidents {
         let claimed: Option<Uuid> = sqlx::query_scalar("SELECT batch_id FROM storage_alert_incidents WHERE workspace_id = ? AND incident_id = ?")

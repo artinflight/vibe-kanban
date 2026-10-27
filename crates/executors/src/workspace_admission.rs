@@ -13,6 +13,17 @@ use uuid::Uuid;
 type OwnerLocks = std::sync::Mutex<HashMap<Uuid, Weak<Mutex<()>>>>;
 static OWNERS: OnceLock<OwnerLocks> = OnceLock::new();
 tokio::task_local! { static OWNER: Uuid; }
+// Only runtime-confirmed child turns with a live lease object count as positive
+// activity. Drop/restart removes this projection, leaving the durable unknown
+// lifetime fence intact. This is neither a queue nor a second job launcher.
+static RUNNING_JOBS: OnceLock<std::sync::Mutex<HashMap<Uuid, Uuid>>> = OnceLock::new();
+pub fn running_jobs(workspace: Uuid) -> Result<bool, String> {
+    let jobs = RUNNING_JOBS
+        .get_or_init(Default::default)
+        .lock()
+        .map_err(|_| "Job activity inventory unavailable")?;
+    Ok(jobs.values().any(|owner| *owner == workspace))
+}
 
 pub async fn owner<T>(id: Uuid, work: impl Future<Output = T>) -> T {
     if OWNER.try_with(|current| *current == id).unwrap_or(false) {
@@ -47,6 +58,14 @@ pub struct JobAdmission {
 pub struct JobLease {
     pool: SqlitePool,
     id: Uuid,
+    workspace: Uuid,
+}
+impl Drop for JobLease {
+    fn drop(&mut self) {
+        if let Ok(mut jobs) = RUNNING_JOBS.get_or_init(Default::default).lock() {
+            jobs.remove(&self.id);
+        }
+    }
 }
 impl JobAdmission {
     pub async fn reserve(&self) -> Result<JobLease, String> {
@@ -65,11 +84,21 @@ impl JobAdmission {
             sqlx::query("INSERT INTO watcher_job_leases(id,workspace_id,session_id,execution_id) VALUES (?,?,?,?)")
                 .bind(id).bind(self.workspace).bind(self.session).bind(self.execution).execute(&mut *tx).await.map_err(|e|e.to_string())?;
             tx.commit().await.map_err(|e|e.to_string())?;
-            Ok(JobLease {pool:self.pool.clone(),id})
+            Ok(JobLease {pool:self.pool.clone(),id,workspace:self.workspace})
         }).await
     }
 }
 impl JobLease {
+    /// Called only after the existing producer binds a real native thread/turn
+    /// acknowledgment and saves its journal. A reservation alone is not activity.
+    pub fn mark_running(&self) -> Result<(), String> {
+        RUNNING_JOBS
+            .get_or_init(Default::default)
+            .lock()
+            .map_err(|_| "Job activity inventory unavailable")?
+            .insert(self.id, self.workspace);
+        Ok(())
+    }
     /// Only a confirmed terminal child result (or refusal before inference) may
     /// close this lease. Cancellation requests, timeout and Drop leave it open.
     pub async fn close(self) -> Result<(), String> {

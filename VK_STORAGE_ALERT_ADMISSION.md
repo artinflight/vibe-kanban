@@ -1,3 +1,14 @@
+> Current modular integration: this branch preserves PR277 and extends the same
+> routes/receipt protocol to a hot-loaded owner registry and durable controlled-job
+> lifetime exclusion. See [current setup/schema and acceptance](scripts/watcher-events/SETUP.md).
+> Both `20261018140000_storage_alert_admission.sql` and
+> `20261027153000_watcher_job_leases.sql` belong in compatible forward/recovery
+> software. Binding now includes reviewed existing `delegation_journal_dir`;
+> legacy parsing remains, missing custody holds new dispatch. `owner_busy` and
+> `owner_independent_jobs_active` mean positive activity; unknown reservations or
+> job lifetimes stay pending. The detailed original PR277 contract below remains
+> preserved history where superseded. No live adoption or restart is claimed.
+
 # Storage alert admission (source only)
 
 This implements the narrow native dependency of [Operations storage response](https://github.com/artinflight/Operations/issues/214).

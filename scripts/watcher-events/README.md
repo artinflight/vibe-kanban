@@ -119,3 +119,10 @@ past the dispatcher's retained backoff. The test now uses the actual saved next
 attempt/cooldown deadline; production backoff remains unchanged. Acceptance also
 adds both-low coalescing and actual Rust backend PID/start/executable comparison
 across hot configuration. These test additions await the next exact-head run.
+
+Final activity refinement: confirmed native child acknowledgments cover an episode
+while their producer remains live; Drop/restart retains unknown lifetime pending.
+An unbound reservation now returns `owner_admission_unsettled` rather than
+`owner_busy`. Added two native regressions and one client regression. Local current
+client suite:158 tests,157 passed,1 optional connector-source check skipped. These
+native refinements await the next exact-head compiled validation.

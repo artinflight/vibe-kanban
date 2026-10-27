@@ -877,3 +877,77 @@ async fn concurrent_job_arrival_parent_exit_and_watcher_admission_have_no_overla
         }
     }
 }
+
+#[tokio::test]
+async fn unbound_reservation_is_pending_uncertainty_not_confirmed_owner_activity() {
+    let (pool, q, b, r) = fixture().await;
+    assert!(
+        tokio::time::timeout(
+            std::time::Duration::from_millis(10),
+            submit(&pool, &q, &b, &r, |_| std::future::pending::<
+                Result<(), ContainerError>,
+            >())
+        )
+        .await
+        .is_err()
+    );
+    let mut later = r.clone();
+    later.batch_id = Uuid::new_v4();
+    later.attempt_id = Uuid::new_v4();
+    later.intent.incidents[0].incident_id = Uuid::new_v4();
+    later.intent_sha256 = fingerprint(&later.intent);
+    let result = submit(&pool, &q, &b, &later, |_| async {
+        panic!("unknown reservation must not launch")
+    })
+    .await
+    .unwrap();
+    assert_eq!(result.reason, "owner_admission_unsettled");
+    assert!(result.no_admission);
+    assert_eq!(count(&pool).await, 0);
+    cancel(&pool, r.batch_id, &r.intent_sha256).await.unwrap();
+    assert_eq!(
+        submit(&pool, &q, &b, &fresh(&later), |_| bind(&pool, b.session_id))
+            .await
+            .unwrap()
+            .outcome,
+        "accepted"
+    );
+}
+
+#[tokio::test]
+async fn confirmed_child_activity_covers_episode_but_drop_reverts_to_durable_unknown() {
+    let (pool, q, b, r) = fixture().await;
+    let parent = create(&pool, b.session_id, Uuid::new_v4()).await.unwrap();
+    let lease = job_admission(&pool, &b, parent.id).reserve().await.unwrap();
+    assert!(!executors::workspace_admission::running_jobs(b.workspace_id).unwrap());
+    lease.mark_running().unwrap(); // injected native acknowledgment, no inference
+    ExecutionProcess::update_completion(
+        &pool,
+        parent.id,
+        ExecutionProcessStatus::Completed,
+        Some(0),
+    )
+    .await
+    .unwrap();
+    assert_eq!(
+        submit(&pool, &q, &b, &r, |_| async {
+            panic!("active child excludes launch")
+        })
+        .await
+        .unwrap()
+        .reason,
+        "owner_independent_jobs_active"
+    );
+    drop(lease); // lost producer/ack cannot fabricate terminal status
+    assert!(!executors::workspace_admission::running_jobs(b.workspace_id).unwrap());
+    assert_eq!(
+        submit(&pool, &q, &b, &fresh(&r), |_| async {
+            panic!("unknown child lifetime excludes launch")
+        })
+        .await
+        .unwrap()
+        .reason,
+        "independent_job_lifetime_unsettled"
+    );
+    assert_eq!(count(&pool).await, 1);
+}

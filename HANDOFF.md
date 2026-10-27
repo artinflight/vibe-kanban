@@ -21,9 +21,8 @@ health/package files. No OS/work-SSD backup payload or fallback is allowed.
   f14cabd137cf99102f41eca3a5170574eed3c56d07b27e88fb8c5213f6c5add8.
   Owner-raised1048576watch ceiling is live. Actual ready/barrier and memory
   acceptance are in b-controls-v1/V10_OWNER_MEMORY_AND_NORMAL_BARRIER_20261027.
-  Approximately770k successful watches,467432KiB RSS/1.06GB cgroup including
- 511MB file cache/84MB kernel; no high/max/OOM events at that checkpoint.
-  This observer stays running independently of Desktop transport.
+  About770k watches;12:24EDT RSS487396KiB/cgroup562319360B, no OOM/limit
+  events. The observer stays independent of Desktop transport.
 - Composition V13 is successfully terminal at12:10:30EDT, unit
   vk-nightly-B-current-composition-inodes-v13-20261027.service, MainPID0/exit0.
   Source2b540cf4dd826414fa25b00688fc0776d4dc2638; package current-composition-B-inodes-v13,
@@ -62,12 +61,9 @@ spools and fault evidence remain. The later V10 set does not repair that epoch.
 Actual B terminal-gap proof42851975fc11ad79e25d214472fc056b2d97cd36c0958cfac41582a16961189b
 is in journal-terminal-gap-proofs; normal independent reopen passed.
 
-V10 composition wrapper failed before new-map adoption: it inherited a1GiB
-namespace-index cap for an already1258803200B map. SQLite clamped its page
-ceiling to existing pages and reported FULL on growth. The corrected4GiB
-budget is the previously tested map budget, not a changed physical reserve.
-The source now refuses too-small writable budgets before mutation. Actual
-native B temporary placement is verified inside controls-v1/sqlite-tmp-v1.
+V10 inherited a1GiB cap for a1258803200B map; SQLite FULL was a wrapper
+budget error. The corrected4GiB phase budget and verified B temporary placement
+retain all physical floors. Full diagnosis/proofs are in the Nightly guide.
 
 V11/V12 stopped on native15s SMART read timeouts; original traces survive.
 V13 completed after the tested finite full requalification fix, with unchanged
@@ -98,11 +94,9 @@ Do not assume204regular SQL points cover all later SQL discoveries/aliases.
 Retain accepted162.70GB independent restore, all137/148/204SQL evidence and later
 supplements. Original7783archive gaps/6546loose-object IDs stay explicit;
 current source resolution never proves original archive inclusion. Current
-runtime/served frontend remain a separate later binding. The08:38 source
-observation/08:44 gateway readback are preparation, not final-current acceptance.
-The prepared runtime-dependencies-20261027-v1 component has two pending bodies
-(gateway.mjs3048B and route.json152B); always sample these finite dependencies,
-without pretending the117-root kernel plan covers them.
+runtime/served frontend remain a separate later binding. Old runtime observations are preparation, not final-current acceptance.
+The runtime-dependencies-20261027-v1 component still needs gateway.mjs3048B
+and route.json152B; always sample them outside the117-root kernel plan.
 
 Current-set acceptance still needs final body/SQL/runtime integration, a sealed
 authenticated B-backed current descriptor and independent composed restore.

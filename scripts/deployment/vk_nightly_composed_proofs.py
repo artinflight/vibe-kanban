@@ -53,12 +53,20 @@ def audit(database,reference,*,base_catalog,recipe_catalogs,objects,objects_root
     provenance=base_catalog.execute('select source_catalog_sha256,restore_proof_sha256 from provenance').fetchall()
     if len(provenance)!=1:raise ValueError('exact accepted-base catalog/restore provenance required')
     for value in provenance[0]:digest(value)
+    schemas=[]
+    for catalog in recipe_catalogs:
+        columns={r[1] for r in catalog.execute('pragma table_info(components)')}
+        if {'id','definition'}<=columns:schemas.append('definitions')
+        elif columns=={'layer','archive_path','archive_identity','records_sha','members','raw_bytes'}:
+            schemas.append('v8i')
+        else:raise ValueError('unsupported authenticated retained component catalog schema')
 
     @lru_cache(maxsize=256)
     def retained(layer):
         if not layer.startswith('retained-'):raise ValueError('undeclared retained carrier layer')
         identifier=digest(layer[len('retained-'):]);found=[]
-        for catalog in recipe_catalogs:
+        for catalog,schema in zip(recipe_catalogs,schemas):
+            if schema!='definitions':continue
             row=catalog.execute('select definition from components where id=?',(identifier,)).fetchone()
             if row:found.append(json.loads(row[0]))
         if not found or any(canonical(v)!=canonical(found[0]) for v in found):
@@ -69,6 +77,27 @@ def audit(database,reference,*,base_catalog,recipe_catalogs,objects,objects_root
         if definition.get('encoding')!='zip-member':raise ValueError('accepted retained ZIP component required')
         for item in ('archive','records'):guard();native_carrier(definition[item])
         return definition
+
+    @lru_cache(maxsize=256)
+    def v8i(layer,encoded_sha):
+        digest(encoded_sha)
+        if layer!='v8i-file-'+encoded_sha[:24]:raise ValueError('v8i component/full archive hash binding differs')
+        found=[]
+        for catalog,schema in zip(recipe_catalogs,schemas):
+            if schema!='v8i':continue
+            row=catalog.execute('select archive_path,archive_identity,records_sha,members,raw_bytes '
+                                'from components where layer=?',(layer,)).fetchone()
+            if row:found.append(row)
+        if not found or any(row!=found[0] for row in found):
+            raise ValueError('selected v8i component is absent or ambiguous in authenticated catalogs')
+        path,identity,records_sha,members,raw_bytes=found[0];identity=json.loads(identity)
+        digest(records_sha)
+        if (not isinstance(identity,list) or len(identity)!=4 or type(members) is not int or members<1
+                or type(raw_bytes) is not int or raw_bytes<0):
+            raise ValueError('complete independently verified v8i component binding required')
+        archive=dict(native_path=path,name=Path(path).name,bytes=identity[2],file_identity=identity,sha256=encoded_sha)
+        guard();native_carrier(archive)
+        return dict(encoding='zip-member',archive=archive,records_sha=records_sha)
 
     @lru_cache(maxsize=1024)
     def accepted(segment_raw):
@@ -93,7 +122,8 @@ def audit(database,reference,*,base_catalog,recipe_catalogs,objects,objects_root
             base_refs+=1;return dict(kind='accepted-restored-base',restore_proof_sha256=provenance[0][1])
         if layer.startswith('retained-SQL-'):
             raise ValueError('legacy SQL segment requires its decoded API acceptance dependency')
-        component=retained(layer);archive=component['archive']
+        component=v8i(layer,segment['encoded_sha256']) if layer.startswith('v8i-file-') else retained(layer)
+        archive=component['archive']
         if (segment.get('encoding')!='zip-member' or segment.get('selector')!=archive['name']
                 or segment.get('encoded_bytes')!=archive['bytes'] or segment.get('encoded_sha256')!=archive['sha256']):
             raise ValueError('selected retained segment/archive binding differs')
@@ -104,10 +134,19 @@ def audit(database,reference,*,base_catalog,recipe_catalogs,objects,objects_root
             for raw, in catalog.execute('select row from versions where layer=? and json_extract(row,\'$.sha256\')=? '
                     'and json_extract(row,\'$.bytes\')=?',(layer,segment['sha256'],segment['bytes'])):
                 row=json.loads(raw)
-                if row.get('segments')==[segment]:matched=True;break
+                if row.get('segments')==[segment]:
+                    if layer.startswith('v8i-file-'):
+                        row_provenance=row.get('component_provenance',{})
+                        if (row_provenance.get('archive_sha256')!=archive['sha256']
+                                or row_provenance.get('record_sha256')!=component['records_sha']):
+                            raise ValueError('v8i member provenance differs from immutable component binding')
+                    matched=True;break
             if matched:break
         if not matched:raise ValueError('selected ZIP member has no exact independently verified catalog record')
-        retained_refs+=1;return dict(kind='retained-independent-component',component_sha256=layer[len('retained-'):])
+        retained_refs+=1
+        return (dict(kind='retained-v8i-independent-component',archive_sha256=archive['sha256'],
+                     records_sha256=component['records_sha']) if layer.startswith('v8i-file-') else
+                dict(kind='retained-independent-component',component_sha256=layer[len('retained-'):]))
 
     def SQL_record(point,member):
         nonlocal control_bytes

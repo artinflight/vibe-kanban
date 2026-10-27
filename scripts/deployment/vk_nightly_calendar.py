@@ -1,53 +1,49 @@
 """DST-aware user-cron wake-up gate. No scheduler installation or cutover.
 
 A fixed 15-minute cron pulse is interpreted using America/Toronto, independent
-of the cron daemon's zone. Resource deferrals retry at most sixteen times in
-02:00--10:00 local time. Unexpected capture failures require reconciliation;
+of the cron daemon's zone. The evening date covers 22:00 through 04:00 next day,
+with an actual hard stop, including DST changes. Unexpected failures require reconciliation;
 no receipt, recovery success or remote notification is manufactured here.
 """
 import argparse
 from contextlib import contextmanager
-from datetime import datetime, time as day_time, timedelta, timezone
+from datetime import datetime,timedelta,timezone
 import fcntl
 import json
 import math
 import os
+import signal
 from pathlib import Path
 import stat
 import subprocess
 import sys
 import time
-from zoneinfo import ZoneInfo
 
 from vk_nightly_capture_adapter import mcp_lease
 from vk_nightly_job import checksum
 from vk_prep_common import save, storage
+from vk_nightly_window import ZONE,bounds,night,seconds_left
 
-ZONE = ZoneInfo('America/Toronto')
 RETRY_SECONDS = 1800
-MAX_ATTEMPTS = 16
+MAX_ATTEMPTS = 16 # Existing finite retry ceiling; the absolute window wins.
 POLL_SECONDS = 900
 MAX_STATE = 65536
 
 
 def scheduled(day):
-    # Roundtrip resolves the nonexistent spring 02:00 to 03:00. Fall 02:00
-    # occurs once in Toronto. No clock/host-zone setting is changed.
-    return datetime.combine(day, day_time(2), ZONE).astimezone(timezone.utc)
+    return bounds(day)[0]
 
 
 def decision(now, state, *, monotonic, boot_id):
     if now.tzinfo is None:raise ValueError('aware real UTC clock required')
-    local = now.astimezone(ZONE); day = local.date(); key = day.isoformat()
+    local = now.astimezone(ZONE); day = night(now); key = day.isoformat()
     next_night = scheduled(day + timedelta(days=1)).isoformat()
     if state and state.get('blocked'):
         return {'status':'needs_review','next_action':'review exact job receipt and recorded owned reconciliation; no blind retry'}, state
     if state and key < state['day']:
         return {'status':'clock_before_recorded_day','next_action':'wait for correct clock; preserve completed-day protection'}, state
-    if local.hour < 2:
+    if 4<=local.hour<22:
         return {'status':'not_due','next_at':scheduled(day).isoformat()}, state
-    if local.hour >= 10:
-        return {'status':'window_expired','next_at':next_night,'next_action':'automatic next-night attempt; scheduler remains enabled'}, state
     value = dict(state) if state and state['day'] == key else {'day':key,'attempts':0,'status':'pending'}
     if value['status'] == 'completed':
         return {'status':'already_completed','next_at':next_night}, value
@@ -60,12 +56,18 @@ def decision(now, state, *, monotonic, boot_id):
             value.update(retry_boot=boot_id,retry_recorded_mono=monotonic,retry_mono=monotonic+remaining)
         if monotonic < value['retry_mono']:
             return {'status':'retry_wait','retry_in_seconds':value['retry_mono']-monotonic}, value
-    return {'status':'due','day':key,'scheduled_utc':scheduled(day).isoformat()}, value
+    return {'status':'due','day':key,'scheduled_utc':scheduled(day).isoformat(),
+            'hard_deadline_utc':bounds(day)[1].isoformat()}, value
 
 
 def finish(value, exit_code, now, *, monotonic, boot_id):
     value = dict(value)
-    if exit_code == 0:
+    end=bounds(datetime.fromisoformat(value['day']).date())[1]
+    if exit_code in (0,75) and now>=end:
+        value.update(status='window_stopped',finished_utc=now.isoformat(),
+                     completed_B_work_preserved=True,late_exit_not_accepted=True)
+        for key in ('retry_utc','retry_boot','retry_recorded_mono','retry_mono'):value.pop(key,None)
+    elif exit_code == 0:
         value.update(status='completed',finished_utc=now.isoformat())
         for key in ('retry_utc','retry_boot','retry_recorded_mono','retry_mono'):value.pop(key,None)
     elif exit_code == 75:
@@ -100,7 +102,7 @@ def load(path):
     value=json.loads(raw)
     if (not isinstance(value,dict) or type(value.get('attempts')) is not int
             or not 0<=value['attempts']<=MAX_ATTEMPTS
-            or value.get('status') not in ('pending','running','completed','resource_deferred','needs_review')
+            or value.get('status') not in ('pending','running','completed','resource_deferred','needs_review','window_stopped')
             or not isinstance(value.get('day'),str)
             or datetime.fromisoformat(value['day']).date().isoformat()!=value['day']):
         raise ValueError('malformed calendar state; preserve and review')
@@ -139,7 +141,7 @@ def tick(state_path, config_sha256, runner, producer_available, report, *, now, 
             'recovery':'existing B lifecycle reconciles only recorded owned resources under real leases'})
     failure=None
     try:
-        code=runner()
+        code=runner(answer['hard_deadline_utc'],answer['day'])
         if type(code) is not int:raise ValueError('fixed child exit code unavailable')
     except (OSError,ValueError,subprocess.SubprocessError) as error:
         code=1;failure=type(error).__name__+': '+str(error)[:256]
@@ -155,12 +157,46 @@ def tick(state_path, config_sha256, runner, producer_available, report, *, now, 
 
 
 def settings(config):
-    expected={'timezone':'America/Toronto','hour':2,'minute':0,'poll_minutes':15,
-              'retry_minutes':30,'max_attempts_per_day':16,'window_end_hour':10}
+    expected={'timezone':'America/Toronto','hour':22,'minute':0,'poll_minutes':15,
+              'retry_minutes':30,'max_attempts_per_day':16,'window_end_hour':4,'hard_stop':True}
     value=config['schedule']
     if any(value.get(k)!=v or type(value.get(k)) is not type(v) for k,v in expected.items()):
         raise ValueError('fixed reviewed Toronto calendar/retry settings required')
     return value
+
+
+def run_bounded(argv,deadline,*,pass_fds=(),now=lambda:datetime.now(timezone.utc),clock=time.monotonic):
+    """Stop ONLY our new process group at the absolute end, never another job.
+
+    Native B and guest reader also receive this absolute deadline and check it
+    before further IO. Completed atomic objects/SQLite receipts are retained;
+    unaccepted partial objects cannot advance the baseline. Cleanup grace is
+    for owned process termination only, never permission for new backup work.
+    A wall-clock rollback cannot extend the initial monotonic time allowance.
+    """
+    remaining=seconds_left(deadline,now=now());limit=clock()+remaining
+    grace=min(5,remaining/4) # Termination grace is INSIDE, never after, the window.
+    process=subprocess.Popen(argv,pass_fds=pass_fds,start_new_session=True)
+    def stop(left):
+        if process.poll() is not None:return
+        try:os.killpg(process.pid,signal.SIGTERM)
+        except ProcessLookupError:pass
+        try:process.wait(timeout=max(0,min(5,left)-.1))
+        except subprocess.TimeoutExpired:
+            try:os.killpg(process.pid,signal.SIGKILL)
+            except ProcessLookupError:pass
+            process.wait(timeout=5)
+    try:
+        while True:
+            # Check time before observing success: a late exit is not accepted.
+            try:left=min(seconds_left(deadline,now=now()),limit-clock())
+            except TimeoutError:stop(0);return 75
+            if left<=grace:stop(left);return 75
+            if process.poll() is not None:return process.returncode
+            try:process.wait(timeout=min(1,left-grace))
+            except subprocess.TimeoutExpired:pass
+    except BaseException:
+        stop(0);raise
 
 
 def main():
@@ -179,8 +215,11 @@ def main():
         print(json.dumps({'settings':schedule,'decision':answer,'scheduler_modified':False,'capture_executed':False}));return 0
     if (schedule.get('enabled') is not True or config.get('adoption_authorized') is not True
             or config.get('retention_adopted') is not True):raise ValueError('actual whole-plan acceptance and schedule adoption remain required')
-    if config['job_timeout_seconds']!=7200 or config.get('initial_job_timeout_seconds',7200)!=7200:
-        raise ValueError('adopted nightly whole-job timeout must be two hours; cold acceptance is separate')
+    reference=config['current_service']
+    from vk_nightly_service import load as load_service
+    value,workers=load_service(Path(reference['config']),reference['sha256'])
+    if value['cycle']['cycle_binding']['cycle_kind']!='incremental' or value.get('existing_components'):
+        raise ValueError('accepted ordinary whole-cycle service required; never launch the legacy supervisor')
     folder=storage(config['staging'])/'calendar';folder.mkdir(exist_ok=True)
     if folder.is_symlink():raise ValueError('calendar directory substituted')
     def report(value):
@@ -189,16 +228,17 @@ def main():
         print(json.dumps(value),flush=True)
     def available():
         try:
-            with mcp_lease(folder.parent/'producer.lock'):pass
+            with mcp_lease(Path(value['controller_lease'])),mcp_lease(Path(workers['files']['desktop']['writer_lease'])):pass
             return True
         except BlockingIOError:return False
     try:
         with held(folder/'lease') as lease_fd:
-            def run():
-                argv=[sys.executable,'-B','-S',str(Path(__file__).with_name('vk_nightly_supervisor.py')),
-                      '--config',str(args.config),'--config-sha256',args.config_sha256]
+            def run(deadline,evening):
+                argv=[sys.executable,'-B','-S',str(Path(__file__).with_name('vk_nightly_service.py')),
+                      '--config',reference['config'],'--config-sha256',reference['sha256'],
+                      '--scheduled-night',evening,'--hard-deadline-utc',deadline]
                 # Fixed owned child, not a command/FD supplied by a manifest.
-                return subprocess.Popen(argv,pass_fds=(lease_fd,)).wait()
+                return run_bounded(argv,deadline,pass_fds=(lease_fd,))
             result=tick(folder/'state.private.json',args.config_sha256,run,available,report,
                         now=lambda:datetime.now(timezone.utc),monotonic=time.monotonic,
                         boot_id=Path('/proc/sys/kernel/random/boot_id').read_text().strip())

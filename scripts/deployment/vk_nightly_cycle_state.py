@@ -11,6 +11,7 @@ import json
 import math
 
 from vk_typed_recovery import checksum,digest
+from vk_nightly_window import validate as overnight_window
 
 
 PHASES=('files','SQL','runtime','candidate','restore')
@@ -28,8 +29,11 @@ def window(binding):
     end=datetime.fromisoformat(binding['deadline_UTC'])
     if start.tzinfo is None or end.tzinfo is None:raise ValueError('aware original whole-cycle window required')
     seconds=(end-start).total_seconds()
+    if binding.get('cycle_kind')=='incremental':
+        overnight_window(start,end)
+        return start.timestamp(),end.timestamp()
     if not math.isfinite(seconds) or not 0<seconds<=8*3600:
-        raise ValueError('whole cycle must fit the installed eight-hour overnight window')
+        raise ValueError('finite original commissioning window required; not recurring overnight acceptance')
     return start.timestamp(),end.timestamp()
 
 
@@ -55,6 +59,31 @@ class CycleState:
             if db.execute('select binding from nightly_cycles where cycle_id=?',(cycle_id,)).fetchone()!=(raw,):
                 raise ValueError('independently reopened original cycle binding differs')
         return cycle_id
+
+    def scheduled_binding(self,binding):
+        """Freeze this evening's accepted predecessor once, including retries.
+
+        The calendar/controller lease serializes callers. The caller supplies
+        deterministic night/template/cohort fields; no completed receipt is
+        re-labelled as new work or given another deadline on a retry.
+        """
+        window(binding)
+        if binding.get('cycle_kind')!='incremental':raise ValueError('ordinary scheduled cycle required')
+        with self.opened() as db:
+            db.execute('create table if not exists nightly_cycles(cycle_id text primary key,binding text not null)')
+            rows=db.execute("select binding from nightly_cycles where json_extract(binding,'$.scheduled_night')=? "
+                "and json_extract(binding,'$.schedule_template_sha256')=?",
+                (binding['scheduled_night'],binding['schedule_template_sha256'])).fetchall()
+        if rows:
+            if len(rows)!=1:raise ValueError('ambiguous scheduled cycle; preserve and reconcile')
+            old=json.loads(rows[0][0]);expected=dict(binding,previous_accepted_sha256=old['previous_accepted_sha256'])
+            if old!=expected:raise ValueError('original scheduled cycle bindings differ; no clock reset')
+            return old
+        accepted=self.accepted()
+        if not accepted:raise ValueError('independently accepted current baseline required before recurring capture')
+        value=dict(binding,previous_accepted_sha256=checksum(accepted))
+        self.initialize(value)
+        return value
 
     def phases(self,cycle_id):
         digest(cycle_id);values=[];previous=cycle_id

@@ -18,6 +18,7 @@ import sys
 
 from vk_nightly_objects import ObjectClient,read_control
 from vk_nightly_transport_diagnostics import Diagnostics,finish
+from vk_nightly_window import seconds_left
 
 
 NATIVE = r'''
@@ -28,6 +29,14 @@ admitted_identity=None
 health_timeout_used=False
 health_observations=0
 health_query_seconds=0.0
+def time_budget(maximum=None):
+ deadline=CONFIG.get('whole_cycle_deadline_UTC')
+ if deadline is None:return maximum
+ end=datetime.datetime.fromisoformat(deadline)
+ if end.tzinfo is None:raise ValueError('aware native hard deadline required')
+ left=(end-datetime.datetime.now(datetime.timezone.utc)).total_seconds()
+ if left<=0:raise TimeoutError('hard backup deadline reached; retain all completed B objects')
+ return left if maximum is None else min(left,maximum)
 def kernel_identity():
  import ctypes,ctypes.wintypes as wt
  api=ctypes.WinDLL('kernel32',use_last_error=True)
@@ -67,7 +76,7 @@ def health_gate():
  if not handle:raise ctypes.WinError(ctypes.get_last_error())
  acquired=False
  try:
-  wait=api.WaitForSingleObject(handle,(CONFIG.get('native_health_read_timeout_seconds',90)+15)*1000)
+  wait=api.WaitForSingleObject(handle,int(time_budget(CONFIG.get('native_health_read_timeout_seconds',90)+15)*1000))
   if wait==0x102:raise TimeoutError('finite native health observation ownership wait; no payload IO admitted')
   if wait not in (0,0x80):raise ctypes.WinError(ctypes.get_last_error())
   # An abandoned owner's result is never reused: always perform a fresh read.
@@ -79,6 +88,7 @@ def health_gate():
    if not api.CloseHandle(handle):raise ctypes.WinError(ctypes.get_last_error())
 def control_identity():
  global admitted_identity
+ time_budget()
  records={p:mm.parse(mm.bounded_read(p)) for p in (mm.STOP_PATH,mm.STATE_PATH)}
  for record in records.values():mm.pause(record)
  assert mm.b_outside_monitor_scope(records[mm.STOP_PATH],records[mm.STATE_PATH]),'B scope changed'
@@ -93,26 +103,28 @@ def control_identity():
  else:
   p=subprocess.run(['powershell.exe','-NoProfile','-NonInteractive','-EncodedCommand',
      base64.b64encode(CONFIG['identity_ps'].encode('utf-16le')).decode()],capture_output=True,
-     timeout=CONFIG.get('identity_admission_timeout_seconds',15))
+     timeout=time_budget(CONFIG.get('identity_admission_timeout_seconds',15)))
   p.check_returncode();identity=json.loads(p.stdout.decode('utf-8-sig'));mm.check_identity(identity)
   if CONFIG.get('native_identity_mode')=='admission-plus-kernel-continuity-v1':
    actual=kernel_identity()
    assert all(identity[k]==v for k,v in actual.items()),'kernel/full admission identity mismatch'
    admitted_identity=dict(identity)
- return identity
+ time_budget();return identity
 def actual_guard(remaining):
  global admitted_identity,health_timeout_used,health_observations,health_query_seconds
  # Observation patience is an implementation bound, not an owner safety
  # threshold. Keep data IO stopped while waiting for a successful fresh read.
  deadline=CONFIG.get('native_health_read_timeout_seconds',90)
+ time_budget()
  try:
   with health_gate():
    identity=control_identity()
    query_started=time.monotonic()
    p=subprocess.run(['C:/ProgramData/MediaArchiveMonitor/smartctl/bin/smartctl.exe',
-      '-j','-i','-H','-A','-l','sataphy','/dev/pd3'],capture_output=True,timeout=deadline)
+      '-j','-i','-H','-A','-l','sataphy','/dev/pd3'],capture_output=True,timeout=time_budget(deadline))
    query_seconds=time.monotonic()-query_started
  except subprocess.TimeoutExpired:
+  time_budget() # An expired window never starts another observation.
   # A missing observation never authorizes I/O. One read-only requalification
   # per finite session may recover a transient command timeout. No work runs
   # between attempts: all STOP/MM/access checks and full identity run again.
@@ -148,6 +160,7 @@ def actual_guard(remaining):
      health_observations=health_observations,health_query_seconds=health_query_seconds,
      reported_drive_fault=False,UTC=datetime.datetime.now(datetime.timezone.utc).isoformat())
  print(json.dumps(metrics),file=sys.stderr,flush=True)
+ time_budget()
  return dict(identity=identity,health=health,free_bytes=free,health_timeout_requalification_used=health_timeout_used,
      health_poll_seconds=CONFIG.get('native_health_poll_seconds',5),**metrics)
 assert hashlib.sha256(MM_SOURCE.encode()).hexdigest()==CONFIG['MM_sha256']
@@ -159,6 +172,7 @@ last_check=time.monotonic()
 last_health_check=last_check
 def progress_guard(remaining):
  global last_check,last_health_check
+ time_budget()
  assert shutil.disk_usage('B:/').free>CONFIG['protected_B_bytes']+remaining+1048576
  now=time.monotonic()
  if now-last_health_check>=CONFIG.get('native_health_poll_seconds',5):
@@ -212,6 +226,7 @@ def ssh_command(config,remote_command):
 
 
 def validate(config,objects):
+    if 'whole_cycle_deadline_UTC' in config:seconds_left(config['whole_cycle_deadline_UTC'])
     ssh_command(config,'true')
     root=config['B_root']
     if (not isinstance(root,str) or not root.startswith('B:/vk-backups/') or '\\' in root
@@ -248,7 +263,8 @@ def native_admission_timeout(config):
     identity=config.get('identity_admission_timeout_seconds',15)
     if type(health) is not int or health not in (15,90) or type(identity) is not int or identity not in (15,45):
         raise ValueError('finite native observation budgets required')
-    return 2*((health+15)+identity+health)+30
+    maximum=2*((health+15)+identity+health)+30
+    return min(maximum,seconds_left(config['whole_cycle_deadline_UTC'])) if 'whole_cycle_deadline_UTC' in config else maximum
 
 
 class DesktopObjects:

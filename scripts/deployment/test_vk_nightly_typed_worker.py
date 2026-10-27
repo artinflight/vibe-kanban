@@ -91,7 +91,7 @@ class TypedWorkerTests(unittest.TestCase):
     def test_native_receiver_source_is_syntactically_valid(self):compile(NATIVE,'native','exec')
 
     def test_actual_native_health_record_preserves_MM_temperature_and_hardware_fields(self):
-        nodes=[n for n in ast.parse(NATIVE).body if isinstance(n,ast.FunctionDef) and n.name in ('control_identity','actual_guard')]
+        nodes=[n for n in ast.parse(NATIVE).body if isinstance(n,ast.FunctionDef) and n.name in ('time_budget','control_identity','actual_guard')]
         code='\n'.join(ast.get_source_segment(NATIVE,node) for node in nodes)
         hardware=dict(serial_number='verified',smart_status={'passed':True},temperature={'current':31},
             ata_smart_attributes={'table':[{'id':5,'raw':{'value':0}}]},sata_phy_event_counters={'table':[{'id':1,'value':0}]})

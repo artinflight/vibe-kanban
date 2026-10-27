@@ -1,10 +1,10 @@
 # Overnight backup qualification
 
-Nightly is a separate worker, not a Vibe backend restart. The existing calendar
-defines the Toronto overnight window as 02:00–10:00. Scheduling remains off until
+Nightly is a separate worker, not a Vibe backend restart. The owner-corrected recurring
+window is **22:00–04:00 America/Toronto with a hard stop at04:00**. Scheduling remains off until
 an actual complete incremental backup and composed restore fit that window.
 An initial retained backlog, a throughput estimate, component tests or separate
-eight-hour phase limits do not establish that result. Cold commissioning and
+historical eight-hour phase limits do not establish that result. Cold commissioning and
 ordinary nightly deltas must be reported separately.
 
 ## Measured overhead and correction — October 27
@@ -160,3 +160,49 @@ leased consumer result. The fixed existing WSL route checks its registered B
 placement and streams pinned consumer code/packet in memory to UID1000. These
 whole-cycle helpers have isolated native-protocol integration evidence; actual
 complete current-set execution and operational calendar adoption remain open.
+
+
+## Owner-corrected hard stop and executable calendar — October27
+
+The22:00 evening is the run identity until04:00 the next day; midnight and the
+repeated DST hour cannot create another run. Normal nights have six elapsed
+hours, spring-forward five and fall-back seven, always ending at local04:00.
+Tonight's target is04:00EDT October28/08:00UTC. It is not an accepted cutover
+baseline until file, SQL, runtime and normal composed readback actually pass.
+
+The fixed calendar invokes only `vk_nightly_service.py` with the authenticated
+configuration, evening and absolute hard deadline. A monotonic cap prevents a
+backward clock correction extending a run. Graceful owned-group termination
+starts inside the window and escalates only for that newly launched owned group;
+there is no extra payload grace after04:00. Native B guards cap their ownership,
+identity and SMART waits to the same remaining time, check again after a slow
+query and refuse further operations/requalification at expiry. The normal reader
+also checks the absolute deadline. Already-issued kernel IO can finish during
+cleanup; it does not authorize another operation or late baseline acceptance.
+
+Completed atomic objects and independently reopened B ledger phases remain.
+Unaccepted partials are preserved and cannot become an accepted baseline. A
+late success is recorded as window-stopped, never a completed night. The current
+accepted pointer stays intact. Each evening has a deterministic new SQL cohort;
+retrying it reopens the original predecessor/binding and never resets its clock.
+Other activity retains genuine capacity/memory/access/identity/STOP controls and
+the existing shared writer lease; an occupied producer causes deferral, not a
+foreign stop. Daytime pulses do not admit backup work.
+
+Actual tests cover both DST transitions, midnight duplicate exclusion,04:00
+refusal, real owned child stop with completed output preserved and an unrelated
+fixture child left alive, clock rollback, slow native query expiry, exact terminal
+component reuse, actual native B-protocol phase retention and publication refusal
+at04:00. They are RAM fixtures, not tonight's complete production restore proof.
+
+The service can authenticate older immutable package DATA without executing it,
+then use the new independently pinned finishing implementation. It waits only
+for exact original component identities and rejects failed, missing or replaced
+units. The composed consumer holds the actual native object/capture lease and
+must pass final fresh B health before its result can advance the pointer.
+The41 newer v8i file components use their actual immutable catalog layout and
+full archive/record/member bindings;206 older definitions remain independently
+reusable. No catalog conversion or archive recopy is needed.
+
+Scheduling remains OFF. Exact installed complete service/config, current full
+restore and an actual ordinary overnight cycle remain commissioning gates.

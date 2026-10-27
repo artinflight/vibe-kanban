@@ -75,6 +75,34 @@ class ComposedProofTests(unittest.TestCase):
         with self.assertRaises(PermissionError):run(denied)
         self.catalog.execute('delete from versions')
         with self.assertRaisesRegex(ValueError,'exact independently verified catalog record'):run(lambda _:None)
+    def test_actual_v8i_schema_coexists_with_old_catalog_without_rehashing_carriers(self):
+        newer=sqlite3.connect(':memory:');self.addCleanup(newer.close)
+        newer.execute('create table components(layer text,archive_path text,archive_identity text,records_sha text,members integer,raw_bytes integer)')
+        newer.execute('create table versions(name text,layer text,row text)')
+        layer='v8i-file-'+'4'*24
+        identity=[1,2,100,4]
+        newer.execute('insert into components values(?,?,?,?,?,?)',
+            (layer,'B:/vk-backups/fixture/new.zip',json.dumps(identity),'5'*64,1,3))
+        segment=dict(layer=layer,selector='new.zip',member='old/name',encoding='zip-member',
+            bytes=3,sha256='6'*64,encoded_bytes=100,encoded_sha256='4'*64)
+        row=dict(self.meta,kind='file',bytes=3,sha256='6'*64,segments=[segment],
+            component_provenance=dict(archive_sha256='4'*64,record_sha256='5'*64,
+                current_source_qualified=False,parent_backup_accepted=False))
+        newer.execute('insert into versions values(?,?,?)',('old/name',layer,canonical(row).decode()))
+        self.put('home/current',row);seen=[]
+        def run():
+            return audit(self.db,self.reference,base_catalog=self.base,recipe_catalogs=[self.catalog,newer],
+                objects=objects,objects_root=self.root,guard=lambda:None,native_carrier=seen.append)
+        with patch.object(objects,'decoded',side_effect=AssertionError('unnecessary payload replay')):
+            self.assertEqual(run()['retained_component_references'],1)
+        self.assertEqual(len(seen),1);self.assertEqual(seen[0]['file_identity'],identity)
+        self.assertEqual(seen[0]['sha256'],'4'*64)
+        row['component_provenance']['record_sha256']='7'*64
+        newer.execute('update versions set row=?',(canonical(row).decode(),))
+        with self.assertRaisesRegex(ValueError,'v8i member provenance'):run()
+        newer.execute('delete from components')
+        with self.assertRaisesRegex(ValueError,'absent or ambiguous'):run()
+
     def test_SQL_acceptance_must_decode_identical_record_not_trust_copied_flags(self):
         row=self.base_file();source='/home/note'
         point=dict(source=source,status='consistent_SQL_point_verified',method='SQLite-backup-API',member=row,

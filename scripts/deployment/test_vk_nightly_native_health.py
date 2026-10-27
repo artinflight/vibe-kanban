@@ -17,7 +17,7 @@ from vk_nightly_desktop_objects import NATIVE,native_admission_timeout
 class NativeHealthTests(unittest.TestCase):
     def guard(self, results):
         tree=ast.parse(NATIVE)
-        functions=[node for node in tree.body if isinstance(node,ast.FunctionDef) and node.name in ('control_identity','actual_guard')]
+        functions=[node for node in tree.body if isinstance(node,ast.FunctionDef) and node.name in ('time_budget','control_identity','actual_guard')]
         baseline=dict(NativeSerial='drive',Attributes=[dict(id=5,raw=dict(value=0))],Phy=[dict(id=10,value=2)])
         smart=dict(serial_number='drive',smart_status=dict(passed=True),temperature=dict(current=33),
             ata_smart_attributes=dict(table=baseline['Attributes']),sata_phy_event_counters=dict(table=baseline['Phy']))
@@ -28,7 +28,7 @@ class NativeHealthTests(unittest.TestCase):
         def run(command,**kwargs):
             calls.append(command)
             if command[0]=='powershell.exe':return result(dict(disk_number=3))
-            self.assertEqual(kwargs['timeout'],90)
+            self.assertGreater(kwargs['timeout'],0);self.assertLessEqual(kwargs['timeout'],90)
             return result(next(results))
         mm=SimpleNamespace(STOP_PATH='stop',STATE_PATH='state',bounded_read=lambda _: '{}',parse=json.loads,
             pause=Mock(),b_outside_monitor_scope=lambda *_:True,check_identity=Mock(),check_health=Mock())
@@ -45,6 +45,26 @@ class NativeHealthTests(unittest.TestCase):
             health_gate=nullcontext,shutil=SimpleNamespace(disk_usage=lambda _:SimpleNamespace(free=10**10)))
         exec(compile(ast.Module(body=functions,type_ignores=[]),'<actual-native-guard>','exec'),space)
         return space,calls,smart
+
+    def test_native_hard_stop_caps_slow_health_and_never_retries_after_four(self):
+        values=[];space,calls,smart=self.guard(iter(values))
+        class Clock(datetime.datetime):
+            current=datetime.datetime.fromisoformat('2026-10-28T07:59:58+00:00')
+            @classmethod
+            def now(cls,tz=None):return cls.current
+        space['datetime']=SimpleNamespace(datetime=Clock,timezone=datetime.timezone)
+        space['CONFIG']['whole_cycle_deadline_UTC']='2026-10-28T08:00:00+00:00'
+        self.assertEqual(space['time_budget'](90),2)
+        def expired():
+            Clock.current=datetime.datetime.fromisoformat('2026-10-28T08:00:00+00:00')
+            yield subprocess.TimeoutExpired('smartctl',2)
+        values.extend([]);space,calls,_smart=self.guard(expired())
+        space['datetime']=SimpleNamespace(datetime=Clock,timezone=datetime.timezone)
+        space['CONFIG']['whole_cycle_deadline_UTC']='2026-10-28T08:00:00+00:00'
+        with self.assertRaisesRegex(TimeoutError,'hard backup deadline'):space['actual_guard'](0)
+        self.assertEqual(len(calls),1);self.assertFalse(space['health_timeout_used'])
+        with self.assertRaisesRegex(TimeoutError,'hard backup deadline'):space['actual_guard'](0)
+        self.assertEqual(len(calls),1)
 
     def test_timeout_requires_fresh_full_identity_and_all_controls_before_success(self):
         values=[];space,calls,smart=self.guard(iter(values))
@@ -106,7 +126,7 @@ class NativeHealthTests(unittest.TestCase):
 
     def polling(self,interval):
         now=[0.0];health=Mock();identity=Mock(return_value={'disk_number':3});space_check=Mock(return_value=SimpleNamespace(free=10**10))
-        space=dict(last_check=0.0,last_health_check=0.0,CONFIG=dict(protected_B_bytes=0,volume_device=123,
+        space=dict(time_budget=lambda *a:None,last_check=0.0,last_health_check=0.0,CONFIG=dict(protected_B_bytes=0,volume_device=123,
             native_health_poll_seconds=interval),time=SimpleNamespace(monotonic=lambda:now[0]),actual_guard=health,
             control_identity=identity,shutil=SimpleNamespace(disk_usage=space_check),
             os=SimpleNamespace(stat=lambda _:SimpleNamespace(st_dev=123)))

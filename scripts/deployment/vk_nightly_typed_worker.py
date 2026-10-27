@@ -58,7 +58,11 @@ def source_closure(folder,entry='vk_nightly_typed_worker'):
     return {name+'.py' for name in found}
 
 
-def configuration(path,expected):
+def configuration(path,expected,*,folder=None):
+    # An adopting controller may authenticate an earlier immutable package's
+    # DATA/config and source hashes without executing or hotpatching that code.
+    # Normal execution still validates against this installed module folder.
+    folder=Path(folder or Path(__file__).parent)
     path=Path(path)
     if not path.is_absolute() or path.resolve()!=path:raise ValueError('canonical installed configuration required')
     fd=os.open(path,os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK)
@@ -72,9 +76,9 @@ def configuration(path,expected):
     if value.get('format') not in ('vk-nightly-typed-file-worker-v1','vk-nightly-typed-worker-v1','vk-nightly-typed-worker-B-v1'):
         raise ValueError('unknown typed worker configuration')
     for name,digest in value['source_sha256'].items():
-        if not re.fullmatch(r'vk_[a-z0-9_]+\.py',name) or checksum(Path(__file__).with_name(name))!=digest:
+        if not re.fullmatch(r'vk_[a-z0-9_]+\.py',name) or checksum(folder/name)!=digest:
             raise ValueError('installed worker source differs: '+name)
-    required=source_closure(Path(__file__).parent)
+    required=source_closure(folder)
     if not required<=value['source_sha256'].keys():raise ValueError('worker source binding incomplete')
     for name in ('maximum_map_bytes','maximum_members','maximum_source_bytes','chunk_bytes','timeout_seconds'):
         if type(value[name]) is not int or value[name]<1:raise ValueError('positive finite worker budget required: '+name)
@@ -91,10 +95,10 @@ def configuration(path,expected):
         if (not value['desktop']['B_root'].endswith('/objects-v1')
                 or value['B_controls']['B_root']!=value['desktop']['B_root'].rsplit('/',1)[0]+'/controls-v1'):
             raise ValueError('same declared native B control/body recovery root required')
-        validate_control(value['B_controls'],Path(__file__).parent)
+        validate_control(value['B_controls'],folder)
     if value.get('schedule_enabled') is True or value.get('baseline_accepted') is True:
         raise ValueError('file-phase configuration cannot claim whole-cycle acceptance or calendar adoption')
-    validate_desktop(value['desktop'],Path(__file__).with_name('vk_nightly_objects.py').read_text())
+    validate_desktop(value['desktop'],(folder/'vk_nightly_objects.py').read_text())
     if value.get('phase_kind','file-points') not in ('file-points','SQL-points'):raise ValueError('unknown prepared phase')
     if 'qualification' in value:
         qualification=value['qualification']

@@ -26,7 +26,7 @@ on unknown-watch reports. V10's complete namespace and body versions remain vali
 October27 RAM stress reproduced a final inode callback after IN_IGNORED. The fix
 retains at most8192 explicitly retired names, dirties/re-enrolls current names,
 and still rejects unknown WDs, missing parents, overflow and access failures.
-Pinned O_PATH enrollment also closes symlink/name replacement races.224 focused
+Pinned O_PATH enrollment also closes symlink/name replacement races; focused
 checks pass. New V11 enrollment/memory proof and stopped-interval namespace
 reconciliation completed; V14 composes those retained inputs. This never
 retrospectively repairs either stopped epoch.
@@ -40,6 +40,9 @@ retained-map V6 later stopped on contended status metadata. Exact checkpoint and
 both writer leases were verified before optimized V8/SQL5/runtime4 handover.
 They preserve completed versions, selected suffix and original deadlines. Read current handoff;
 whole-baseline/installed calendar acceptance remains open.
+Owner corrected recurring runs to22:00–04:00 Toronto with a hard stop. New source
+caps native health waits and the owned whole-cycle process at that deadline;
+active fileV8 and its completed data remain unchanged.
 Namespace completeness alone does not prove body/SQL/runtime recoverability.
 
 Live MM scope/pointer and current owner guard were reconciled October26. B needs

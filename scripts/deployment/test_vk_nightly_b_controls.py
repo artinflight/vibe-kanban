@@ -476,6 +476,33 @@ class BControlTests(unittest.TestCase):
         self.assertTrue(again['reused_completed_publication']);self.assertEqual(again['revision'],1)
         self.assertEqual(calls,['files','SQL','runtime','candidate','restore'])
 
+    def test_scheduled_binding_survives_retry_and_four_AM_stops_between_phases(self):
+        from datetime import datetime,timedelta,timezone
+        from vk_nightly_cycle_state import run_cycle
+        from vk_nightly_window import bounds
+        from vk_typed_recovery import checksum
+        store,base,adapters,calls,now=self.cycle_fixture()
+        accepted=run_cycle(store,base,**adapters)
+        start,end=bounds(datetime(2099,1,2).date())
+        binding=dict(base,cycle_kind='incremental',started_UTC=start.isoformat(),deadline_UTC=end.isoformat(),
+            scheduled_night='2099-01-02',schedule_template_sha256='a'*64)
+        frozen=store.scheduled_binding(binding)
+        self.assertEqual(frozen['previous_accepted_sha256'],checksum(accepted))
+        with patch.object(store,'accepted',side_effect=AssertionError('retry changed its original predecessor')):
+            self.assertEqual(store.scheduled_binding(dict(binding,previous_accepted_sha256='f'*64)),frozen)
+        now[0]=end-timedelta(seconds=2);before=list(calls)
+        def expired(*_):
+            calls.append('SQL');now[0]=end
+            return dict(more_pending=False,actual_independent_B_SQL_cycle_receipt_reopen_verified=True)
+        with self.assertRaisesRegex(TimeoutError,'original whole-cycle'):
+            run_cycle(store,frozen,**dict(adapters,SQL=expired))
+        self.assertEqual([p['phase'] for p in store.phases(checksum(frozen))],['files'])
+        self.assertEqual(store.accepted(),accepted)
+        self.assertEqual(calls[len(before):],['files','SQL'])
+        with self.assertRaisesRegex(TimeoutError,'original whole-cycle'):
+            run_cycle(store,frozen,**adapters)
+        self.assertEqual(calls[len(before):],['files','SQL'])
+
     def test_failed_restore_or_expired_original_window_cannot_publish_or_reset_progress(self):
         from datetime import timedelta
         from vk_nightly_cycle_state import run_cycle
@@ -842,6 +869,34 @@ class BControlTests(unittest.TestCase):
             self.assertEqual(json.loads(writer.execute('select row from tracking_health').fetchone()[0]),dict(sequence=17))
         finally:thread.join(timeout=3);writer.close()
         self.assertFalse(errors)
+
+    def test_service_reopens_actual_native_completion_not_merely_a_local_success_flag(self):
+        from vk_nightly_service import reopen_component
+        owner=SimpleNamespace(reference=dict(instance='same-real-observer'),check=lambda:None)
+        root=self.root/'existing-owner';root.mkdir()
+        def saved(name,value):
+            p=root/name;raw=json.dumps(value).encode();p.write_bytes(raw);p.chmod(0o600)
+            return str(p),hashlib.sha256(raw).hexdigest()
+        control,sha=saved('controller',dict(worker_config='fixture',worker_config_sha256='1'*64))
+        row=dict(phase='finite-current-file-cycle-complete',more_pending=False,
+                 final_B_delivery=dict(instance='same-real-observer'),completed_members=7)
+        result,_=saved('result',dict(row,at_EDT='fixture-time',actual_independent_B_file_cycle_receipt_reopen_verified=True))
+        db=self.client.connect('service-existing-file',self.sha)
+        db.execute('create table tracking_health(id integer primary key,row text not null)')
+        db.execute('insert into tracking_health values(1,?)',(json.dumps(row),));db.close()
+        worker=dict(B_index_name='service-existing-file',B_checkpoint_sha256=self.sha)
+        ref=dict(config=control,config_sha256=sha,result=result,result_binding=dict(phase=row['phase']))
+        with patch('vk_nightly_service.terminal',return_value=True),patch('vk_nightly_service.configuration',return_value=worker):
+            value=reopen_component(self.client,ref,'files',owner,guard=lambda:None)
+            self.assertEqual(value['completed_members'],7)
+            db=self.client.connect('service-existing-file',self.sha)
+            db.execute('update tracking_health set row=?',(json.dumps(dict(row,optional_SSD_health_mirror_error='work SSD full')),));db.close()
+            value=reopen_component(self.client,ref,'files',owner,guard=lambda:None)
+            self.assertEqual(value['adoption_reopen_optional_mirror_error'],'work SSD full')
+            db=self.client.connect('service-existing-file',self.sha)
+            db.execute('update tracking_health set row=?',(json.dumps(dict(row,completed_members=8)),));db.close()
+            with self.assertRaisesRegex(ValueError,'native B completion receipt differs'):
+                reopen_component(self.client,ref,'files',owner,guard=lambda:None)
 
     def test_new_native_B_state_seed_needs_no_SSD_source_or_hydration(self):
         digest=seed(self.client);db=self.client.connect('new-seed',digest)

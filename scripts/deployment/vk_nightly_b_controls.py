@@ -416,6 +416,46 @@ class Store:
             return value.reconcile_namespace(namespace,qualified,checkpoint=lambda:self.guard(path.stat().st_size+LIMIT),
                 maximum_paths=q['maximum_paths'],allow_unaccepted_epoch_successor=q.get('allow_unaccepted_epoch_successor') is True,
                 source_scope_extension=extension)
+        if op=='replay-current-map':
+            import vk_nightly_current_map as current
+            expected=sha(q['input_sha256']);parts=[];total=0
+            for number,(part,data) in enumerate(db.execute('select part,data from namespace_replay_inputs where sha256=? order by part',(expected,))):
+                if part!=number or not isinstance(data,bytes) or not 0<len(data)<=65536:
+                    raise ValueError('replay input part missing or malformed')
+                parts.append(data);total+=len(data)
+                if total>16*1024**2:raise ValueError('finite replay input exceeded')
+            raw=b''.join(parts)
+            if hashlib.sha256(raw).hexdigest()!=expected:raise ValueError('exact retained replay input required')
+            value=json.loads(raw);report=value['report']
+            mapped=current.CurrentMap();mapped.db=db;mapped.path=path;mapped.inode=tuple(inode)
+            if db.execute("select 1 from sqlite_master where name='namespace_replay_windows'").fetchone():
+                accepted=db.execute('select complete from namespace_replay_windows where sha256=?',(expected,)).fetchone()
+                if accepted:
+                    # An existing window was admitted against the actual B
+                    # ledger before its first commit. Resume its exact saved
+                    # input/cursor or return its completed point; later source
+                    # changes/faults remain the next unaccepted suffix.
+                    return mapped.apply_metadata_replay(report,value['replay'],checkpoint=lambda:self.guard(LIMIT),maximum_paths=q['maximum_paths'])
+            journal,jp,ji,_=self.handles[name(q['journal_index'])]
+            if self.objects.file_identity(jp)[:2]!=ji:raise ValueError('source journal index substituted')
+            epoch=journal.execute('select binding,cursor,ready,terminal from epochs where instance=?',(report['instance'],)).fetchone()
+            if not epoch or not epoch[2] or epoch[3] or epoch[1]!=report['sequence']:
+                raise ValueError('actual durable B journal cursor/health differs')
+            bound=json.loads(epoch[0])
+            if any(bound.get(k)!=report.get(k) for k in ('instance','plan_sha256','scope_sha256','coverage_model')):
+                raise ValueError('actual durable B journal binding differs')
+            if journal.execute('select 1 from faults where instance=? limit 1',(report['instance'],)).fetchone():
+                raise ValueError('actual B journal has an unreconciled fault')
+            events=dict(journal.execute('select path,mask from changes where instance=? and sequence>? order by path',(report['instance'],report['since'])))
+            if events!=report['events']:raise ValueError('replay names differ from actual retained B journal')
+            delivery=journal.execute('select cursor,sha256 from outbox_delivery where instance=?',(report['instance'],)).fetchone()
+            if not delivery or delivery[0]!=report['sequence']:raise ValueError('verified source barrier delivery unavailable')
+            chunks=[data for part,data in journal.execute('select part,data from outbox_report_parts where instance=? order by part',(report['instance'],))]
+            saved=b''.join(chunks)
+            if len(saved)>16*1024**2 or hashlib.sha256(saved).hexdigest()!=delivery[1]:raise ValueError('source barrier delivery changed')
+            if json.loads(saved).get('barrier')!=report.get('barrier'):raise ValueError('replay barrier differs from actual B delivery')
+            mapped=current.CurrentMap();mapped.db=db;mapped.path=path;mapped.inode=tuple(inode)
+            return mapped.apply_metadata_replay(report,value['replay'],checkpoint=lambda:self.guard(path.stat().st_size+LIMIT),maximum_paths=q['maximum_paths'])
         if op=='member-demand':
             from vk_nightly_current_map import decode_member
             totals={};largest=[]

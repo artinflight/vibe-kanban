@@ -56,8 +56,8 @@ V8 PID3433527/start30016200 enrolled891073watches and passed its initial
 barrier/memory check(579.6MiB RSS/780.9MiB cgroup peak,swap0). At09:43UTC
 it later recorded actual kernel queue overflow16384; its ready gate closed.
 INODE_V8_LATER_QUEUE_OVERFLOW preserves the exact fault, old source DB/journal
-and all initial proofs. Only that faulted own unit closed normally; V7 remains
-active. Do not use V8's earlier ready receipt as present journal continuity.
+and all initial proofs. Only that faulted own unit closed normally; V7 was later closed after
+the independently verified V9 handover below. Do not use V8's earlier ready receipt as present journal continuity.
 
 Correction268e17c84 separates kernel-byte draining with a finite16MiB RAM
 FIFO and O(1) type counters. V9 PID3861689/start30300948,epoch
@@ -81,20 +81,20 @@ Reuse the completed namespace and B proof in the corrected map worker; existing
 map rows/carriers/SQL images were not recopied. Actual B preflight already
 matched the old map/root bindings and identified the one required SQL target.
 
-The additive map integration is source-tested, not yet applied: exact B proof
-hash, all old bindings and complete new namespace are required; old absences/
-epochs and SQL requirements survive atomic transition. The logical SQL alias
-adds its regular target to SQL_sources, never implicit raw-main acceptance.
-The source test batch passed80cases, including real buffered barriers and
-native protocol rejection of a wrong proof hash. Prettier remains unavailable.
+The corrected V4 map job completed exit0 at07:28EDT using source89ba9671a:
+920540names,753622existing qualifications reused,0source/body/SSDindex bytes.
+The exact B-derived STATUS is in recovery-map-worker-B-inodes-v4. Before its
+suffix, remaining states are18702qualification/70123capture/205regularSQL;
+64.329GB pending-file logical size is NOT measured transfer demand. The alias
+now has its actual regular target in the map. All old API images remain retained.
 
-Remaining: adopt the completed B namespace with the corrected map worker,
-then replay its journal suffix. Qualify
-17182unresolved versions and capture only required chunks for70167points using
-retained prefix/CAS carriers. Their64342833998logicalB are NOT transfer demand.
-Bind current critical SQL/runtime; accept composed current restore and ordinary
-finite cycle/health; only then enable02:00America/Toronto. Calendar disabled,
-next run null. Root migration is separate. All original restore epochs remain.
+The map's required metadata-suffix consumer is now implemented: exact B ledger/
+barrier validation, persisted bounded inputs, per-batch cursor/history, WAL-main
+invalidation and lost-reply recovery. It closes only its recorded later window;
+body/SQL/current runtime/composed restore remain separate. Read actual private
+LATEST_STATUS and phase receipts before claiming this source work was applied.
+Only after current restore and finite worker acceptance may02:00Toronto enable.
+Calendar remains disabled; next run null. Prettier remains unavailable.
 
 Directory event preservation now reaches616165/2458names, normal B readback
 SHA077bd796277dd50065f27ed29d78657743940c2bbe3218d17016b788284ea356.

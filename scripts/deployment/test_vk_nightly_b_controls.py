@@ -341,6 +341,59 @@ class BControlTests(unittest.TestCase):
             self.assertFalse(result['current_baseline_accepted'])
         qdb.close()
 
+    def test_native_metadata_suffix_requires_actual_B_journal_and_preserves_interrupted_input(self):
+        import stat
+        from vk_nightly_current_map import CurrentMap
+        from vk_nightly_tracking import TrackingStore
+        from vk_nightly_outbox_export import export
+        from vk_nightly_namespace import replay_metadata
+        from vk_nightly_gap_namespace import initialize
+        source=self.root/'source';source.mkdir();(source/'a').write_bytes(b'abc')
+        from vk_prep_common import identity
+        from vk_change_journal import scope
+        from vk_nightly_tracking import source_bindings
+        plan={'sources':[str(source)]};bindings=source_bindings(plan)
+        report=dict(instance='inode-fixture',plan_sha256=identity(plan),scope_sha256=identity(scope(plan)),
+            since=0,sequence=1,ready=True,errors=[],terminal=None,coverage_model='all-selected-inodes-v1',
+            changed=[str(source/'a')],events={str(source/'a'):2},
+            barrier=dict(kernel_drain_completed=True,durable_sequence=1,instance='inode-fixture'))
+        anchor=dict(report,sequence=0)
+        namespace=sqlite3.connect(':memory:');self.addCleanup(namespace.close)
+        initialize(namespace,plan,anchor);namespace.execute('update gap_meta set complete=1');namespace.commit()
+        path=self.root/'replay-map.sqlite'
+        with CurrentMap.held(path,binding={'test':'replay'},create=True) as m:
+            m.compile(namespace,lambda n:None,SQL_sources=[],checkpoint=lambda:None,maximum_paths=10)
+            m.reconcile_namespace(namespace,lambda n:None,checkpoint=lambda:None,maximum_paths=10)
+        digest=self.import_other(path)
+        replay=replay_metadata(plan,report,instance='inode-fixture',since=0,maximum_paths=10,checkpoint=lambda:None)
+        from vk_nightly_metadata_replay import stage_input,durable_report
+        db=self.client.connect('replay-map',digest)
+        sha=stage_input(db,report,replay,guard=lambda:None)
+        self.assertEqual(stage_input(db,report,replay,guard=lambda:None),sha)
+        journal=self.client.connect('replay-ledger',self.sha)
+        TrackingStore.initialize(journal)
+        class Ledger(TrackingStore):
+            def check(self):journal.request('check')
+        ledger=Ledger();ledger.db=journal
+        binding=dict(format='vk-nightly-tracking-v1',instance='inode-fixture',plan_sha256=identity(plan),scope_sha256=identity(scope(plan)),
+            coverage_model='all-selected-inodes-v1',required_root_bindings=bindings,owner_pid=os.getpid(),owner_start_ticks=123)
+        proof=export(binding,report,ledger,guard=lambda:None)
+        self.assertEqual(durable_report(ledger,'inode-fixture',0,guard=lambda:None)['events'],report['events'])
+        with self.assertRaisesRegex(ValueError,'exact retained replay input'):
+            self.client.call(op='replay-current-map',name='replay-map',journal_index='replay-ledger',input_sha256='f'*64,maximum_paths=10)
+        journal.execute("update epochs set ready=0 where instance='inode-fixture'")
+        with self.assertRaisesRegex(ValueError,'cursor/health'):
+            self.client.call(op='replay-current-map',name='replay-map',journal_index='replay-ledger',input_sha256=sha,maximum_paths=10)
+        journal.execute("update epochs set ready=1 where instance='inode-fixture'")
+        value=self.client.call(op='replay-current-map',name='replay-map',journal_index='replay-ledger',input_sha256=sha,maximum_paths=10)
+        self.assertEqual(value['through'],1);self.assertFalse(value['baseline_accepted'])
+        self.assertEqual(db.execute('select suffix_complete from namespace_reconciliation').fetchone(),(1,))
+        self.assertTrue(self.client.call(op='replay-current-map',name='replay-map',journal_index='replay-ledger',input_sha256=sha,maximum_paths=10)['already_complete'])
+        self.assertEqual(db.execute('select count(*) from namespace_replay_windows').fetchone(),(1,))
+        journal.execute("update epochs set cursor=2,ready=0 where instance='inode-fixture'")
+        self.assertTrue(self.client.call(op='replay-current-map',name='replay-map',journal_index='replay-ledger',input_sha256=sha,maximum_paths=10)['already_complete'])
+        db.close();journal.close()
+
     def test_prepared_SQL_worker_keeps_state_on_B_and_reuses_completed_API_point(self):
         import json
         from contextlib import contextmanager

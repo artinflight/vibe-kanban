@@ -635,6 +635,143 @@ class CurrentMap:
             raise
         return dict(already_accepted=False)
 
+    def apply_metadata_replay(self, report, replay, *, checkpoint, maximum_paths):
+        """Apply a pinned Linux metadata replay, retaining every replaced row.
+
+        The authenticated controller must obtain the report from the normal
+        retained-B/live barrier reader and persist it before calling. This is
+        namespace/suffix acceptance only: file bodies, SQL points, original
+        gaps and changes after `through` remain separate requirements. A lost
+        response resumes the identical input/cursor; a different input cannot
+        replace an unfinished replay.
+        """
+        self.check();db=self.db
+        if type(maximum_paths) is not int or not 1<=maximum_paths<=100000:
+            raise ValueError('finite metadata replay bound required')
+        row=db.execute('select binding,complete,suffix_complete from namespace_reconciliation where id=1').fetchone()
+        if not row or row[1]!=1 or not db.execute('select complete from metadata').fetchone()[0]:
+            raise ValueError('completed namespace required before suffix replay')
+        binding=json.loads(row[0]);barrier=report.get('barrier',{})
+        for k in ('instance','plan_sha256','scope_sha256'):
+            if report.get(k)!=binding.get(k) or replay.get(k)!=binding.get(k):
+                raise ValueError('replay observer/plan/scope differs from namespace')
+        if (report.get('coverage_model')!='all-selected-inodes-v1' or report.get('ready') is not True
+                or report.get('errors') or report.get('terminal')
+                or type(report.get('since')) is not int or type(report.get('sequence')) is not int
+                or report['sequence']<report['since'] or barrier.get('kernel_drain_completed') is not True
+                or barrier.get('durable_sequence')!=report['sequence'] or barrier.get('instance')!=report['instance']
+                or replay.get('since')!=report['since'] or replay.get('through')!=report['sequence']
+                or replay.get('required_root_bindings')!=binding.get('required_root_bindings')
+                or replay.get('baseline_accepted') is not False or replay.get('subsequent_changes_replayed') is not False
+                or any(replay.get(k)!=0 for k in ('unchanged_paths_scanned','source_payload_bytes_read','backup_payload_bytes_copied'))):
+            raise ValueError('complete actual full-inode barrier and bounded metadata replay required')
+        changed=report.get('changed');events=report.get('events')
+        observed=replay.get('observations');absent=replay.get('absent_observations');excluded=replay.get('excluded_observations')
+        expanded=replay.get('expanded_subtrees');subtrees=replay.get('absent_subtrees')
+        if (not isinstance(changed,list) or len(changed)!=len(set(changed)) or not isinstance(events,dict)
+                or set(events)!=set(changed) or any(type(m) is not int or not 0<m<2**32 for m in events.values())
+                or not isinstance(observed,dict) or any(not isinstance(x,list) or len(x)!=len(set(x)) for x in (absent,excluded,expanded,subtrees))):
+            raise ValueError('complete exact replay names/events required')
+        names=sorted(set(observed)|set(absent)|set(excluded))
+        if (len(names)>maximum_paths or set(observed)&set(absent) or set(observed)&set(excluded)
+                or set(absent)&set(excluded) or not set(changed)<=set(names)
+                or not set(subtrees)<=set(absent) or not set(expanded)<=set(observed)):
+            raise ValueError('replay omitted or contradicted an actual changed path')
+        roots=set(binding['required_root_bindings'])|{v['resolved'] for v in binding['required_root_bindings'].values() if v}
+        def under(p,r):return p==r or p.startswith(r.rstrip('/')+'/')
+        for path in names:
+            if not isinstance(path,str) or not path.startswith('/'):raise ValueError('canonical replay path required')
+            key(path[1:])
+            if not any(under(path,r) for r in roots):raise ValueError('replay escaped bound roots')
+            if path not in events and not any(under(path,r) for r in expanded):
+                raise ValueError('extra replay name lacks changed-directory expansion')
+        for path in expanded:
+            if (path not in events or not events[path]&0x40000000 or not events[path]&(0x100|0x80)
+                    or observed[path].get('kind')!='directory'):
+                raise ValueError('only actual created/moved-in directories may expand')
+        if any(not events.get(p,0)&0x40000000 for p in subtrees):raise ValueError('absent subtree lacks directory event')
+        raw=json.dumps(dict(report=report,replay=replay),sort_keys=True,separators=(',',':'),allow_nan=False).encode()
+        if len(raw)>16*1024**2:raise ValueError('bounded replay input required')
+        sha=hashlib.sha256(raw).hexdigest()
+        db.execute('create table if not exists namespace_replay_windows(sha256 text primary key,since integer,through integer,last_name text,complete integer,summary text) without rowid')
+        db.execute('create table if not exists namespace_replay_history(window_sha256 text,name text,old_state text,row blob,disposition text,primary key(window_sha256,name)) without rowid')
+        prior=db.execute('select since,through,last_name,complete,summary from namespace_replay_windows where sha256=?',(sha,)).fetchone()
+        if prior and prior[3]:return dict(json.loads(prior[4]),already_complete=True)
+        unfinished=db.execute('select sha256 from namespace_replay_windows where complete=0').fetchall()
+        if unfinished and unfinished!=[(sha,)]:raise ValueError('resume exact retained unfinished replay input')
+        if not prior:
+            previous=db.execute('select max(through) from namespace_replay_windows where complete=1').fetchone()[0]
+            expected=binding['start_sequence'] if previous is None else previous
+            if report['since']!=expected:raise ValueError('metadata suffix cursor gap or rewind')
+            db.execute('begin immediate')
+            try:
+                db.execute('insert into namespace_replay_windows values(?,?,?,?,0,NULL)',(sha,report['since'],report['sequence'],''))
+                db.execute('update namespace_reconciliation set suffix_complete=0 where id=1')
+                db.execute('commit')
+            except BaseException:
+                if db.in_transaction:db.execute('rollback')
+                raise
+        last=prior[2] if prior else ''
+        sources={p for p, in db.execute('select path from SQL_sources')}
+        def retain(name,subtree=False):
+            if subtree:
+                lo=name+'/';hi=name+'0';condition='name>=? and name<?';args=(lo,hi)
+            else:condition='name=?';args=(name,)
+            db.execute('insert or ignore into namespace_replay_history select ?,name,state,row,? from members where '+condition,
+                       (sha,'later-journal-replaced-or-absent',*args))
+            db.execute('delete from members where '+condition,args)
+        for offset in range(0,len(names),128):
+            batch=[p for p in names[offset:offset+128] if p>last]
+            if not batch:continue
+            checkpoint();self.check();db.execute('begin immediate')
+            try:
+                for path in batch:
+                    name=path[1:]
+                    if path in excluded:continue
+                    old=db.execute('select state,row from members where name=?',(name,)).fetchone()
+                    if path in absent:
+                        retain(name)
+                        if path in subtrees:retain(name,True)
+                        continue
+                    observation=observed[path];version=None
+                    if old and observation.get('kind')=='file':
+                        candidate=decode_member(old[1]).get('qualification')
+                        if (candidate and candidate.get('source_identity')==observation['identity']
+                                and all(candidate['row'].get(k)==observation[k] for k in ('mode','uid','gid','mtime_ns','bytes','xattrs'))):version=candidate
+                    state,value=classify(name,observation,version,SQL_sources=sources)
+                    retain(name)
+                    if observation['kind']!='directory':retain(name,True)
+                    db.execute('insert into members values(?,?,?)',(name,state,encode_member(value)))
+                    if state=='SQLite-needs-image':sources.add(path);db.execute('insert or ignore into SQL_sources values(?)',(path,))
+                last=batch[-1]
+                db.execute('update namespace_replay_windows set last_name=? where sha256=?',(last,sha))
+                checkpoint();self.check();db.execute('commit')
+            except BaseException:
+                if db.in_transaction:db.execute('rollback')
+                raise
+        # WAL-only changes invalidate the consistent main point even when the
+        # main inode did not change. The old image stays in acceptance history.
+        affected=sorted({source for source in sources if any(p in events for p in (source,source+'-wal',source+'-shm',source+'-journal'))})
+        checkpoint();db.execute('begin immediate')
+        try:
+            for source in affected:
+                name=source[1:];old=db.execute('select state,row from members where name=?',(name,)).fetchone()
+                if not old or old[0] in ('symlink','SQLite-needs-image'):continue
+                value=decode_member(old[1]);retain(name)
+                db.execute('insert into members values(?,?,?)',(name,'SQLite-needs-image',encode_member(dict(source=source,
+                    namespace=value.get('namespace'),previous_SQL_point=value.get('SQL_point'),journal_suffix_requires_API=True))))
+            result=dict(window_sha256=sha,instance=report['instance'],since=report['since'],through=report['sequence'],
+                replayed_paths=len(names),changed_paths=len(changed),unchanged_paths_scanned=0,source_payload_bytes_read=0,
+                backup_payload_bytes_copied=0,journal_suffix_complete_through=report['sequence'],
+                baseline_accepted=False,original_epoch_repaired=False,subsequent_changes_replayed=False)
+            db.execute('update namespace_replay_windows set complete=1,summary=? where sha256=?',(json.dumps(result,sort_keys=True,separators=(',',':')),sha))
+            db.execute('update namespace_reconciliation set suffix_complete=1 where id=1')
+            checkpoint();self.check();db.execute('commit')
+        except BaseException:
+            if db.in_transaction:db.execute('rollback')
+            raise
+        return result
+
     def refresh_unresolved(self,qualified,*,checkpoint,maximum_paths,SQL_sources=(),after='',progress=lambda _:None):
         """Refresh only unresolved exact names from newer retained observations.
 

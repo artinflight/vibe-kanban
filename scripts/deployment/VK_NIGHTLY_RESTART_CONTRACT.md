@@ -162,3 +162,24 @@ Actual adoption maps20,475 members across41 completed components,14,441 regular
 versions/14.118GB. These match their old selected requests, not present-source
 acceptance. The remaining old file-request count/budget is not a fresh transfer
 measurement; qualify older carriers and changed versions before admission.
+
+## Durable metadata suffix application
+
+`vk_nightly_metadata_replay` reads a verified B-delivered barrier and retained
+changed-name ledger. Linux `replay_metadata` observes only those names and actual
+created/moved-in subtrees, preserving declared exclusions and root bindings.
+Inputs are hash-bound, chunked control metadata on B; no source body or SSD index
+is staged. The native `replay-current-map` operation verifies the actual B epoch,
+cursor, event masks and delivered barrier before applying an unfinished window.
+A caller-supplied ready flag cannot replace these records.
+
+Replaced/absent member rows remain in replay history. Each bounded transaction
+commits its cursor; interrupted work resumes the identical input, and a lost
+reply returns its completed point without repeating the changes. A new replay
+clears suffix readiness until its final commit. A WAL-only event invalidates the
+main SQL point for fresh API qualification; the old image/proof remains retained.
+
+This closes only the namespace suffix through its recorded sequence. Later
+source changes, pending bodies/SQL, original-epoch gaps, composed restore and
+runtime binding remain explicit. It does not enable a calendar or authorize a
+backend restart. Unchanged workspaces incur no inventory or payload read.

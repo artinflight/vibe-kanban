@@ -171,7 +171,7 @@ def replay_metadata(plan, report, *, instance, since, maximum_paths, checkpoint)
     bindings = source_bindings(plan)
     roots = set(plan['sources']) | {b['resolved'] for b in bindings.values() if b is not None}
     exclusions = Exclusions(plan)
-    observations, absent, expansions = {}, [], []
+    observations, absent, expansions, excluded = {}, [], [], []
 
     def within(path, root):
         return path == root or path.startswith(root.rstrip('/') + '/')
@@ -181,8 +181,10 @@ def replay_metadata(plan, report, *, instance, since, maximum_paths, checkpoint)
                 or '..' in Path(raw).parts or '\0' in raw
                 or not any(within(raw, root) for root in roots)):
             raise ValueError('replay path escaped declared roots/explicit alias target')
-        if exclusions(raw) or raw in observations or raw in absent:
+        if exclusions(raw):
+            if raw not in excluded:excluded.append(raw)
             return
+        if raw in observations or raw in absent:return
         if len(observations) + len(absent) >= maximum_paths:
             raise ValueError('namespace replay exceeds bounded path budget')
         checkpoint()
@@ -218,6 +220,8 @@ def replay_metadata(plan, report, *, instance, since, maximum_paths, checkpoint)
     if source_bindings(plan) != bindings:
         raise ValueError('source root changed during bounded metadata replay')
     return dict(instance=instance, since=since, through=report['sequence'], observations=observations,
+                plan_sha256=report['plan_sha256'],scope_sha256=report['scope_sha256'],
+                required_root_bindings=bindings,excluded_observations=excluded,
                 absent_observations=absent,
                 absent_subtrees=[p for p in absent if events.get(p, 0) & 0x40000000],
                 expanded_subtrees=minimal, unchanged_paths_scanned=0,

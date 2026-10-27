@@ -27,7 +27,7 @@ from vk_prep_common import save
 from vk_nightly_desktop_controls import DesktopControls,validate_control
 from vk_nightly_b_controls import current_map,NativeControlDeferred
 from vk_nightly_b_tracker import write_health
-from vk_nightly_sql_cohort import inherit
+from vk_nightly_sql_cohort import inherit,statistics as SQL_statistics
 
 
 class ResourceDeferred(OSError):pass
@@ -168,8 +168,7 @@ def run_SQL(config,*,backend=None):
             status=dict(phase=phase,worker_PID=os.getpid(),completed_SQL_images=len(state['completed']),
                 requested_SQL_images=len(config['SQL_sources']),deferred_SQL_images=len(state['deferred']),
                 pending_SQL_partial_images=len(state['partial']),baseline_accepted=False,schedule_enabled=False,
-                new_B_SQL_payload_encoded_bytes=sum(v.get('new_B_encoded_payload_bytes',0) for v in state['completed'].values()),
-                source_API_image_bytes=sum(v.get('source_API_image_bytes',0) for v in state['completed'].values()),
+                **SQL_statistics(state),
                 old_native_images_reused=sum(v.get('independent',{}).get('reused_accepted_independent_SQL_image',False) for v in state['completed'].values()),
                 OS_SSD_payload_bytes=0,elapsed_seconds=time.monotonic()-started)
             if backend is None:save(state_path,state);save(Path(config['status']),status)

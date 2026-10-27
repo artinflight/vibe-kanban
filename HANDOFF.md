@@ -57,10 +57,20 @@ accept the complete composed descriptor/readback. Integrate ordinary bounded
 cycle/health and only then enable02:00America/Toronto. Calendar disabled/next
 run null. Root migration is separate. All original restore/components remain.
 
+Sole new SQL phase vk-nightly-B-current-SQL-v7-20261027 PID413807/start27699116
+uses immutable a775fa6ff, configSHA
+0a29bff0fc07af5b61b99c1cb85b6d2a0279f6d1409e0d10d65ae9df3a5b25b1.
+It inherited138points and handles only66new names. Do not duplicate it.
+Its original progress counters include inherited totals; preserve raw receipts
+and use tested SQL cohort statistics to separate incremental bytes. Local
+package434176allocatedB plus bounded health/finite log fits measured1MiB new
+control envelope, preserving the unchanged2GiB SSD floor. No source body onSSD.
+
 Current change also retains genuine access/STOP/corruption failures, treats
 only real native BUSY/competing leases as temporary, and repeats full native
-B identity/SMART admission at final acceptance. Hosted exact e8826e294 passed
-recovery/general CI; new source requires its own focused/hosted checks.
+B identity/SMART admission at final acceptance. Exact a775fa6ff passed715hosted recovery tests/1skip and86focused RAM
+regressions; later accounting correction passed9focused tests and needs its
+own exact-head CI. Full current baseline and schedule remain unaccepted.
 Required formatter attempted: Rustpassed, Prettier unavailable.
 Complete prior pickup is retained in
 [the dated archive](HANDOFF_NIGHTLY_HISTORY_20261027_0124.md), bound by

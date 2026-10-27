@@ -36,6 +36,18 @@ has been changed. A10000-file disposable RAM trial observed25672KiB Python
 peakRSS and26140672B cgroup current memory; full-scale memory/enrollment proof
 is still required. No physical OOM or causal host-pressure claim is made.
 
+The admitted204-name SQL successor inherits138points and captures only66new
+API points. Its immutable package is434176allocatedB; the measured1MiB local
+metadata envelope includes bounded health and finite run output while keeping
+the2GiB SSD floor. Source API/independent images use bounded RAM; durable SQL
+phase state, growing journals and compressed bodies go directly to B. The new
+reporting helper separates inherited component totals from incremental cohort
+transfer demand without rewriting earlier raw receipts.
+
+After full inode enrollment, the newly established alias gap needs one explicit
+metadata reconciliation with that coverage, reusing matching verified bodies.
+Neither the old383-name suffix nor a new ready flag alone repairs that gap.
+
 Current complete baseline, alias-gap disposition, ordinary cycle, health and
 schedule are unaccepted. Calendar stays disabled, next run null. Remaining
 ordinary logical sizes are not net transfer demand; retained prefixes and CAS

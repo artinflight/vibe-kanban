@@ -7,6 +7,23 @@ in their original ledger. No live database access or baseline acceptance here.
 import copy
 
 
+def statistics(state):
+    """Separate provenance totals from this cohort's incremental work.
+
+    Accepted records retain their original byte counts when inherited. Summing
+    those as new transfer demand would falsely charge completed components.
+    These are component-ledger totals, not a per-attempt socket byte counter.
+    """
+    inherited={name for row in state.get('inherited_SQL_points',[]) for name in row['source_names']}
+    completed=state['completed'];new=[r for name,r in completed.items() if name not in inherited]
+    return dict(accepted_SQL_points_inherited_without_recopy=len(inherited & set(completed)),
+                new_images_in_current_cohort=len(new),
+                new_B_SQL_payload_encoded_bytes=sum(r.get('new_B_encoded_payload_bytes',0) for r in new),
+                source_API_image_bytes=sum(r.get('source_API_image_bytes',0) for r in new),
+                accepted_SQL_payload_encoded_bytes_including_inherited_points=sum(r.get('new_B_encoded_payload_bytes',0) for r in completed.values()),
+                accepted_API_image_bytes_including_inherited_points=sum(r.get('source_API_image_bytes',0) for r in completed.values()))
+
+
 def inherit(target,previous,*,reference,verify):
     if (target['binding']['B_root']!=previous['binding']['B_root']
             or target['binding']['catalog_sha256']!=previous['binding']['catalog_sha256']):

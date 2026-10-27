@@ -34,9 +34,11 @@ A later V10 complete namespace and18539-point qualification stage now provide
 reusable inputs; the current B-only composition resumes those exact results.
 Additive map integration requires that actual proof and full later namespace,
 retains old epochs/absences and explicitly enrolls the critical SQL target.
-The B-only namespace completed. V14 map composition runs; its installed serial
-file successor awaits exact success before consuming only unresolved versions.
-Baseline/calendar stay open.
+The B-only namespace and V14 composition completed with independent reopen.
+After a native health-command timeout, fresh actual B health passed and the
+retained-map V5 continuation is installed. SQL V3 and the finite runtime component
+are queued serially behind exact verified predecessors. Read current handoff;
+whole-baseline/installed calendar acceptance remains open.
 Namespace completeness alone does not prove body/SQL/runtime recoverability.
 
 Live MM scope/pointer and current owner guard were reconciled October26. B needs

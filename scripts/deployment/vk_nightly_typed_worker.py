@@ -223,7 +223,7 @@ def run_SQL(config,*,backend=None):
         if fd is not None:os.close(fd)
 
 
-def run_B(config):
+def run_B(config,*,at_component_boundary=lambda:None):
     """Authoritative prepared phase on B, with only a bounded health mirror."""
     started=time.monotonic();guard=lambda:host_guard(config,started)
     guard()
@@ -265,11 +265,18 @@ def run_B(config):
                     control_storage='native-Desktop-B',baseline_accepted=False,schedule_enabled=False,
                     OS_SSD_payload_bytes=0,OS_SSD_index_journal_bytes=0,elapsed_seconds=time.monotonic()-started))
                 last_status[0]=time.monotonic()
+                # Called after a completed protocol operation, never while a
+                # body upload/readback is streaming. Journal delivery can use
+                # this serial boundary without another native health poller.
+                at_component_boundary()
             with DesktopObjects(config['desktop'],guard=guard) as remote:
-                report(dict(phase='capturing-qualified-file-points'),force=True)
+                reuse=controls.client.recover_completed_files(config['B_index_name'],
+                    on_progress=lambda value:report(value,force=True))
+                report(dict(phase='capturing-qualified-file-points',completed_file_reuse=reuse),force=True)
                 result=capture_pending(current,remote.client,guard=guard,maximum_members=config['maximum_members'],
                     maximum_source_bytes=config['maximum_source_bytes'],chunk_bytes=config['chunk_bytes'],
                     read_prefix=lambda prefix,sink:read_prefix(remote,prefix,sink),on_progress=report)
+                result['completed_file_reuse']=reuse
                 report(dict(result,native_admission=remote.ready),force=True)
             return result
 

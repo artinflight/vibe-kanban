@@ -554,6 +554,11 @@ class Store:
             if json.loads(saved).get('barrier')!=report.get('barrier'):raise ValueError('replay barrier differs from actual B delivery')
             mapped=current.CurrentMap();mapped.db=db;mapped.path=path;mapped.inode=tuple(inode)
             return mapped.apply_metadata_replay(report,value['replay'],checkpoint=lambda:self.guard(path.stat().st_size+LIMIT),maximum_paths=q['maximum_paths'])
+        if op=='reuse-completed-file-carriers':
+            import vk_nightly_current_map as current
+            value=current.CurrentMap();value.db=db;value.path=path;value.inode=tuple(inode)
+            return value.reuse_pending_carriers(lambda *_:(),checkpoint=lambda:self.guard(LIMIT),
+                maximum_paths=q['maximum_paths'],after=q.get('after',''))
         if op=='index-completed-file-carriers':
             import vk_nightly_current_map as current
             value=current.CurrentMap();value.db=db;value.path=path;value.inode=tuple(inode)
@@ -735,6 +740,25 @@ class Client:
                 or value['error_type']=='OperationalError' and value['error'] in ('database is locked','database table is locked'))
             raise (NativeControlDeferred if temporary else NativeControlError)(value)
         return value['result']
+    def recover_completed_files(self,key,*,on_progress=lambda _:None):
+        """Finite keyset metadata passes before any pending body upload."""
+        after=('', '')
+        while True:
+            indexed=self.call(op='index-completed-file-carriers',name=key,maximum_paths=8192,after=after)
+            on_progress(dict(indexed,phase='indexing-retained-completed-body-proofs'))
+            if not indexed['more_names']:break
+            after=indexed['last_key']
+        after='';reused=raw_bytes=0
+        while True:
+            batch=self.call(op='reuse-completed-file-carriers',name=key,maximum_paths=8192,after=after)
+            reused+=batch['completed_file_points_reused'];raw_bytes+=batch['retained_file_bytes_reused']
+            on_progress(dict(batch,phase='reusing-completed-body-points-before-transfer',
+                completed_file_points_reused_this_phase=reused,retained_raw_bytes_reused_this_phase=raw_bytes))
+            if not batch['more_names']:break
+            after=batch['last_name']
+        return dict(completed_file_points_reused=reused,retained_raw_bytes_reused=raw_bytes,
+                    source_payload_bytes_read=0,backup_payload_bytes_copied=0)
+
     def seal_checkpoint(self,key,binding,*,on_progress=lambda _:None):
         """Seal a committed native index and independently accept exact bytes.
 

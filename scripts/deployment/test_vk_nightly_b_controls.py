@@ -667,6 +667,51 @@ class BControlTests(unittest.TestCase):
         self.assertEqual(second['completed_members'],1);self.assertFalse(second['more_pending'])
         self.assertFalse((self.root/'SQL_STATE.private.json').exists());self.assertFalse((self.root/'SQL_PHASE.lease').exists())
 
+    def test_actual_worker_serial_boundaries_and_completed_body_recovery_before_upload(self):
+        import vk_nightly_typed_worker as worker
+        from vk_nightly_current_map import CurrentMap
+        from vk_nightly_namespace import observe
+        from vk_nightly_qualification import qualify_file,encode_observation
+        source=self.root/'serial-point';source.write_bytes(b'actual serial point')
+        point=qualify_file(source,maximum_bytes=1024,journal=dict(ready=True,errors=[],instance='fixture',
+            sequence=1,scope_sha256='a'*64,plan_sha256='b'*64),carriers=lambda *_:[],guard=lambda:None)
+        ns=sqlite3.connect(':memory:');self.addCleanup(ns.close);ns.execute('create table namespace(name text primary key,row blob)')
+        member=str(source)[1:];ns.execute('insert into namespace values(?,?)',(member,encode_observation(observe(source))))
+        path=self.root/'serial-map.sqlite';binding={'fixture':'serial file worker'}
+        with CurrentMap.held(path,binding=binding,create=True) as m:
+            m.compile(ns,lambda _:point,SQL_sources=[],checkpoint=lambda:None,maximum_paths=10)
+            pending=m.db.execute('select row from members where name=?',(member,)).fetchone()[0]
+        digest=self.import_other(path);folder=str(Path(__file__).parent);streaming=[False];boundaries=[]
+        @contextmanager
+        def body(config,*,guard):
+            code='import sys;sys.path.insert(0,'+repr(folder)+');from vk_nightly_objects import receive;receive('+repr(str(self.objects))+',sys.stdin.buffer,sys.stdout.buffer,guard=lambda n:None,maximum_object_bytes=65536)'
+            p=subprocess.Popen([sys.executable,'-B','-u','-c',code],stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+            client=ObjectClient(p.stdout,p.stdin,guard=lambda:None,ram_root=self.root,maximum_object_bytes=65536)
+            for name in ('ensure','verify'):
+                original=getattr(client,name)
+                def wrapped(*args,_original=original,**kwargs):
+                    streaming[0]=True
+                    try:return _original(*args,**kwargs)
+                    finally:streaming[0]=False
+                setattr(client,name,wrapped)
+            try:yield SimpleNamespace(client=client,ready={'fixture':True})
+            finally:p.stdin.close();p.wait(timeout=10);p.stdout.close();p.stderr.close()
+        @contextmanager
+        def controls(config,*,guard):yield SimpleNamespace(client=self.client)
+        def boundary():self.assertFalse(streaming[0]);boundaries.append(True)
+        config=dict(format='vk-nightly-typed-worker-B-v1',B_controls={},B_index_name='serial-map',B_checkpoint_sha256=digest,
+            map_binding=binding,status=str(self.root/'serial-status'),desktop={},maximum_members=10,maximum_source_bytes=1024,chunk_bytes=64)
+        with patch.object(worker,'DesktopControls',controls),patch.object(worker,'DesktopObjects',body),patch.object(worker,'host_guard',lambda *_:None):
+            first=worker.run_B(config,at_component_boundary=boundary)
+            self.assertEqual(first['completed_members'],1);self.assertGreaterEqual(len(boundaries),3)
+            with current_map(self.client,'serial-map',digest,binding=binding) as m:
+                m.db.execute("update members set state='file-needs-capture',row=? where name=?",(pending,member))
+            with patch('vk_nightly_typed_capture.capture_qualified_version',side_effect=AssertionError('accepted body copied again')):
+                second=worker.run_B(config,at_component_boundary=boundary)
+            self.assertEqual(second['completed_members'],0);self.assertFalse(second['more_pending'])
+            self.assertEqual(second['completed_file_reuse']['completed_file_points_reused'],1)
+            self.assertEqual(second['completed_file_reuse']['backup_payload_bytes_copied'],0)
+
     def test_native_file_acceptance_lost_reply_reopens_without_duplicate_completed_copy(self):
         from vk_nightly_current_map import CurrentMap
         from vk_nightly_namespace import observe

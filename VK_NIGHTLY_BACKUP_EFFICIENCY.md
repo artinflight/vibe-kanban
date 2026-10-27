@@ -1683,3 +1683,15 @@ refuse adoption. Interrupted unaccepted partials and working originals survive.
 Completed file-history lookup separately validates original accepted-row hashes
 and ordered-readback proofs before reusing their bodies. Its bounded keyset
 index and pending resolution perform no source/body read or transfer.
+
+The native typed capture worker now performs completed-file-history reuse
+before upload under its existing body-writer lease. Durable source forwarding
+can run at a serial completed-component boundary; it need not compete with
+upload/readback using a background native-health session. This retains the
+same object/STOP/hardware checks and original map/body/config identities.
+
+The focused integration suite now covers an actual native file transfer followed
+by a later demotion to pending: the worker reuses its accepted history body
+without another source capture or upload. Journal boundary callbacks are
+observed outside both object upload and independent readback. The new native
+health/snapshot/worker/current-map/composed-reader suite passes122tests.

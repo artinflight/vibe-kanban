@@ -40,3 +40,20 @@ indexed and hash-bound by [the archive manifest](CONTINUITY_ARCHIVE.json).
 
 Current release coordination, newer Sidebar adoption and remaining private gates:
 [October 17 release status](VK_RELEASE_COORDINATION_20261017.md).
+
+## Current branch correction: modular watcher wake in VK Dev, October 27
+
+The earlier sections above are preserved continuity. This branch now migrates
+the modular watcher source into [scripts/watcher-events](scripts/watcher-events/README.md)
+from the misplaced Operations PR217. Base is verified fork/staging
+`5b43524ea35b2eb5dd80d0881dc8445489f4442f`. Keep the existing native owner/PR277
+as the integration path; Disk remains the existing cleanup owner. No competing
+dispatcher, native-owner branch edit or production change is included.
+
+156 isolated client tests passed with0 skips; ops governance passed. Full format
+completed Rust formatting then failed on missing frontend Prettier. Full Vibe
+check/lint/native tests and current-client/native pairing remain unrun. This is
+source custody, not merge/release acceptance. Native independent-job lifetime
+and arrival-race proof, reviewed saved bindings/access, combined candidate and
+latest-data recovery, and actual Disk/second-connection no-restart acceptance
+remain with existing T64/Staging owners. Preserve original histories and state.

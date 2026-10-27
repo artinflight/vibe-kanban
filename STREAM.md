@@ -36,7 +36,7 @@ Additive map integration requires that actual proof and full later namespace,
 retains old epochs/absences and explicitly enrolls the critical SQL target.
 The B-only namespace and V14 composition completed with independent reopen.
 After a native health-command timeout, fresh actual B health passed and the
-retained-map V5 continuation is installed. SQL V3 and the finite runtime component
+retained-map V6 continuation uses serialized native health observations. SQL V4 and the finite runtime component
 are queued serially behind exact verified predecessors. Read current handoff;
 whole-baseline/installed calendar acceptance remains open.
 Namespace completeness alone does not prove body/SQL/runtime recoverability.

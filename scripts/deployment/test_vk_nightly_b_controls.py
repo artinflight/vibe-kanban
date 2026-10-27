@@ -394,6 +394,32 @@ class BControlTests(unittest.TestCase):
         self.assertTrue(self.client.call(op='replay-current-map',name='replay-map',journal_index='replay-ledger',input_sha256=sha,maximum_paths=10)['already_complete'])
         db.close();journal.close()
 
+    def test_native_prefix_attachment_uses_the_retained_base_without_copy_or_acceptance(self):
+        import stat
+        from vk_nightly_current_map import CurrentMap,decode_member
+        from vk_nightly_qualification import encode_observation
+        source=self.root/'pending-map.sqlite';ns=sqlite3.connect(':memory:');self.addCleanup(ns.close)
+        ns.execute('create table namespace(name text primary key,row blob)')
+        meta=dict(mode=0o600,uid=1000,gid=1000,mtime_ns=123,xattrs={})
+        obs=dict(meta,kind='file',bytes=3,identity=[1,2,stat.S_IFREG|0o600,3,123,456,1000,1000,1])
+        ns.execute('insert into namespace values(?,?)',('home/a',encode_observation(obs)))
+        point=dict(source='/home/a',source_identity=obs['identity'],state='qualified-pending-body',row=dict(meta,kind='file',bytes=3,sha256='a'*64))
+        with CurrentMap.held(source,binding={'test':'prefix'},create=True) as m:
+            m.compile(ns,lambda n:point,SQL_sources=[],checkpoint=lambda:None,maximum_paths=10)
+        digest=self.import_other(source)
+        bp=self.root/'base.sqlite';base=sqlite3.connect(bp)
+        base.execute('create table provenance(source_catalog_sha256 text,restore_proof_sha256 text)')
+        base.execute('insert into provenance values(?,?)',('b'*64,'c'*64))
+        base.execute('create table bodies(sha256 text,bytes integer,name text)')
+        base.execute('insert into bodies values(?,?,?)',('d'*64,2,'home/a'));base.commit();base.close()
+        bdigest=self.import_other(bp);base=self.client.connect('base-prefixes',bdigest,readonly=True)
+        db=self.client.connect('pending-map',digest)
+        result=self.client.call(op='attach-base-prefixes',name='pending-map',base_index='base-prefixes',maximum_paths=128)
+        self.assertEqual(result['candidate_prefix_bytes'],2);self.assertEqual(result['backup_payload_bytes_copied'],0)
+        state,raw=db.execute('select state,row from members').fetchone()
+        self.assertEqual(state,'file-needs-capture');self.assertEqual(decode_member(raw)['candidate_accepted_prefix']['independent_proof_sha256'],'c'*64)
+        db.close();base.close()
+
     def test_prepared_SQL_worker_keeps_state_on_B_and_reuses_completed_API_point(self):
         import json
         from contextlib import contextmanager

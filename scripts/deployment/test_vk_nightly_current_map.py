@@ -176,6 +176,47 @@ class CurrentMapTests(unittest.TestCase):
         with patch('vk_nightly_current_map.Path',PureWindowsPath):
             self.assertEqual(additive_scope_SQL_sources(previous,current,proof,{'/home/sql'}),['/outside/sql'])
 
+    def test_prefix_metadata_preserves_original_carrier_and_never_accepts_uncopied_tail(self):
+        import copy
+        base=sqlite3.connect(':memory:');self.addCleanup(base.close)
+        base.execute('create table provenance(source_catalog_sha256 text,restore_proof_sha256 text)')
+        base.execute('insert into provenance values(?,?)',('a'*64,'b'*64))
+        base.execute('create table bodies(sha256 text,bytes integer,name text)')
+        base.executemany('insert into bodies values(?,?,?)',[(hashlib.sha256(b'ab').hexdigest(),2,'home/a'),
+            (hashlib.sha256(b'abc').hexdigest(),3,'home/a'),('c'*64,1,'home/b')])
+        pending=copy.deepcopy(self.version);pending['state']='qualified-pending-body';pending['row'].pop('segments')
+        with CurrentMap.held(self.path,binding=self.binding,create=True) as m:
+            self.compile(m,qualified=lambda n:dict(pending,source='/'+n))
+            one=m.attach_base_prefixes(base,checkpoint=lambda:None,maximum_paths=1)
+            self.assertTrue(one['more_names']);self.assertEqual(one['candidate_prefix_bytes'],2)
+            value=decode_member(m.db.execute("select row from members where name='home/a'").fetchone()[0])
+            self.assertEqual(value['candidate_accepted_prefix']['segments'][0]['selector'],'home/a')
+            self.assertEqual(value['candidate_accepted_prefix']['independent_proof_sha256'],'b'*64)
+            self.assertEqual(m.db.execute("select state from members where name='home/a'").fetchone(),('file-needs-capture',))
+            self.assertEqual(m.attach_base_prefixes(base,checkpoint=lambda:None,maximum_paths=1)['prefix_candidates_attached'],0)
+            two=m.attach_base_prefixes(base,checkpoint=lambda:None,maximum_paths=8,after=one['last_name'])
+            self.assertFalse(two['more_names']);self.assertEqual(two['candidate_prefix_bytes'],1)
+            self.assertEqual(two['prefix_bytes_actually_reused'],0)
+
+    def test_prefix_binding_failure_rolls_back_and_bad_base_provenance_refuses(self):
+        import copy
+        base=sqlite3.connect(':memory:');self.addCleanup(base.close)
+        base.execute('create table provenance(source_catalog_sha256 text,restore_proof_sha256 text)')
+        base.execute('insert into provenance values(?,?)',('a'*64,'b'*64))
+        base.execute('create table bodies(sha256 text,bytes integer,name text)')
+        base.execute('insert into bodies values(?,?,?)',('c'*64,1,'home/a'))
+        pending=copy.deepcopy(self.version);pending['state']='qualified-pending-body';pending['row'].pop('segments')
+        with CurrentMap.held(self.path,binding=self.binding,create=True) as m:
+            self.compile(m,qualified=lambda n:dict(pending,source='/'+n));calls=0
+            def fail():
+                nonlocal calls
+                calls+=1
+                if calls==2:raise OSError('synthetic prefix commit failure')
+            with self.assertRaisesRegex(OSError,'prefix commit'):m.attach_base_prefixes(base,checkpoint=fail,maximum_paths=8)
+            self.assertNotIn('candidate_accepted_prefix',decode_member(m.db.execute("select row from members where name='home/a'").fetchone()[0]))
+            base.execute("update provenance set restore_proof_sha256='missing'")
+            with self.assertRaises(ValueError):m.attach_base_prefixes(base,checkpoint=lambda:None,maximum_paths=8)
+
     def test_relocated_pointer_fails_closed_with_provider_instruction_before_SQLite_open(self):
         with tempfile.TemporaryDirectory(dir='/dev/shm') as root:
             p=Path(root)/'moved.sqlite';p.write_bytes(b'VK_NIGHTLY_B_CONTROL_POINTER_V1\n{}\n');p.chmod(0o400)

@@ -534,6 +534,51 @@ class CurrentMap:
                 yield name,raw
                 after=name;count+=1
 
+    def attach_base_prefixes(self,base,*,checkpoint,maximum_paths,after=''):
+        """Reference smaller accepted same-name bodies; never copy or assume append.
+
+        Source transfer must still hash the proposed prefix against source,
+        then independently read it from its existing accepted restore. A prefix
+        mismatch has emitted no tail and permits the ordinary full-point path.
+        Original carrier proof/epoch remain unchanged.
+        """
+        if type(maximum_paths) is not int or not 1<=maximum_paths<=8192:
+            raise ValueError('finite prefix metadata batch required')
+        self.check();checkpoint()
+        if not self.db.execute('select complete from metadata').fetchone()[0]:
+            raise ValueError('finish namespace composition before prefix binding')
+        provenance=base.execute('select source_catalog_sha256,restore_proof_sha256 from provenance').fetchall()
+        if len(provenance)!=1:raise ValueError('exact independently restored base provenance required')
+        for value in provenance[0]:digest(value)
+        batch=self.db.execute("select name,row from members where state='file-needs-capture' and name>? order by name limit ?",(after,maximum_paths)).fetchall()
+        prepared=[];reused=0
+        for name,raw in batch:
+            value=decode_member(raw);row=value['member'];point=value['qualification']
+            if point['source']!='/'+name or point['row']!=row or point['state']!='qualified-pending-body':
+                raise ValueError('exact pending qualified point required for prefix binding')
+            candidates=base.execute('select sha256,bytes,name from bodies where name=? and bytes>0 and bytes<? order by bytes desc',(name,row['bytes'])).fetchall()
+            if not candidates:continue
+            sha,size,selector=candidates[0];digest(sha);key(selector)
+            if type(size) is not int or not 0<size<row['bytes']:raise ValueError('invalid accepted base prefix length')
+            previous=value.get('candidate_accepted_prefix')
+            if previous and previous['bytes']>=size:continue
+            value['candidate_accepted_prefix']=dict(bytes=size,sha256=sha,independent_proof_sha256=provenance[0][1],
+                segments=[dict(layer='accepted-base',selector=selector,bytes=size,sha256=sha)],
+                original_carrier_epoch_preserved=True,source_prefix_equality_not_yet_verified=True)
+            prepared.append((encode_member(value),name));reused+=size
+        self.db.execute('begin immediate')
+        try:
+            self.db.executemany('update members set row=? where name=?',prepared)
+            checkpoint();self.check();self.db.execute('commit')
+        except BaseException:
+            if self.db.in_transaction:self.db.execute('rollback')
+            raise
+        last=batch[-1][0] if batch else after
+        more=self.db.execute("select 1 from members where state='file-needs-capture' and name>? limit 1",(last,)).fetchone() is not None
+        return dict(processed=len(batch),prefix_candidates_attached=len(prepared),candidate_prefix_bytes=reused,
+            last_name=last,more_names=more,source_payload_bytes_read=0,backup_payload_bytes_copied=0,
+            prefix_bytes_actually_reused=0,current_baseline_accepted=False)
+
     def source_phase_check(self):self.check()
 
     def accept_file(self,name,original_sha256,accepted,proof,*,checkpoint):

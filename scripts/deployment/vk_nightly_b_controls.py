@@ -456,6 +456,13 @@ class Store:
             if json.loads(saved).get('barrier')!=report.get('barrier'):raise ValueError('replay barrier differs from actual B delivery')
             mapped=current.CurrentMap();mapped.db=db;mapped.path=path;mapped.inode=tuple(inode)
             return mapped.apply_metadata_replay(report,value['replay'],checkpoint=lambda:self.guard(path.stat().st_size+LIMIT),maximum_paths=q['maximum_paths'])
+        if op=='attach-base-prefixes':
+            import vk_nightly_current_map as current
+            base,bp,bi,_=self.handles[name(q['base_index'])]
+            if self.objects.file_identity(bp)[:2]!=bi:raise ValueError('accepted base catalog substituted')
+            value=current.CurrentMap();value.db=db;value.path=path;value.inode=tuple(inode)
+            return value.attach_base_prefixes(base,checkpoint=lambda:self.guard(path.stat().st_size+LIMIT),
+                maximum_paths=q['maximum_paths'],after=q.get('after',''))
         if op=='member-demand':
             from vk_nightly_current_map import decode_member
             totals={};largest=[]

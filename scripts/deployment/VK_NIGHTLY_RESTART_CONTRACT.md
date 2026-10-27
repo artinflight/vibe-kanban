@@ -183,3 +183,11 @@ This closes only the namespace suffix through its recorded sequence. Later
 source changes, pending bodies/SQL, original-epoch gaps, composed restore and
 runtime binding remain explicit. It does not enable a calendar or authorize a
 backend restart. Unchanged workspaces incur no inventory or payload read.
+
+Before transferring qualified pending points, `attach-base-prefixes` can bind
+smaller same-name bodies from the independently restored base catalog. This is
+only a candidate reference: its source prefix must match the accepted digest,
+and the completed file must pass ordered independent B readback. A mismatch
+emits no tail and falls back to the qualified full point. The prefix retains
+its original restore proof and carrier; candidate byte totals are potential
+reuse, never reported as measured transfer savings.

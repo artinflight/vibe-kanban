@@ -1,4 +1,14 @@
-# October27 — current tracker, durable suffix and ongoing retained-point capture
+# October27, 17:18EDT — overnight performance qualification
+
+The current sole producer remains V6/PID1340112; its SQL/runtime successors wait
+serially. Source `5bf44b4b7` adds separately measured health cadence, query telemetry
+and single independent object readback feeding the whole-file proof.203 focused
+tests pass; the hash-pinned619KB candidate passes metadata-only preflight but is
+unarmed and has not replaced loaded code. Read [overnight acceptance](VK_NIGHTLY_OVERNIGHT_ACCEPTANCE.md)
+for exact measured fixture results, unchanged fault/STOP/identity/capacity checks,
+and required real Desktop/complete-cycle restore timing. Scheduling remains off.
+
+# October27 — earlier tracker and retained-point checkpoint
 
 The owner-raised1048576watch ceiling is verified. Corrected V9 tracks about891k
 inodes without recorded errors; measured585MiB process RSS/1.09GB cgroup total

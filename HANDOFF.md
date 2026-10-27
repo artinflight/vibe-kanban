@@ -1,106 +1,109 @@
-# Nightly commissioning pickup — October27, 16:53EDT
+# Nightly commissioning pickup — October27, 17:18EDT
 
-Workspace604d/PR263 owns the single Nightly package/schedule. Separate worker,
-no backend restart or Staging controller change. Backup bodies/indexes/temp stay
-Desktop B. Preserve all sources, originals, accepted restore/components, failed
-archives/spools/RAM points and actual access/STOP/hardware/resource/owner guards.
+Workspace604d/PR263 owns the single Nightly package and schedule. The owner's
+new explicit focus is reliable overnight incremental completion, measured native
+health/query overhead and actual end-to-end restore before enabling scheduling.
+No backend restart. Backup bodies/index/temp stay Desktop B. Preserve originals,
+accepted162.70GB/137DB/later148/204SQL/components, failed archives/spools and epochs.
 No .pyc tracking, cleanup, history migration, security change or extra spend.
 
-## Actual owners and artifacts
+## Current owners: collect these, never duplicate
 
-Evidence root /mnt/vk-storage/vk-nightly-efficiency-20261017/commissioning-20261026.
-Read LATEST_STATUS.private.json plus each named package RESULT/STOP/status.
-Current MM explicitly excludes B from E/Q/R scope. Old Staging-only B blockers
-are superseded; actual B identity/SMART/PHY/STOP/access/capacity still apply.
+Evidence root /mnt/vk-storage/vk-nightly-efficiency-20261017/commissioning-20261026
+(D); native metadata receipts D/b-controls-v1 (C). LATEST_STATUS.private.json and
+these packages hold exact config/source/installation/result/STOP bindings.
 
 Source V11: vk-nightly-bounded-inode-observer-v11-20261027.service,
 PID3849155/start32997998, epoch31ab8db49caf4f9699c7c0bd75c363a2,
 configSHAe4bb83f02c2e71f8aebc768cb35d6feda255a181bf1cd24aa85d7dbe2c2641ed.
-At16:49 ready/errors0,772076watches; ceiling1048576.
-Fixed bounded local outbox/durable B delivery. No duplicate observer.
-Later namespace785371paths/errors0 and V14 normal B composition are complete;
-never repeat their census. Reuse actual B file/chunk history before source reads.
+Owner-approved1048576 ceiling; about772k watches, actual memory/noOOM evidence
+retained. Bounded local spool/durable B prefix, not a growing local index.
+V14 namespace/composition reopened independently; old stopped gaps remain.
 
-Installed source407ee6ef45f1ad654fc9f555ce12abc47051ad2d, started16:33:13EDT:
-- file-points-worker-B-inodes-v6, vk-nightly-B-current-file-cycle-inodes-v6-20261027.service;
-  PID1340112/start34086993; controllerSHA4db6c37bf9857ddb017e43689b0fdd4dc2eef74c95d71dd278f5ef036dd1fcaf;
-  Same retained map, normal suffix/only unresolved qualification, accepted body
-  and prefix reuse, pending capture/full ordered readback. At16:49 phase842
-  completed/690962787source B/182984603encoded sent. Before transfer it reused
-  eleven completed points/8358573B with0source reads/payload copies.
-- current-SQL-cycle-inodes-v4, vk-nightly-B-current-SQL-cycle-inodes-v4-20261027.service;
-  PID1340115/start34086995; controllerSHA0d7ce6d159ed72677a40ea0cacba171a6f2ef5c70f5ec15918c65e6d75ab27a3;
-  Waits exact successful V6 independent receipt. No current SQL API/capture yet.
-- runtime-component-cycle-v2, vk-nightly-B-runtime-component-cycle-v2-20261027.service;
-  PID1340118/start34087000; controllerSHA0f705683f1902aee14da907c0727112b5e9f15723d01f1e2672ac346244ef551;
-  Waits SQL, then fresh-qualifies/captures/readbacks/seals/adopts route+gateway3200B.
-  Changed prepared runtime versions fail without rewriting the old component.
+Active serial chain uses frozen source407ee6ef45f1ad654fc9f555ce12abc47051ad2d:
+- file-points-worker-B-inodes-v6:
+  vk-nightly-B-current-file-cycle-inodes-v6-20261027.service,
+  PID1340112/start34086993, controllerSHA4db6c37bf9857ddb017e43689b0fdd4dc2eef74c95d71dd278f5ef036dd1fcaf.
+  At17:16,2671additional points/1097182078source bytes/584919356encoded sent;
+  active,~461MB memory current/528MB peak, host fullPSIavg10=0.
+  Eleven earlier points/8358573B reused with0source/body copies before transfer.
+  Same retained map/CAS, actual per-file ordered independent readback. No duplicate.
+- current-SQL-cycle-inodes-v4:
+  vk-nightly-B-current-SQL-cycle-inodes-v4-20261027.service,
+  PID1340115/start34086995, controllerSHA0d7ce6d159ed72677a40ea0cacba171a6f2ef5c70f5ec15918c65e6d75ab27a3;
+  waits exact successful V6 receipt. No current API capture yet.
+- runtime-component-cycle-v2:
+  vk-nightly-B-runtime-component-cycle-v2-20261027.service,
+  PID1340118/start34087000, controllerSHA0f705683f1902aee14da907c0727112b5e9f15723d01f1e2672ac346244ef551;
+  waits SQL, then route/gateway3200B fresh qualification, direct capture/readback,
+  sealed adoption and independent normal reopen. Changed prepared versions fail.
 
-SERIAL dependencies, not competing producers. CPU25%, High1536MiB/Max2GiB,
-Swap0/Tasks64/Restartno. Bounds8h file+8h SQL+1h runtime, predecessor waits
-separate. SQL max512MiB/image,3600s/point; larger measured images defer honestly.
-If needed, fresh-admit a larger RAM phase resuming SAME SQL request/index/cohort,
-not recapturing smaller completed points. Prepared code/control <=16MiB; no SSD body/index or exclusive reservation.
+CPU25%,High1536MiB/Max2GiB,Swap0/Tasks64/Restartno. File8h phase from16:33
+(~00:33EDT Oct28), SQL8h phase, runtime1h; waits bounded separately. These are NOT
+whole-overnight acceptance. SQL image max512MiB: measure actual larger deferrals,
+fresh-admit a larger RAM phase if needed with SAME frozen request/cohort/index;
+never recapture smaller completed points. Code/control preparations <=16MiB,
+not a lifetime data quota. No OS/SSD bodies/index/temp or exclusive reserve.
 
-## Health timeout recovery
+## Measured performance correction — prepared, not live
 
-V4 stopped15:46 and V5 stopped16:12 on repeated15s native smartctl observations;
-all predecessors are terminal and preserved. V5 retained466completed points.
-Native admission passed, unchanged identity/counters/free~1.509TB.
-Serial SMART took1.17–1.41s; slow-call cause is unproven;
-do not claim physicalOOM, hardware damage or proven probe-conflict causation.
+Read [overnight qualification](VK_NIGHTLY_OVERNIGHT_ACCEPTANCE.md).
+Tested/pushed source5bf44b4b7af213dac5a962defa742f40372f61a3:203focused tests,
+ops/diff pass; Rust formatting passes, fullformat stops at absent Prettier.
+C/NATIVE_HEALTH_LATENCY_DIAGNOSIS_20261027.private.json records successful native
+reads1.172/1.343/1.406s. V4/V5 previously stopped at15s observation timeouts;
+slow-call cause unproven, not evidence of physicalOOM/drive failure.
+V6 already has serialized finite90s native observations, full fail-closed controls.
 
-V6 serializes native health reads with a finite90s observation.
-No IO while unknown; fresh STOP/MM/identity/counters remain required. Transport
-wait covers finite child waits. The15s deadline was agent-added. Windows cross-process/guard checks passed.
-Read b-controls-v1 native health diagnosis/guard/cross-process acceptance receipts.
-Preserve old STOPs.
-Collect actual V6 result; do not launch an unchanged duplicate on an observation timeout.
+Explicit60s full health retains five-second STOP/MM/kernel identity, capacity
+every guard and fresh full entry/final checks; no shared cache. Due unknowns
+block IO; actual faults still fail. Telemetry measures queries and roundtrips.
+New independent object-acceptance readbacks feed the ordered file hash directly;
+reused objects still get actual recall. No content/metadata/hash check removed.
+Actual RAM protocol fixture:11to7frames,5to3readbacks;25ms explicitly modeled
+frame delay gives309.070to202.683ms median. NOT production throughput acceptance.
 
-## Remaining complete-set and service acceptance
+D/file-points-worker-B-inodes-v7-overhead-prepared is619262B/40modules, metadata-only
+preflightPASS at17:15. ControllerSHA6f2a46ae99078cf63c5829e942b60e22062865b86f009b00cf05cc0d1673daaf;
+workerSHA88e553daf539f44653b695d249c9ddf43ca09b4231d9278729f613adacfbde9d.
+Unarmed: reconcile terminal V6/SQL4/runtime2 and leases before serial upgrade.
+Do not mutate loaded packages or interrupt healthy work. Actual timing is pending.
 
-Finish pending bodies/changed-name deferrals, current SQL and runtime. Seal the
-immutable map only when no required point remains unresolved. Then run native
-immutable content-proof audit, normal leased complete-reader/selected readback,
-SQL integrity/schema and metadata checks. Reuse accepted162704613801B/137DB and
-all148/204SQL/41+older components with their epochs. Reuse it.
-Original7783gaps, original raw Git container gaps and later semantic repairs stay
-explicit. Current source presence never proves original archive inclusion.
+## Remaining actual acceptance
 
-New source2496aeaf4bcfe61dcc7c5e9e5bb0a5cb2c0a0424 has193passing focused tests.
-`audit-current-content` checks actual accepted objects/NTFS identities, exact
-base/catalog recipes, ordered full-file proofs and decoded SQL acceptance records.
-`vk_nightly_composed_restore.verify` uses the ordinary complete reader and restores
-required runtime/always-API samples one-at-a-time in admitted tmpfs; independently
-reopens/hashes, checks SQLite integrity/schema and Linux metadata. Failed samples
-stay intact; only successful new RAM duplicates are released. Production current
-composed acceptance/normal B-backed invocation is NOT done by these tests.
+Complete pending files/changed-name deferrals/current SQL/runtime, then seal the
+immutable map. Run native audit-current-content proof closure and normal leased
+B-backed composed consumer with required runtime/always-API sample readbacks,
+actual SQLite integrity/schema and Linux metadata. Reuse accepted carriers.
+Source presence/current Git resolution never proves original archive inclusion.
+Original7783gaps/6546rawloose Git gaps and later semantic repairs remain distinct.
 
-Prepared independent-composed-consumer-v1 source manifest pins2496aeaf4 and19
-modules/345157B. b-controls-v1/COMPOSED_CONSUMER_REQUIRED_INPUTS_20261027.private.json
-SHA d532e1b5fc96f9bea508e2a30436b4e811251f2b6e4680a8a160cc582e723c1a
-accounts117current roots/111historical union/three aliases/14runtime pins and
-immutable proof catalogs. Actual seal/cohort/runtime adoption/provider leases and
-fresh final pins remain REQUIRED, not placeholder successes. Final consumer also
-needs whole-cycle publishing/lifecycle integration before calendar commissioning.
+Prepared consumer source2496aeaf4/19modules345157B,193tests before new work:
+D/independent-composed-consumer-v1/SOURCE_MANIFEST.private.json.
+C/COMPOSED_CONSUMER_REQUIRED_INPUTS_20261027.private.json
+SHAd532e1b5fc96f9bea508e2a30436b4e811251f2b6e4680a8a160cc582e723c1a
+accounts117current roots/111historical union/3aliases/14runtimepins/catalogs.
+Monitor's current requirement was explicitly owner-retired in hash-pinned plan;
+two restored Monitor SQL images remain in accepted137 proof. Typed consumer must
+match the external retirement contract; no source/recovery deletion or gap repair.
+Actual final map/cohort/runtime/catalog leases and fresh final pins are pending.
+Production composed consumer invocation/whole worker/publisher/lifecycle integration
+is unfinished, not established by its source tests.
 
-All111 historical roots remain accounted for. The one removed current requirement
-is Monitor, explicitly retired by the owner in the current hash-pinned plan;
-its old137SQL proof includes both independently restored Monitor images. Typed
-retirement requires the matching external consumer/owner-plan binding and retained
-proofs. It deletes nothing, cannot retire a currently required root, hide an old
-source or repair old gaps. Historical /tmp/.git absence remains unproven/explicit.
+After actual baseline AND whole ordinary incremental+restore timing/failure
+acceptance, install/adopt the correct worker/config/calendar. Current scheduleOFF,
+nextNONE. Existing legacy calendar targets old supervisor, so do not enable it.
+Toronto02:00–10:00 window is existing calendar behavior; separate8h phase budgets,
+a proposed cadence or a rate extrapolation cannot prove overnight completion.
+No current external permission blocker. Continue integration during serial capture.
 
-After actual baseline/whole-worker/failure acceptance, commission the authorized
-02:00America/Toronto schedule and verify exact binding/next run. At16:27 there
-were0Nightly timers/noNightly crontab entry; calendar OFF/next NONE. Legacy calendar
-still targets old supervisor: do not enable it on component tests alone.
+MM excludes B from E/Q/R scope; genuine hardware/STOP/access/capacity/owner
+guards remain. Last16:20 health passed/~1.509TB free, not a reservation.
+Preserve all predecessors/partials; no competing B probe or Staging prompt.
 
-PR263 is pushed/MERGEABLE. Source2496aeaf4 recovery CI passed; combined checks
-were still running16:51. Ops/diff checks pass. Rust format passes; full pnpm format
-stops at absent Prettier. No backend/Staging restart is required or authorized.
-
-Topic: [Nightly contract](VK_NIGHTLY_BACKUP_EFFICIENCY.md).
-Prior pickup: [checkpoint archive](HANDOFF_NIGHTLY_HISTORY_20261027_1653.md).
-Full [history](HANDOFF_HISTORY_20261017.md) and
-[integrated Staging notes](STAGING_SOURCE_PICKUP_20261027.md) remain retained.
+PR263 source5bf44b4b7 is pushed; exact-head CI must be collected, not assumed.
+Prior full pickup/bindings retained byte-for-byte in
+[17:18 archive](HANDOFF_NIGHTLY_HISTORY_20261027_1718.md).
+[Prior history](HANDOFF_NIGHTLY_HISTORY_20261027_1653.md),
+[full history](HANDOFF_HISTORY_20261017.md) and
+[Staging notes](STAGING_SOURCE_PICKUP_20261027.md) remain retained.

@@ -37,31 +37,18 @@ health/package files. No OS/work-SSD backup payload or fallback is allowed.
 
 ## Retained component inputs
 
-- terminal-gap-recovery-inodes-v10:783552paths/0errors, completed10:21EDT.
-- qualification-stage-B-inodes-v10:18539points,14031retained/4494pending,
-  13SQL discoveries/1deferred,4971262421hashed bytes; completed10:34EDT.
-  Both normal independent B reopens passed. Do not repeat these phases.
-- file-points-worker-B-inodes-v1 is terminal after10:08EDT SQLite BUSY;
-  all4398accepted history points remain. The successor retries only final
-  idempotent metadata acceptance, never a completed upload/readback.
+V10 namespace783552paths/errors0 and qualification18539points are accepted
+component inputs; normal B reopens passed. Qualification read4971262421B,
+reusing14031body matches and finding4494pending/13SQL/1deferred. Preserve them.
 
 ## Preserved gaps and corrected failures
 
-V9 stopped09:12EDT, epoch21487895bcd24324869f9f8e636f8d5e. Its SQLite is
-intact through4081780, with1317pending names and B acknowledgement3029482.
-It records unknown-watch897862/mask8; the unsealed oversized in-memory report
-was not retained, so its duplicate/error-size makeup is unknown. All originals,
-spools and fault evidence remain. The later V10 set does not repair that epoch.
-Actual B terminal-gap proof42851975fc11ad79e25d214472fc056b2d97cd36c0958cfac41582a16961189b
-is in journal-terminal-gap-proofs; normal independent reopen passed.
-
-V10 inherited a1GiB cap for a1258803200B map; SQLite FULL was a wrapper
-budget error. The corrected4GiB phase budget and verified B temporary placement
-retain all physical floors. Full diagnosis/proofs are in the Nightly guide.
-
-V11/V12 stopped on native15s SMART read timeouts; original traces survive.
-V13 completed after the tested finite full requalification fix, with unchanged
-STOP/access/counter checks and command deadline. No blind denied-write retry.
+V9's failed epoch/spool remains preserved, with B terminal-gap proof
+42851975fc11ad79e25d214472fc056b2d97cd36c0958cfac41582a16961189b.
+Its unsealed oversized report was not retained; exact duplicate makeup is unknown.
+V10's1GiB map-budget defect and V11/V12 native SMART-timeout evidence remain in
+the guide/private receipts. The4GiB map budget and finite full native health
+requalification passed V13 without relaxing STOP/access/identity/counter checks.
 
 Body phase vk-nightly-B-file-points-inodes-v2-20261027.service is terminal
 13:12:40EDT, MainPID0/exit1: source observer no longer ready. STOP is authoritative.
@@ -76,6 +63,18 @@ retains a bounded8192-name retirement ledger and reobserves known dirty names;
 unknown WDs/overflow/access/root loss remain faults. Pinned FD enrollment fixes
 symlink ABA/transient name races.198 focused tests pass, including5000 mixed
 mutation rounds. Do not overwrite old packages or claim old epochs repaired.
+
+Current successor V11: vk-nightly-bounded-inode-observer-v11-20261027.service,
+PID3849155/start32997998, epoch31ab8db49caf4f9699c7c0bd75c363a2, source17c43149a,
+configSHAe4bb83f02c2e71f8aebc768cb35d6feda255a181bf1cd24aa85d7dbe2c2641ed.
+Memory collector R2 targets this exact unit; original wrong-target collector is
+retained terminal. Read tracking-worker-local-inodes-v11/MEMORY_ENROLLMENT_R2.
+Sole recovery controller vk-nightly-B-terminal-gap-recovery-v11-20261027.service
+PID3861771, configSHA16fa6d86dee2ad18b79ccdd33dd56f89ad2f637177dcf1dc4b006c060e50eae7;
+package terminal-gap-recovery-inodes-v11/recover.private.py. It waits for V11,
+then seals the old terminal proof and resumes its own B-only metadata index.
+Do not duplicate it. It never recaptures old body versions; deadline16:33EDT.
+Latest actual ownership/progress is in LATEST_STATUS.private.json.
 
 ## Baseline/commissioning work still required
 

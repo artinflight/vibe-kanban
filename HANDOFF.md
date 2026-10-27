@@ -51,26 +51,29 @@ an actual accepted target point, and the bounded-delta interface supports bound
 always_SQL_API_sources for critical aliases whose WAL lies outside a directory
 root. No payload was recaptured for this diagnosis.
 
-REAL TRACKING LIMIT: V7 directory-only observation cannot witness writes via
-external hardlinks. Retained B namespace metadata contains889894distinct
-regular/directory/symlink inodes versus actual kernel per-user limit248899.
-Directory observer remains useful/active; its ready flag is not whole-file
-coverage. Opt-in full-inode source correction and hardlink/symlink/rename/
-refusal tests are prepared; operational restart-delta selection rejects old
-namespace-only coverage. No host limit or active package was changed.
-A10000-file RAM trial used25672KiB actual Python peakRSS; it is not full-scale
-resource admission. Owner approval for1048576watches was verified October27
-09:01UTC. The approved sudo -n sysctl attempt failed: password required. The
-live limit remains248899; administrator authentication, not further approval,
-is required. WATCH_LIMIT_APPROVED_AUTHENTICATION_BLOCKED_20261027 retains the
-exact attempt and existing observer memory. Full enrollment was not started.
-This planning number is not a user limit, reservation or readiness claim.
+FULL-INODE ENROLLMENT: owner approved1048576watches and completed the
+administrator command. Live readback on October27 is1048576; the earlier
+sudo password refusal remains historical evidence, not a pending approval.
+The immutable tracking-worker-local-inodes-v8 package/configSHA
+ ebdec8784187b6a1e1b8b8fc619071f3c280e92592b161e92a40ae454a926952
+runs PID3433527/start30016200,epochfd4881e5054843c8929e9c2d1d81e60e.
+Its117-root additive plan preserves all old roots/exclusions. At05:27EDT it
+reported891073watches/readytrue/errors0; normal full-coverage barrier passed.
+Actual RSS579.6MiB/cgroup772.3MiB/chargedkernel84.8MiB/peak780.9MiB;
+MEMORY_ENROLLMENT_R2 completed exit0 after60s stable and a normal ready
+barrier SHA83ce162e7a66527a46c9a907e4f3a3514f667fac1b09a9ccd55d44f42a5f2e14. All observer
+memory high/max/OOM events are0. The old directory observer remains active
+until a separately verified handover; old hardlink/alias gaps are not repaired.
+Measurement R1 was memcg-OOM-killed at128MiB by the enormous procfs seq_read
+allocation. Its successful samples and exact kernel cause are preserved; R2
+uses bounded process/cgroup/normal status reads, without repeating fdinfo.
+No source-body reads, backup writer, calendar change or reboot-persistence
+configuration was performed. This clears the approved resource-setting gate,
+not current-backup acceptance.
 
-Remaining: authenticated administrator runs
-`sudo /usr/sbin/sysctl -w fs.inotify.max_user_watches=1048576`; verify readback,
-then enroll the full-inode
-observer with explicit critical SQL alias roots and validate its actual resource
-use. Reconcile alias gap/additive roots without dropping prior scope. Qualify
+Remaining: finish explicit additive-scope handover for the
+observer with explicit critical SQL alias roots. Reconcile the old hardlink/
+alias gap and additive roots without dropping prior scope. Qualify
 17182unresolved versions and capture only required chunks for70167points using
 retained prefix/CAS carriers. Their64342833998logicalB are NOT transfer demand.
 Bind current critical SQL/runtime; accept composed current restore and ordinary
@@ -89,9 +92,9 @@ SQL package434176allocatedB and bounded health/finite output fit1MiB new local
 metadata; B runtime does not need unused SSD index/journal headroom. No body is
 staged on SSD. Actual floors and mount/access/STOP/memory checks are preserved.
 
-Source bf0d20797 passed716hosted recovery tests/1skip and general CI. New alias/
-full-observer/delta work passed100focused tests plus launch-admission cases;
-new exact-head CI remains necessary. Full baseline and calendar are unaccepted.
+Source782d88eb4 passed719hosted recovery tests/1skip. The nine narrow inode/
+refusal/admission tests passed again before actual891k enrollment. Broader
+source acceptance is separate; full baseline and calendar remain unaccepted.
 Required formatter attempted: Rustpassed, Prettier unavailable.
 Complete prior pickup is retained in
 [the dated archive](HANDOFF_NIGHTLY_HISTORY_20261027_0124.md), bound by

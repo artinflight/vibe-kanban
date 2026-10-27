@@ -22,9 +22,11 @@ retained. Both earlier trackers stopped at14:34EDT on SSD capacity. The user aut
 removing that dependency: six indexes are verified on native B. The original
 B tracker later failed, so current source observation uses a strictly bounded
 preallocated SSD event outbox independent of Desktop transport; growing indexes
-and backup bodies remain B-only. Its actual107010-watch barrier and independent
-B forward-copy reopen passed. Neither epoch erases earlier gaps. A later B-only
-metadata reconciliation is active; current baseline and calendar remain open.
+and backup bodies remain B-only. Its actual107010-directory-watch barrier and independent
+B forward-copy reopen passed; this does not cover external hardlink writes.
+The full-inode correction needs actual kernel resource admission; retained
+metadata needs889894watches versus248899available. No setting was changed.
+The B-only namespace/map reconciliation completed; baseline/calendar stay open.
 Namespace completeness alone does not prove body/SQL/runtime recoverability.
 
 Live MM scope/pointer and current owner guard were reconciled October26. B needs

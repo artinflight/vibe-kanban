@@ -98,9 +98,15 @@ def progress_guard(remaining):
  assert shutil.disk_usage('B:/').free>CONFIG['protected_B_bytes']+remaining+1048576
  if time.monotonic()-last_check>=5:
   actual_guard(remaining);last_check=time.monotonic()
+def final_guard(remaining):
+ global admitted_identity
+ # Full fresh MM identity/health again at the acceptance boundary. Only
+ # intermediate polling avoids expensive repeated CIM enumeration.
+ admitted_identity=None
+ return actual_guard(remaining)
 print(json.dumps(dict(status='ready',guard=before,object_module_sha256=CONFIG['object_module_sha256'])),flush=True)
 objects.receive(job,sys.stdin.buffer,sys.stdout.buffer,guard=progress_guard,maximum_object_bytes=CONFIG['maximum_object_bytes'],retained_SQL_root='B:/vk-backups' if CONFIG.get('retained_SQL_reads') is True else None)
-actual_guard(1048576)
+final_guard(1048576)
 '''
 
 

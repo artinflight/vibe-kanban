@@ -509,6 +509,46 @@ class CurrentMap:
             if db.in_transaction:db.execute('rollback')
             raise
 
+    def accept_SQL_point(self,record,*,checkpoint):
+        """The caller authenticates the exact B-sealed independent API proof.
+
+        An API-image size may differ from the live main/WAL files. Retain its
+        actual source epoch separately; never adopt a raw WAL/main shortcut.
+        """
+        source=record['source'];name=key(source.removeprefix('/'));row=record['member'];proof=record['independent']
+        if (source!='/'+name or record.get('status')!='consistent_SQL_point_verified'
+                or record.get('method')!='SQLite-backup-API'
+                or record.get('source_API_point_qualifies_later_epoch_not_original') is not True
+                or row.get('kind')!='file' or row.get('bytes')!=record['bytes'] or row.get('sha256')!=record['sha256']
+                or proof.get('integrity')!='ok' or proof.get('bytes')!=record['bytes'] or proof.get('sha256')!=record['sha256']
+                or not (proof.get('independent_Linux_metadata_verified') is True
+                        or proof.get('reused_accepted_independent_SQL_image') is True and proof.get('current_Linux_metadata_verified') is True)
+                or not row.get('segments') or sum(x['bytes'] for x in row['segments'])!=row['bytes']
+                or any(row.get(k)!=record['source_metadata_before'][k] for k in ('mode','uid','gid','mtime_ns','xattrs'))):
+            raise ValueError('complete independently verified consistent SQL point required')
+        digest(row['sha256']);point_sha=digest(record['B_acceptance_object']['sha256'])
+        self.check()
+        if not self.db.execute('select complete from metadata').fetchone()[0]:
+            raise ValueError('finish namespace adoption before SQL binding')
+        old=self.db.execute('select state,row from members where name=?',(name,)).fetchone()
+        if old is None or self.db.execute('select 1 from SQL_sources where path=?',(source,)).fetchone() is None:
+            raise ValueError('SQL point must belong to the selected source map')
+        encoded=encode_member(dict(member=row,SQL_point=record))
+        if old==('verified-file',encoded):return dict(already_accepted=True)
+        if old[0]!='SQLite-needs-image' and not decode_member(old[1]).get('SQL_point'):
+            raise ValueError('SQL point cannot replace an unrelated file version')
+        self.db.execute('create table if not exists SQL_acceptance_history '
+                        '(source text,point_sha256 text,record blob,primary key(source,point_sha256)) without rowid')
+        self.db.execute('begin immediate')
+        try:
+            self.db.execute('insert or ignore into SQL_acceptance_history values(?,?,?)',(source,point_sha,encode_member(record)))
+            self.db.execute("update members set state='verified-file',row=? where name=?",(encoded,name))
+            checkpoint();self.check();self.db.execute('commit')
+        except BaseException:
+            if self.db.in_transaction:self.db.execute('rollback')
+            raise
+        return dict(already_accepted=False)
+
     def refresh_unresolved(self,qualified,*,checkpoint,maximum_paths,SQL_sources=(),after='',progress=lambda _:None):
         """Refresh only unresolved exact names from newer retained observations.
 

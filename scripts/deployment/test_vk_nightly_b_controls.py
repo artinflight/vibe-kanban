@@ -7,6 +7,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import io
 import threading
 import time
 from contextlib import contextmanager
@@ -104,6 +105,75 @@ class BControlTests(unittest.TestCase):
         self.assertEqual(db.execute('select count(*) from point').fetchone(),(2,));db.close()
         self.assertEqual(self.original.read_bytes(),self.raw)
         self.assertEqual(self.receipt['Linux_metadata'],self.metadata)
+
+    def test_native_busy_is_deferred_but_access_STOP_and_integrity_errors_are_not(self):
+        from vk_nightly_b_controls import NativeControlDeferred,NativeControlError
+        for kind,message,reason,expected in [
+                ('BlockingIOError','another own-index writer',None,NativeControlDeferred),
+                ('OperationalError','database is locked',None,NativeControlDeferred),
+                ('PermissionError','STOP access denied',None,NativeControlError),
+                ('Blocked','OWNER_PAUSE_OR_MALFORMED',None,NativeControlError),
+                ('OperationalError','database is locked','real guard failure',NativeControlError),
+                ('DatabaseError','database disk image is malformed',None,NativeControlError)]:
+            with self.subTest(kind=kind,message=message,reason=reason):
+                source=io.BytesIO();send(source,dict(error_type=kind,error=message,guard_reason=reason));source.seek(0)
+                client=Client(source,io.BytesIO())
+                with self.assertRaises(expected) as caught:client.call(op='check',name='owned')
+                self.assertIs(type(caught.exception),expected)
+                self.assertEqual(caught.exception.native_error_type,kind)
+
+    def test_actual_consistent_API_point_is_adopted_once_only_from_exact_B_acceptance(self):
+        from vk_nightly_current_map import CurrentMap
+        from vk_nightly_namespace import observe
+        from vk_nightly_qualification import encode_observation
+        from vk_nightly_sql_point import capture_SQL_point
+        source=self.root/'selected.sqlite'
+        with sqlite3.connect(source) as db:db.execute('create table actual(value)');db.execute("insert into actual values('retained')")
+        db.close()
+        code=('import sys;sys.path.insert(0,'+repr(str(Path(__file__).parent))+');from vk_nightly_objects import receive;receive('
+              +repr(str(self.objects))+',sys.stdin.buffer,sys.stdout.buffer,guard=lambda n:None,maximum_object_bytes=65536)')
+        body=subprocess.Popen([sys.executable,'-B','-u','-c',code],stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+        self.children.append(body);client=ObjectClient(body.stdout,body.stdin,guard=lambda:None,ram_root=self.root,maximum_object_bytes=65536)
+        record=capture_SQL_point(source,client,allowed_sources={str(source)},guard=lambda:None,retained_by_sha=lambda *_:None,
+            ram_root=self.root,maximum_image_bytes=1024**2,chunk_bytes=4096,timeout_seconds=30)
+        namespace=sqlite3.connect(':memory:')
+        namespace.execute('create table namespace(name text primary key,row blob)')
+        namespace.execute('insert into namespace values(?,?)',(str(source)[1:],encode_observation(observe(source))))
+        original=self.root/'current-SQL-map.sqlite'
+        try:
+            with CurrentMap.held(original,binding={'fixture':'SQL'},create=True) as current:
+                current.compile(namespace,lambda _:None,SQL_sources=[str(source)],checkpoint=lambda:None,maximum_paths=10)
+        finally:namespace.close()
+        raw=original.read_bytes();sha=hashlib.sha256(raw).hexdigest();meta=metadata(original);segments=[client.ensure(raw)]
+        self.client.call(op='import',sha256=sha,bytes=len(raw),segments=segments,Linux_metadata=meta)
+        self.client.readback(sha);self.client.call(op='acknowledge',sha256=sha,independent_stream_sha256=sha,Linux_metadata=meta)
+        index=self.client.connect('sql-member-map',sha)
+        try:
+            altered=dict(record,status='not an actual API point')
+            with self.assertRaisesRegex(ValueError,'actual B object'):
+                self.client.call(op='accept-SQL-point',name='sql-member-map',record=altered)
+            self.assertEqual(index.execute('select state from members').fetchone(),('SQLite-needs-image',))
+            self.assertFalse(self.client.call(op='accept-SQL-point',name='sql-member-map',record=record)['already_accepted'])
+            self.assertTrue(self.client.call(op='accept-SQL-point',name='sql-member-map',record=record)['already_accepted'])
+            self.assertEqual(index.execute('select state from members').fetchone(),('verified-file',))
+            self.assertEqual(index.execute('select count(*) from SQL_acceptance_history').fetchone(),(1,))
+        finally:index.close()
+
+    def test_inode_demand_deduplicates_aliases_from_retained_metadata_only(self):
+        from vk_nightly_qualification import encode_observation
+        db=self.client.connect('inode-demand',self.sha)
+        try:
+            db.execute('create table namespace(name text primary key,row blob)')
+            for name,kind,inode,links in [('a','file',1,2),('b','file',1,2),('c','file',2,1),('d','directory',3,1),('e','symlink',4,1)]:
+                db.execute('insert into namespace values(?,?)',(name,encode_observation(dict(kind=kind,identity=[10,inode,0,0,0,0,1000,1000,links]))))
+            result=self.client.call(op='namespace-inode-demand',name='inode-demand',maximum_paths=10)
+            self.assertEqual(result['unique_regular_inodes'],2);self.assertEqual(result['all_inode_watch_demand'],4)
+            self.assertEqual(result['symlink_paths'],1);self.assertEqual(result['unique_symlink_inodes'],1)
+            self.assertEqual(result['hardlinked_paths'],2);self.assertEqual(result['unique_hardlinked_inodes'],1)
+            self.assertEqual(result['source_paths_scanned'],0);self.assertEqual(result['source_body_bytes_read'],0)
+            with self.assertRaises(ValueError):self.client.call(op='namespace-inode-demand',name='inode-demand',maximum_paths=1)
+            self.assertEqual(db.execute('select count(*) from namespace').fetchone(),(5,))
+        finally:db.close()
 
     def test_interruption_rolls_back_only_uncommitted_transaction(self):
         db=self.client.connect('resume',self.sha);db.execute('insert into point values(1,?)',(b'accepted',))

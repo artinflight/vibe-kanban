@@ -25,7 +25,7 @@ from vk_nightly_prefix_reader import read_prefix
 from vk_nightly_sql_point import capture_SQL_point,release_verified_ram
 from vk_prep_common import save
 from vk_nightly_desktop_controls import DesktopControls,validate_control
-from vk_nightly_b_controls import current_map
+from vk_nightly_b_controls import current_map,NativeControlDeferred
 from vk_nightly_b_tracker import write_health
 from vk_nightly_sql_cohort import inherit
 
@@ -290,7 +290,7 @@ def main():
 
 if __name__=='__main__':
     try:raise SystemExit(main())
-    except (ResourceDeferred,BlockingIOError) as error:
+    except (ResourceDeferred,BlockingIOError,NativeControlDeferred) as error:
         print(json.dumps(dict(status='resource_or_owner_deferred',reason=str(error),completed_objects_preserved=True)),file=sys.stderr)
         raise SystemExit(75)
     except (OSError,ValueError,KeyError,RuntimeError) as error:

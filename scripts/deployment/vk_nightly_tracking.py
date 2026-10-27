@@ -150,6 +150,7 @@ class TrackingStore:
         binding=json.loads(epoch[0])
         return dict(format=FORMAT,instance=instance,since=since,sequence=epoch[1],scope_sha256=binding['scope_sha256'],
                     plan_sha256=binding['plan_sha256'],ready=bool(epoch[2] and epoch[3] is None),
+                    coverage_model=binding.get('coverage_model','directory-namespace-only-v1'),
                     errors=errors,terminal=epoch[3],changed=list(changed),events=changed,
                     history_before_instance_proven=False,source_paths_scanned=0,source_payload_bytes_read=0)
 
@@ -182,16 +183,21 @@ def discard_committed(journal,cursor):
             journal.events[path]={mask:seq for mask,seq in journal.events[path].items() if seq>cursor}
 
 
-def serve(plan,path,endpoint,*,guard,status_path,stop=None,store_factory=None,status_writer=None):
+def serve(plan,path,endpoint,*,guard,status_path,stop=None,store_factory=None,status_writer=None,journal_factory=Journal):
     """Run one read-only observer. The caller owns package/plan/admission pins."""
     endpoint=Path(endpoint)
     if endpoint.exists() or endpoint.is_symlink():raise ValueError('existing tracking endpoint must not be replaced')
-    stop=stop or threading.Event();journal=Journal(plan);pump=None;failure=[]
+    stop=stop or threading.Event();journal=journal_factory(plan);pump=None;failure=[]
     roots=source_bindings(plan)
+    for raw,root in roots.items():
+        if root is None:journal.errors.append({'initial_required_root_absent':raw})
+    if journal.roots!={r['resolved'] for r in roots.values() if r is not None}:
+        journal.errors.append({'root_binding_changed_before_enrollment':True})
     binding=dict(format=FORMAT,instance=journal.instance,plan_sha256=identity(plan),
                  scope_sha256=identity(scope(plan)),owner_pid=os.getpid(),
                  owner_start_ticks=int(Path('/proc/self/stat').read_text().rsplit(')',1)[1].split()[19]),
                  started_utc=time.time(),history_before_instance_proven=False,
+                 coverage_model=getattr(journal,'coverage_model','directory-namespace-only-v1'),
                  required_root_bindings=roots)
     def drain():
         while not stop.is_set():
@@ -232,7 +238,7 @@ def serve(plan,path,endpoint,*,guard,status_path,stop=None,store_factory=None,st
                             discard_committed(journal,report['sequence'])
                     if time.monotonic()-last_status>10:
                         write_status(dict(binding,phase='tracking',sequence=previous,
-                             watches=len(journal.watches),raw_errors=list(journal.errors),ready=report['ready'],
+                             watches=report.get('watches',len(journal.watches)),raw_errors=list(journal.errors),ready=report['ready'],
                              heartbeat_utc=time.time(),metadata_bytes=store.byte_size(),
                              baseline_accepted=False));last_status=time.monotonic()
                     try:connection,_=server.accept()

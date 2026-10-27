@@ -6,6 +6,7 @@ New/moved-in directories require only their affected subtrees to be enumerated.
 Journal faults/epoch loss demand explicit reconciliation, never an empty delta.
 """
 from pathlib import PurePosixPath
+from vk_nightly_inode_journal import require_full_coverage
 
 
 class ReconciliationRequired(ValueError):pass
@@ -15,6 +16,8 @@ def under(path,root):return path==root or path.startswith(root.rstrip('/')+'/')
 
 
 def select(anchor,report,*,required_sql,maximum_paths,enumerate_subtree):
+    try:require_full_coverage(report)
+    except ValueError as error:raise ReconciliationRequired(str(error)) from error
     if (anchor.get('baseline_accepted') is not True or report.get('ready') is not True
             or report.get('errors') or report.get('terminal')
             or anchor.get('instance')!=report.get('instance')

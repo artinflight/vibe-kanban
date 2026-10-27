@@ -1,4 +1,4 @@
-# Nightly — current pickup,October26 21:24EDT
+# Nightly — current pickup,October26 22:44EDT
 
 Finish the existing operational Nightly goal/PR263. No backend restart. Calendar
 is disabled; next run null. Do not duplicate active jobs or accepted bodies.
@@ -26,43 +26,45 @@ Old source DB/journal remain preserved pending verified B relocation. No old
 SSD-growing observers are enabled. Never query an acknowledged local prefix
 as empty; use retained_prefix_report through the authenticated B provider.
 
-Later gap enumeration COMPLETE:919022paths/107010directories/errors0,
-383changed-name closing suffix,0source-body bytes. V6_GAP_NAMESPACE_RESULT
-and all earlier epochs remain. B-map successor unit
-vk-nightly-B-map-v6-namespace-adoption-20261027,PID3776518, package
-recovery-map-worker-B-v2 configSHA
-6b4e2b779044c96a5924e625e4bdab2344bc455e42980bbd4a8c286a1d3e6efa,
-is adopting that same-scope epoch and preserving old gap/absence rows. Do not
-restart it. A competing SQLite read was correctly refused; the supported
-nonlocking probe showed995311616B and fresh native mtime, not SQL acceptance.
-Previous complete map:918974names/753701qualified versions reused;70169file
-points and17133qualifications were still pending. Logical sizes are not net
-transfer demand. Continue from the successor's actual terminal demand.
+Later gap enumeration and map adoption COMPLETE:919022paths/errors0,
+753699qualified versions reused,0source-body bytes. V6_GAP_NAMESPACE_RESULT
+and MAP_V6_RECONCILIATION_STATUS retain exact epochs. All147 SQL points in
+capture-worker-B-v6 are independently accepted:137old images reused,10new,
+831428846encodedB. The large API image passed independent RAM fullSHA/SQLite/
+Linuxmetadata. Original failed unsealed RAM inode33476 remains preserved.
+SQL_V6_MAP_ADOPTION adopted138selected points from their actual B acceptance
+objects with0recapture/recopy. Remaining66SQL names total193630208logical
+main bytes;9nonselected old cohort names remain in the old recovery graph.
 
-Sole body writer: vk-nightly-B-large-SQL-point-v6-20261027,PID3387982,
-capture-worker-B-v6 configSHA
-f102d6786b9d19bacf26b1382298af6e3f14b01bed1fcd02604e69a48f6802d5.
-146accepted images were reused(137old/9new,143142689encodedB). The remaining
-3GB API point is uploaded with a durable layout and independent RAM readback
-is advancing. Do not recapture it. Its prior unsealed RAM inode33476 is retained.
-The map has66SQL names outside the old147-source cohort, mostly copied review
-fixtures; SQL_RESIDUALS_V6 records exact names. Use tested explicit cohort
-inheritance and CAS reuse, not omission or completed-image recopy.
+REAL TRACKING LIMIT: V7 directory-only observation cannot witness writes via
+external hardlinks. Retained B namespace metadata contains889894distinct
+regular/directory/symlink inodes versus actual kernel per-user limit248899.
+Directory observer remains useful/active; its ready flag is not whole-file
+coverage. Opt-in full-inode source correction and hardlink/symlink/rename/
+refusal tests are prepared; operational restart-delta selection rejects old
+namespace-only coverage. No host limit or active package was changed.
+A10000-file RAM trial used25672KiB actual Python peakRSS; it is not full-scale
+resource admission. Administrator resource-setting authority is needed for a
+proposed1048576watch ceiling, followed by real enrollment/memory/handover proof.
+This planning number is not a user limit, reservation or readiness claim.
 
-Remaining: collect SQL/map terminals; qualify/capture only unresolved versions;
-apply the383-name suffix plus proven observer bridge/current delta; disposition
-extra SQL/special/absent names; pin current runtime/frontend; accept the complete
-composed descriptor/readback; integrate the ordinary cycle and only then enable
-02:00America/Toronto. Root-history migration is separate. Preserve162.70GB
-accepted restore,137/148SQL cohorts,all components/supplements/original gaps.
+Remaining: reconcile/capture66additional SQL points; qualify17182unresolved
+file versions and capture only needed chunks for70167points, using retained
+prefix/CAS bodies first. Their64342833998logicalB are NOT transfer demand.
+Apply383-name closing suffix, proven V6/V7 bridge and actual current events;
+retain the newly identified alias-observation gap explicitly. Pin runtime and
+accept the complete composed descriptor/readback. Integrate ordinary bounded
+cycle/health and only then enable02:00America/Toronto. Calendar disabled/next
+run null. Root migration is separate. All original restore/components remain.
 
-Source a9b7daa08 hosted recovery passed704tests/1skip; new focused epoch/native
-cases41pass. Public general CI found pickup-budget excess; this compact handoff
-repairs it while preserving the complete prior text in
+Current change also retains genuine access/STOP/corruption failures, treats
+only real native BUSY/competing leases as temporary, and repeats full native
+B identity/SMART admission at final acceptance. Hosted exact e8826e294 passed
+recovery/general CI; new source requires its own focused/hosted checks.
+Required formatter attempted: Rustpassed, Prettier unavailable.
+Complete prior pickup is retained in
 [the dated archive](HANDOFF_NIGHTLY_HISTORY_20261027_0124.md), bound by
-[its provenance](NIGHTLY_CHECKPOINT_ARCHIVE_20261027_0124.json). Ops and Rust
-formatting pass; Prettier unavailable. See VK_NIGHTLY_BACKUP_EFFICIENCY.md and
-STREAM.md for scope and historical evidence.
+[its provenance](NIGHTLY_CHECKPOINT_ARCHIVE_20261027_0124.json).
 
 Full earlier history: [Nightly](HANDOFF_NIGHTLY_HISTORY_20261026.md) and
 [original upstream pickup](HANDOFF_HISTORY_20261017.md). Their original bytes

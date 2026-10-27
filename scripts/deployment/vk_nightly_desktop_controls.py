@@ -55,7 +55,7 @@ class DesktopControls:
             "for name,code in PORTABLE.items():\n assert hashlib.sha256(code.encode()).hexdigest()==CONFIG['portable_source_sha256'][name]\n module=types.ModuleType(name);sys.modules[name]=module;exec(code,module.__dict__)\n"+
             "controls=types.ModuleType('native_controls');exec(CONTROL_SOURCE,controls.__dict__)\n"+
             "controls.serve(job,sys.stdin.buffer,sys.stdout.buffer,objects=objects,guard=progress_guard,maximum_index_bytes=CONFIG['maximum_index_bytes'])\n"+
-            'actual_guard(0)\n')
+            'final_guard(0)\n')
         self.process=subprocess.Popen(['ssh','-T','-o','BatchMode=yes','-o','StrictHostKeyChecking=yes',
             '-o','ConnectTimeout=15','-o','ControlMaster=no','-o','ControlPath=none','desktop',
             'python -B -u -c "import sys,base64;exec(base64.b64decode(sys.stdin.buffer.readline()))"'],

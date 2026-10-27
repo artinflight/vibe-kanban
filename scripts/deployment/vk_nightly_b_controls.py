@@ -306,6 +306,29 @@ class Store:
                 pending_directories=db.execute('select count(*) from gap_pending where done=0').fetchone()[0],
                 replay_errors=db.execute('select count(*) from namespace_errors').fetchone()[0],
                 index_bytes=path.stat().st_size)
+        if op=='namespace-inode-demand':
+            from vk_nightly_qualification import decode_observation
+            maximum=q['maximum_paths']
+            if type(maximum) is not int or not 1<=maximum<=1000000:raise ValueError('bounded retained namespace required')
+            identities={};files=directories=links=hardlinks=seen=0
+            for member,raw in db.execute('select name,row from namespace order by name'):
+                seen+=1
+                if seen>maximum:raise ValueError('retained metadata exceeds inode-count admission')
+                if seen%1024==0:self.guard(1024**2)
+                row=decode_observation(raw);kind=row['kind']
+                if kind not in ('file','directory','symlink'):continue
+                identity=row['identity'];key=(identity[0],identity[1],kind)
+                linked=kind=='file' and identity[8]>1
+                identities[key]=identities.get(key,False) or linked
+                files+=kind=='file';directories+=kind=='directory';links+=kind=='symlink';hardlinks+=linked
+            regular=sum(k[2]=='file' for k in identities);dirs=sum(k[2]=='directory' for k in identities)
+            symlinks=sum(k[2]=='symlink' for k in identities)
+            return dict(retained_paths=seen,regular_paths=files,directory_paths=directories,
+                symlink_paths=links,unique_symlink_inodes=symlinks,
+                unique_regular_inodes=regular,unique_directory_inodes=dirs,
+                hardlinked_paths=hardlinks,unique_hardlinked_inodes=sum(identities.values()),
+                all_inode_watch_demand=regular+dirs+symlinks,source_body_bytes_read=0,source_paths_scanned=0,
+                scope='retained namespace epoch, not fresh filesystem admission')
         if op=='namespace-batch':
             if len(q['rows'])+len(q['errors'])>1024 or len(q['completed'])>512:
                 raise ValueError('bounded namespace transaction required')
@@ -331,6 +354,28 @@ class Store:
                     cursor.close();del self.cursors[cid];self.pending_rows.pop(cid,None);self.exhausted.pop(cid,None)
             db.close();lease.__exit__(None,None,None);del self.handles[key];self.readonly_identities.pop(key,None)
             return dict(closed=True)
+        if op=='accept-SQL-point':
+            # Accept only the exact independently sealed body record, not a
+            # caller's asserted integrity flag or current source resolution.
+            import vk_nightly_current_map as current
+            record=q['record'];seal=record['B_acceptance_object']
+            if type(seal['bytes']) is not int or not 0<seal['bytes']<=1024**2:
+                raise ValueError('bounded SQL acceptance control object required')
+            obj,_,accepted=self.objects.object_paths(self.root.parent/'objects-v1',seal['sha256'])
+            self.checked(accepted)
+            if accepted.stat().st_size>65536:raise ValueError('bounded accepted-object receipt required')
+            receipt=json.loads(accepted.read_text());self.checked(obj)
+            if (receipt.get('raw_sha256')!=seal['sha256'] or receipt.get('raw_bytes')!=seal['bytes']
+                    or receipt.get('independent_RAM_reopened_hash_verified') is not True
+                    or receipt.get('identity')!=self.objects.file_identity(obj)
+                    or receipt.get('encoded_sha256')!=seal['encoded_sha256']):
+                raise ValueError('accepted B SQL control object changed')
+            raw=b''.join(self.objects.decoded(obj,expected_size=seal['bytes'],expected_sha=seal['sha256'],
+                encoded_sha=seal['encoded_sha256'],guard=lambda:self.guard(1024**2)))
+            expected={k:v for k,v in record.items() if k not in ('B_acceptance_object','new_B_total_encoded_bytes_including_control')}
+            if json.loads(raw)!=expected:raise ValueError('SQL acceptance differs from its actual B object')
+            value=current.CurrentMap();value.db=db;value.path=path;value.inode=tuple(inode)
+            return value.accept_SQL_point(record,checkpoint=lambda:self.guard(LIMIT))
         if op=='refresh-current-map':
             # The exact same qualified-row classifier runs next to both native
             # SQLite indexes; no per-path network round trips or source reread.
@@ -446,12 +491,25 @@ def serve(root,source,output,*,objects,guard,maximum_index_bytes=4*1024**3):
             finally:lease.__exit__(None,None,None)
 
 
+class NativeControlError(ValueError):
+    def __init__(self,value):
+        self.native_error_type=value['error_type'];self.guard_reason=value.get('guard_reason')
+        super().__init__('native B '+value['error_type']+': '+value['error']+
+                         ('; '+self.guard_reason if self.guard_reason else ''))
+
+
+class NativeControlDeferred(NativeControlError):
+    """Only actual competing ownership/SQLite BUSY, never denied controls."""
+
+
 class Client:
     def __init__(self,source,output,*,guard=lambda:None):self.source=source;self.output=output;self.guard=guard
     def call(self,**query):
         self.guard();send(self.output,query);value=recv(self.source)
-        if 'error' in value:raise ValueError('native B '+value['error_type']+': '+value['error']+
-                                           ('; '+value['guard_reason'] if value.get('guard_reason') else ''))
+        if 'error' in value:
+            temporary=not value.get('guard_reason') and (value['error_type']=='BlockingIOError'
+                or value['error_type']=='OperationalError' and value['error'] in ('database is locked','database table is locked'))
+            raise (NativeControlDeferred if temporary else NativeControlError)(value)
         return value['result']
     def readback(self,digest,*,sink=None,on_progress=lambda _:None):
         self.guard();send(self.output,dict(op='readback',sha256=digest));header=recv(self.source)

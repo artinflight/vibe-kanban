@@ -1,3 +1,46 @@
+# October26,22:44EDT — completed B map/SQL and discovered coverage limit
+
+The six index relocations released2085306368allocatedB on the SSD without
+losing originals or earlier accepted proofs. Growing indexes, native journals,
+and index temporary work are on Desktop B. The active source outbox is bounded
+at8MiB plus9MiB reserved rollback and small fixed health files. Historical cold
+proofs and closed observer files remain preserved; their residency is separate
+from the active outbox bound. Real page exhaustion, allocation ENOSPC, optional
+health ENOSPC, Desktop loss, generation-safe ACK and exact-cursor reopen are
+covered by regression tests. No OS-disk backup fallback exists.
+
+The later namespace/map finished919022names, reusing753699qualified versions.
+The147-source SQL cohort completed:137older images reused,10new images,
+831428846encodedB newly uploaded. The large image passed separate RAM fullSHA,
+SQLite integrity and Linux metadata proof. All138points selected in the new
+map were adopted from their actual sealed B control objects, without source
+recapture/body recopy. The old9outside-scope points remain retained. The other
+66SQL names total193630208logical main-fileB, not measured transfer demand.
+
+A RAM adversarial test established that directory-only inotify misses writes
+through external hardlinks, including links made after enrollment. This is a
+real coverage flaw; the existing observer remains useful for namespace changes
+but cannot qualify whole-scope content-change coverage. The opt-in correction
+watches individual regular and symlink inodes, fans out all selected aliases,
+tracks namespace/atomic replacements and fails closed on refused watches.
+The operational bounded-delta reader now rejects namespace-only reports.
+Historical descriptors and raw receipts remain readable and unchanged.
+
+A read of retained B metadata, without source walk/body reads, measured742200
+regular,106999directory and40695symlink distinct inodes:889894watches total.
+The live per-user kernel limit is248899; even a single observer cannot fit.
+Overlapping the retained107010-directory observer requires at least996904
+before unrelated same-user watches/growth. Proposed1048576is an administrator
+resource planning ceiling, not sufficient admission by itself. No kernel limit
+has been changed. A10000-file disposable RAM trial observed25672KiB Python
+peakRSS and26140672B cgroup current memory; full-scale memory/enrollment proof
+is still required. No physical OOM or causal host-pressure claim is made.
+
+Current complete baseline, alias-gap disposition, ordinary cycle, health and
+schedule are unaccepted. Calendar stays disabled, next run null. Remaining
+ordinary logical sizes are not net transfer demand; retained prefixes and CAS
+reuse must be applied before capture. Root history migration remains separate.
+
 # October26 — bounded local metadata and retained B recovery,20:39EDT
 
 The six growing controls are now on native Desktop B;2085306368allocatedB

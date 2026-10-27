@@ -118,7 +118,7 @@ class TrackedDeltaTests(unittest.TestCase):
     def setUp(self):
         self.anchor=dict(baseline_accepted=True,instance='one',scope_sha256='a'*64,plan_sha256='b'*64,sequence=10,sources=['/source'])
         self.report=dict(ready=True,errors=[],terminal=None,instance='one',scope_sha256='a'*64,plan_sha256='b'*64,
-                         since=10,sequence=11,changed=[],events={})
+                         since=10,sequence=11,changed=[],events={},barrier=True,coverage_model='all-selected-inodes-v1')
 
     def delta(self,enumerate_subtree=lambda _:(),maximum_paths=10):
         return select(self.anchor,self.report,required_sql=['/source/db.sqlite'],maximum_paths=maximum_paths,enumerate_subtree=enumerate_subtree)
@@ -139,7 +139,8 @@ class TrackedDeltaTests(unittest.TestCase):
         self.assertNotIn('/source/db.sqlite-wal',result['paths'])
 
     def test_epoch_fault_scope_or_wrong_query_cursor_requires_reconciliation(self):
-        for updates in (dict(instance='new'),dict(errors=[{'coverage_lost':16384}]),dict(ready=False),dict(since=9)):
+        for updates in (dict(instance='new'),dict(errors=[{'coverage_lost':16384}]),dict(ready=False),dict(since=9),
+                        dict(coverage_model='directory-namespace-only-v1'),dict(barrier=False)):
             old=copy.deepcopy(self.report);self.report.update(updates)
             with self.assertRaises(ReconciliationRequired):self.delta()
             self.report=old

@@ -17,6 +17,7 @@ import threading
 from vk_nightly_bounded_spool import held
 from vk_nightly_b_tracker import write_health
 from vk_nightly_tracking import serve
+from vk_nightly_inode_journal import Journal as InodeJournal
 
 
 def run(config, *, guard):
@@ -35,9 +36,10 @@ def run(config, *, guard):
                 write_health(store.db,config['status'],value)
             factory.status=status
             yield store
+    options={'journal_factory':InodeJournal} if config.get('watch_all_selected_inodes') is True else {}
     serve(json.loads(Path(config['plan']).read_text()),None,Path(config['endpoint']),
           guard=guard,status_path=None,stop=stop,store_factory=factory,
-          status_writer=lambda value:factory.status(value))
+          status_writer=lambda value:factory.status(value),**options)
 
 
 def main():

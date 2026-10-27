@@ -26,7 +26,7 @@ on unknown-watch reports. V10's complete namespace and body versions remain vali
 October27 RAM stress reproduced a final inode callback after IN_IGNORED. The fix
 retains at most8192 explicitly retired names, dirties/re-enrolls current names,
 and still rejects unknown WDs, missing parents, overflow and access failures.
-Pinned O_PATH enrollment also closes symlink/name replacement races.198 focused
+Pinned O_PATH enrollment also closes symlink/name replacement races.224 focused
 checks pass. New V11 enrollment/memory proof and stopped-interval namespace
 reconciliation completed; V14 composes those retained inputs. This never
 retrospectively repairs either stopped epoch.
@@ -36,8 +36,9 @@ Additive map integration requires that actual proof and full later namespace,
 retains old epochs/absences and explicitly enrolls the critical SQL target.
 The B-only namespace and V14 composition completed with independent reopen.
 After a native health-command timeout, fresh actual B health passed and the
-retained-map V6 continuation uses serialized native health observations. SQL V4 and the finite runtime component
-are queued serially behind exact verified predecessors. Read current handoff;
+retained-map V6 later stopped on contended status metadata. Exact checkpoint and
+both writer leases were verified before optimized V8/SQL5/runtime4 handover.
+They preserve completed versions, selected suffix and original deadlines. Read current handoff;
 whole-baseline/installed calendar acceptance remains open.
 Namespace completeness alone does not prove body/SQL/runtime recoverability.
 

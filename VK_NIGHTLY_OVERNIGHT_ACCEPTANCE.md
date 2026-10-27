@@ -73,8 +73,8 @@ payload or production reader was created for these fixtures.
    supervisor and must not be enabled as this new integration on source tests.
 
 Current progress, exact live owners and the pending baseline/service integration
-are in [the handoff](HANDOFF.md). This document claims neither production adoption
-of the performance changes nor overnight completion.
+are in [the handoff](HANDOFF.md). The optimized file continuation is now installed
+and advancing; whole-backup and overnight completion remain unverified.
 
 ## Executable restore integration and recovered dependency
 
@@ -121,3 +121,42 @@ prepared component, SQL predecessor, source epoch and original absolute wait/
 unit deadlines. All memory/CPU/swap/access guards remain. File V6 and SQL V4 were
 not stopped or replaced. This is recovery of a waiting dependency, not a second
 capture or a claim of runtime/baseline completion.
+
+## Actual optimized handover — October 27, 18:42 EDT
+
+The owner requested a controlled checkpoint/resume. The old file worker stopped
+on an actual SQLite lock in its progress-status upsert before any requested
+signal was sent. Its queued SQL/runtime controllers correctly stopped on that
+failed predecessor. A concurrent checkpoint read may have contributed; the
+observations do not establish causation. This was neither a drive-failure report
+nor loss of completed backup bytes. The corrected upsert retries only the same
+idempotent metadata operation within the existing finite contention allowance,
+retaining actual host/native/STOP controls. It never retries a body capture.
+
+All old controllers were verified terminal, with empty cgroups. The successor
+actually acquired both the inherited MCP writer lease and native B object-store
+lease before launch. A normal independent B reopen passed map `quick_check`,
+retained all 14,594 file-acceptance rows and authenticated the exact selected
+journal input. No immutable baseline or completed body was recopied. The new
+controller resumes that qualified input rather than enrolling a fresh suffix;
+later source events remain durably tracked for subsequent delta consumption.
+The original absolute file and dependent waiting deadlines remain unchanged.
+
+The file, SQL and runtime successor packages pin source `539e0280c`; 224 focused
+tests pass, including actual native SQLite reader contention/STOP, interrupted
+file reuse, exact retained-input reopening, memory-streamed normal consumer and
+whole-cycle publication after independent restore. Actual command lines and
+config/source hashes bind the new loaded packages. Production file progress
+contains the new control-roundtrip and independent-readback telemetry. In one
+80.8-second mixed-file interval it added 89 files, read 404,058 source bytes and
+sent 154,637 encoded bytes to B. This is observed progress, not a supported ETA,
+a same-work before/after speed comparison or overnight acceptance.
+
+The B-resident whole-cycle ledger preserves original deadlines and authenticated
+phase receipts across interruption. Fixed serial integration completes the
+recorded file delta dirtied by SQL selection without chasing another live global
+suffix. An accepted pointer advances transactionally only after a matching normal
+leased consumer result. The fixed existing WSL route checks its registered B
+placement and streams pinned consumer code/packet in memory to UID1000. These
+whole-cycle helpers have isolated native-protocol integration evidence; actual
+complete current-set execution and operational calendar adoption remain open.

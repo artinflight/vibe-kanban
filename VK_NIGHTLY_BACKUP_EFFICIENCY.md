@@ -1643,3 +1643,15 @@ independent B reopen. The hash-only stage completed10:34EDT:18539points,
 actual B stage reopen passed. These are reusable components, not full current
 restore/calendar acceptance. Baseline composition and subsequent capture
 consume them after the original body writer is verified terminal.
+
+Composition admission now checks the actual writable index size before setting
+a SQLite page ceiling. The failed V10 wrapper inherited a1GiB namespace cap
+for an existing1258803200B map; SQLite silently clamped its page ceiling to
+the existing page count and then rejected growth as SQLITE_FULL. Native B
+was healthy with1545625174016B free; native C temp also had66GB free. The
+map successor restores its previously tested4GiB budget rather than changing
+a physical floor. A regression reproduces and rejects the too-small budget
+before mutation. Native SQLite/Python temporary placement is now verified
+inside the admitted B control directory; it changes only that worker process.
+Structured error context reports operation/index/code frames without SQL
+parameters, improving future exact diagnosis.

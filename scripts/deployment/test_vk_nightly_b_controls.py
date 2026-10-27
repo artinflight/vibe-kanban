@@ -41,10 +41,10 @@ class BControlTests(unittest.TestCase):
         self.assertEqual(self.client.readback(self.sha),len(self.raw))
         self.receipt=self.client.call(op='acknowledge',sha256=self.sha,independent_stream_sha256=self.sha,Linux_metadata=self.metadata)
 
-    def start(self):
+    def start(self,maximum_index_bytes=8388608):
         code=('import sys;sys.path.insert(0,'+repr(str(Path(__file__).parent))+');import vk_nightly_objects as objects;'
             'from vk_nightly_b_controls import serve;serve('+repr(str(self.controls))+
-            ',sys.stdin.buffer,sys.stdout.buffer,objects=objects,guard=lambda n:None,maximum_index_bytes=8388608)')
+            ',sys.stdin.buffer,sys.stdout.buffer,objects=objects,guard=lambda n:None,maximum_index_bytes='+repr(maximum_index_bytes)+')')
         p=subprocess.Popen([sys.executable,'-B','-u','-c',code],stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
         self.children.append(p);return Client(p.stdout,p.stdin)
 
@@ -111,6 +111,25 @@ class BControlTests(unittest.TestCase):
         finally:
             stop.set();thread.join(timeout=5)
         self.assertFalse(thread.is_alive());self.assertEqual(errors,[])
+
+    def test_existing_larger_index_is_rejected_before_a_misleading_SQLITE_FULL(self):
+        from vk_nightly_b_controls import NativeControlError
+        db=self.client.connect('grown',self.sha)
+        db.execute('create table larger(body blob)');db.execute('insert into larger values(zeroblob(65536))');db.close()
+        smaller=self.start(maximum_index_bytes=16384)
+        with self.assertRaisesRegex(NativeControlError,'existing native B index exceeds') as caught:
+            smaller.connect('grown',self.sha)
+        self.assertEqual(caught.exception.native_context['operation'],'open')
+        # A metadata reader may inspect it without claiming a writable budget.
+        view=smaller.connect('grown',self.sha,readonly=True,working=True)
+        self.assertEqual(view.execute('select length(body) from larger').fetchone(),(65536,));view.close()
+        # Restore the previously measured bound on the same normal provider.
+        db=self.client.connect('grown',self.sha)
+        state=self.client.call(op='storage-status',name='grown')
+        self.assertGreater(state['max_page_count'],state['page_count'])
+        self.assertEqual(Path(state['temporary_directory']),self.controls/'sqlite-tmp-v1')
+        self.assertEqual(Path(state['sqlite_temp_directory']),self.controls/'sqlite-tmp-v1')
+        db.execute('insert into larger values(zeroblob(4096))');db.close()
 
     def test_native_transactions_roundtrip_binary_and_reopen_without_recopy(self):
         db=self.client.connect('working',self.sha)

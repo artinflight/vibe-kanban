@@ -19,6 +19,7 @@ import sqlite3
 import struct
 import tempfile
 import time
+import traceback
 
 LIMIT=4*1024**2
 BLOCK=65536
@@ -80,9 +81,19 @@ class Store:
         self.root=Path(root);self.objects=objects;self.guard=guard;self.maximum=maximum_index_bytes
         if self.root.resolve()!=self.root or not self.root.is_dir():raise ValueError('existing canonical B control directory required')
         self.handles={};self.cursors={};self.next_cursor=0;self.readonly_identities={};self.pending_rows={};self.exhausted={}
-        self.cache_bytes=128*1024**2;self.guard_reason=None
+        self.cache_bytes=128*1024**2;self.guard_reason=None;self.temporary_configured=False
 
     def configure(self,db):
+        if not self.temporary_configured:
+            # SQLite spill/statement journals and Python-owned temporary work
+            # belong on the same admitted B control volume. This affects only
+            # this dedicated worker process, never OS/global settings or sources.
+            self.guard(1024**2);temporary=self.root/'sqlite-tmp-v1';self.directory(temporary)
+            db.execute("pragma temp_store_directory='"+str(temporary).replace("'","''")+"'")
+            actual=db.execute('pragma temp_store_directory').fetchone()
+            if actual is None or Path(actual[0]).resolve()!=temporary:
+                raise ValueError('native SQLite cannot verify B temporary placement')
+            tempfile.tempdir=str(temporary);self.temporary_configured=True
         # This is a per-connection ceiling, not a preallocation or global
         # reserve. The measured842MB map thrashed at the former2MB setting.
         if os.name=='nt':
@@ -203,7 +214,7 @@ class Store:
         # remains active; SQLite's native locks provide that consistency.
         lease=nullcontext() if working_read else self.objects.store_lease(self.root/(key+'-lease'))
         if not working_read:self.directory(self.root/(key+'-lease'))
-        lease.__enter__()
+        lease.__enter__();db=None
         try:
             path=checkpoint if readonly and not working_read else self.root/(key+'.sqlite')
             binding=self.root/(key+'.binding.json')
@@ -231,18 +242,23 @@ class Store:
                 if bound!={'checkpoint_sha256':q['checkpoint_sha256'],'inode':self.objects.file_identity(path)[:2]}:
                     raise ValueError('working index binding changed')
             self.checked(path)
+            if not readonly and path.stat().st_size>self.maximum:
+                raise ValueError('existing native B index exceeds this phase byte budget; preserve and use its measured working size')
             suffix='?mode=ro' if working_read else '?mode=ro&immutable=1' if readonly else '?mode=rw'
             db=sqlite3.connect(path.as_uri()+suffix,uri=True,timeout=0,isolation_level=None)
             self.configure(db)
             if not readonly:
                 db.execute('pragma journal_mode=DELETE');db.execute('pragma synchronous=FULL')
                 page=db.execute('pragma page_size').fetchone()[0]
-                db.execute('pragma max_page_count='+str(self.maximum//page))
+                actual=db.execute('pragma max_page_count='+str(self.maximum//page)).fetchone()[0]
+                if actual!=self.maximum//page:raise ValueError('native SQLite page ceiling differs from admitted index budget')
             db.set_authorizer(self.authorizer)
             self.handles[key]=(db,path,self.objects.file_identity(path)[:2],lease)
             if readonly and not working_read:self.readonly_identities[key]=self.objects.file_identity(path)
             return dict(open=True,in_transaction=False,bytes=path.stat().st_size)
-        except BaseException:lease.__exit__(None,None,None);raise
+        except BaseException:
+            if db is not None:db.close()
+            lease.__exit__(None,None,None);raise
 
     def call(self,q):
         self.guard(1024**2);op=q['op']
@@ -298,6 +314,17 @@ class Store:
         if key in self.readonly_identities and self.objects.file_identity(path)!=self.readonly_identities[key]:
             raise ValueError('immutable B checkpoint changed while reading')
         if op=='check':return dict(in_transaction=db.in_transaction,bytes=path.stat().st_size)
+        if op=='storage-status':
+            temporary=tempfile.gettempdir()
+            return dict(index_bytes=path.stat().st_size,maximum_index_bytes=self.maximum,
+                page_count=db.execute('pragma page_count').fetchone()[0],page_size=db.execute('pragma page_size').fetchone()[0],
+                max_page_count=db.execute('pragma max_page_count').fetchone()[0],
+                temp_store=db.execute('pragma temp_store').fetchone()[0],temporary_directory=temporary,
+                sqlite_temp_directory=str(self.root/'sqlite-tmp-v1'),
+                temporary_volume_free_bytes=shutil.disk_usage(temporary).free,
+                B_control_free_bytes=shutil.disk_usage(self.root).free,sqlite_version=sqlite3.sqlite_version,
+                in_transaction=db.in_transaction,metadata_only=True)
+
         if op=='namespace-next':
             limit=q['limit']
             if type(limit) is not int or not 1<=limit<=512:raise ValueError('bounded namespace queue request required')
@@ -573,7 +600,10 @@ def serve(root,source,output,*,objects,guard,maximum_index_bytes=4*1024**3):
                 send(output,dict(sha256=store.hash(path)));continue
             try:result=store.call(q)
             except (OSError,ValueError,sqlite3.Error,KeyError) as error:
-                send(output,dict(error_type=type(error).__name__,error=str(error),guard_reason=store.guard_reason));continue
+                context=dict(operation=str(q.get('op',''))[:128],index=str(q.get('name',''))[:128],
+                    sqlite_errorcode=getattr(error,'sqlite_errorcode',None),sqlite_errorname=getattr(error,'sqlite_errorname',None),
+                    frames=[dict(function=f.name,line=f.lineno) for f in traceback.extract_tb(error.__traceback__)[-8:]])
+                send(output,dict(error_type=type(error).__name__,error=str(error),guard_reason=store.guard_reason,native_context=context));continue
             send(output,dict(result=result))
     except EOFError:pass
     finally:
@@ -586,7 +616,7 @@ def serve(root,source,output,*,objects,guard,maximum_index_bytes=4*1024**3):
 
 class NativeControlError(ValueError):
     def __init__(self,value):
-        self.native_error_type=value['error_type'];self.guard_reason=value.get('guard_reason')
+        self.native_error_type=value['error_type'];self.guard_reason=value.get('guard_reason');self.native_context=value.get('native_context')
         super().__init__('native B '+value['error_type']+': '+value['error']+
                          ('; '+self.guard_reason if self.guard_reason else ''))
 

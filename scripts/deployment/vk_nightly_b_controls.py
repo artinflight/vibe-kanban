@@ -413,9 +413,18 @@ class Store:
                 if record is None or hashlib.sha256(record[0].encode()).hexdigest()!=expected:
                     raise ValueError('actual B scope-extension proof missing or changed')
                 extension=json.loads(record[0])
+            terminal=None
+            if q.get('terminal_epoch_gap_sha256') is not None:
+                expected=sha(q['terminal_epoch_gap_sha256'])
+                proof_db,proof_path,proof_inode,_=self.handles[name(q['terminal_epoch_gap_index'])]
+                if self.objects.file_identity(proof_path)[:2]!=proof_inode:raise ValueError('terminal gap index substituted')
+                record=proof_db.execute('select row from source_terminal_gaps where sha256=?',(expected,)).fetchone()
+                if record is None or hashlib.sha256(record[0].encode()).hexdigest()!=expected:
+                    raise ValueError('actual B terminal gap proof missing or changed')
+                terminal=json.loads(record[0])
             return value.reconcile_namespace(namespace,qualified,checkpoint=lambda:self.guard(path.stat().st_size+LIMIT),
                 maximum_paths=q['maximum_paths'],allow_unaccepted_epoch_successor=q.get('allow_unaccepted_epoch_successor') is True,
-                source_scope_extension=extension)
+                source_scope_extension=extension,terminal_epoch_gap=terminal)
         if op=='replay-current-map':
             import vk_nightly_current_map as current
             expected=sha(q['input_sha256']);parts=[];total=0

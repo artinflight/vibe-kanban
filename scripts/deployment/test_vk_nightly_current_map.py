@@ -98,6 +98,33 @@ class CurrentMapTests(unittest.TestCase):
             self.assertEqual(result['member_states'],{'verified-file':1,'file-needs-qualification':1})
             with self.assertRaisesRegex(ValueError,'durable journal suffix'):SealedMemberIndex(m.db,m.check,{'consistent_SQL_sidecars':{}})
 
+    def test_completed_suffix_successor_requires_exact_retained_terminal_gap(self):
+        import copy
+        first=self.later_namespace();first.execute('insert into namespace values(?,?)',('home/a',encode_observation(self.observation)))
+        second=self.later_namespace();old=json.loads(first.execute('select binding from gap_meta').fetchone()[0]);new=dict(old,instance='after-terminal')
+        second.execute('update gap_meta set binding=?',(json.dumps(new),));second.execute('insert into namespace values(?,?)',('home/a',encode_observation(self.observation)))
+        proof=dict(format='vk-nightly-closed-source-epoch-gap-v1',old_instance=old['instance'],new_instance=new['instance'],
+            **{k:old.get(k) for k in ('plan_sha256','scope_sha256','required_root_bindings')},
+            old_owner_verified_terminal=True,old_MainPID=0,old_committed_sequence=old['start_sequence']+1,
+            old_B_delivered_sequence=old['start_sequence'],old_gap_continuity_proven=False,original_epoch_repaired=False,
+            current_baseline_accepted=False,complete_later_metadata_required=True,reason='retained unknown-watch fault',old_source_database_sha256='a'*64)
+        with CurrentMap.held(self.path,binding=self.binding,create=True) as m:
+            self.compile(m);m.reconcile_namespace(first,lambda n:self.version,checkpoint=lambda:None,maximum_paths=10)
+            m.db.execute('update namespace_reconciliation set suffix_complete=1')
+            with self.assertRaisesRegex(ValueError,'terminal gap'):
+                m.reconcile_namespace(second,lambda n:None,checkpoint=lambda:None,maximum_paths=10,allow_unaccepted_epoch_successor=True)
+            for field,bad in [('old_instance','wrong'),('old_MainPID',123),('old_gap_continuity_proven',True),
+                              ('current_baseline_accepted',True),('plan_sha256','f'*64),('old_source_database_sha256','bad')]:
+                with self.subTest(field=field),self.assertRaises(ValueError):
+                    m.reconcile_namespace(second,lambda n:None,checkpoint=lambda:None,maximum_paths=10,
+                        allow_unaccepted_epoch_successor=True,terminal_epoch_gap=dict(proof,**{field:bad}))
+            result=m.reconcile_namespace(second,lambda n:None,checkpoint=lambda:None,maximum_paths=10,
+                allow_unaccepted_epoch_successor=True,terminal_epoch_gap=proof)
+            self.assertFalse(result['current_baseline_accepted']);self.assertTrue(result['journal_suffix_required'])
+            self.assertEqual(m.db.execute('select suffix_complete from namespace_reconciliation_history').fetchone(),(1,))
+            self.assertEqual(m.db.execute('select count(*) from namespace_terminal_gaps').fetchone(),(1,))
+            self.assertEqual(m.db.execute('select suffix_complete from namespace_reconciliation').fetchone(),(0,))
+
     def additive_namespace_fixture(self):
         import copy
         old=self.later_namespace();old_binding=json.loads(old.execute('select binding from gap_meta').fetchone()[0])

@@ -1611,3 +1611,11 @@ pass real RAM fixtures, including3000 concurrent replacements. The exact old
 in-memory report was not retained; its size/duplicate count are unknown. No
 claim that these fixes repair old coverage. The active body worker retains
 independently verified file points; current baseline and calendar remain open.
+
+Terminal-epoch recovery is now explicit: the native B provider authenticates
+a retained closed-source gap proof before replacing a completed draft suffix
+with a complete later namespace. It preserves old gap/suffix records, requires
+unchanged scope/roots and a verified terminal owner, and refuses continuity or
+whole-baseline claims. Missing/tampered proofs and lost replies pass native
+protocol regression tests. The active body phase must release its map lease
+before later metadata adoption; accepted component copies remain reusable.

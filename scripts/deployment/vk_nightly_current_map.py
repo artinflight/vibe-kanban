@@ -110,6 +110,35 @@ def additive_scope_SQL_sources(previous,current,proof,SQL_sources):
     return sources
 
 
+def terminal_epoch_successor(previous,current,proof):
+    """A retained, B-authenticated terminal-gap receipt permits a new draft.
+
+    This is a later complete metadata epoch, never an overlap/continuity claim.
+    The normal native provider authenticates the exact proof before this call.
+    Accepted immutable descriptors/carriers remain separate and unchanged.
+    """
+    if (not isinstance(proof,dict) or proof.get('format')!='vk-nightly-closed-source-epoch-gap-v1'
+            or proof.get('old_instance')!=previous.get('instance')
+            or proof.get('new_instance')!=current.get('instance')
+            or previous.get('instance')==current.get('instance')
+            or any(proof.get(k)!=previous.get(k) or previous.get(k)!=current.get(k)
+                   for k in ('plan_sha256','scope_sha256','required_root_bindings'))
+            or proof.get('old_owner_verified_terminal') is not True
+            or type(proof.get('old_MainPID')) is not int or proof['old_MainPID']!=0
+            or type(proof.get('old_committed_sequence')) is not int
+            or proof['old_committed_sequence']<previous['start_sequence']
+            or type(proof.get('old_B_delivered_sequence')) is not int
+            or not 0<=proof['old_B_delivered_sequence']<=proof['old_committed_sequence']
+            or proof.get('old_gap_continuity_proven') is not False
+            or proof.get('original_epoch_repaired') is not False
+            or proof.get('current_baseline_accepted') is not False
+            or proof.get('complete_later_metadata_required') is not True
+            or not isinstance(proof.get('reason'),str) or not 0<len(proof['reason'])<=4096):
+        raise ValueError('exact retained terminal epoch/gap proof required')
+    digest(proof['old_source_database_sha256'])
+    return json.dumps(proof,sort_keys=True,separators=(',',':'))
+
+
 class SealedMemberIndex:
     """Typed-reader view of one authenticated complete current-map image.
 
@@ -323,7 +352,7 @@ class CurrentMap:
         return dict(already_complete=False, processed=processed, more_members=False, **self.summary())
 
     def reconcile_namespace(self, namespace, qualified, *, checkpoint, maximum_paths,
-                            allow_unaccepted_epoch_successor=False,source_scope_extension=None):
+                            allow_unaccepted_epoch_successor=False,source_scope_extension=None,terminal_epoch_gap=None):
         """Adopt one complete later metadata epoch without replaying body hashes.
 
         Reuse requires the full nine-field identity AND Linux xattrs from the
@@ -347,8 +376,9 @@ class CurrentMap:
                 raise ValueError('later namespace/observer binding changed; preserve existing reconciliation')
             previous=json.loads(stored)
             suffix=db.execute('select suffix_complete from namespace_reconciliation where id=1').fetchone()[0]
-            if not complete or suffix:
-                raise ValueError('only completed unaccepted namespace may have an explicit successor')
+            terminal_raw=terminal_epoch_successor(previous,binding,terminal_epoch_gap) if terminal_epoch_gap is not None else None
+            if not complete or suffix and terminal_raw is None:
+                raise ValueError('completed unaccepted namespace and explicit terminal gap required for a closed suffix')
             same_scope=all(previous.get(k)==binding.get(k) for k in
                            ('plan_sha256','scope_sha256','required_root_bindings'))
             additional_SQL=[];extension_raw=None
@@ -365,10 +395,14 @@ class CurrentMap:
                 '(sha256 text primary key,binding text,last_name text,complete integer,suffix_complete integer) without rowid')
             db.execute('create table if not exists namespace_absent_history '
                 '(epoch_sha256 text,name text,old_state text,row blob,disposition text,primary key(epoch_sha256,name)) without rowid')
+            if terminal_raw is not None:
+                db.execute('create table if not exists namespace_terminal_gaps(sha256 text primary key,row text not null) without rowid')
             if extension_raw is not None:
                 db.execute('create table if not exists namespace_scope_extensions(sha256 text primary key,row text not null) without rowid')
             db.execute('begin immediate')
             try:
+                if terminal_raw is not None:
+                    db.execute('insert into namespace_terminal_gaps values(?,?)',(hashlib.sha256(terminal_raw.encode()).hexdigest(),terminal_raw))
                 if extension_raw is not None:
                     db.execute('insert into namespace_scope_extensions values(?,?)',
                                (hashlib.sha256(extension_raw.encode()).hexdigest(),extension_raw))

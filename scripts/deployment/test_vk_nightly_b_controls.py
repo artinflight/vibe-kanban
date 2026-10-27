@@ -408,6 +408,46 @@ class BControlTests(unittest.TestCase):
         self.assertTrue(self.client.call(op='replay-current-map',name='replay-map',journal_index='replay-ledger',input_sha256=sha,maximum_paths=10)['already_complete'])
         db.close();journal.close()
 
+    def test_native_terminal_gap_adoption_requires_exact_independently_retained_proof(self):
+        from vk_nightly_current_map import CurrentMap
+        from vk_nightly_gap_namespace import initialize
+        from vk_prep_common import identity
+        from vk_change_journal import scope
+        source=self.root/'source';source.mkdir();plan={'sources':[str(source)]}
+        def namespace(path,instance):
+            db=sqlite3.connect(path)
+            initialize(db,plan,dict(instance=instance,ready=True,errors=[],sequence=17,
+                plan_sha256=identity(plan),scope_sha256=identity(scope(plan))))
+            db.execute('update gap_meta set complete=1');db.commit()
+            binding=json.loads(db.execute('select binding from gap_meta').fetchone()[0]);db.close();return binding
+        first=self.root/'old-ns.sqlite';old=namespace(first,'old-inodes')
+        path=self.root/'map.sqlite';ns=sqlite3.connect(first)
+        with CurrentMap.held(path,binding={'test':'terminal-gap'},create=True) as m:
+            m.compile(ns,lambda n:None,SQL_sources=[],checkpoint=lambda:None,maximum_paths=10)
+            m.reconcile_namespace(ns,lambda n:None,checkpoint=lambda:None,maximum_paths=10)
+            m.db.execute('update namespace_reconciliation set suffix_complete=1')
+        ns.close();mapsha=self.import_other(path)
+        second=self.root/'new-ns.sqlite';new=namespace(second,'new-inodes');nssha=self.import_other(second)
+        mapped=self.client.connect('terminal-map',mapsha);newns=self.client.connect('terminal-ns',nssha)
+        q=self.client.connect('terminal-q',self.sha);q.execute('create table versions(name text primary key,row blob)')
+        proofs=self.client.connect('terminal-proofs',self.sha);proofs.execute('create table source_terminal_gaps(sha256 text primary key,row text not null) without rowid')
+        args=dict(op='reconcile-current-map',name='terminal-map',namespace='terminal-ns',qualifier='terminal-q',maximum_paths=10,allow_unaccepted_epoch_successor=True)
+        with self.assertRaisesRegex(ValueError,'terminal gap'):self.client.call(**args)
+        proof=dict(format='vk-nightly-closed-source-epoch-gap-v1',old_instance=old['instance'],new_instance=new['instance'],
+            **{k:old[k] for k in ('plan_sha256','scope_sha256','required_root_bindings')},old_owner_verified_terminal=True,old_MainPID=0,
+            old_committed_sequence=20,old_B_delivered_sequence=18,old_gap_continuity_proven=False,original_epoch_repaired=False,
+            current_baseline_accepted=False,complete_later_metadata_required=True,reason='retained source queue fault',old_source_database_sha256='a'*64)
+        raw=json.dumps(proof,sort_keys=True,separators=(',',':'));sha=hashlib.sha256(raw.encode()).hexdigest()
+        args.update(terminal_epoch_gap_index='terminal-proofs',terminal_epoch_gap_sha256=sha)
+        with self.assertRaisesRegex(ValueError,'missing or changed'):self.client.call(**args)
+        proofs.execute('insert into source_terminal_gaps values(?,?)',(sha,raw))
+        result=self.client.call(**args)
+        self.assertFalse(result['current_baseline_accepted']);self.assertTrue(result['journal_suffix_required'])
+        self.assertEqual(mapped.execute('select suffix_complete from namespace_reconciliation_history').fetchone(),(1,))
+        self.assertEqual(mapped.execute('select suffix_complete from namespace_reconciliation').fetchone(),(0,))
+        self.assertTrue(self.client.call(**args)['already_complete'])
+        for db in (mapped,newns,q,proofs):db.close()
+
     def test_native_prefix_attachment_uses_the_retained_base_without_copy_or_acceptance(self):
         import stat
         from vk_nightly_current_map import CurrentMap,decode_member

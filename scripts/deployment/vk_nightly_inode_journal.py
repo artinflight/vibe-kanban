@@ -28,9 +28,14 @@ def require_full_coverage(report):
     A ready namespace observer cannot establish file-content change coverage.
     The caller still authenticates owner, epoch, scope and the actual barrier.
     """
+    barrier=report.get('barrier')
     if (report.get('coverage_model')!='all-selected-inodes-v1'
-            or report.get('ready') is not True or report.get('errors')
-            or report.get('terminal') or not report.get('barrier')):
+            or report.get('ready') is not True or report.get('errors') or report.get('terminal')
+            or not isinstance(barrier,dict) or barrier.get('kernel_drain_completed') is not True
+            or not isinstance(report.get('instance'),str) or not report['instance']
+            or type(report.get('sequence')) is not int or report['sequence']<0
+            or barrier.get('instance')!=report['instance'] or type(barrier.get('durable_sequence')) is not int
+            or barrier['durable_sequence']!=report['sequence']):
         raise ValueError('complete inode change coverage and actual healthy barrier required')
 
 

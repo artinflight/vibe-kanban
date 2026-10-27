@@ -220,3 +220,17 @@ volume identity, capacity and provider/writer leases are unchanged. This changes
 only per-invocation placement; it installs no network/security configuration and
 does not rewrite an active producer. A missing or mismatched endpoint fails
 closed. Current runtime route evidence and fresh B admission stay private.
+
+Runtime code/control dependencies outside the main watched plan are explicit
+`always_runtime_files` in an accepted anchor, never silently claimed as watched.
+The bounded selector returns them separately for complete stable-point observation
+on each cycle/final delta. They count against the same finite path budget. Actual
+kernel coverage requires the daemon's matching instance/sequence/drain barrier;
+a truthy Boolean cannot establish it. Normal unchanged workspaces remain untouched.
+
+A hash-only qualification phase may read committed unresolved map rows through
+the native read-only working provider while the body worker owns that map. It
+stages results in the separately leased B qualification index, retaining old
+observations, atomic batch receipts and its resume cursor. It does not write the
+main map or compete for the body-writer lane. Apply its results only through the
+existing map controller after that writer releases its lease.

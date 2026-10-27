@@ -5,6 +5,7 @@ report. No global walk, stat or content hash is performed for unchanged paths.
 New/moved-in directories require only their affected subtrees to be enumerated.
 Journal faults/epoch loss demand explicit reconciliation, never an empty delta.
 """
+import re
 from pathlib import PurePosixPath
 from vk_nightly_inode_journal import require_full_coverage
 
@@ -41,6 +42,18 @@ def select(anchor,report,*,required_sql,maximum_paths,enumerate_subtree):
                    or '..' in PurePosixPath(path).parts or '\x00' in path
                    or not any(under(path,root) for root in sources) for path in always)):
         raise ReconciliationRequired('always-snapshotted SQL dependencies must be explicitly bound in source scope')
+    runtime=anchor.get('always_runtime_files',{})
+    if not isinstance(runtime,dict):raise ReconciliationRequired('explicit accepted runtime dependency map required')
+    for path,row in runtime.items():
+        if (not isinstance(path,str) or not path.startswith('/') or str(PurePosixPath(path))!=path
+                or '..' in PurePosixPath(path).parts or '\x00' in path or not isinstance(row,dict)
+                or row.get('kind')!='file' or type(row.get('bytes')) is not int or row['bytes']<0
+                or not isinstance(row.get('sha256'),str) or not re.fullmatch('[0-9a-f]{64}',row['sha256'])):
+            raise ReconciliationRequired('canonical accepted runtime file point required')
+    if len(runtime)>maximum_paths:raise ReconciliationRequired('bounded runtime dependency budget exceeded')
+    # Runtime code/control files outside the main source plan remain an
+    # explicit component. The controller always observes their complete stable
+    # points; this selector never claims the kernel watched these paths.
     # A critical SQL alias target may live outside a directory root. Its WAL
     # need not modify the main inode, so its API snapshot is always required.
     # Ordinary unchanged workspaces still incur zero inventory/content reads.
@@ -51,7 +64,7 @@ def select(anchor,report,*,required_sql,maximum_paths,enumerate_subtree):
             raise ValueError('canonical changed source required')
         if not any(under(path,root) for root in sources):raise ValueError('changed path outside bound source roots')
         selected.add(path)
-        if len(selected)>maximum_paths:raise ReconciliationRequired('bounded final delta exceeded; finish Nightly catch-up first')
+        if len(selected|set(runtime))>maximum_paths:raise ReconciliationRequired('bounded final delta exceeded; finish Nightly catch-up first')
     for path in changed:
         mask=events[path]
         if type(mask) is not int or mask<=0:raise ReconciliationRequired('actual event mask required')
@@ -71,5 +84,7 @@ def select(anchor,report,*,required_sql,maximum_paths,enumerate_subtree):
             add(path)
     return dict(instance=report['instance'],since=anchor['sequence'],through=report['sequence'],
                 paths=sorted(selected),subtrees_enumerated=roots,removed_or_moved_from=sorted(deleted),
-                SQLite_API_sources=sorted(SQL),unchanged_paths_scanned=0,unchanged_payload_bytes_read=0,
+                SQLite_API_sources=sorted(SQL),runtime_files_to_observe_always=sorted(runtime),
+                kernel_coverage_for_runtime_files_claimed=False,
+                unchanged_paths_scanned=0,unchanged_payload_bytes_read=0,
                 writer_fence_verified=False,final_restart_SQLite_API_required=True)

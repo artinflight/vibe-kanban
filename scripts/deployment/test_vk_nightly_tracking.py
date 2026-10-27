@@ -158,7 +158,7 @@ class TrackedDeltaTests(unittest.TestCase):
     def setUp(self):
         self.anchor=dict(baseline_accepted=True,instance='one',scope_sha256='a'*64,plan_sha256='b'*64,sequence=10,sources=['/source'])
         self.report=dict(ready=True,errors=[],terminal=None,instance='one',scope_sha256='a'*64,plan_sha256='b'*64,
-                         since=10,sequence=11,changed=[],events={},barrier=True,coverage_model='all-selected-inodes-v1')
+                         since=10,sequence=11,changed=[],events={},barrier=dict(instance='one',durable_sequence=11,kernel_drain_completed=True),coverage_model='all-selected-inodes-v1')
 
     def delta(self,enumerate_subtree=lambda _:(),maximum_paths=10):
         return select(self.anchor,self.report,required_sql=['/source/db.sqlite'],maximum_paths=maximum_paths,enumerate_subtree=enumerate_subtree)
@@ -177,6 +177,24 @@ class TrackedDeltaTests(unittest.TestCase):
         self.assertEqual(result['unchanged_paths_scanned'],0)
         for paths in (['/outside'],['/source/not-declared.sqlite']):
             self.anchor['always_SQL_API_sources']=paths
+            with self.assertRaises(ReconciliationRequired):self.delta()
+
+    def test_external_runtime_dependencies_are_always_selected_without_claiming_journal_coverage(self):
+        self.anchor['always_runtime_files']={'/runtime/gateway.mjs':dict(kind='file',bytes=3200,sha256='a'*64)}
+        result=self.delta(lambda _:self.fail('unchanged source subtree scanned'))
+        self.assertEqual(result['paths'],[])
+        self.assertEqual(result['runtime_files_to_observe_always'],['/runtime/gateway.mjs'])
+        self.assertFalse(result['kernel_coverage_for_runtime_files_claimed'])
+        self.assertEqual(result['unchanged_paths_scanned'],0)
+        self.events({'/source/changed':2})
+        with self.assertRaisesRegex(ReconciliationRequired,'bounded final delta'):self.delta(maximum_paths=1)
+        self.anchor['always_runtime_files']['/runtime/gateway.mjs']['kind']='symlink'
+        with self.assertRaises(ReconciliationRequired):self.delta()
+
+    def test_boolean_or_wrong_sequence_barrier_never_counts_as_actual_coverage(self):
+        for barrier in [True,dict(instance='other',durable_sequence=11,kernel_drain_completed=True),
+                        dict(instance='one',durable_sequence=10,kernel_drain_completed=True)]:
+            self.report['barrier']=barrier
             with self.assertRaises(ReconciliationRequired):self.delta()
 
     def test_new_nested_subtree_is_enumerated_once_and_SQL_sidecars_select_API(self):

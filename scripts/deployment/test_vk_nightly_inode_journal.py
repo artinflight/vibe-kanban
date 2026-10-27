@@ -71,7 +71,10 @@ class InodeJournalTests(unittest.TestCase):
         with self.assertRaises(ValueError):require_full_coverage(report)
         report['coverage_model']='directory-namespace-only-v1'
         with self.assertRaises(ValueError):require_full_coverage(report)
-        report['coverage_model']='all-selected-inodes-v1';require_full_coverage(report)
+        report['coverage_model']='all-selected-inodes-v1'
+        with self.assertRaises(ValueError):require_full_coverage(report)
+        report.update(instance='actual-source',sequence=42,barrier=dict(instance='actual-source',durable_sequence=42,kernel_drain_completed=True))
+        require_full_coverage(report)
         for key,value in [('ready',False),('errors',[{'coverage_lost':True}]),('terminal','stopped'),('barrier',False)]:
             with self.subTest(key=key),self.assertRaises(ValueError):require_full_coverage(dict(report,**{key:value}))
 

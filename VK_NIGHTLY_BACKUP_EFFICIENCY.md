@@ -1,3 +1,29 @@
+# October27 — current tracker, durable suffix and ongoing retained-point capture
+
+The owner-raised1048576watch ceiling is verified. Corrected V9 tracks about891k
+inodes without recorded errors; measured585MiB process RSS/1.09GB cgroup total
+includes file cache and about97MB kernel memory, with0swap/0OOM events.
+
+The B namespace/map completed920540names, reusing753622qualifications with no
+source/body rescan. A4529-name suffix independently reopened on B through1965408;
+original gaps remain historical and later events remain the next delta. The sole
+retained-point capture is running directly to B, preserving completed files/CAS
+receipts. Its pinned configuration stays intact; the next phase can use the
+separately identity/health-verified existing Desktop LAN route with strict SSH
+host keys. No network/security setting was changed.
+
+The current backend byte hash remains6f023011; actual PID615441 differs from the
+old handoff. Current loopback gateway/index agree. Two gateway control files
+outside the main plan total3200B; their explicit component metadata was prepared
+and independently reopened on B. Bodies/current-set adoption are still pending.
+Always-sampled runtime selection does not claim these files were kernel-watched.
+
+A separate qualification stage can read the committed map without its writer
+lease and store stable hashes/carrier matches in the independently leased B
+qualification index. Apply its results after the body map writer releases.
+Whole current descriptor/composed restore, ordinary worker commissioning and
+calendar activation remain open. No backend restart or next run is claimed.
+
 # October26,23:40EDT — regular SQL completion and explicit primary-DB dependency
 
 The current204-regular-source cohort completed successfully in1390.2s. It

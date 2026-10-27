@@ -59,6 +59,8 @@ class BControlTests(unittest.TestCase):
         from vk_nightly_tracking import serve,request
         from vk_nightly_outbox_collector import copy_once
         from vk_nightly_outbox_export import retained_prefix_report
+        from vk_nightly_inode_journal import Journal as InodeJournal
+        from vk_nightly_tracked_delta import select
         source=self.root/'source';source.mkdir();endpoint=self.root/'source.sock';status=self.root/'source-status'
         stop=threading.Event();errors=[]
         target=dict(B_root='B:/vk-backups/test/controls-v1',index_name='outbox',checkpoint_sha256=self.sha)
@@ -66,7 +68,7 @@ class BControlTests(unittest.TestCase):
         def factory():
             with held(self.root/'bounded.sqlite',maximum_bytes=256*1024,guard=lambda:None,replica=target) as store:yield store
         def observe():
-            try:serve({'sources':[str(source)]},None,endpoint,guard=lambda:None,status_path=status,stop=stop,store_factory=factory)
+            try:serve({'sources':[str(source)]},None,endpoint,guard=lambda:None,status_path=status,stop=stop,store_factory=factory,journal_factory=InodeJournal)
             except BaseException as error:errors.append(error)
         thread=threading.Thread(target=observe);thread.start()
         try:
@@ -77,6 +79,12 @@ class BControlTests(unittest.TestCase):
                 time.sleep(.01)
             config=dict(source_health=str(status),endpoint=str(endpoint),B_delivery_target=target,
                         controls={'B_root':target['B_root']},maximum_B_index_bytes=8*1024**2)
+            # Real empty fixture namespace is the accepted starting point;
+            # this never labels the production backup as accepted.
+            initial=request(endpoint,json.loads(status.read_text())['instance'],0,barrier=True)
+            self.assertEqual(list(source.iterdir()),[])
+            anchor=dict(baseline_accepted=True,instance=initial['instance'],sequence=initial['sequence'],
+                plan_sha256=initial['plan_sha256'],scope_sha256=initial['scope_sha256'],sources=[str(source)])
             (source/'changed').write_bytes(b'fixture')
             with patch('vk_nightly_outbox_collector.DesktopControls',side_effect=ConnectionError('Desktop offline')):
                 with self.assertRaises(ConnectionError):copy_once(config,guard=lambda:None)
@@ -92,6 +100,12 @@ class BControlTests(unittest.TestCase):
             with tracking_store(self.client,'outbox',self.sha,maximum_bytes=8*1024**2) as store:
                 combined=retained_prefix_report(store,endpoint,instance,0,guard=lambda:None)
                 self.assertIn(str(source/'changed'),combined['changed']);self.assertEqual(combined['source_paths_scanned'],0)
+                self.assertEqual(combined['since'],anchor['sequence'])
+                selected=select(anchor,combined,required_sql=[],maximum_paths=16,
+                    enumerate_subtree=lambda _:self.fail('unchanged fixture workspace scanned'))
+                self.assertIn(str(source/'changed'),selected['paths'])
+                self.assertEqual(selected['unchanged_paths_scanned'],0)
+                self.assertFalse(selected['writer_fence_verified'])
         finally:
             stop.set();thread.join(timeout=5)
         self.assertFalse(thread.is_alive());self.assertEqual(errors,[])

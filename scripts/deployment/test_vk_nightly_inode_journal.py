@@ -59,6 +59,57 @@ class InodeJournalTests(unittest.TestCase):
         outside.write_bytes(b'later');report=journal.report(moved['sequence'])
         self.assertTrue(report['ready']);self.assertIn(str(second/'file'),report['changed']);self.assertNotIn(str(original),report['changed'])
 
+    def test_old_ignored_event_cannot_erase_new_inode_name_mapping(self):
+        old=self.root/'old';new=self.root/'new';old.write_bytes(b'a');new.write_bytes(b'b')
+        journal=self.enroll();oldwd=journal.path_watches[str(old)];newwd=journal.path_watches[str(new)]
+        # Model the already-delivered destination enrollment followed by the
+        # old inode's queued IGNORED event. The new watch remains removable.
+        journal.file_aliases[oldwd]={str(new)}
+        journal.expected_ignored.add(oldwd)
+        journal.event(oldwd,0x8000,'')
+        self.assertEqual(journal.path_watches[str(new)],newwd)
+        self.assertIn(newwd,journal.file_aliases)
+
+    def test_replacement_during_child_enrollment_defers_until_actual_inode_is_watched(self):
+        old=self.root/'file';old.write_bytes(b'a');journal=self.enroll()
+        other=self.base/'replacement';other.write_bytes(b'b');real=os.lstat
+        def replaced(path,*args,**kwargs):
+            if str(path)==str(old):return real(other)
+            return real(path,*args,**kwargs)
+        with patch('vk_nightly_inode_journal.os.lstat',side_effect=replaced):
+            journal.enroll_file(str(old))
+        self.assertEqual(journal.pending_file_enrollments,{str(old)})
+        self.assertEqual(journal.errors,[])
+        report=journal.report(0)
+        self.assertEqual(report['pending_file_enrollments'],0)
+        self.assertTrue(report['ready'],report['errors'])
+        self.assertIn(str(old),report['changed'])
+        self.assertIn(str(old),journal.path_watches)
+
+    def test_concurrent_atomic_replacement_and_alias_churn_remain_observed(self):
+        import threading,time
+        f=self.root/'file';f.write_bytes(b'a');outside=self.base/'outside';os.link(f,outside)
+        journal=self.enroll();stop=threading.Event();failures=[]
+        def drain():
+            try:
+                while not stop.wait(.001):journal.read()
+            except BaseException as error:failures.append(str(error))
+        thread=threading.Thread(target=drain);thread.start()
+        try:
+            for i in range(1500):
+                p=self.root/'tmp';p.write_bytes(b'a');os.replace(p,f)
+                if i%2==0:os.link(outside,self.root/'hard');(self.root/'hard').unlink()
+            report=journal.report(0)
+            self.assertEqual(failures,[]);self.assertTrue(report['ready'],report['errors'])
+            self.assertEqual(report['pending_file_enrollments'],0)
+            self.assertIn(str(f),report['changed'])
+            self.assertIn(str(f),journal.path_watches)
+            alias=self.base/'new-alias';os.link(f,alias);alias.write_bytes(b'later')
+            after=journal.report(report['sequence'])
+            self.assertTrue(after['ready'],after['errors']);self.assertIn(str(f),after['changed'])
+        finally:stop.set();thread.join(timeout=5)
+        self.assertFalse(thread.is_alive())
+
     def test_real_kernel_refusal_is_not_ignored_or_retried_using_another_route(self):
         original=self.root/'file';original.write_bytes(b'old');journal=Journal({'sources':[str(self.root)]});self.addCleanup(journal.close)
         def full(*_):ctypes.set_errno(errno.ENOSPC);return -1

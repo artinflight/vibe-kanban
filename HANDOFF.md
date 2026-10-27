@@ -12,7 +12,9 @@ proof; SSD replicas became pointers, releasing2085306368allocatedB. The latest
 2321969152B cold task footprint is mostly retained prefix/scale evidence; it was
 not deleted. No backup payload or growing index is staged on OS/work SSD.
 
-Current source observation is V9, Desktop-independent: fixed8MiB local DB
+V9 stopped09:12EDT: report bound plus persisted unknown-watch fault;
+its raw queue/1,317pending names/cursor4081780 remain intact. B acknowledged
+3029482. Corrected successor requires explicit gap reconciliation. Fixed8MiB local DB
 plus9MiB preallocated PERSIST/FULL rollback journal; growing controls remain B.
 The owner-raised1048576watch ceiling is live. V7 closed only after authenticated
 V9 overlap; all previous raw spools/faults remain preserved. Earlier V6/V7
@@ -29,12 +31,10 @@ prefixes; actual source-prefix/full-B-readback checks decide reuse, not that
 candidate total. It forwards source events while capturing directly to B.
 Read actual phase STATUS/RESULT/STOP and LATEST_STATUS; do not duplicate it.
 
-Selected qualification/adoption is now source-tested against native B protocol,
-with exact pending-row ownership, current epoch, retained global hash matching,
-explicit deferred/SQL promotion and no rehash after a committed lost reply.
-It is not yet applied alongside this file phase: both require the same map lease.
-Next phase reuses the map/accepted points and EXISTING_LAN_NATIVE_B_ADMISSION
-with verified_SSH_route; leave the current pinned producer unchanged.
+Selected qualification/adoption and disjoint B staging pass source tests.
+The stage refused dead-source admission before B work; no qualifications lost.
+Next body phase may use EXISTING_LAN_NATIVE_B_ADMISSION; current pinned
+producer stays unchanged. Always reread actual receipts before adoption.
 
 Historical V6 namespace919022/753699reuse and all147 SQL points remain
 accepted component evidence. The204-regular SQL successor completed exit0,
@@ -66,7 +66,7 @@ the independently verified V9 handover below. Do not use V8's earlier ready rece
 
 Correction268e17c84 separates kernel-byte draining with a finite16MiB RAM
 FIFO and O(1) type counters. V9 PID3861689/start30300948,epoch
-21487895bcd24324869f9f8e636f8d5e is now tracking891k inodes/errors0.
+21487895bcd24324869f9f8e636f8d5e earlier tracked891k inodes; now terminal.
 ConfigSHA6c79c381efac2c30e8752e59ab3477d1ff6945655c6cf2fabba78ec91609c462.
 V7->V9 new/old/new barriers, both B prefix copies and normal independent B
 proof readback passed06:15EDT: V7_V9_ADDITIVE_HANDOVER,
@@ -102,8 +102,7 @@ Only after current restore and finite worker acceptance may02:00Toronto enable.
 Calendar remains disabled; next run null. Prettier remains unavailable.
 
 Cold own-root census remains in SSD_OWN_ALLOCATION_CURRENT_20261027;
-all originals/spools are preserved and charged once. New V9/control metadata
-is inside20MiB; growing indexes and bodies stay on B. Actual mount/access,
+all originals/spools are preserved and charged once. Bounded local source state uses8MiB DB plus9MiB rollback; growing indexes and bodies stay on B. Actual mount/access,
 STOP, capacity and memory checks remain; unused SSD-index headroom is not a
 native-B body-phase requirement. Full baseline/calendar remain unaccepted.
 Required formatter attempted: Rustpassed, Prettier unavailable.

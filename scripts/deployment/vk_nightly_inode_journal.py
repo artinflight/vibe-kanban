@@ -62,6 +62,7 @@ class Journal(DirectoryJournal):
         self.sorted_paths=[];self.paths_dirty=True
         self.inode_kinds={};self.root_aliases_enrolled=False
         self.kind_counts={stat.S_IFREG:0,stat.S_IFLNK:0}
+        self.pending_file_enrollments=set()
         self.lib.inotify_rm_watch.argtypes=[ctypes.c_int,ctypes.c_int]
         self.lib.inotify_rm_watch.restype=ctypes.c_int
         # Only ordered kernel bytes enter this finite FIFO. The reader never
@@ -117,6 +118,11 @@ class Journal(DirectoryJournal):
                     # FIFO cannot double its admitted memory.
                     with self.raw_lock:self.raw_bytes-=len(data)
             self.expire()
+            # A subscribed parent protects namespace transitions while a
+            # replaced child is enrolled again. Keep its point dirty/unready
+            # until the actual current inode has passed the final identity check.
+            for path in list(sorted(self.pending_file_enrollments))[:64]:
+                self.pending_file_enrollments.remove(path);self.enroll_file(path)
 
     def close(self):
         self.raw_stop.set();self.raw_reader.join(timeout=2)
@@ -167,8 +173,14 @@ class Journal(DirectoryJournal):
             self.inode_kinds[wd]=kind
             after=os.lstat(path)
             if (after.st_dev,after.st_ino)!=(before.st_dev,before.st_ino):
+                self.forget(path)
+                if str(Path(path).parent) in self.watches.values():
+                    if len(self.pending_file_enrollments)>=10000:
+                        raise WatchAdmissionError('bounded pending inode enrollment exceeded')
+                    self.pending_file_enrollments.add(path);self.changed_name(path,0x100)
+                    return
                 self.errors.append({'inode_enrollment_replaced':path})
-                raise WatchAdmissionError('source replaced during inode enrollment')
+                raise WatchAdmissionError('source replaced during inode enrollment without subscribed parent')
         except FileNotFoundError:
             if self.protected(path):
                 self.errors.append({'initial_required_root_absent':path})
@@ -237,7 +249,10 @@ class Journal(DirectoryJournal):
                 if mask&IGNORED:
                     if wd not in self.expected_ignored:self.errors.append({'inode_watch_removed':aliases})
                     self.expected_ignored.discard(wd)
-                    for path in aliases:self.path_watches.pop(path,None)
+                    for path in aliases:
+                        # A queued IGNORED for the replaced old inode must not
+                        # erase a new inode's already-enrolled name mapping.
+                        if self.path_watches.get(path)==wd:self.path_watches.pop(path,None)
                     self.file_aliases.pop(wd,None);kind=self.inode_kinds.pop(wd,None)
                     if kind is not None:self.kind_counts[kind]-=1
                     self.paths_dirty=True
@@ -252,6 +267,8 @@ class Journal(DirectoryJournal):
     def report(self,since=0):
         value=super().report(since)
         value.update(coverage_model=self.coverage_model,
+                     pending_file_enrollments=len(self.pending_file_enrollments),
+                     ready=value['ready'] and not self.pending_file_enrollments,
                      directory_watches=len(self.watches),regular_inode_watches=self.kind_counts[stat.S_IFREG],
                      symlink_inode_watches=self.kind_counts[stat.S_IFLNK],
                      regular_alias_paths=len(self.path_watches),watches=len(self.watches)+len(self.file_aliases),

@@ -73,6 +73,71 @@ class TrackingTests(unittest.TestCase):
                 with TrackingStore.held(self.path):pass
             self.assertEqual(store.report('one',0)['sequence'],5)
 
+    def test_readiness_recovery_without_a_new_event_is_committed(self):
+        from vk_nightly_inode_journal import Journal
+        import json
+        source=self.root/'source';source.mkdir();endpoint=self.root/'ready.sock';status=self.root/'ready.json'
+        stop=threading.Event();journals=[];errors=[]
+        def factory(plan):
+            j=Journal(plan);journals.append(j);return j
+        def worker():
+            try:serve({'sources':[str(source)]},self.path,endpoint,guard=lambda:None,
+                      status_path=status,journal_factory=factory,stop=stop)
+            except BaseException as error:errors.append(error)
+        thread=threading.Thread(target=worker);thread.start()
+        try:
+            deadline=time.monotonic()+10
+            while not endpoint.exists():
+                if errors:raise errors[0]
+                if time.monotonic()>deadline:self.fail('tiny observer did not enroll')
+                time.sleep(.01)
+            h=json.loads(status.read_text());(source/'new').write_text('fixture')
+            while not (r:=request(endpoint,h['instance'],0))['sequence']:
+                if time.monotonic()>deadline:self.fail('no event')
+                time.sleep(.01)
+            with journals[0].lock:journals[0].ready=False
+            while request(endpoint,h['instance'],0)['ready']:
+                if time.monotonic()>deadline:self.fail('unready state not durable')
+                time.sleep(.01)
+            with journals[0].lock:journals[0].ready=True
+            while not (r:=request(endpoint,h['instance'],0))['ready']:
+                if time.monotonic()>deadline:self.fail('readiness without new event not durable')
+                time.sleep(.01)
+            self.assertGreater(r['sequence'],0)
+        finally:stop.set();thread.join(timeout=5)
+        self.assertEqual(errors,[]);self.assertFalse(thread.is_alive())
+
+    def test_real_coverage_fault_commits_once_and_stops_with_original_reason(self):
+        from vk_nightly_tracking import CoverageFault
+        from vk_nightly_inode_journal import Journal
+        source=self.root/'source';source.mkdir();endpoint=self.root/'fault.sock';status=self.root/'fault.json'
+        journals=[];errors=[]
+        def factory(plan):
+            j=Journal(plan);journals.append(j);return j
+        def worker():
+            try:serve({'sources':[str(source)]},self.path,endpoint,guard=lambda:None,
+                      status_path=status,journal_factory=factory)
+            except BaseException as error:errors.append(error)
+        thread=threading.Thread(target=worker);thread.start()
+        try:
+            deadline=time.monotonic()+10
+            while not endpoint.exists() and thread.is_alive():
+                if time.monotonic()>deadline:self.fail('tiny observer did not enroll')
+                time.sleep(.01)
+            with journals[0].lock:journals[0].errors.append({'unknown_watch':123,'mask':8})
+            thread.join(timeout=5)
+            self.assertFalse(thread.is_alive());self.assertIsInstance(errors[0],CoverageFault)
+            import json
+            h=json.loads(status.read_text())
+            self.assertIn('unknown_watch',h['reason']);self.assertFalse(h['ready'])
+            self.assertEqual(h['raw_errors'],[{'unknown_watch':123,'mask':8}])
+            with TrackingStore.held(self.path) as store:
+                value=store.report(h['instance'],0)
+                self.assertFalse(value['ready']);self.assertEqual(value['errors'],h['raw_errors'])
+                self.assertIn('unknown_watch',value['terminal'])
+        finally:
+            if thread.is_alive():self.fail('faulted own observer did not close')
+
     def test_real_daemon_commits_change_and_serves_complete_bounded_query(self):
         source=self.root/'source';source.mkdir();endpoint=self.root/'queue.sock';status=self.root/'status.json'
         stop=threading.Event();errors=[]

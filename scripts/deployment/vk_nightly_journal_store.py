@@ -38,8 +38,11 @@ def sequence(value):
 
 
 def validate_report(raw, *, instance, scope_sha256, since):
-    if not isinstance(raw, bytes) or len(raw) > MAX_REPORT:
-        raise ValueError('complete bounded journal report required')
+    if not isinstance(raw, bytes):
+        raise ValueError('complete bounded journal report bytes required')
+    if len(raw) > MAX_REPORT:
+        raise ValueError('complete bounded journal report exceeded: '+str(len(raw))+
+                         ' bytes > '+str(MAX_REPORT)+'; no truncated commit')
     value = parse(raw)
     if (value.get('instance') != instance or value.get('scope_sha256') != scope_sha256
             or sequence(value.get('sequence')) < sequence(since)

@@ -30,6 +30,16 @@ FORMAT='vk-nightly-tracking-v1'
 MAX_RESPONSE=16*1024**2
 
 
+class CoverageFault(RuntimeError):
+    """A durable explicit gap, never an apparently healthy running observer."""
+
+
+def require_no_coverage_fault(report):
+    if report.get('errors'):
+        first=canonical(report['errors'][0]).decode()
+        raise CoverageFault('source coverage fault; reconcile current set: '+first[:2048])
+
+
 def source_bindings(plan):
     """Bind required aliases as well as their resolved watch targets.
 
@@ -123,7 +133,7 @@ class TrackingStore:
             for fault in value['errors']:
                 self.db.execute('insert or ignore into faults values(?,?)',(value['instance'],canonical(fault).decode()))
             fault=self.db.execute('select 1 from faults where instance=? limit 1',(value['instance'],)).fetchone()
-            ready=value['ready'] and not fault and not value.get('pending_directory_moves')
+            ready=value['ready'] and not fault and not value.get('pending_directory_moves') and not value.get('pending_file_enrollments')
             self.db.execute('update epochs set cursor=?,ready=? where instance=?',(value['sequence'],int(ready),value['instance']))
             self.check();self.db.execute('commit')
         except BaseException:
@@ -218,7 +228,7 @@ def serve(plan,path,endpoint,*,guard,status_path,stop=None,store_factory=None,st
             journal.ready=True
             with socket.socket(socket.AF_UNIX) as server:
                 server.bind(str(endpoint));os.chmod(endpoint,0o600);server.listen(4);server.settimeout(.5)
-                previous=-1;last_status=0
+                previous=-1;previous_ready=None;last_status=0
                 while not stop.is_set():
                     guard()
                     with journal.lock:
@@ -228,14 +238,19 @@ def serve(plan,path,endpoint,*,guard,status_path,stop=None,store_factory=None,st
                                 error={'required_source_binding_changed':raw}
                                 if error not in journal.errors:journal.errors.append(error)
                         report=journal.report(0)
-                        needs_commit=report['sequence']!=previous or journal.errors or not previous
+                        needs_commit=(report['sequence']!=previous or report['ready']!=previous_ready
+                                      or journal.errors or not previous)
                     if needs_commit:
                         # B may take time to commit. Keep draining the kernel
                         # independently; a remote transaction must not hold the
                         # inotify lock and manufacture queue overflow.
-                        store.commit(report);previous=report['sequence']
+                        store.commit(report);previous=report['sequence'];previous_ready=report['ready']
                         with journal.lock:
                             discard_committed(journal,report['sequence'])
+                    # Persist the first real fault and close this epoch now.
+                    # Continuing to append identical unknown-watch errors until
+                    # a JSON bound fails obscures both cause and gap boundary.
+                    require_no_coverage_fault(report)
                     if time.monotonic()-last_status>10:
                         write_status(dict(binding,phase='tracking',sequence=previous,
                              watches=report.get('watches',len(journal.watches)),raw_errors=list(journal.errors),ready=report['ready'],
@@ -268,7 +283,8 @@ def serve(plan,path,endpoint,*,guard,status_path,stop=None,store_factory=None,st
                                             error={'required_source_binding_changed':raw}
                                             if error not in journal.errors:journal.errors.append(error)
                                     latest=journal.report(0)
-                                store.commit(latest)
+                                store.commit(latest);previous=latest['sequence'];previous_ready=latest['ready']
+                                require_no_coverage_fault(latest)
                                 with journal.lock:discard_committed(journal,latest['sequence'])
                                 barrier_sequence=latest['sequence']
                             with journal.lock:
@@ -289,7 +305,8 @@ def serve(plan,path,endpoint,*,guard,status_path,stop=None,store_factory=None,st
                 if failure:raise RuntimeError(failure[0])
         except BaseException as error:
             store.terminate(journal.instance,type(error).__name__+': '+str(error))
-            write_status(dict(binding,phase='failed',ready=False,reason=str(error),baseline_accepted=False))
+            write_status(dict(binding,phase='failed',ready=False,reason=str(error),baseline_accepted=False,
+                              faults_observed_count=len(journal.errors),raw_errors=list(journal.errors[:32])))
             raise
         finally:
             stop.set()

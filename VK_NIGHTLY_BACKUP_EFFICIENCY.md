@@ -1602,3 +1602,12 @@ absence evidence in the same transaction. Existing required SQL aliases add
 their explicit regular target to SQL requirements; that target still needs an
 independently accepted consistent API point. Missing proof, root omission or a
 namespace-only new observer cannot turn this transition into accepted coverage.
+
+October27 09:12EDT trackerV9 is terminal after an oversized report; retained
+SQLite is intact through4081780 with unknown-watch fault897862/mask8. B
+acknowledged3029482; this is an explicit later gap. First-fault termination,
+replacement enrollment deferral and delayed old-watch mapping retention now
+pass real RAM fixtures, including3000 concurrent replacements. The exact old
+in-memory report was not retained; its size/duplicate count are unknown. No
+claim that these fixes repair old coverage. The active body worker retains
+independently verified file points; current baseline and calendar remain open.

@@ -112,6 +112,10 @@ def predecessor(reference,source,*,maximum_seconds,report,clock=time.monotonic,s
     if not re.fullmatch(r'vk-nightly-[A-Za-z0-9-]+\.service',reference['unit']):
         raise ValueError('exact existing Nightly predecessor unit required')
     if type(maximum_seconds) is not int or maximum_seconds<1:raise ValueError('finite predecessor wait required')
+    proof_field=reference.get('verification_field','actual_independent_normal_B_composition_reopen_verified')
+    if proof_field not in ('actual_independent_normal_B_composition_reopen_verified',
+                           'actual_independent_B_file_cycle_receipt_reopen_verified'):
+        raise ValueError('fixed independent predecessor acceptance field required')
     started=clock()
     while True:
         source.check()
@@ -122,8 +126,9 @@ def predecessor(reference,source,*,maximum_seconds,report,clock=time.monotonic,s
             if state.get('ActiveState')!='inactive' or state.get('ExecMainStatus')!='0':
                 raise ValueError('metadata predecessor did not complete successfully; preserve its cursor')
             value=read_owned(reference['result'])
-            if (value.get('actual_independent_normal_B_composition_reopen_verified') is not True
-                    or value.get('source_instance')!=source.reference['instance']
+            instance=value.get('source_instance',value.get('final_B_delivery',{}).get('instance'))
+            if (value.get(proof_field) is not True
+                    or instance!=source.reference['instance']
                     or any(value.get(k)!=v for k,v in reference['result_binding'].items())):
                 raise ValueError('actual independent metadata predecessor result differs')
             return value

@@ -877,6 +877,60 @@ class BControlTests(unittest.TestCase):
         self.assertEqual(second['completed_members'],1);self.assertFalse(second['more_pending'])
         self.assertFalse((self.root/'SQL_STATE.private.json').exists());self.assertFalse((self.root/'SQL_PHASE.lease').exists())
 
+        # A new current cohort must qualify this same source again rather
+        # than relabeling the older completed point above. Equal API bytes
+        # still reuse their actual accepted CAS objects.
+        import vk_nightly_sql_cycle as cycle
+        from vk_nightly_current_map import CurrentMap,decode_member
+        from vk_nightly_namespace import observe
+        from vk_nightly_qualification import encode_observation
+        from vk_change_journal import scope
+        from vk_prep_common import identity
+        plan={'sources':[str(self.original)]};roots={str(self.original):dict(resolved=str(self.original),literal=None)}
+        epoch=dict(instance='current-sql-source',plan_sha256=identity(plan),scope_sha256=identity(scope(plan)),
+            start_sequence=1,required_root_bindings=roots)
+        ns=sqlite3.connect(':memory:');self.addCleanup(ns.close)
+        ns.execute('create table namespace(name text primary key,row blob)')
+        ns.execute('insert into namespace values(?,?)',(str(self.original)[1:],encode_observation(observe(self.original))))
+        ns.execute('create table namespace_errors(name text primary key,error blob)')
+        ns.execute('create table gap_meta(id integer primary key,binding text,complete integer)')
+        ns.execute('insert into gap_meta values(1,?,1)',(json.dumps(epoch),))
+        mp=self.root/'current-sql-main.sqlite';binding={'test':'current SQL selection'}
+        with CurrentMap.held(mp,binding=binding,create=True) as m:
+            m.compile(ns,lambda _:None,SQL_sources=[str(self.original)],checkpoint=lambda:None,maximum_paths=10)
+            m.reconcile_namespace(ns,lambda _:None,checkpoint=lambda:None,maximum_paths=10)
+            # The separately tested suffix stage is the admitted fixture input
+            # below; SQL adoption must still check its actual completion row.
+            m.db.execute('update namespace_reconciliation set suffix_complete=1')
+        map_sha=self.import_other(mp);self.client.connect('current-sql-main',map_sha).close()
+        prepared=dict(config,B_index_name='current-sql-main',B_checkpoint_sha256=map_sha,
+            B_controls={'maximum_index_bytes':8*1024**2})
+        source=SimpleNamespace(reference={'instance':epoch['instance']},plan=plan,
+            check=lambda:{'required_root_bindings':roots},deliver=lambda:{'instance':epoch['instance']},
+            config={'B_delivery_target':{'index_name':'fixture-journal','checkpoint_sha256':self.sha}})
+        settings=dict(source_observer={},maximum_delta_paths=10,cohort_tag='actual-current-sql-r1',
+            SQL_phase_index=dict(index_name='current-sql-points',checkpoint_sha256=self.sha))
+        with patch.object(worker,'DesktopControls',controls),patch.object(worker,'DesktopObjects',body),\
+             patch.object(worker,'host_guard',lambda *_:None),patch.object(cycle,'host_guard',lambda *_:None),\
+             patch.object(cycle,'DesktopControls',controls),patch.object(cycle,'Source',return_value=source):
+            with patch.object(cycle,'advance_suffix',return_value={'actual_retained_delta':'fixture'}),\
+                 patch.object(worker,'capture_SQL_point',wraps=worker.capture_SQL_point) as current_API:
+                result=cycle.run(settings,prepared,report=lambda _:None)
+                self.assertEqual(current_API.call_count,1)
+            self.assertTrue(result['actual_independent_B_SQL_cycle_receipt_reopen_verified'])
+            self.assertEqual(result['completed_current_SQL_points'],1);self.assertFalse(result['more_pending'])
+            with patch.object(cycle,'advance_suffix',side_effect=AssertionError('retained cohort reset')) ,\
+                 patch.object(worker,'capture_SQL_point',side_effect=AssertionError('current API point recaptured')):
+                resumed=cycle.run(settings,prepared,report=lambda _:None)
+                with self.assertRaisesRegex(ValueError,'request binding changed'):
+                    cycle.run(dict(settings,cohort_tag='a-different-current-cycle'),prepared,report=lambda _:None)
+            self.assertEqual(resumed['cohort_id'],result['cohort_id'])
+        db=self.client.connect('current-sql-main',map_sha,readonly=True,working=True)
+        row=decode_member(db.execute('select row from members where name=?',(str(self.original)[1:],)).fetchone()[0])
+        self.assertEqual(row['SQL_point']['SQL_cohort_id'],result['cohort_id'])
+        self.assertEqual(row['SQL_point']['new_B_encoded_payload_bytes'],0)
+        self.assertEqual(db.execute('select count(*) from SQL_acceptance_history').fetchone(),(1,));db.close()
+
     def test_actual_worker_serial_boundaries_and_completed_body_recovery_before_upload(self):
         import vk_nightly_typed_worker as worker
         from vk_nightly_current_map import CurrentMap

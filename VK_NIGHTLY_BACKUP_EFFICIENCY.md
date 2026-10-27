@@ -1823,3 +1823,23 @@ state, temporary SQLite work and bodies stay on B. Local outputs are bounded
 control/status files. The final file-phase receipt is independently reopened
 through the normal B reader, but SQL/runtime/composed restore and calendar
 adoption remain separate gates. This file controller does not enable scheduling.
+
+
+### Current SQL cohort fencing and serial adoption
+
+`vk_nightly_sql_cycle` obtains the actual selected SQL queue from the complete,
+source-bound B member map after a normal journal suffix. A full B request binds
+its source epoch, resolved roots, catalog and cohort digest. A retry resumes that
+request and its completed API points; a different cohort cannot reset/relabel it.
+Older independently accepted images remain body candidates. They never become
+freshly qualified merely by importing an older completed SQL state.
+
+Each new cohort uses the consistent SQLite backup API and seals its cohort ID
+inside both the prepared layout and B acceptance record. Equal API bytes reuse
+accepted CAS/native bodies without another payload copy. Retained RAM points
+and durable B layouts can resume only in their actual cohort. The controller
+adopts only those exact B-sealed points into the selected map, then independently
+reopens its normal B phase receipt. Measured images larger than the admitted RAM
+window stay explicit deferrals; no root/DB is silently dropped. An unresolved
+queue template cannot execute as an empty successful SQL phase. Current runtime,
+complete composed restore and scheduling remain separate requirements.

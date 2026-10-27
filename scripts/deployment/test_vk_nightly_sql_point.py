@@ -42,6 +42,34 @@ class SQLPointTests(unittest.TestCase):
         self.assertEqual(list(self.root.glob('nightly-sql-*.sqlite')),[])
         self.assertFalse(result['baseline_accepted'])
 
+    def test_fresh_cohort_runs_API_but_reuses_identical_accepted_body_without_copy(self):
+        import io,json
+        first=self.capture(cohort_id='a'*64)
+        second=self.capture(cohort_id='b'*64)
+        self.assertEqual(first['SQL_cohort_id'],'a'*64);self.assertEqual(second['SQL_cohort_id'],'b'*64)
+        self.assertGreaterEqual(second['original_source_API_point_at'],first['original_source_API_point_at'])
+        self.assertEqual(first['sha256'],second['sha256'])
+        self.assertEqual(second['new_B_encoded_payload_bytes'],0)
+        self.assertEqual([s['selector'] for s in first['member']['segments']],[s['selector'] for s in second['member']['segments']])
+        accepted=io.BytesIO();self.client.verify(second['B_acceptance_object'],accepted)
+        self.assertEqual(json.loads(accepted.getvalue())['SQL_cohort_id'],'b'*64)
+
+    def test_another_cohort_cannot_relabel_retained_API_or_durable_layout(self):
+        saved={}
+        def stop(value):
+            saved.update(value)
+            if 'layout' in value:raise RuntimeError('retained current API layout')
+        with self.assertRaises(RuntimeError):self.capture(cohort_id='a'*64,on_prepared=stop)
+        before=self.client.payload_bytes_sent
+        for layout in (None,{k:saved[k] for k in ('layout','manifest')}):
+            with self.assertRaisesRegex(ValueError,'another qualification cohort'):
+                self.capture(cohort_id='b'*64,resume=saved['captured_RAM_point'],resume_layout=layout)
+        self.assertEqual(self.client.payload_bytes_sent,before)
+        self.assertTrue(Path(saved['captured_RAM_point']['working_RAM_path']).exists())
+        result=self.capture(cohort_id='a'*64,resume=saved['captured_RAM_point'],resume_layout={k:saved[k] for k in ('layout','manifest')})
+        self.assertEqual(result['SQL_cohort_id'],'a'*64)
+        self.assertTrue(result['recovered_from_durable_B_layout']);self.assertEqual(result['new_B_encoded_payload_bytes'],0)
+
     def test_WAL_committed_rows_are_captured_through_SQL_API(self):
         live=sqlite3.connect(self.source);self.addCleanup(live.close)
         live.execute('pragma journal_mode=WAL');live.execute('pragma wal_autocheckpoint=0')

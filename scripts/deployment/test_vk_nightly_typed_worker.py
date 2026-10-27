@@ -52,6 +52,22 @@ class TypedWorkerTests(unittest.TestCase):
                 worker.run_B(dict(qualification={}))
             remote.assert_not_called()
 
+    def test_current_SQL_cohort_cannot_blindly_inherit_prior_completed_points(self):
+        config=dict(self.config(),SQL_sources=[],SQL_catalog_sha256='a'*64,current_SQL_cohort_id='b'*64,
+            SQL_reuse_controls=[dict(index_name='older',checkpoint_sha256='c'*64)])
+        with patch.object(worker,'DesktopObjects') as remote:
+            with self.assertRaisesRegex(ValueError,'blindly inherit'):worker.run_SQL(config)
+            remote.assert_not_called()
+
+    def test_unresolved_SQL_template_cannot_execute_an_empty_successful_capture(self):
+        config=dict(self.config(),SQL_sources=[],SQL_catalog_sha256='a'*64,SQL_sources_from_current_map=True)
+        with patch.object(worker,'DesktopObjects') as remote:
+            with self.assertRaisesRegex(ValueError,'resolved current SQL cohort'):worker.run_SQL(config)
+            remote.assert_not_called()
+        with patch.object(worker,'DesktopControls') as remote:
+            with self.assertRaisesRegex(ValueError,'resolved current SQL cohort'):worker.run_B(config)
+            remote.assert_not_called()
+
     def test_native_receiver_source_is_syntactically_valid(self):compile(NATIVE,'native','exec')
 
     def test_actual_native_health_record_preserves_MM_temperature_and_hardware_fields(self):
@@ -130,7 +146,7 @@ class TypedWorkerTests(unittest.TestCase):
             catalog=root/'catalog.json';catalog.write_text(json.dumps(dict(sql_images={})))
             config=dict(self.config(),SQL_sources=[str(source)],SQL_catalog=str(catalog),
                 SQL_catalog_sha256=worker.checksum(catalog),maximum_SQL_image_bytes=1024**2,
-                SQL_image_timeout_seconds=15,status=str(root/'status.json'))
+                SQL_image_timeout_seconds=15,status=str(root/'status.json'),current_SQL_cohort_id='a'*64)
             ledger=sqlite3.connect(root/'ledger.sqlite');self.addCleanup(ledger.close)
             ledger.execute('create table state(row text)');ledger.commit()
             class Backend:
@@ -155,6 +171,7 @@ class TypedWorkerTests(unittest.TestCase):
                         worker.run_SQL(config,backend=backend,at_component_boundary=deliver)
                     state=backend.load({});point=state['completed'][str(source)]
                     self.assertEqual(point['independent']['integrity'],'ok')
+                    self.assertEqual(point['SQL_cohort_id'],'a'*64)
                     before={p.name:p.stat().st_ino for p in objects.iterdir()}
                     called=[]
                     with patch.object(worker,'capture_SQL_point',side_effect=AssertionError('completed point recaptured')):
@@ -162,6 +179,8 @@ class TypedWorkerTests(unittest.TestCase):
                     self.assertFalse(result['more_pending']);self.assertTrue(called)
                     self.assertEqual(backend.load({})['completed'][str(source)],point)
                     self.assertEqual({p.name:p.stat().st_ino for p in objects.iterdir()},before)
+                    with self.assertRaisesRegex(ValueError,'input binding changed'):
+                        worker.run_SQL(dict(config,current_SQL_cohort_id='b'*64),backend=backend)
             finally:
                 child.stdin.close();child.wait(timeout=5);child.stdout.close();child.stderr.close()
 

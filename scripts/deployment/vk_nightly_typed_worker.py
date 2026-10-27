@@ -114,8 +114,18 @@ def configuration(path,expected):
         if len(set(names))!=len(names) or value['B_index_name'] in names:
             raise ValueError('distinct accepted carrier and current map indexes required')
     if value.get('phase_kind')=='SQL-points':
+        derived=value.get('SQL_sources_from_current_map',False)
+        if type(derived) is not bool:raise ValueError('explicit SQL source queue authority required')
+        if derived and (value['format']!='vk-nightly-typed-worker-B-v1' or value.get('SQL_reuse_controls')):
+            raise ValueError('current SQL queue requires the authenticated B map controller')
+        if 'current_SQL_cohort_id' in value:
+            from vk_nightly_checkpoints import digest
+            digest(value['current_SQL_cohort_id'])
+            if value.get('SQL_reuse_controls'):
+                raise ValueError('current SQL qualification cannot blindly inherit an older frozen cohort')
         sources=value['SQL_sources']
-        if (not isinstance(sources,list) or not sources or len(sources)>1024 or len(sources)!=len(set(sources))
+        if (not isinstance(sources,list) or (bool(sources) if derived else not sources)
+                or len(sources)>1024 or len(sources)!=len(set(sources))
                 or type(value['maximum_SQL_image_bytes']) is not int or value['maximum_SQL_image_bytes']<1
                 or any(not isinstance(p,str) or not p.startswith('/') or str(Path(p))!=p or '..' in Path(p).parts for p in sources)):
             raise ValueError('finite exact prepared SQL source queue required')
@@ -172,6 +182,15 @@ def run_SQL(config,*,backend=None,at_component_boundary=lambda:None):
     started=time.monotonic();guard=lambda:host_guard(config,started)
     folder=Path(config['status']).parent;state_path=folder/'SQL_STATE.private.json'
     binding=dict(sources=config['SQL_sources'],catalog_sha256=config['SQL_catalog_sha256'],B_root=config['desktop']['B_root'])
+    cohort=config.get('current_SQL_cohort_id')
+    if cohort is not None:
+        from vk_nightly_checkpoints import digest
+        digest(cohort)
+        if config.get('SQL_reuse_controls'):
+            raise ValueError('current SQL qualification cannot blindly inherit an older frozen cohort')
+        binding['current_SQL_cohort_id']=cohort
+    if config.get('SQL_sources_from_current_map') or not config['SQL_sources']:
+        raise ValueError('resolved current SQL cohort request required before API work')
     # Resource ceilings/code versions may be reviewed for a successor phase;
     # the source cohort and B recovery identity cannot silently change.
     fd=None if backend is not None else os.open(folder/'SQL_PHASE.lease',os.O_RDWR|os.O_CREAT|os.O_NOFOLLOW|os.O_NONBLOCK,0o600)
@@ -198,6 +217,8 @@ def run_SQL(config,*,backend=None,at_component_boundary=lambda:None):
             # second background native health/transport poller during SQL I/O.
             at_component_boundary()
         def check_accepted(client,record):
+            if cohort is not None and record.get('SQL_cohort_id')!=cohort:
+                raise ValueError('completed SQL point belongs to another qualification cohort')
             output=io.BytesIO();client.verify(record['B_acceptance_object'],output)
             actual=json.loads(output.getvalue())
             expected={k:v for k,v in record.items() if k not in ('B_acceptance_object','new_B_total_encoded_bytes_including_control')}
@@ -234,7 +255,7 @@ def run_SQL(config,*,backend=None,at_component_boundary=lambda:None):
                     retained_by_sha=lambda sha,size:old.get((sha,size)),ram_root='/dev/shm',
                     maximum_image_bytes=config['maximum_SQL_image_bytes'],chunk_bytes=config['chunk_bytes'],
                     timeout_seconds=config['SQL_image_timeout_seconds'],on_prepared=prepared,resume=retained,
-                    resume_layout=layout)
+                    resume_layout=layout,cohort_id=cohort)
                 if result['status']=='larger_SQL_working_window_required':state['deferred'][source]=result
                 else:
                     state['completed'][source]=result;state['partial'].pop(source,None);state['deferred'].pop(source,None)
@@ -287,6 +308,8 @@ def qualify_B(current,client,qualification,*,journal,guard,on_progress):
 def run_B(config,*,at_component_boundary=lambda:None,source_report=None):
     """Authoritative prepared phase on B, with only a bounded health mirror."""
     started=time.monotonic();guard=lambda:host_guard(config,started)
+    if config.get('SQL_sources_from_current_map'):
+        raise ValueError('resolved current SQL cohort request required before B work')
     if 'qualification' in config and not callable(source_report):
         raise ValueError('selected qualification requires the authenticated current source controller')
     guard()

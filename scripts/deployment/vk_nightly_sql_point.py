@@ -21,6 +21,7 @@ import time
 from vk_b_disk_snapshot import metadata
 from vk_nightly_file_version import fingerprint,attributes,stream_hash
 from vk_nightly_objects import ChunkSink
+from vk_nightly_checkpoints import digest
 
 
 INDEPENDENT_SQL_CHECK = r'''
@@ -66,12 +67,15 @@ def release_verified_ram(path,expected_identity):
 
 def capture_SQL_point(source,client,*,allowed_sources,guard,retained_by_sha,ram_root,
                       maximum_image_bytes,chunk_bytes,timeout_seconds,on_prepared=lambda _:None,resume=None,
-                      resume_layout=None):
+                      resume_layout=None,cohort_id=None):
     """retained_by_sha returns only authenticated independent SQL image pairs.
 
     All image/chunk receipts remain distinct from final baseline/namespace
     acceptance. No WAL/main-file shortcut or source journal mode change occurs.
     """
+    if cohort_id is not None:digest(cohort_id)
+    if resume is not None and cohort_id is not None and resume.get('SQL_cohort_id')!=cohort_id:
+        raise ValueError('retained SQL API point belongs to another qualification cohort')
     path=Path(source);root=ram_path(ram_root)
     if (str(path) not in allowed_sources or not path.is_absolute() or path.resolve()!=path
             or type(maximum_image_bytes) is not int or maximum_image_bytes<1
@@ -79,7 +83,7 @@ def capture_SQL_point(source,client,*,allowed_sources,guard,retained_by_sha,ram_
         raise ValueError('explicit finite SQLite API point admission required')
     if resume_layout is not None:
         return recover_SQL_layout(path,client,resume,resume_layout,root=root,guard=guard,
-            maximum_image_bytes=maximum_image_bytes,timeout_seconds=timeout_seconds,on_prepared=on_prepared)
+            maximum_image_bytes=maximum_image_bytes,timeout_seconds=timeout_seconds,on_prepared=on_prepared,cohort_id=cohort_id)
     guard();before=path.lstat() if resume is None else None
     if before is not None and not stat.S_ISREG(before.st_mode):raise ValueError('regular API source required')
     source_meta=metadata(path) if resume is None else resume['source_metadata_before']
@@ -137,6 +141,7 @@ def capture_SQL_point(source,client,*,allowed_sources,guard,retained_by_sha,ram_
                 source_metadata_before=source_meta,source_metadata_after=metadata(path),
                 source_identity_before=fingerprint(before),source_changed_online=changed,
                 original_source_API_point_at=time.time())
+            if cohort_id is not None:captured['SQL_cohort_id']=cohort_id
             on_prepared(dict(captured_RAM_point=captured))
         else:
             if (resume.get('API_capture_completed') is not True or resume.get('source')!=str(path)
@@ -176,6 +181,7 @@ def capture_SQL_point(source,client,*,allowed_sources,guard,retained_by_sha,ram_
             segments=sink.finish();data_uploaded=client.payload_bytes_sent-uploaded_before
             prepared=dict(source=str(path),bytes=size,sha256=sha,segments=segments,source_metadata=source_meta,
                 method='SQLite-backup-API',independent_SQL_restore_accepted=False)
+            if cohort_id is not None:prepared['SQL_cohort_id']=cohort_id
             manifest=client.ensure(json.dumps(prepared,sort_keys=True,separators=(',',':')).encode())
             on_prepared(dict(layout=prepared,manifest=manifest,working_RAM_path=str(working)))
             restore_fd,restore_path=tempfile.mkstemp(prefix='nightly-sql-independent-',suffix='.sqlite',dir=root)
@@ -201,6 +207,7 @@ def capture_SQL_point(source,client,*,allowed_sources,guard,retained_by_sha,ram_
             member=row,independent=independent,dependency=dependency,prepared_manifest=manifest,
             new_B_encoded_payload_bytes=uploaded,source_API_image_bytes=size,baseline_accepted=False,
             source_API_point_qualifies_later_epoch_not_original=True)
+        if cohort_id is not None:record['SQL_cohort_id']=cohort_id
         record['verified_RAM_duplicates']=[dict(path=str(working),identity=working_identity)]
         if legacy is None:record['verified_RAM_duplicates'].append(dict(path=str(restored),identity=restored_identity))
         # Persist the complete acceptance on B before releasing only our newly
@@ -222,7 +229,7 @@ def capture_SQL_point(source,client,*,allowed_sources,guard,retained_by_sha,ram_
 
 
 def recover_SQL_layout(source,client,captured,retained,*,root,guard,maximum_image_bytes,
-                       timeout_seconds,on_prepared):
+                       timeout_seconds,on_prepared,cohort_id=None):
     """Finish a durable uploaded API image after its volatile RAM file is lost.
 
     The original API bracket, manifest and accepted chunk identities must all
@@ -232,10 +239,14 @@ def recover_SQL_layout(source,client,captured,retained,*,root,guard,maximum_imag
     """
     if not isinstance(captured,dict) or captured.get('API_capture_completed') is not True:
         raise ValueError('retained complete original API proof required')
+    if cohort_id is not None:
+        digest(cohort_id)
+        if captured.get('SQL_cohort_id')!=cohort_id:raise ValueError('retained SQL API qualification cohort differs')
     layout=retained['layout'];initial=captured['initial_SQL_integrity'];size=captured['bytes'];sha=captured['sha256']
     expected=dict(source=str(source),bytes=size,sha256=sha,segments=layout['segments'],
         source_metadata=captured['source_metadata_before'],method='SQLite-backup-API',
         independent_SQL_restore_accepted=False)
+    if cohort_id is not None:expected['SQL_cohort_id']=cohort_id
     if (layout!=expected or captured['source']!=str(source) or initial.get('sha256')!=sha
             or initial.get('bytes')!=size or initial.get('integrity')!='ok'
             or type(size) is not int or not 0<size<=maximum_image_bytes
@@ -278,6 +289,7 @@ def recover_SQL_layout(source,client,captured,retained,*,root,guard,maximum_imag
         source_API_image_bytes=0,original_API_point_bytes=size,baseline_accepted=False,
         source_API_point_qualifies_later_epoch_not_original=True,
         verified_RAM_duplicates=[dict(path=str(restored),identity=restored_identity)])
+    if cohort_id is not None:record['SQL_cohort_id']=cohort_id
     check();record['B_acceptance_object']=client.ensure(json.dumps(record,sort_keys=True,separators=(',',':')).encode())
     on_prepared(dict(accepted=record));record['new_B_total_encoded_bytes_including_control']=client.payload_bytes_sent-uploaded
     release_verified_ram(restored,restored_identity)

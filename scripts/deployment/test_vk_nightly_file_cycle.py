@@ -93,5 +93,19 @@ class FileCycleTests(unittest.TestCase):
                 cycle.run(config,dict(B_controls=self.source.controls),report=lambda _:None)
             deliver.assert_not_called();capture.assert_not_called()
 
+    def test_serial_SQL_followthrough_requires_actual_file_receipt_and_fixed_marker(self):
+        result,_=self.write('file-result',dict(actual_independent_B_file_cycle_receipt_reopen_verified=True,
+            final_B_delivery={'instance':'source-epoch'},phase='finite-current-file-cycle-complete'))
+        reference=dict(unit='vk-nightly-existing-files.service',result=result,
+            verification_field='actual_independent_B_file_cycle_receipt_reopen_verified',
+            result_binding={'phase':'finite-current-file-cycle-complete'})
+        with patch.object(cycle.subprocess,'check_output',return_value='MainPID=0\nExecMainStatus=0\nActiveState=inactive\n'):
+            value=cycle.predecessor(reference,self.source,maximum_seconds=60,report=lambda _:None)
+            self.assertEqual(value['phase'],'finite-current-file-cycle-complete')
+        with patch.object(cycle.subprocess,'check_output') as commands:
+            with self.assertRaisesRegex(ValueError,'fixed independent'):
+                cycle.predecessor(dict(reference,verification_field='any_boolean'),self.source,maximum_seconds=60,report=lambda _:None)
+            commands.assert_not_called()
+
 
 if __name__=='__main__':unittest.main()

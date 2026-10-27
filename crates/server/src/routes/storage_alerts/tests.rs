@@ -624,8 +624,13 @@ fn isolated(name: &str, capacity_hold: bool) -> bool {
         String::from_utf8_lossy(&output.stdout)
     );
     for line in String::from_utf8_lossy(&output.stdout).lines() {
-        if let Some((_, evidence)) = line.split_once("NATIVE_STORAGE_ADAPTER_EVIDENCE ") {
-            println!("NATIVE_STORAGE_ADAPTER_EVIDENCE {evidence}");
+        for prefix in [
+            "NATIVE_STORAGE_ADAPTER_EVIDENCE ",
+            "MODULAR_NATIVE_EVIDENCE ",
+        ] {
+            if let Some((_, evidence)) = line.split_once(prefix) {
+                println!("{prefix}{evidence}");
+            }
         }
     }
     false

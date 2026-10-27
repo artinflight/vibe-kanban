@@ -899,6 +899,12 @@ async fn unbound_reservation_is_pending_uncertainty_not_confirmed_owner_activity
     later.batch_id = Uuid::new_v4();
     later.attempt_id = Uuid::new_v4();
     later.intent.incidents[0].incident_id = Uuid::new_v4();
+    later.validation.eligible_incident_ids = later
+        .intent
+        .incidents
+        .iter()
+        .map(|i| i.incident_id)
+        .collect();
     later.intent_sha256 = fingerprint(&later.intent);
     let result = submit(&pool, &q, &b, &later, |_| async {
         panic!("unknown reservation must not launch")

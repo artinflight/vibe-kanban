@@ -105,6 +105,46 @@ class TrackingTests(unittest.TestCase):
         self.assertFalse(thread.is_alive());self.assertEqual(errors,[])
         with TrackingStore.held(self.path) as store:self.assertFalse(store.report(instance,0)['ready'])
 
+    def test_buffered_inode_daemon_barrier_covers_burst_behind_processing_lock(self):
+        from vk_nightly_inode_journal import Journal,require_full_coverage
+        from vk_nightly_observer_barrier import flush
+        import json
+        limit=int(Path('/proc/sys/fs/inotify/max_queued_events').read_text())
+        if limit>65536:self.skipTest('host FIFO exceeds bounded fixture')
+        source=self.root/'inode-source';source.mkdir()
+        files=[source/str(i) for i in range(4)]
+        for f in files:f.write_bytes(b'x')
+        endpoint=self.root/'inode.sock';status=self.root/'inode-status.json'
+        stop=threading.Event();errors=[];journals=[]
+        def factory(plan):
+            journal=Journal(plan);journals.append(journal);return journal
+        def worker():
+            try:serve({'sources':[str(source)]},self.path,endpoint,guard=lambda:None,
+                      status_path=status,stop=stop,journal_factory=factory)
+            except BaseException as error:errors.append(error)
+        thread=threading.Thread(target=worker);thread.start()
+        try:
+            deadline=time.monotonic()+10
+            while not endpoint.exists():
+                if errors:raise errors[0]
+                if time.monotonic()>deadline:self.fail('inode daemon did not enroll')
+                time.sleep(.01)
+            binding=json.loads(status.read_text())
+            with journals[0].lock:
+                for i in range(limit+1024):
+                    os.utime(files[i%4],ns=(i+1,i+1))
+                    if i%256==0:time.sleep(.001)
+            report=flush(endpoint,binding['instance'],0,guard=lambda:None)
+            require_full_coverage(report)
+            self.assertEqual(set(report['changed']),set(map(str,files)))
+            self.assertGreater(report['sequence'],limit)
+            self.assertEqual(report['barrier']['durable_sequence'],report['sequence'])
+            self.assertEqual(report['source_payload_bytes_read'],0)
+            self.assertEqual(report['source_paths_scanned'],0)
+        finally:stop.set();thread.join(timeout=10)
+        self.assertFalse(thread.is_alive());self.assertEqual(errors,[])
+        self.assertFalse(journals[0].raw_reader.is_alive())
+
     def test_required_alias_retarget_is_detected_without_scanning_source_contents(self):
         one=self.root/'one';two=self.root/'two';one.mkdir();two.mkdir();alias=self.root/'alias';alias.symlink_to(one)
         plan={'sources':[str(alias)]};before=source_bindings(plan)

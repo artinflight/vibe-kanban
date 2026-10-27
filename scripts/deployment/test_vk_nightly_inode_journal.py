@@ -90,3 +90,72 @@ class InodeJournalTests(unittest.TestCase):
              patch('vk_nightly_local_tracker.serve') as serve:
             with self.assertRaises(WatchAdmissionError):run(config,guard=lambda:None)
         serve.assert_not_called()
+
+    def test_kernel_reader_drains_burst_while_metadata_processing_lock_is_held(self):
+        # Four tiny inode sources generate more events than the current
+        # kernel FIFO can retain. No source payload workload or limit change.
+        import time
+        limit=int(Path('/proc/sys/fs/inotify/max_queued_events').read_text())
+        if limit>65536:self.skipTest('host FIFO exceeds this bounded fixture admission')
+        files=[self.root/str(i) for i in range(4)]
+        for f in files:f.write_bytes(b'x')
+        journal=self.enroll()
+        with journal.lock:
+            for i in range(limit+1024):
+                os.utime(files[i%4],ns=(i+1,i+1))
+                if i%256==0:time.sleep(.001)
+        report=journal.report(0)
+        self.assertTrue(report['ready'],report['errors'])
+        self.assertEqual(set(report['changed']),set(map(str,files)))
+        self.assertGreater(report['sequence'],limit)
+        self.assertGreater(report['kernel_raw_buffer_peak_bytes'],4096)
+        self.assertLessEqual(report['kernel_raw_buffer_peak_bytes'],16*1024**2)
+        self.assertEqual(journal.raw_bytes,0)
+
+    def test_finite_buffer_does_not_hide_actual_kernel_overflow(self):
+        import time
+        limit=int(Path('/proc/sys/fs/inotify/max_queued_events').read_text())
+        if limit>65536:self.skipTest('host FIFO exceeds this bounded fixture admission')
+        files=[self.root/str(i) for i in range(4)]
+        for f in files:f.write_bytes(b'x')
+        journal=Journal({'sources':[str(self.root)]},maximum_raw_bytes=4096)
+        self.addCleanup(journal.close);journal.tree(self.root);journal.ready=True
+        with journal.lock:
+            for i in range(limit+1024):
+                os.utime(files[i%4],ns=(i+1,i+1))
+                if i%256==0:time.sleep(.001)
+        report=journal.report(0)
+        self.assertFalse(report['ready'])
+        self.assertTrue(any(error.get('coverage_lost')==0x4000 for error in report['errors']))
+        self.assertLessEqual(report['kernel_raw_buffer_peak_bytes'],4096)
+        with self.assertRaises(ValueError):require_full_coverage(dict(report,barrier=True))
+
+    def test_report_counts_do_not_iterate_all_registered_inodes(self):
+        import stat
+        f=self.root/'file';f.write_bytes(b'x');(self.root/'alias').symlink_to(f)
+        journal=self.enroll()
+        class NoValues(dict):
+            def values(self):raise AssertionError('whole inode scan in ordinary heartbeat')
+        journal.inode_kinds=NoValues(journal.inode_kinds)
+        report=journal.report(0)
+        self.assertEqual(report['regular_inode_watches'],1)
+        self.assertEqual(report['symlink_inode_watches'],1)
+        self.assertEqual(report['watches'],3)
+        f.unlink();(self.root/'alias').unlink()
+        report=journal.report(report['sequence'])
+        self.assertEqual(report['regular_inode_watches'],0)
+        self.assertEqual(report['symlink_inode_watches'],0)
+
+    def test_owned_kernel_reader_closes_without_reusing_or_leaking_its_FD(self):
+        journal=Journal({'sources':[str(self.root)]});journal.tree(self.root)
+        fd=journal.fd;journal.close()
+        self.assertFalse(journal.raw_reader.is_alive())
+        with self.assertRaises(OSError):os.fstat(fd)
+
+    def test_repeated_close_cannot_close_a_reused_descriptor_or_leave_ready(self):
+        journal=Journal({'sources':[str(self.root)]});journal.tree(self.root);journal.ready=True
+        journal.close();other=os.open('/dev/null',os.O_RDONLY)
+        try:
+            journal.close();os.fstat(other)
+            self.assertFalse(journal.report(0)['ready'])
+        finally:os.close(other)

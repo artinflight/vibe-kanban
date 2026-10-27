@@ -51,28 +51,26 @@ an actual accepted target point, and the bounded-delta interface supports bound
 always_SQL_API_sources for critical aliases whose WAL lies outside a directory
 root. No payload was recaptured for this diagnosis.
 
-FULL-INODE ENROLLMENT: owner approved1048576watches and completed the
-administrator command. Live readback on October27 is1048576; the earlier
-sudo password refusal remains historical evidence, not a pending approval.
-The immutable tracking-worker-local-inodes-v8 package/configSHA
- ebdec8784187b6a1e1b8b8fc619071f3c280e92592b161e92a40ae454a926952
-runs PID3433527/start30016200,epochfd4881e5054843c8929e9c2d1d81e60e.
-Its117-root additive plan preserves all old roots/exclusions. At05:27EDT it
-reported891073watches/readytrue/errors0; normal full-coverage barrier passed.
-Actual RSS579.6MiB/cgroup772.3MiB/chargedkernel84.8MiB/peak780.9MiB;
-MEMORY_ENROLLMENT_R2 completed exit0 after60s stable and a normal ready
-barrier SHA83ce162e7a66527a46c9a907e4f3a3514f667fac1b09a9ccd55d44f42a5f2e14. All observer
-memory high/max/OOM events are0. The old directory observer remains active
-until a separately verified handover; old hardlink/alias gaps are not repaired.
-Measurement R1 was memcg-OOM-killed at128MiB by the enormous procfs seq_read
-allocation. Its successful samples and exact kernel cause are preserved; R2
-uses bounded process/cgroup/normal status reads, without repeating fdinfo.
-No source-body reads, backup writer, calendar change or reboot-persistence
-configuration was performed. This clears the approved resource-setting gate,
-not current-backup acceptance.
+FULL-INODE FOLLOW-THROUGH: owner-approved1048576watch limit is live.
+V8 PID3433527/start30016200 enrolled891073watches and passed its initial
+barrier/memory check(579.6MiB RSS/780.9MiB cgroup peak,swap0). At09:43UTC
+it later recorded actual kernel queue overflow16384; its ready gate closed.
+INODE_V8_LATER_QUEUE_OVERFLOW preserves the exact fault, old source DB/journal
+and all initial proofs. Only that faulted own unit closed normally; V7 remains
+active. Do not use V8's earlier ready receipt as present journal continuity.
 
-Remaining: finish explicit additive-scope handover for the
-observer with explicit critical SQL alias roots. Reconcile the old hardlink/
+Correction separates fast kernel-byte draining from metadata dispatch with a
+finite16MiB RAM FIFO, including actively processing bytes. Inode type counts
+are O(1) instead of repeated900k-entry scans. Tests cover a real over-kernel-
+queue burst while dispatch is locked, genuine overflow under an undersized
+buffer, normal daemon/barrier integration and FD-safe shutdown. No kernel
+queue limit or verification gate was changed. A fresh explicit observer epoch
+and B-only metadata reconciliation are required; no database/body recapture.
+The earlier measurement collector's own128MiB procfs seq_read failure remains
+preserved; use bounded process/cgroup/normal status reads, never huge fdinfo.
+
+Remaining: enroll the corrected full-inode observer, then finish explicit
+additive-scope handover with critical SQL alias roots. Reconcile the old hardlink/
 alias gap and additive roots without dropping prior scope. Qualify
 17182unresolved versions and capture only required chunks for70167points using
 retained prefix/CAS carriers. Their64342833998logicalB are NOT transfer demand.

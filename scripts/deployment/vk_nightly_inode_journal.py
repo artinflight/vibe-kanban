@@ -5,11 +5,15 @@ No file content is read, writers are never fenced and kernel limits are never
 changed. A failed watch aborts enrollment, preserving the earlier observer.
 """
 import bisect
+from collections import deque
 import ctypes
 import errno
 import os
 from pathlib import Path
+import select
 import stat
+import struct
+import threading
 
 from vk_change_journal import MASK,OVERFLOW,UNMOUNT,IGNORED,ISDIR
 from vk_nightly_move_journal import Journal as DirectoryJournal,under
@@ -45,13 +49,77 @@ def check_watch_demand(required,maximum):
 
 class Journal(DirectoryJournal):
     coverage_model='all-selected-inodes-v1'
-    def __init__(self,plan):
+    def __init__(self,plan,*,maximum_raw_bytes=16*1024**2):
+        if type(maximum_raw_bytes) is not int or not 4096<=maximum_raw_bytes<=16*1024**2:
+            raise ValueError('finite inode event buffer required')
         super().__init__(plan)
         self.file_aliases={};self.path_watches={};self.expected_ignored=set()
         self.sorted_paths=[];self.paths_dirty=True
         self.inode_kinds={};self.root_aliases_enrolled=False
+        self.kind_counts={stat.S_IFREG:0,stat.S_IFLNK:0}
         self.lib.inotify_rm_watch.argtypes=[ctypes.c_int,ctypes.c_int]
         self.lib.inotify_rm_watch.restype=ctypes.c_int
+        # Only ordered kernel bytes enter this finite FIFO. The reader never
+        # takes the metadata/enrollment lock or performs path lookups.
+        self.maximum_raw_bytes=maximum_raw_bytes
+        self.raw_chunks=deque();self.raw_bytes=0;self.raw_peak_bytes=0
+        self.raw_lock=threading.Lock();self.raw_stop=threading.Event()
+        self.raw_failure=None;self.raw_closed=False
+        self.raw_reader=threading.Thread(target=self.kernel_reader,daemon=True)
+        self.raw_reader.start()
+
+    def fill_raw_locked(self):
+        while self.maximum_raw_bytes-self.raw_bytes>=4096 and not self.raw_stop.is_set():
+            try:data=os.read(self.fd,min(1024**2,self.maximum_raw_bytes-self.raw_bytes))
+            except BlockingIOError:return
+            except OSError as error:
+                self.raw_failure=repr(error);self.raw_stop.set();return
+            if not data:
+                self.raw_failure='unexpected empty inotify read';self.raw_stop.set();return
+            self.raw_chunks.append(data);self.raw_bytes+=len(data)
+            self.raw_peak_bytes=max(self.raw_peak_bytes,self.raw_bytes)
+
+    def kernel_reader(self):
+        try:
+            while not self.raw_stop.is_set():
+                select.select([self.fd],[],[],.05)
+                with self.raw_lock:
+                    self.fill_raw_locked()
+                    full=self.maximum_raw_bytes-self.raw_bytes<4096
+                if full:self.raw_stop.wait(.01)
+        except BaseException as error:
+            with self.raw_lock:self.raw_failure=repr(error)
+            self.raw_stop.set()
+
+    def read(self):
+        with self.lock:
+            if self.raw_closed:return
+            while True:
+                with self.raw_lock:
+                    self.fill_raw_locked()
+                    if self.raw_failure:
+                        self.errors.append({'kernel_reader_failed':self.raw_failure})
+                        raise RuntimeError(self.raw_failure)
+                    chunks=list(self.raw_chunks);self.raw_chunks.clear()
+                if not chunks:break
+                for data in chunks:
+                    offset=0
+                    while offset<len(data):
+                        wd,mask,cookie,size=struct.unpack_from('iIII',data,offset)
+                        name=os.fsdecode(data[offset+16:offset+16+size].split(b'\0')[0])
+                        self.event(wd,mask,name,cookie);offset+=16+size
+                    # Active processing bytes still count: extracting the
+                    # FIFO cannot double its admitted memory.
+                    with self.raw_lock:self.raw_bytes-=len(data)
+            self.expire()
+
+    def close(self):
+        self.raw_stop.set();self.raw_reader.join(timeout=2)
+        if self.raw_reader.is_alive():raise RuntimeError('owned kernel reader did not close; preserve FD')
+        with self.lock:
+            if self.raw_closed:return
+            self.raw_closed=True;self.ready=False
+            super().close()
 
     def protected(self,path):
         return super().protected(path) or any(under(root,path) for root in self.plan['sources'])
@@ -88,7 +156,10 @@ class Journal(DirectoryJournal):
             prior=self.path_watches.get(path)
             if prior is not None and prior!=wd:self.forget(path)
             self.file_aliases.setdefault(wd,set()).add(path);self.path_watches[path]=wd;self.paths_dirty=True
-            self.inode_kinds[wd]=stat.S_IFMT(before.st_mode)
+            kind=stat.S_IFMT(before.st_mode)
+            if wd not in self.inode_kinds:self.kind_counts[kind]+=1
+            elif self.inode_kinds[wd]!=kind:raise WatchAdmissionError('kernel inode watch type changed')
+            self.inode_kinds[wd]=kind
             after=os.lstat(path)
             if (after.st_dev,after.st_ino)!=(before.st_dev,before.st_ino):
                 self.errors.append({'inode_enrollment_replaced':path})
@@ -162,7 +233,9 @@ class Journal(DirectoryJournal):
                     if wd not in self.expected_ignored:self.errors.append({'inode_watch_removed':aliases})
                     self.expected_ignored.discard(wd)
                     for path in aliases:self.path_watches.pop(path,None)
-                    self.file_aliases.pop(wd,None);self.inode_kinds.pop(wd,None);self.paths_dirty=True
+                    self.file_aliases.pop(wd,None);kind=self.inode_kinds.pop(wd,None)
+                    if kind is not None:self.kind_counts[kind]-=1
+                    self.paths_dirty=True
                 for path in aliases:self.changed_name(path,mask)
                 return
             parent=self.watches.get(wd);path=str(Path(parent)/name) if parent and name else parent
@@ -174,7 +247,8 @@ class Journal(DirectoryJournal):
     def report(self,since=0):
         value=super().report(since)
         value.update(coverage_model=self.coverage_model,
-                     directory_watches=len(self.watches),regular_inode_watches=sum(k==stat.S_IFREG for k in self.inode_kinds.values()),
-                     symlink_inode_watches=sum(k==stat.S_IFLNK for k in self.inode_kinds.values()),
-                     regular_alias_paths=len(self.path_watches),watches=len(self.watches)+len(self.file_aliases))
+                     directory_watches=len(self.watches),regular_inode_watches=self.kind_counts[stat.S_IFREG],
+                     symlink_inode_watches=self.kind_counts[stat.S_IFLNK],
+                     regular_alias_paths=len(self.path_watches),watches=len(self.watches)+len(self.file_aliases),
+                     kernel_raw_buffer_peak_bytes=self.raw_peak_bytes,kernel_raw_buffer_maximum_bytes=self.maximum_raw_bytes)
         return value

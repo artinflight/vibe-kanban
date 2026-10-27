@@ -1551,3 +1551,18 @@ integrity and STOP failures still propagate. This queue cannot accept a baseline
 Progress mirrors are sampled while each actual file acceptance remains durable.
 The60focused RAM cases passed, including native lost-reply/reopen, changed-point
 continuation, guard propagation, prior-version preservation and prefix restore.
+
+
+### Full-inode event burst handling
+
+The full-inode observer drains raw kernel events independently of metadata
+processing. Its finite 16 MiB RAM FIFO counts both queued and actively decoded
+bytes; it never expands onto an SSD or drops an event to keep a ready flag.
+A real kernel overflow, read failure or lost watch still closes coverage and
+requires explicit reconciliation. Ordinary health uses constant-time watch
+counts and bounded process/cgroup reads, avoiding large `/proc/*/fdinfo` lists.
+Real kernel burst tests hold metadata processing while generating more events
+than the kernel FIFO holds, then verify the normal durable consumer barrier.
+An intentionally small buffer also proves that actual overflow remains fatal
+to incremental acceptance. This correction does not repair the failed V8 epoch
+or make its earlier enrollment receipt a current continuity certificate.

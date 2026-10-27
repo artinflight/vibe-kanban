@@ -240,7 +240,9 @@ def serve(plan,path,endpoint,*,guard,status_path,stop=None,store_factory=None,st
                         write_status(dict(binding,phase='tracking',sequence=previous,
                              watches=report.get('watches',len(journal.watches)),raw_errors=list(journal.errors),ready=report['ready'],
                              heartbeat_utc=time.time(),metadata_bytes=store.byte_size(),
-                             baseline_accepted=False));last_status=time.monotonic()
+                             baseline_accepted=False,**{k:report[k] for k in
+                                 ('directory_watches','regular_inode_watches','symlink_inode_watches',
+                                  'kernel_raw_buffer_peak_bytes','kernel_raw_buffer_maximum_bytes') if k in report}));last_status=time.monotonic()
                     try:connection,_=server.accept()
                     except socket.timeout:continue
                     with connection:

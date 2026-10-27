@@ -112,6 +112,21 @@ class BControlTests(unittest.TestCase):
             stop.set();thread.join(timeout=5)
         self.assertFalse(thread.is_alive());self.assertEqual(errors,[])
 
+    def test_embedded_temp_placement_preserves_python_default_and_restores_SQLite_scope(self):
+        import vk_nightly_objects as objects
+        from vk_nightly_b_controls import Store
+        original=tempfile.gettempdir();probe=sqlite3.connect(':memory:')
+        previous=probe.execute('pragma temp_store_directory').fetchone()
+        store=Store(self.controls,objects,guard=lambda _:None)
+        db=sqlite3.connect(':memory:')
+        try:
+            store.configure(db)
+            self.assertEqual(tempfile.gettempdir(),original)
+            self.assertEqual(Path(db.execute('pragma temp_store_directory').fetchone()[0]),self.controls/'sqlite-tmp-v1')
+        finally:db.close();store.restore_temporary_scope()
+        self.assertEqual(probe.execute('pragma temp_store_directory').fetchone(),previous)
+        self.assertEqual(tempfile.gettempdir(),original);probe.close()
+
     def test_existing_larger_index_is_rejected_before_a_misleading_SQLITE_FULL(self):
         from vk_nightly_b_controls import NativeControlError
         db=self.client.connect('grown',self.sha)
@@ -726,6 +741,7 @@ class BControlTests(unittest.TestCase):
             calls+=1
             if calls>=3:raise ValueError('synthetic explicit owner stop')
         store=Store(self.controls,objects,guard=stop)
+        self.addCleanup(store.restore_temporary_scope)
         db=sqlite3.connect(':memory:');self.addCleanup(db.close);store.configure(db)
         with self.assertRaises(sqlite3.OperationalError):
             db.execute('with recursive n(x) as (values(1) union all select x+1 from n where x<1000000) select sum(x) from n').fetchone()

@@ -1655,3 +1655,13 @@ before mutation. Native SQLite/Python temporary placement is now verified
 inside the admitted B control directory; it changes only that worker process.
 Structured error context reports operation/index/code frames without SQL
 parameters, improving future exact diagnosis.
+
+October27 11:52EDT V12 stopped on the same native15s SMART read timeout;
+all committed metadata and completed body points survived. No stale STATUS
+is terminal success. The guard now permits one read-only requalification per
+finite native session: it reruns STOP/MM/full identity and requires a successful
+fresh SMART/PHY/capacity observation before any data work. A second timeout,
+access denial, STOP, failed SMART or changed counter still fails closed. Five
+actual embedded-guard regressions pass these branches. No deadline or hardware
+criterion changes. The separate SQLite temporary-scope cleanup passes the
+178-test focused suite; Python's global tempfile default remains unchanged.

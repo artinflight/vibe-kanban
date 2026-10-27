@@ -18,7 +18,6 @@ import shutil
 import sqlite3
 import struct
 import subprocess
-import tempfile
 import time
 import traceback
 
@@ -90,11 +89,13 @@ class Store:
             # belong on the same admitted B control volume. This affects only
             # this dedicated worker process, never OS/global settings or sources.
             self.guard(1024**2);temporary=self.root/'sqlite-tmp-v1';self.directory(temporary)
+            previous=db.execute('pragma temp_store_directory').fetchone()
+            self.previous_temporary_directory=previous[0] if previous else ''
             db.execute("pragma temp_store_directory='"+str(temporary).replace("'","''")+"'")
             actual=db.execute('pragma temp_store_directory').fetchone()
             if actual is None or Path(actual[0]).resolve()!=temporary:
                 raise ValueError('native SQLite cannot verify B temporary placement')
-            tempfile.tempdir=str(temporary);self.temporary_configured=True
+            self.temporary_directory=temporary;self.temporary_configured=True
         # This is a per-connection ceiling, not a preallocation or global
         # reserve. The measured842MB map thrashed at the former2MB setting.
         if os.name=='nt':
@@ -316,7 +317,7 @@ class Store:
             raise ValueError('immutable B checkpoint changed while reading')
         if op=='check':return dict(in_transaction=db.in_transaction,bytes=path.stat().st_size)
         if op=='storage-status':
-            temporary=tempfile.gettempdir()
+            temporary=str(self.temporary_directory)
             return dict(index_bytes=path.stat().st_size,maximum_index_bytes=self.maximum,
                 page_count=db.execute('pragma page_count').fetchone()[0],page_size=db.execute('pragma page_size').fetchone()[0],
                 max_page_count=db.execute('pragma max_page_count').fetchone()[0],
@@ -581,8 +582,22 @@ class Store:
             return dict(rows=rows,done=done,in_transaction=db.in_transaction)
         raise ValueError('unknown B control operation')
 
+    def restore_temporary_scope(self):
+        # Dedicated receivers exit after closing their handles. Embedded users
+        # must also restore SQLite's process-local setting; never repoint
+        # Python's global tempfile cache into a disposable control fixture.
+        if not self.temporary_configured:return
+        probe=sqlite3.connect(':memory:')
+        try:
+            actual=probe.execute('pragma temp_store_directory').fetchone()
+            if actual and Path(actual[0]).resolve()==self.temporary_directory:
+                probe.execute("pragma temp_store_directory='"+self.previous_temporary_directory.replace("'","''")+"'")
+        finally:probe.close()
+        self.temporary_configured=False
+
     def close(self):
         for key in list(self.handles):self.call(dict(op='close',name=key))
+        self.restore_temporary_scope()
 
 
 def serve(root,source,output,*,objects,guard,maximum_index_bytes=4*1024**3):
@@ -613,6 +628,7 @@ def serve(root,source,output,*,objects,guard,maximum_index_bytes=4*1024**3):
         for db,path,inode,lease in list(store.handles.values()):
             try:db.close()
             finally:lease.__exit__(None,None,None)
+        store.restore_temporary_scope()
 
 
 class NativeControlError(ValueError):

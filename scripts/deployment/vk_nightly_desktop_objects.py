@@ -25,6 +25,7 @@ import base64,datetime,hashlib,json,os,pathlib,shutil,subprocess,sys,time,types
 mm=types.ModuleType('current_MM_guard');exec(MM_SOURCE,mm.__dict__)
 job=pathlib.Path(CONFIG['B_root']);baseline=CONFIG['baseline']
 admitted_identity=None
+health_timeout_used=False
 def kernel_identity():
  import ctypes,ctypes.wintypes as wt
  api=ctypes.WinDLL('kernel32',use_last_error=True)
@@ -51,7 +52,7 @@ def kernel_identity():
  assert match,'native B volume GUID malformed'
  return dict(disk_number=int(number[1]),partition_number=int(number[2]),volume_guid=match[1].lower())
 def actual_guard(remaining):
- global admitted_identity
+ global admitted_identity,health_timeout_used
  records={p:mm.parse(mm.bounded_read(p)) for p in (mm.STOP_PATH,mm.STATE_PATH)}
  for record in records.values():mm.pause(record)
  assert mm.b_outside_monitor_scope(records[mm.STOP_PATH],records[mm.STATE_PATH]),'B scope changed'
@@ -72,8 +73,20 @@ def actual_guard(remaining):
    actual=kernel_identity()
    assert all(identity[k]==v for k,v in actual.items()),'kernel/full admission identity mismatch'
    admitted_identity=dict(identity)
- p=subprocess.run(['C:/ProgramData/MediaArchiveMonitor/smartctl/bin/smartctl.exe',
-    '-j','-i','-H','-A','-l','sataphy','/dev/pd3'],capture_output=True,timeout=15)
+ try:
+  p=subprocess.run(['C:/ProgramData/MediaArchiveMonitor/smartctl/bin/smartctl.exe',
+     '-j','-i','-H','-A','-l','sataphy','/dev/pd3'],capture_output=True,timeout=15)
+ except subprocess.TimeoutExpired:
+  # A missing observation never authorizes I/O. One read-only requalification
+  # per finite session may recover a transient command timeout. No work runs
+  # between attempts: all STOP/MM/access checks and full identity run again.
+  # Never retry an actual denied operation, changed counter or failed SMART.
+  if health_timeout_used:raise
+  health_timeout_used=True;admitted_identity=None
+  print(json.dumps(dict(event='native-health-read-timeout-requalification',
+      timeout_seconds=15,UTC=datetime.datetime.now(datetime.timezone.utc).isoformat(),
+      data_IO_permitted=False,remaining_requalifications=0)),file=sys.stderr,flush=True)
+  return actual_guard(remaining)
  p.check_returncode();j=json.loads(p.stdout)
  attrs={x['id']:x['raw']['value'] for x in j['ata_smart_attributes']['table'] if x['id'] in [5,187,188,197,198,199]}
  phy={x['id']:x['value'] for x in j['sata_phy_event_counters']['table']}
@@ -87,7 +100,7 @@ def actual_guard(remaining):
  assert os.stat('B:/').st_dev==CONFIG['volume_device'] and identity['disk_number']==3
  free=shutil.disk_usage('B:/').free
  assert free>CONFIG['protected_B_bytes']+remaining+1048576,'actual B protected floor/commitment'
- return dict(identity=identity,health=health,free_bytes=free,UTC=datetime.datetime.now(datetime.timezone.utc).isoformat())
+ return dict(identity=identity,health=health,free_bytes=free,health_timeout_requalification_used=health_timeout_used,UTC=datetime.datetime.now(datetime.timezone.utc).isoformat())
 assert hashlib.sha256(MM_SOURCE.encode()).hexdigest()==CONFIG['MM_sha256']
 assert hashlib.sha256(OBJECT_SOURCE.encode()).hexdigest()==CONFIG['object_module_sha256']
 mm.evidence();before=actual_guard(CONFIG['maximum_object_bytes']+1048576)

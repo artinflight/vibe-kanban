@@ -1733,3 +1733,32 @@ point is not yet a captured/adopted component or whole-current acceptance.
 The133focused native-control/current-map/descriptor/typed-worker/reader tests
 pass, including real fixture SQL API-image restore/integrity and outside-scope
 runtime readback/catch-up obligations.
+
+
+### October27 late retired-inode callback correction
+
+V10 ended13:10:23EDT on unknown WD779294/mask8, not a memory guard or B fault.
+Its local SQLite remains intact through5807284, B delivery through5803171,
+with64pending names. The body worker stopped13:12:40EDT at a completed boundary;
+its last status records604completed versions,4735398282source bytes and
+1398510917encoded bytes sent directly to B, with no OS/SSD backup payload.
+The terminal record and all accepted file points remain independent evidence.
+
+An isolated concurrent replacement/hardlink fixture reproduced IN_IGNORED
+followed by a final MODIFY/CLOSE_WRITE for the same retired watch. Discarding
+all retired attribution therefore caused a false unknown-WD fault. The observer
+now retains at most8192 retired names attributed to actual own watch retirement.
+A late event dirties those names and readiness waits for normal current-inode
+enrollment. A missing covering parent, root loss, genuinely unknown or expired
+WD, overflow, access/resource refusal or reused kernel descriptor still fails
+closed. This is neither an unknown-event exemption nor a repair of old gaps.
+
+O_PATH FD enrollment now pins symlinks and directories as well as regular files;
+the symlink inode itself is watched, without following its target. Directory
+identity comes from that pinned FD, preventing a post-watch pathname-stat race.
+Transient link-resolution replacement races are conservatively observed rather
+than excluded.198 focused integration tests pass, including deterministic late
+callbacks, real symlink ABA, lost-parent/refusal checks and5000 concurrent mixed
+replacement/unlink/open-writer rounds. Whole current restore/calendar acceptance
+remains separate. A successor must record the terminal gap, establish a new
+healthy epoch, reconcile stopped-interval metadata and reuse completed B bodies.

@@ -35,8 +35,11 @@ class WatchMap(dict):
         except OSError as error:
             self.owner.errors.append({'watch_reenrollment_stat_failed': path, 'errno': error.errno})
             return super().__setitem__(wd, path)
-        identity = (info.st_dev, info.st_ino)
-        if old is not None and old != path and stat.S_ISDIR(info.st_mode):
+        return self.bind(wd, path, (info.st_dev, info.st_ino), is_directory=stat.S_ISDIR(info.st_mode))
+
+    def bind(self, wd, path, identity, *, is_directory=True):
+        old = self.get(wd)
+        if old is not None and old != path and is_directory:
             if self.identities.get(wd) != identity:
                 self.owner.errors.append({'watch_identity_rebound': wd})
             elif not os.path.lexists(old):

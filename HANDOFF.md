@@ -15,14 +15,13 @@ health/package files. No OS/work-SSD backup payload or fallback is allowed.
 
 ## Actual independent ownership
 
-- Source observer V10: vk-nightly-bounded-inode-observer-v10-20261027.service,
-  PID1714599/start31642400, epoch2f32f888fa134b9496467b4fba4fc0e7.
-  Installed source0524e7d3d, configSHA
-  f14cabd137cf99102f41eca3a5170574eed3c56d07b27e88fb8c5213f6c5add8.
-  Owner-raised1048576watch ceiling is live. Actual ready/barrier and memory
-  acceptance are in b-controls-v1/V10_OWNER_MEMORY_AND_NORMAL_BARRIER_20261027.
-  About770k watches;12:24EDT RSS487396KiB/cgroup562319360B, no OOM/limit
-  events. The observer stays independent of Desktop transport.
+- Source observer V10 is terminal13:10:23EDT, MainPID0/exit1, epoch
+  2f32f888fa134b9496467b4fba4fc0e7. Unknown watch779294/mask8; intact SQLite
+  SHA61977f098f9dcb58b1bd804c40c635ce585e0dfeaf361a8be602af2b786be89d,
+  cursor5807284/B ACK5803171/64pending names. Receipt b-controls-v1/
+  INODE_V10_TERMINAL_GAP_20261027.private.json. Preserve the epoch and spools.
+  A later corrected observer and metadata gap reconciliation must precede
+  current baseline acceptance; prior journal component proof stays historical.
 - Composition V13 is successfully terminal at12:10:30EDT, unit
   vk-nightly-B-current-composition-inodes-v13-20261027.service, MainPID0/exit0.
   Source2b540cf4dd826414fa25b00688fc0776d4dc2638; package current-composition-B-inodes-v13,
@@ -64,17 +63,19 @@ V11/V12 stopped on native15s SMART read timeouts; original traces survive.
 V13 completed after the tested finite full requalification fix, with unchanged
 STOP/access/counter checks and command deadline. No blind denied-write retry.
 
-Current sole body phase is vk-nightly-B-file-points-inodes-v2-20261027.service,
-PID3167974, started12:22EDT; package file-points-worker-B-inodes-v2.
-Source028c45e14f8ecdc7346ac8fb9ba3775f577eb01b; worker configSHA
-50c2f289a1963ec70c51db8dd511b3ea070716513ea8e68ef4ea8b099f058735;
-controllerSHA0c21d2909653cdcafb2bd9e29d14a8984e7d4a27a7d6318fb56d70474bf33467.
-CPU25%,High1536MiB/Max2GiB,Swap0,Tasks64,3h own/3h5min hard deadline.
-Existing phase bounds8192files/16GiB source reads remain. It reuses actual
-completed histories before transfer and delivers source events serially at
-completed-component boundaries, replacing the old background health stream.
-Read STOP/RESULT before STATUS; do not duplicate it or run another native
-inspection/health probe alongside it. Latest status includes measured memory.
+Body phase vk-nightly-B-file-points-inodes-v2-20261027.service is terminal
+13:12:40EDT, MainPID0/exit1: source observer no longer ready. STOP is authoritative.
+STATUS retained604completed points,4735398282source bytes/1398510917encoded sent,
+0SSD payload/index bytes. All completed points/partial CAS objects survive;
+reuse their actual B acceptance ledger, never repeat completed transfers.
+Installed source028c45e14f8ecdc7346ac8fb9ba3775f577eb01b, configSHA
+50c2f289a1963ec70c51db8dd511b3ea070716513ea8e68ef4ea8b099f058735.
+
+RAM stress reproduced late inode events after IN_IGNORED. Corrected tracking
+retains a bounded8192-name retirement ledger and reobserves known dirty names;
+unknown WDs/overflow/access/root loss remain faults. Pinned FD enrollment fixes
+symlink ABA/transient name races.198 focused tests pass, including5000 mixed
+mutation rounds. Do not overwrite old packages or claim old epochs repaired.
 
 ## Baseline/commissioning work still required
 

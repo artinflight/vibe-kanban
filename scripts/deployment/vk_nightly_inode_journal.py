@@ -5,7 +5,7 @@ No file content is read, writers are never fenced and kernel limits are never
 changed. A failed watch aborts enrollment, preserving the earlier observer.
 """
 import bisect
-from collections import deque
+from collections import deque, OrderedDict
 import ctypes
 import errno
 import os
@@ -63,6 +63,11 @@ class Journal(DirectoryJournal):
         self.inode_kinds={};self.root_aliases_enrolled=False
         self.kind_counts={stat.S_IFREG:0,stat.S_IFLNK:0}
         self.pending_file_enrollments=set()
+        # Concurrent fsnotify callbacks can enqueue a final inode event after
+        # rm_watch's IN_IGNORED. Attribute only known retirements, never exempt
+        # arbitrary unknown WDs. Recheck the current name before readiness.
+        self.retired_files=OrderedDict();self.maximum_retired_paths=8192
+        self.retired_path_count=0;self.late_retired_events=0
         self.lib.inotify_rm_watch.argtypes=[ctypes.c_int,ctypes.c_int]
         self.lib.inotify_rm_watch.restype=ctypes.c_int
         # Only ordered kernel bytes enter this finite FIFO. The reader never
@@ -135,6 +140,38 @@ class Journal(DirectoryJournal):
     def protected(self,path):
         return super().protected(path) or any(under(root,path) for root in self.plan['sources'])
 
+    def excluded_path(self,path):
+        try:return super().excluded_path(path)
+        except OSError as error:
+            if error.errno not in (errno.EINVAL,errno.ENOENT,errno.ENOTDIR):raise
+            # resolve() may lstat a link replaced before readlink(). Never
+            # omit that name; normal no-follow enrollment/identity checks run.
+            return False
+
+    def retain_retired(self,wd,paths):
+        paths=set(paths)
+        if not paths:return
+        if len(paths)>self.maximum_retired_paths:
+            raise WatchAdmissionError('bounded retired inode attribution exceeded')
+        old=self.retired_files.setdefault(wd,set())
+        self.retired_path_count+=len(paths-old);old.update(paths)
+        self.retired_files.move_to_end(wd)
+        while self.retired_path_count>self.maximum_retired_paths:
+            _,removed=self.retired_files.popitem(last=False)
+            self.retired_path_count-=len(removed)
+
+    def late_retired(self,wd,mask):
+        paths=self.retired_files.get(wd)
+        if not paths or mask&(OVERFLOW|UNMOUNT|IGNORED):return False
+        # Root loss or loss of the covering parent still fails closed.
+        if any(self.protected(p) or str(Path(p).parent) not in self.watches.values() for p in paths):
+            return False
+        if len(self.pending_file_enrollments|paths)>10000:
+            raise WatchAdmissionError('bounded pending inode enrollment exceeded')
+        for path in paths:self.changed_name(path,mask)
+        self.pending_file_enrollments.update(paths);self.late_retired_events+=1
+        return True
+
     def changed_name(self,path,mask):
         self.seq+=1;self.changed[path]=self.seq;bits=self.events.setdefault(path,{})
         for bit in range(32):
@@ -146,6 +183,7 @@ class Journal(DirectoryJournal):
         if wd is None:return
         self.paths_dirty=True;self.file_aliases[wd].discard(path)
         if not self.file_aliases[wd]:
+            self.retain_retired(wd,[path])
             self.expected_ignored.add(wd)
             if self.lib.inotify_rm_watch(self.fd,wd)<0 and ctypes.get_errno()!=errno.EINVAL:
                 self.errors.append({'inode_watch_remove_failed':path,'errno':ctypes.get_errno()})
@@ -158,19 +196,21 @@ class Journal(DirectoryJournal):
             if not (stat.S_ISREG(before.st_mode) or stat.S_ISLNK(before.st_mode)):return
             # Own O_PATH FD pins the actual inode across rename/replacement.
             # Do not use DONT_FOLLOW on this deliberately controlled FD link.
-            link=stat.S_ISLNK(before.st_mode)
-            watch_path=path if link else '/proc/self/fd/'+str(fd)
-            wd=self.lib.inotify_add_watch(self.fd,os.fsencode(watch_path),MASK|(0x02000000 if link else 0))
+            # A procfs magic FD link resolves directly to the pinned inode,
+            # including an O_PATH|O_NOFOLLOW symlink inode (not its target).
+            # Using the mutable source name here would allow a symlink ABA.
+            watch_path='/proc/self/fd/'+str(fd)
+            wd=self.lib.inotify_add_watch(self.fd,os.fsencode(watch_path),MASK)
             if wd<0:
-                code=ctypes.get_errno();self.errors.append({'watch_failed':path,'errno':code})
+                code=ctypes.get_errno()
+                if code==errno.ENOENT:raise FileNotFoundError(code,os.strerror(code),path)
+                self.errors.append({'watch_failed':path,'errno':code})
                 raise WatchAdmissionError('source inode watch refused: '+path+': '+os.strerror(code))
+            if wd in self.retired_files:
+                raise WatchAdmissionError('retired kernel watch descriptor reused; reconcile source epoch')
             prior=self.path_watches.get(path)
             if prior is not None and prior!=wd:self.forget(path)
             self.file_aliases.setdefault(wd,set()).add(path);self.path_watches[path]=wd;self.paths_dirty=True
-            kind=stat.S_IFMT(before.st_mode)
-            if wd not in self.inode_kinds:self.kind_counts[kind]+=1
-            elif self.inode_kinds[wd]!=kind:raise WatchAdmissionError('kernel inode watch type changed')
-            self.inode_kinds[wd]=kind
             after=os.lstat(path)
             if (after.st_dev,after.st_ino)!=(before.st_dev,before.st_ino):
                 self.forget(path)
@@ -181,6 +221,10 @@ class Journal(DirectoryJournal):
                     return
                 self.errors.append({'inode_enrollment_replaced':path})
                 raise WatchAdmissionError('source replaced during inode enrollment without subscribed parent')
+            kind=stat.S_IFMT(before.st_mode)
+            if wd not in self.inode_kinds:self.kind_counts[kind]+=1
+            elif self.inode_kinds[wd]!=kind:raise WatchAdmissionError('kernel inode watch type changed')
+            self.inode_kinds[wd]=kind
         except FileNotFoundError:
             if self.protected(path):
                 self.errors.append({'initial_required_root_absent':path})
@@ -201,16 +245,23 @@ class Journal(DirectoryJournal):
             path=pending.pop()
             with self.lock:
                 if self.excluded_path(path):continue
+                directory_fd=None
                 try:
-                    info=os.lstat(path)
+                    directory_fd=os.open(path,os.O_PATH|os.O_NOFOLLOW|os.O_CLOEXEC)
+                    info=os.fstat(directory_fd)
                     if stat.S_ISREG(info.st_mode) or stat.S_ISLNK(info.st_mode):self.enroll_file(path);continue
                     if not stat.S_ISDIR(info.st_mode):
                         self.errors.append({'enrollment_directory_became_link':path});continue
-                    wd=self.lib.inotify_add_watch(self.fd,os.fsencode(path),MASK|0x02000000|0x01000000)
+                    # The owned O_PATH FD pins the actual directory across
+                    # rename/deletion; do not re-stat a vanished pathname after
+                    # registering its watch. Parent events cover its successor.
+                    wd=self.lib.inotify_add_watch(self.fd,os.fsencode('/proc/self/fd/'+str(directory_fd)),MASK|0x01000000)
                     if wd<0:
-                        code=ctypes.get_errno();self.errors.append({'watch_failed':path,'errno':code})
+                        code=ctypes.get_errno()
+                        if code==errno.ENOENT:raise FileNotFoundError(code,os.strerror(code),path)
+                        self.errors.append({'watch_failed':path,'errno':code})
                         raise WatchAdmissionError('directory watch refused: '+path+': '+os.strerror(code))
-                    self.watches[wd]=path
+                    self.watches.bind(wd,path,(info.st_dev,info.st_ino))
                     with os.scandir(path) as entries:
                         for entry in entries:
                             if self.excluded_path(entry.path):continue
@@ -223,6 +274,8 @@ class Journal(DirectoryJournal):
                 except OSError as error:
                     self.errors.append({'watch_enrollment_failed':path,'errno':error.errno})
                     raise WatchAdmissionError('inode enrollment access/resource failure') from error
+                finally:
+                    if directory_fd is not None:os.close(directory_fd)
 
     def remap(self,old,new):
         count=super().remap(old,new)
@@ -242,12 +295,14 @@ class Journal(DirectoryJournal):
         with self.lock:
             if wd in self.file_aliases and not mask&(OVERFLOW|UNMOUNT):
                 aliases=list(self.file_aliases[wd])
+                if not aliases and self.late_retired(wd,mask):return
                 if mask&0x400:
                     self.expected_ignored.add(wd)
                     for path in aliases:
                         if self.protected(path):self.errors.append({'protected_root_deleted':path})
                 if mask&IGNORED:
                     if wd not in self.expected_ignored:self.errors.append({'inode_watch_removed':aliases})
+                    elif aliases:self.retain_retired(wd,aliases)
                     self.expected_ignored.discard(wd)
                     for path in aliases:
                         # A queued IGNORED for the replaced old inode must not
@@ -258,6 +313,7 @@ class Journal(DirectoryJournal):
                     self.paths_dirty=True
                 for path in aliases:self.changed_name(path,mask)
                 return
+            if self.late_retired(wd,mask):return
             parent=self.watches.get(wd);path=str(Path(parent)/name) if parent and name else parent
             super().event(wd,mask,name,cookie)
             if path and not self.excluded_path(path):
@@ -272,5 +328,6 @@ class Journal(DirectoryJournal):
                      directory_watches=len(self.watches),regular_inode_watches=self.kind_counts[stat.S_IFREG],
                      symlink_inode_watches=self.kind_counts[stat.S_IFLNK],
                      regular_alias_paths=len(self.path_watches),watches=len(self.watches)+len(self.file_aliases),
+                     retained_retired_paths=self.retired_path_count,late_retired_inode_events=self.late_retired_events,
                      kernel_raw_buffer_peak_bytes=self.raw_peak_bytes,kernel_raw_buffer_maximum_bytes=self.maximum_raw_bytes)
         return value

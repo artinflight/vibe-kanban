@@ -36,6 +36,28 @@ class InodeJournalTests(unittest.TestCase):
         self.assertEqual(report['symlink_inode_watches'],1);self.assertEqual(report['regular_inode_watches'],0)
         self.assertEqual(target.read_bytes(),b'preserved target')
 
+    def test_symlink_watch_uses_pinned_inode_even_when_source_name_changes_back(self):
+        target=self.base/'target';target.write_bytes(b'one')
+        other=self.base/'other';other.write_bytes(b'two')
+        link=self.root/'link';link.symlink_to(target)
+        decoy=self.base/'decoy';decoy.symlink_to(other);saved=self.base/'saved'
+        outside=self.base/'external-link';os.link(link,outside,follow_symlinks=False)
+        journal=Journal({'sources':[str(self.root)]});self.addCleanup(journal.close)
+        real=journal.lib.inotify_add_watch
+        def register(fd,path,mask):
+            if os.fsdecode(path).startswith('/proc/self/fd/') and os.readlink(os.fsdecode(path))==str(link):
+                link.rename(saved);decoy.rename(link)
+                try:return real(fd,path,mask)
+                finally:link.rename(decoy);saved.rename(link)
+            return real(fd,path,mask)
+        with patch.object(journal.lib,'inotify_add_watch',side_effect=register):journal.tree(self.root)
+        journal.ready=True;start=journal.report(0)['sequence']
+        os.utime(outside,ns=(1000000000,2000000000),follow_symlinks=False)
+        report=journal.report(start)
+        self.assertTrue(report['ready'],report['errors']);self.assertIn(str(link),report['changed'])
+        target.write_bytes(b'target is outside scope')
+        self.assertNotIn(str(link),journal.report(report['sequence'])['changed'])
+
     def test_external_link_created_after_enrollment_and_new_source_file_are_covered(self):
         original=self.root/'original';original.write_bytes(b'first');journal=self.enroll();start=journal.report(0)['sequence']
         outside=self.base/'later-link';os.link(original,outside);outside.write_bytes(b'later')
@@ -109,6 +131,102 @@ class InodeJournalTests(unittest.TestCase):
             self.assertTrue(after['ready'],after['errors']);self.assertIn(str(f),after['changed'])
         finally:stop.set();thread.join(timeout=5)
         self.assertFalse(thread.is_alive())
+
+    def test_attributed_inode_event_after_ignored_rechecks_actual_current_name(self):
+        source=self.root/'file';source.write_bytes(b'old');journal=self.enroll()
+        wd=journal.path_watches[str(source)]
+        journal.forget(str(source));journal.report(0) # actual rm_watch/IGNORED
+        self.assertNotIn(wd,journal.file_aliases)
+        start=journal.seq
+        journal.event(wd,8,'') # reproduced late fsnotify close-write ordering
+        self.assertIn(str(source),journal.pending_file_enrollments)
+        self.assertEqual(journal.errors,[])
+        report=journal.report(start)
+        self.assertTrue(report['ready'],report['errors'])
+        self.assertIn(str(source),report['changed'])
+        self.assertNotEqual(journal.path_watches[str(source)],wd)
+        outside=self.base/'external';os.link(source,outside);outside.write_bytes(b'new')
+        self.assertIn(str(source),journal.report(report['sequence'])['changed'])
+        self.assertEqual(report['late_retired_inode_events'],1)
+
+    def test_late_retirement_ledger_is_bounded_and_never_exempts_unknown_watches(self):
+        first=self.root/'a';second=self.root/'b';first.write_bytes(b'a');second.write_bytes(b'b')
+        journal=self.enroll();journal.maximum_retired_paths=1
+        a=journal.path_watches[str(first)];b=journal.path_watches[str(second)]
+        journal.forget(str(first));journal.forget(str(second));journal.report(0)
+        self.assertEqual(journal.retired_path_count,1)
+        self.assertEqual(set(journal.retired_files),{b})
+        journal.event(a,8,'')
+        self.assertIn({'unknown_watch':a,'mask':8},journal.errors)
+        journal.event(b,0x4000,'')
+        self.assertTrue(any('coverage_lost' in row for row in journal.errors))
+
+    def test_unexpected_watch_loss_or_lost_parent_never_becomes_a_retired_exemption(self):
+        source=self.root/'file';source.write_bytes(b'a');journal=self.enroll()
+        wd=journal.path_watches[str(source)]
+        journal.forget(str(source));journal.report(0)
+        journal.watches.clear();journal.event(wd,8,'')
+        self.assertIn({'unknown_watch':wd,'mask':8},journal.errors)
+        other=Journal({'sources':[str(self.root)]});self.addCleanup(other.close)
+        other.tree(self.root);other.ready=True;wd=other.path_watches[str(source)]
+        other.event(wd,0x8000,'')
+        self.assertTrue(any('inode_watch_removed' in row for row in other.errors))
+        self.assertNotIn(wd,other.retired_files)
+
+    def test_directory_disappearing_after_actual_watch_registration_keeps_parent_tombstone(self):
+        child=self.root/'child';child.mkdir()
+        journal=Journal({'sources':[str(self.root)]});self.addCleanup(journal.close)
+        real=journal.lib.inotify_add_watch
+        def register(fd,path,mask):
+            result=real(fd,path,mask)
+            if os.fsdecode(path).startswith('/proc/self/fd/') and os.readlink(os.fsdecode(path))==str(child):
+                child.rmdir()
+            return result
+        with patch.object(journal.lib,'inotify_add_watch',side_effect=register):journal.tree(self.root)
+        journal.ready=True;report=journal.report(0)
+        self.assertTrue(report['ready'],report['errors'])
+        self.assertIn(str(child),report['changed'])
+
+    def test_resolve_link_replacement_race_is_not_a_source_omission_or_access_bypass(self):
+        journal=self.enroll()
+        for code in (errno.EINVAL,errno.ENOENT,errno.ENOTDIR):
+            with patch('vk_nightly_move_journal.Journal.excluded_path',side_effect=OSError(code,'readlink race')):
+                self.assertFalse(journal.excluded_path(self.root/'moving'))
+        with patch('vk_nightly_move_journal.Journal.excluded_path',side_effect=PermissionError('denied')):
+            with self.assertRaises(PermissionError):journal.excluded_path(self.root/'moving')
+
+    def test_mixed_live_replacements_unlinks_and_open_writer_closes_remain_covered(self):
+        import threading
+        source=self.root/'file';source.write_bytes(b'a')
+        outside=self.base/'outside';os.link(source,outside)
+        journal=self.enroll();stop=threading.Event();failures=[]
+        def drain():
+            try:
+                while not stop.wait(.001):journal.read()
+            except BaseException:
+                import traceback
+                failures.append(traceback.format_exc());stop.set()
+        thread=threading.Thread(target=drain);thread.start()
+        try:
+            for i in range(5000):
+                p=self.root/'tmp';p.write_bytes(b'a');os.replace(p,source)
+                if i%3==0:
+                    q=self.root/'hard';os.link(outside,q);q.unlink()
+                if i%4==0:
+                    sub=self.root/'sub';sub.mkdir();child=sub/'child'
+                    fd=os.open(child,os.O_CREAT|os.O_WRONLY,0o600)
+                    try:os.write(fd,b'first');child.unlink();os.write(fd,b'later')
+                    finally:os.close(fd)
+                    sub.rmdir()
+                if i%5==0:p.symlink_to(outside);os.replace(p,source)
+                if stop.is_set():break
+            stop.set();thread.join(timeout=30)
+            self.assertFalse(thread.is_alive());self.assertEqual(failures,[])
+            report=journal.report(0)
+            self.assertTrue(report['ready'],report['errors'])
+            self.assertLessEqual(report['retained_retired_paths'],8192)
+            self.assertIn(str(source),report['changed'])
+        finally:stop.set();thread.join(timeout=30)
 
     def test_real_kernel_refusal_is_not_ignored_or_retried_using_another_route(self):
         original=self.root/'file';original.write_bytes(b'old');journal=Journal({'sources':[str(self.root)]});self.addCleanup(journal.close)

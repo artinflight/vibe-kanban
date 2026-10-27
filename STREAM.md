@@ -16,18 +16,19 @@ alone are insufficient. Reuse accepted162.70GB/137DB and all valid later layers.
 Current source work reconciles PR263 against Staging and authenticates reusable
 components from failed v8i without relabeling its parent as accepted. Historical
 17SQL/one-rollout/five-watch counts must not be treated as current requirements.
-The Staging-owned v11 observer ended naturally. The original selector qualifier
-finished at R5; the902818-member map and disjoint new-name qualification are
-retained. Both earlier trackers stopped at14:34EDT on SSD capacity. The user authorized
-removing that dependency: six indexes are verified on native B. The original
-B tracker later failed, so current source observation uses a strictly bounded
-preallocated SSD event outbox independent of Desktop transport; growing indexes
-and backup bodies remain B-only. Its actual107010-directory-watch barrier and independent
-B forward-copy reopen passed; this does not cover external hardlink writes.
+Earlier selector/namespace, B migration and directory-only observer proofs are
+retained. Six growing indexes now live on native B. Source tracking uses a
+fixed preallocated SSD outbox independent of Desktop transport; bodies stay B.
+Directory-only readiness never establishes external hardlink write coverage.
 The owner-approved1048576watch limit is live. V8's later real queue overflow
-is preserved; its earlier ready proof is historical. V9 later stopped with a preserved reporting/watch fault. Corrected V10 uses
-bounded raw draining, replacement enrollment and first-fault termination. Actual new/old/new barriers and independent
-B readback passed before V7 closed. The single finite controller completed920540metadata paths/errors0 on B.
+is preserved; its earlier ready proof is historical. V9 and later V10 stopped
+on unknown-watch reports. V10's complete namespace and body versions remain valid.
+October27 RAM stress reproduced a final inode callback after IN_IGNORED. The fix
+retains at most8192 explicitly retired names, dirties/re-enrolls current names,
+and still rejects unknown WDs, missing parents, overflow and access failures.
+Pinned O_PATH enrollment also closes symlink/name replacement races.198 focused
+checks pass; a new observer epoch and explicit stopped-interval reconciliation
+are required. This does not retrospectively repair either stopped epoch.
 A later V10 complete namespace and18539-point qualification stage now provide
 reusable inputs; the current B-only composition resumes those exact results.
 Additive map integration requires that actual proof and full later namespace,

@@ -41,4 +41,5 @@ def copy_once(config,*,guard):
         guard();result=query(config['endpoint'],dict(instance=instance,op='acknowledge_delivery',proof=acknowledgement))
         if result['acknowledged']!=proof['sequence']:raise ValueError('source delivery acknowledgement differs')
     return dict(proof,actual_native_B_reopen_verified=True,local_acknowledged=result['acknowledged'],
+                local_changes_pruned=True,local_changes_pruned_through=result['acknowledged'],
                 newer_source_generations_preserved=True,whole_baseline_accepted=False)

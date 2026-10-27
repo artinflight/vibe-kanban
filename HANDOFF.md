@@ -1,4 +1,30 @@
-# October26 — bounded SSD outbox and B-native controls,20:39EDT
+# October26 — gap enumeration complete and real bounded delivery,21:05EDT
+
+V6_GAP_NAMESPACE_RESULT is terminal success:919022paths,107010directories,
+0replay errors,0source-body bytes,383changed names in the retained closing
+suffix. Both prior namespaces remain intact. Current map successor must use
+the explicit same-scope unaccepted-epoch transition: it retains the previous
+binding and all absence rows transactionally, then resumes the new cursor.
+New batch lookups avoid alternating per-file HDD index reads without changing
+the exact9-field identity/xattr checks. Local map/native regressions41pass.
+
+V7 observer PID3632010/start26998675,instancea685913e7c07452cb13efc761f0a64b0,
+107010watches/errors0, package tracking-worker-local-v7/configSHA
+d0213d97077dce0175fafe49d11f2f4fe59b4ecbdc5f0e77d0958825bc0cc255.
+Real native-B copy/reopen then nonce-bound local ACK passed through25692;
+the normal retained-prefix/live consumer returned279paths/sequence56878 with
+0inventory/body reads. Original receipt's local_changes_pruned=false was the
+pre-ACK export flag; local_acknowledged and actual prefix refusal establish
+the real ACK. Source now corrects that result field. Preserve all receipts.
+Unit's first post-acceptance health-table error was repaired by collection only,
+without copying events again. V6 remains live until exact overlap/handover and
+all V6 consumers finish. Do not start another observer or repeat enumeration.
+
+Exact760ad14be hosted recovery passed702tests/1skip. New successor changes
+require their own hosted head. Large SQL v6 remains the sole body writer;
+its3GB point is streaming, previous146images reused. Calendar still disabled.
+
+# Earlier October26 — bounded SSD outbox and B-native controls,20:39EDT
 
 Current operational status: NOT commissioned; no enabled nightly calendar or
 accepted next run. No backend restart is needed. Keep the sole existing SQL

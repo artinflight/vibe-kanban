@@ -355,8 +355,12 @@ class Store:
             def qualified(member):
                 row=qualifier.execute('select row from versions where name=?',(member,)).fetchone()
                 return decode_observation(row[0]) if row else None
+            def many(members):
+                return {member:decode_observation(raw) for member,raw in qualifier.execute(
+                    'select name,row from versions where name in ('+','.join('?' for _ in members)+')',members)}
+            qualified.many=many
             return value.reconcile_namespace(namespace,qualified,checkpoint=lambda:self.guard(path.stat().st_size+LIMIT),
-                maximum_paths=q['maximum_paths'])
+                maximum_paths=q['maximum_paths'],allow_unaccepted_epoch_successor=q.get('allow_unaccepted_epoch_successor') is True)
         if op=='member-demand':
             from vk_nightly_current_map import decode_member
             totals={};largest=[]

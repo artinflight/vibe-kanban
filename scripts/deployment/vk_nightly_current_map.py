@@ -249,7 +249,8 @@ class CurrentMap:
         self.db.execute('update metadata set complete=1')
         return dict(already_complete=False, processed=processed, more_members=False, **self.summary())
 
-    def reconcile_namespace(self, namespace, qualified, *, checkpoint, maximum_paths):
+    def reconcile_namespace(self, namespace, qualified, *, checkpoint, maximum_paths,
+                            allow_unaccepted_epoch_successor=False):
         """Adopt one complete later metadata epoch without replaying body hashes.
 
         Reuse requires the full nine-field identity AND Linux xattrs from the
@@ -268,7 +269,35 @@ class CurrentMap:
         db.execute('create table if not exists namespace_reconciliation(id integer primary key,binding text,last_name text,complete integer,suffix_complete integer)')
         db.execute('insert or ignore into namespace_reconciliation values(1,?,?,0,0)',(encoded,''))
         stored,last,complete=db.execute('select binding,last_name,complete from namespace_reconciliation where id=1').fetchone()
-        if stored!=encoded:raise ValueError('later namespace/observer binding changed; preserve existing reconciliation')
+        if stored!=encoded:
+            if not allow_unaccepted_epoch_successor:
+                raise ValueError('later namespace/observer binding changed; preserve existing reconciliation')
+            previous=json.loads(stored)
+            suffix=db.execute('select suffix_complete from namespace_reconciliation where id=1').fetchone()[0]
+            if (not complete or suffix or any(previous.get(k)!=binding.get(k) for k in
+                    ('plan_sha256','scope_sha256','required_root_bindings'))):
+                raise ValueError('only completed unaccepted same-scope namespace may have an explicit successor')
+            # Preserve the whole old gap/absence evidence before resetting the
+            # derived draft cursor. Immutable checkpoints and body versions are
+            # untouched. A later current epoch never repairs the original gap.
+            old_digest=hashlib.sha256(stored.encode()).hexdigest()
+            db.execute('create table if not exists namespace_reconciliation_history '
+                '(sha256 text primary key,binding text,last_name text,complete integer,suffix_complete integer) without rowid')
+            db.execute('create table if not exists namespace_absent_history '
+                '(epoch_sha256 text,name text,old_state text,row blob,disposition text,primary key(epoch_sha256,name)) without rowid')
+            db.execute('begin immediate')
+            try:
+                db.execute('insert into namespace_reconciliation_history values(?,?,?,?,?)',
+                           (old_digest,stored,last,complete,suffix))
+                db.execute('insert into namespace_absent_history select ?,name,old_state,row,disposition from namespace_absent',(old_digest,))
+                db.execute('delete from namespace_absent')
+                db.execute('update namespace_absence_cursor set last_name=? where id=1',('',))
+                db.execute('update namespace_reconciliation set binding=?,last_name=?,complete=0,suffix_complete=0 where id=1',(encoded,''))
+                checkpoint();self.check();db.execute('commit')
+            except BaseException:
+                if db.in_transaction:db.execute('rollback')
+                raise
+            last='';complete=0
         if complete:return dict(already_complete=True,processed=0,journal_suffix_required=True,**self.summary())
         db.execute('update metadata set complete=0');sources={p for p, in db.execute('select path from SQL_sources')}
         processed=reused=0
@@ -281,15 +310,22 @@ class CurrentMap:
             batch=namespace.execute('select name,row from namespace where name>? order by name limit ?',
                                     (last,min(128,maximum_paths-processed))).fetchall()
             if not batch:break
+            # Alternate per-file reads across two HDD indexes caused repeated
+            # seeks. Batch the same exact-name lookups before processing them;
+            # no identity/hash/metadata checks or durable boundaries change.
+            names=[name for name,_ in batch]
+            qualifications=qualified.many(names) if hasattr(qualified,'many') else None
+            old_rows={name:raw for name,raw in db.execute('select name,row from members where name in ('+
+                         ','.join('?' for _ in names)+')',names)}
             rows=[];newSQL=[]
             for name,raw in batch:
                 observation=decode_observation(raw);version=None
                 if observation['kind']=='file':
-                    candidate=qualified(name)
+                    candidate=qualifications.get(name) if qualifications is not None else qualified(name)
                     if matches(candidate,observation):version=candidate
                     if version is None:
-                        old=db.execute('select row from members where name=?',(name,)).fetchone()
-                        previous=decode_member(old[0]).get('qualification') if old else None
+                        old=old_rows.get(name)
+                        previous=decode_member(old).get('qualification') if old else None
                         if matches(previous,observation):version=previous
                     if version is not None:
                         version=dict(version,journal={k:binding[k] for k in ('instance','plan_sha256','scope_sha256')},

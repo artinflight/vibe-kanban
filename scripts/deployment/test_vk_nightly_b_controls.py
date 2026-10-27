@@ -86,6 +86,7 @@ class BControlTests(unittest.TestCase):
             with patch('vk_nightly_outbox_collector.DesktopControls',remote):
                 result=copy_once(config,guard=lambda:None)
             self.assertTrue(result['actual_native_B_reopen_verified']);self.assertFalse(result['whole_baseline_accepted'])
+            self.assertTrue(result['local_changes_pruned']);self.assertEqual(result['local_changes_pruned_through'],result['sequence'])
             with self.assertRaisesRegex(ValueError,'retained B journal prefix'):request(endpoint,instance,0)
             with tracking_store(self.client,'outbox',self.sha,maximum_bytes=8*1024**2) as store:
                 combined=retained_prefix_report(store,endpoint,instance,0,guard=lambda:None)

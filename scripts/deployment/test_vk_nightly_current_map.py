@@ -52,6 +52,19 @@ class CurrentMapTests(unittest.TestCase):
             final=m.reconcile_namespace(later,lambda n:self.version,checkpoint=lambda:None,maximum_paths=10)
             self.assertEqual(final['member_states'],{'file-needs-qualification':1})
 
+    def test_native_batch_lookup_keeps_exact_checks_without_per_file_index_switches(self):
+        later=self.later_namespace()
+        later.executemany('insert into namespace values(?,?)',[(name,encode_observation(self.observation)) for name in ('home/a','home/b')])
+        calls=[]
+        def qualified(_):raise AssertionError('per-file qualifier lookup should not run')
+        def many(names):calls.append(names);return {'home/a':self.version}
+        qualified.many=many
+        with CurrentMap.held(self.path,binding=self.binding,create=True) as m:
+            self.compile(m)
+            result=m.reconcile_namespace(later,qualified,checkpoint=lambda:None,maximum_paths=10)
+            self.assertEqual(calls,[['home/a','home/b']])
+            self.assertEqual(result['member_states'],{'verified-file':1,'file-needs-qualification':1})
+
     def test_namespace_error_cannot_be_mislabeled_as_an_absent_old_member(self):
         later=self.later_namespace();later.execute('insert into namespace_errors values(?,?)',('home/a',b'permission denied'))
         with CurrentMap.held(self.path,binding=self.binding,create=True) as m:
@@ -59,6 +72,31 @@ class CurrentMapTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError,'targeted replay before absence adoption'):
                 m.reconcile_namespace(later,lambda name:None,checkpoint=lambda:None,maximum_paths=10)
             self.assertEqual(m.db.execute('select count(*) from members').fetchone()[0],2)
+
+    def test_explicit_successor_retains_old_unaccepted_gap_and_absences_atomically(self):
+        first=self.later_namespace();first.execute('insert into namespace values(?,?)',('home/a',encode_observation(self.observation)))
+        second=self.later_namespace();binding=json.loads(second.execute('select binding from gap_meta').fetchone()[0])
+        binding['instance']='next-epoch';second.execute('update gap_meta set binding=?',(json.dumps(binding),))
+        second.executemany('insert into namespace values(?,?)',[(name,encode_observation(self.observation)) for name in ('home/a','home/new')])
+        with CurrentMap.held(self.path,binding=self.binding,create=True) as m:
+            self.compile(m)
+            m.reconcile_namespace(first,lambda n:self.version,checkpoint=lambda:None,maximum_paths=10)
+            old_absences=m.db.execute('select * from namespace_absent').fetchall()
+            with self.assertRaisesRegex(ValueError,'binding changed'):
+                m.reconcile_namespace(second,lambda n:None,checkpoint=lambda:None,maximum_paths=10)
+            def failed_commit():raise OSError('synthetic successor commit failure')
+            with self.assertRaisesRegex(OSError,'successor commit'):
+                m.reconcile_namespace(second,lambda n:None,checkpoint=failed_commit,maximum_paths=10,allow_unaccepted_epoch_successor=True)
+            self.assertEqual(m.db.execute('select * from namespace_absent').fetchall(),old_absences)
+            self.assertEqual(m.db.execute('select count(*) from namespace_reconciliation_history').fetchone(),(0,))
+            result=m.reconcile_namespace(second,lambda n:None,checkpoint=lambda:None,maximum_paths=10,allow_unaccepted_epoch_successor=True)
+            self.assertFalse(result['more_names']);self.assertTrue(result['journal_suffix_required'])
+            self.assertEqual(m.db.execute('select name,old_state,row,disposition from namespace_absent_history').fetchall(),old_absences)
+            history=m.db.execute('select binding,complete,suffix_complete from namespace_reconciliation_history').fetchone()
+            self.assertEqual(json.loads(history[0])['instance'],'new-epoch');self.assertEqual(history[1:],(1,0))
+            self.assertEqual(decode_member(m.db.execute("select row from members where name='home/a'").fetchone()[0])['qualification']['journal']['instance'],'next-epoch')
+            self.assertEqual(result['member_states'],{'verified-file':1,'file-needs-qualification':1})
+            with self.assertRaisesRegex(ValueError,'durable journal suffix'):SealedMemberIndex(m.db,m.check,{'consistent_SQL_sidecars':{}})
 
     def test_relocated_pointer_fails_closed_with_provider_instruction_before_SQLite_open(self):
         with tempfile.TemporaryDirectory(dir='/dev/shm') as root:

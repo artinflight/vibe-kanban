@@ -8,6 +8,7 @@ fn owner(workspace: Uuid, session: Uuid) -> OwnerBinding {
         executor_config: serde_json::from_value(serde_json::json!({"executor": "CODEX"}))
             .expect("existing executor-config serde defaults"),
         max_validation_age_seconds: 60,
+        delegation_journal_dir: None,
     }
 }
 

@@ -420,11 +420,14 @@ async fn seed_owner(
         .await
         .unwrap();
     state.close().await;
+    let delegation_dir = dir.join("delegation");
+    std::fs::create_dir(&delegation_dir).unwrap();
     let binding = OwnerBinding {
         workspace_id: w.id,
         session_id: s.id,
         executor_config: saved.clone(),
         max_validation_age_seconds: 60,
+        delegation_journal_dir: Some(delegation_dir),
     };
     let intent = admission::Intent {
         workspace_id: w.id,
@@ -458,8 +461,10 @@ async fn seed_owner(
 // Executor I/O is synthetic in this fixture; this explicitly substitutes the
 // production capture writer's EOF receipt, never a live closure attestation.
 async fn close_fixture_captures(pool: &sqlx::SqlitePool) {
-    sqlx::query("INSERT OR IGNORE INTO workspace_review_log_finalized(execution_id,finalized_at,raw_bytes,raw_sha256) SELECT id,datetime('now'),0,? FROM execution_processes WHERE status != 'running'")
-        .bind("0".repeat(64)).execute(pool).await.unwrap();
+    use sha2::{Digest, Sha256};
+    let raw = serde_json::to_vec(&LogMsg::Finished).unwrap();
+    sqlx::query("INSERT OR IGNORE INTO workspace_review_log_finalized(execution_id,finalized_at,raw_bytes,raw_sha256) SELECT id,datetime('now'),?,? FROM execution_processes WHERE status != 'running'")
+        .bind(raw.len() as i64).bind(format!("{:x}",Sha256::digest(&raw))).execute(pool).await.unwrap();
 }
 
 #[tokio::test]
@@ -1041,6 +1046,19 @@ async fn native_independent_job_and_capture_unknown_hold_without_launch() {
     r.attempt_id = Uuid::new_v4();
     r.validation.observed_at = chrono::Utc::now();
     let response = submit_bound(&d, &b, &r).await.unwrap();
+    assert_eq!(response.reason, "independent_job_inventory_unknown");
+    db::models::subagent_job::SubagentJob::update_status(
+        &d.db().pool,
+        b.session_id,
+        anchor,
+        "independent",
+        db::models::subagent_job::SubagentJobStatus::Running,
+    )
+    .await
+    .unwrap();
+    r.attempt_id = Uuid::new_v4();
+    r.validation.observed_at = chrono::Utc::now();
+    let response = submit_bound(&d, &b, &r).await.unwrap();
     assert_eq!(response.reason, "owner_independent_jobs_active");
     assert_eq!(d.container.launches.load(Ordering::SeqCst), 0);
     db::models::subagent_job::SubagentJob::update_status(
@@ -1069,7 +1087,9 @@ async fn native_independent_job_and_capture_unknown_hold_without_launch() {
     let response = submit_bound(&d, &b, &r).await.unwrap();
     assert!(matches!(
         response.reason.as_str(),
-        "owner_independent_jobs_active" | "independent_job_producers_not_closed"
+        "owner_independent_jobs_active"
+            | "independent_job_producers_not_closed"
+            | "independent_job_inventory_unknown"
     ));
     sqlx::query("UPDATE thread_spawn_edges SET status='closed'")
         .execute(&state)
@@ -1098,4 +1118,60 @@ async fn native_modular_watchers_decimal_disks_and_hot_second_connection() {
         return;
     }
     modular_adapter::exercise().await;
+}
+
+#[tokio::test]
+async fn legacy_controlled_job_journal_unknown_and_unconfirmed_terminal_hold() {
+    if !isolated(
+        "legacy_controlled_job_journal_unknown_and_unconfirmed_terminal_hold",
+        false,
+    ) {
+        return;
+    }
+    let (_dir, d, mut b, _) = fixture().await;
+    let path = b
+        .delegation_journal_dir
+        .as_ref()
+        .unwrap()
+        .join("synthetic-existing-thread.json");
+    for status in [
+        "starting",
+        "launching",
+        "running",
+        "interrupted_unconfirmed",
+        "unknown",
+    ] {
+        std::fs::write(
+            &path,
+            serde_json::to_vec(&serde_json::json!({"synthetic-job":{"status":status}})).unwrap(),
+        )
+        .unwrap();
+        assert!(
+            watcher_delegation_journals_closed(&d.db().pool, &b)
+                .await
+                .is_err()
+        );
+    }
+    for status in ["completed", "failed", "interrupted", "blocked"] {
+        std::fs::write(
+            &path,
+            serde_json::to_vec(&serde_json::json!({"synthetic-job":{"status":status}})).unwrap(),
+        )
+        .unwrap();
+        watcher_delegation_journals_closed(&d.db().pool, &b)
+            .await
+            .unwrap();
+    }
+    std::fs::write(&path, b"truncated").unwrap();
+    assert!(
+        watcher_delegation_journals_closed(&d.db().pool, &b)
+            .await
+            .is_err()
+    );
+    b.delegation_journal_dir = None;
+    assert!(
+        watcher_delegation_journals_closed(&d.db().pool, &b)
+            .await
+            .is_err()
+    );
 }

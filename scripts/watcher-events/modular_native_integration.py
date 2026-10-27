@@ -143,13 +143,15 @@ def run(d):
                'targets': {'printer-owner': {**template['targets']['printer-owner'],
                    **binding(d['owners'][1]), 'enabled': True}},
                'rules': {'printer-error': template['rules']['printer-error']}}
+        cfg['sources']['printer-status']['max_age_seconds'] = 300
+        cfg['targets']['printer-owner'].update(max_validation_age_seconds=300, cooldown_seconds=60)
         registry_file = root/'modular-registry.json'
         registry_file.write_text(json.dumps(cfg)); os.chmod(registry_file, 0o600)
         registry = watch_events.Registry(json.loads(registry_file.read_text()))
         store_path = root/'printer.sqlite'
         store = watch_events.EventStore(store_path)
         event = {'version': 1, 'source': 'printer-status', 'event_id': str(uuid.uuid4()),
-                 'resource': 'mk4', 'sequence': 1, 'observed_at': time.time(),
+                 'resource': 'mk4', 'sequence': 1, 'observed_at': time.time()-181,
                  'values': {'state': 'error'}, 'report': 'Synthetic printer fault; report only.'}
         def ingest(value):
             routed = registry.event(value['source'], value, value['observed_at'])
@@ -182,8 +184,34 @@ def run(d):
         assert counts['POST'] == posts
         assert store.db.execute('SELECT count(*) FROM incidents').fetchone()[0] == 1
         assert 'Synthetic printer fault' in control(second=True)['latest_prompt']
+        # Recover under the original rule before editing its condition. Samples
+        # are safely injected in the recent past; the native backend sees only
+        # real fresh validation, never a future timestamp or altered host clock.
+        for i in range(3):
+            recovery = {**event, 'event_id': str(uuid.uuid4()), 'sequence': i+2,
+                        'observed_at': event['observed_at']+60*(i+1),
+                        'values': {'state': 'operational'}}
+            ingest(recovery)
+        assert store.db.execute('SELECT recovered FROM incidents').fetchone()[0] is not None
+        assert counts['POST'] == posts
+        cfg['rules']['printer-error']['trigger']['value'] = 'faulted'
+        changed = registry_file.with_suffix('.next')
+        changed.write_text(json.dumps(cfg)); os.chmod(changed, 0o600); changed.replace(registry_file)
+        registry = watch_events.Registry(json.loads(registry_file.read_text()))
+        changed_event = {**event, 'event_id': str(uuid.uuid4()), 'sequence': 5,
+                         'observed_at': time.time(), 'values': {'state': 'faulted'},
+                         'report': 'Synthetic changed condition; still report only.'}
+        ingest(changed_event)
+        # Inject scheduler time to exercise expired cooldown without waiting or
+        # changing wall clocks. The event/native validation timestamp stays real.
+        assert watch_events.drain(store, registry, 'printer-owner', time.time()+61,
+                                  lambda _: idle, lose_reply) == 'accepted'
+        assert counts['POST'] == posts+1 and control(second=True)['launches'] == 4
+        assert store.db.execute('SELECT count(*) FROM incidents').fetchone()[0] == 2
+        control('complete', second=True)
         store.close()
-        checks.extend(['second_unrelated_source_and_target_hot_reload_same_backend',
+        checks.extend(['settled_condition_edit_and_rearm_same_backend',
+                       'second_unrelated_source_and_target_hot_reload_same_backend',
                        'real_native_commit_lost_ack_client_reopen_GET_only',
                        'replayed_event_one_incident_one_execution'])
     return {'fixture_protocol': d['fixture_protocol'], 'status': 'passed', 'evidence': checks,

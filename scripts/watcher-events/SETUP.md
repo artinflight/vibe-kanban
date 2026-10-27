@@ -19,62 +19,60 @@ watcher/timer invokes it. A remote system may stream its saved event over an
 already-authorized SSH connection; this package does not create that connection,
 install a key or grant a remote account new permissions.
 
-## Native dependency and ownership
+## Native integration and ownership
 
-- Native implementation: Vibe PR277, exact existing head
-  `8534a6a655e03e4903e4e517cfea21c3b91c4636`; sole native writer T64
-  VK::Storage Response Admission, workspace `PRIVATE_CONFIGURED_ID`,
-  session `PRIVATE_CONFIGURED_ID`.
-- Client ancestry: Operations PR215 `81887d38d238ce3b0665092bf38a482284441062`,
-  reused by this T26 worktree. Do not replace the newer decimal policies with its
-  historical percentage/physical-floor policies.
-- Release owner: existing VK::Staging, workspace
-  `PRIVATE_CONFIGURED_ID`, session
-  `PRIVATE_CONFIGURED_ID`. Only that release owner adopts/builds/
-  seals/deploys the native source under its existing release authority and
-  runbook. This package neither changes its branch nor deploys an API.
-- Wire version stays `storage-admission-v2`, POST
-  `/api/storage-alerts/batches` and GET exact batch with `intent_sha256`. No
-  additional route or migration is needed for the supplied multi-owner parser.
-  PR277's original `20261018140000_storage_alert_admission.sql` and its execution
-  fences are still required. SHA256:
-  `791b0b526641d0633ff81a6afdd154285e0ef2d50f86a7905616f96c8721cc41`.
-- Native v2's legacy `filesystem_uuid` and `policy` fields already accept opaque
-  nonempty strings. Generic input uses `source:resource` and `watch-event-v1:rule`;
-  Disk keeps its actual filesystem UUID and decimal policy. Receipt fields and
-  canonical hashes remain unchanged. Generic labels do not assert disk identity.
+The module is developed in VK Dev and `artinflight/vibe-kanban` on
+`vk/ab88-op-disk-space-wa`, targeting the existing Vibe `staging` branch.
+PR277 head `8534a6a655e03e4903e4e517cfea21c3b91c4636` is preserved by merge
+ancestry, alongside the migrated Operations PR215/PR217 client. The old
+`native-overlay` files are retained migration provenance, not a patch to apply
+again. The current implementation is the Vibe route and shared native services.
+The original backend owner's branch and all workspace/session history survive.
+This workspace now owns completing integration and tests; Staging owns release.
+Disk remains the single existing cleanup owner.
 
-The additive source delta is
-`native-overlay/storage-alert-owner-registry.patch`. It applies cleanly to the
-exact PR277 head and reuses its route, receipt tables, owner lock and launcher.
-The native file is reread per submission, so a bounded version-1 list can select
-more than one reviewed existing workspace/session without another Vibe restart.
-Legacy single-owner files still parse. The supplied Rust parser tests are
-**formatted and unexecuted**; native CI/resource admission remains with T64 and
-Staging. No host compiler/build was run, and PR277 was not modified.
+The wire protocol remains `storage-admission-v2`, POST
+`/api/storage-alerts/batches`, GET exact batch with `intent_sha256`. No second
+route, executor or dispatcher is added. Raw JSON is required; an HTTP200 HTML
+frontend fallback is not an admission API. Acceptance binds batch, intent hash,
+known attempt, existing workspace/session, saved config hash and exact native
+execution UUID. Accepted means execution creation committed, not cleanup success.
+Lost or ambiguous replies reconcile GET only. The existing gateway access review
+and exact saved CODEX DEFAULT Recommend configuration remain required.
 
-**This parser delta does not solve the existing independent-job lifetime gap.**
-The pinned native busy query checks native non-devserver executions,
-reservations, durable incoming/user queues and the in-memory queue. Independent
-Codex job observations use
-`SubagentJob::find_by_session_id_with_codex_threads` (DB rows plus Codex threads).
-Its spawn/status ingestion is in `services/execution_process.rs`; those
-observations are not an atomic job-lifetime reservation shared with native owner
-admission. T64 must supply or identify the authoritative producer/exclusion and
-prove a job arriving after client preflight cannot overlap the admitted turn.
-Adding a read of that inventory alone is insufficient. Client preflight is
-advisory. Unknown inventories remain held. Do not require unrelated owners idle.
+Two migrations must be included in forward and compatible latest-data recovery:
+`20261018140000_storage_alert_admission.sql` (original SHA256
+`791b0b526641d0633ff81a6afdd154285e0ef2d50f86a7905616f96c8721cc41`) and
+`20261027153000_watcher_job_leases.sql`. Never modify an adopted checksum or drop
+receipts, attempts, incidents or unresolved job leases to pass recovery.
 
-The original native policy also restricts selected targets to their saved
-**CODEX DEFAULT Recommend** configuration. Arbitrary existing compatible sessions
-can be listed; support for other executor types is not implemented or claimed.
-If the owner intends those types too, that remains native source/contract work,
-not permission to bypass saved configuration or model/resource gates.
+Controlled independent jobs acquire a durable lease before inference under the
+same workspace lock and SQLite write transaction as native alert admission.
+Parent exit, timeout, cancellation request, future Drop and process restart do
+not release a lease. Only confirmed child terminal status or definite refusal
+before inference closes it. Stale producers cannot gain authority after parent
+exit or another watcher reservation. The 4096 retained-lease quota per workspace (65536 total)
+fails closed; it never deletes history to recover capacity. Unrelated workspaces
+remain concurrent. These source paths require compiled race/termination/reopen
+acceptance before use.
+
+Native POST additionally requires root capture closure, no still-registered
+native root client, complete readable Codex descendant state, no unresolved job,
+and closed legacy controlled-delegation journals. A completed task on an open
+native child edge remains a producer and holds dispatch. Bind
+`delegation_journal_dir` to the existing producer's actual directory; when
+`VK_CODEX_ROUTING_AVAILABILITY` is set, its adjacent `delegation` directory must
+match canonically. Missing custody, corrupt/oversized journals and unconfirmed
+interruption hold. Legacy single-owner files still parse; an omitted journal
+path holds new dispatch until that existing custody is supplied and reviewed.
+The route reads these files without modifying them or gaining new access.
+Unmanaged external jobs require their existing authoritative owner/process
+inventory; snapshots alone cannot certify an unknown producer as idle.
 
 ## One initial backend release, then file configuration
 
-Before initial deployment, T64/Staging must include native PR277, the reviewed
-multi-owner delta and independent-job exclusion/proof in the same source-bound
+Before initial deployment, Staging must include the integrated PR277/module,
+multi-owner registry and job-lease/producer checks with compiled proof in the same source-bound
 forward and compatible recovery package. Set a stable
 `VK_STORAGE_ALERT_OWNER_FILE` path at that initial release. Changing an environment
 variable later would require a restart; changing the file contents does not.
@@ -86,7 +84,8 @@ new model selection):
 {"version":1,"owners":[
   {"workspace_id":"EXISTING_UUID","session_id":"EXISTING_UUID",
    "executor_config":{"...":"complete exact saved ExecutorConfig"},
-   "max_validation_age_seconds":60}
+   "max_validation_age_seconds":60,
+   "delegation_journal_dir":"/private/existing-producer/delegation"}
 ]}
 ```
 
@@ -226,8 +225,11 @@ workspace `PRIVATE_CONFIGURED_ID` / session
 Every target uses the same Store commit-before-POST, immutable batch/intent,
 known attempt list, strict native receipt decoder and lookup reconciliation.
 Accepted work never resubmits; uncertain/lost/HTML/error/not-found responses hold
-and GET only. A positive native no-admission deferral can retry the same batch
+and GET only. A positive native capacity/queue no-admission deferral can retry the same batch
 with a new attempt only after strictly newer, still eligible observations.
+A confirmed native `owner_busy` or active independent-job receipt covers that
+incident episode; it does not wake again when the owner later becomes idle.
+Unknown/unsettled lifetime evidence keeps delivery pending.
 A config edit or execution failure cannot create a fresh incident to evade that.
 
 The generic runner takes one nonblocking flock for its private state root.
@@ -247,14 +249,14 @@ uncertain receipts. Repeated source/target renames cannot silently grow unlimite
 state. Do not install this on the OS disk or delete existing state to regain
 quota. A planned retention/migration needs explicit receipt-preservation review.
 
-## Acceptance for T64 and Staging at the existing idle checkpoint
+## Merge readiness and Staging release acceptance
 
 1. **Source and release identity:** adopt PR277 plus the reviewed multi-owner
    delta and actual independent-job fix. Bind exact client/module hashes and the
    current decimal policies. Run the new Rust parser tests in native CI and the
    current Python/native paired fixture. The old PR215/native hosted pairing is
    historical supporting evidence. Reseal the current combined source/artifact,
-   migration catalogue and compatible latest-data recovery; do not overlay old
+   both migration catalogues and compatible latest-data recovery; do not overlay old
    binaries or drop current Staging work. No new generic approval is implied
    where Staging already holds conditional release authority.
 2. **One initial deployment:** release owner performs the authorized initial

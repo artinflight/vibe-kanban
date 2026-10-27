@@ -23,3 +23,5 @@ pub mod stdout_dup;
 pub mod systemd_run;
 
 pub mod routing_telemetry;
+
+pub mod workspace_admission;

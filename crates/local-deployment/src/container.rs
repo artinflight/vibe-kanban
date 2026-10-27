@@ -2457,6 +2457,12 @@ impl ContainerService for LocalContainerService {
         );
 
         // Always inject workspace/session context
+        env.job_admission = Some(executors::workspace_admission::JobAdmission {
+            pool: self.db.pool.clone(),
+            workspace: workspace.id,
+            session: execution_process.session_id,
+            execution: execution_process.id,
+        });
         env.insert("VK_WORKSPACE_ID", workspace.id.to_string());
         env.insert("VK_SESSION_ID", execution_process.session_id.to_string());
         env.insert("VK_EXECUTION_PROCESS_ID", execution_process.id.to_string());

@@ -142,7 +142,9 @@ impl SubagentJob {
         pool: &SqlitePool,
         session_ids: &[Uuid],
     ) -> Result<bool, sqlx::Error> {
-        let roots = find_agent_threads_for_sessions(pool, session_ids).await?;
+        let mut roots = find_agent_threads_for_sessions(pool, session_ids).await?;
+        let mut seen = std::collections::HashSet::new();
+        roots.retain(|root| seen.insert(root.agent_session_id.clone()));
         if roots.is_empty() {
             return Ok(false);
         }

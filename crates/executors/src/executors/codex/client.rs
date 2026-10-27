@@ -963,6 +963,18 @@ impl AppServerClient {
             .insert(execution_process_id, Arc::downgrade(client));
     }
 
+    /// Existing executor ownership, including a root whose final turn has
+    /// completed but whose RPC producer has not yet disconnected.
+    pub fn registered_executions() -> io::Result<Vec<Uuid>> {
+        let clients = active_codex_clients()
+            .lock()
+            .map_err(|_| io::Error::other("Native registry unavailable"))?;
+        Ok(clients
+            .iter()
+            .filter_map(|(id, weak)| weak.upgrade().map(|_| *id))
+            .collect())
+    }
+
     pub fn unregister_active_execution(execution_process_id: Uuid) {
         active_codex_clients()
             .lock()

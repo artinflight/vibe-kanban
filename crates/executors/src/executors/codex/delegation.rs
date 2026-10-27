@@ -29,7 +29,17 @@ static ADMISSION: StdMutex<()> = StdMutex::new(());
 pub fn active_count() -> usize {
     ACTIVE.load(Ordering::SeqCst)
 }
-struct Permit;
+struct Permit {
+    lease: Option<crate::workspace_admission::JobLease>,
+}
+impl Permit {
+    async fn finish(mut self) -> Result<(), String> {
+        if let Some(lease) = self.lease.take() {
+            lease.close().await?;
+        }
+        Ok(())
+    }
+}
 impl Drop for Permit {
     fn drop(&mut self) {
         ACTIVE.fetch_sub(1, Ordering::SeqCst);
@@ -43,7 +53,7 @@ fn permit() -> Result<Permit, String> {
         return Err(error.to_string());
     }
     ACTIVE.fetch_add(1, Ordering::SeqCst);
-    Ok(Permit)
+    Ok(Permit { lease: None })
 }
 
 pub fn tool_spec() -> DynamicToolSpec {
@@ -365,9 +375,12 @@ impl Delegation {
             let failed = previous.as_ref().is_some_and(|p| {
                 p.pending_failure || p.status == "failed" || p.validation_failures >= 2
             });
-            let permit = tokio::task::spawn_blocking(permit)
+            let mut permit = tokio::task::spawn_blocking(permit)
                 .await
                 .map_err(|e| e.to_string())??;
+            if let Some(admission) = &self.env.job_admission {
+                permit.lease = Some(admission.reserve().await?);
+            }
             let record = Record {
                 id: previous
                     .as_ref()
@@ -392,6 +405,7 @@ impl Delegation {
             state.records.insert(task.clone(), record);
             if let Err(error) = self.save(&state).await {
                 state.records.remove(&task);
+                permit.finish().await?;
                 if let Some(p) = previous.clone() {
                     state.records.insert(task.clone(), p);
                 }
@@ -426,7 +440,9 @@ impl Delegation {
                 if failed {
                     r.choice = previous.as_ref().and_then(|p| p.choice.clone());
                 }
-                state.permits.remove(&task);
+                if let Some(permit) = state.permits.remove(&task) {
+                    permit.finish().await?;
+                }
                 if let Err(error) = self.save(&state).await {
                     self.close();
                     tracing::warn!(%error,"Delegation journal unavailable; further child admission closed");
@@ -800,8 +816,10 @@ impl Delegation {
                 _ => return Ok(true),
             }
             let r = r.clone();
-            if !r.active() {
-                state.permits.remove(&task);
+            if !r.active()
+                && let Some(permit) = state.permits.remove(&task)
+            {
+                permit.finish().await?;
             }
             self.save(&state).await?;
             r

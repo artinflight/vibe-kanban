@@ -93,3 +93,20 @@ Safe local client suite: 157 cases,156 passed,1 optional existing-connector chec
 skipped without its explicit source path. A native `owner_busy` receipt now covers
 the episode instead of retrying after that owner finishes; capacity/queue holds
 keep durable pending delivery. Current hosted native results are still pending.
+
+The independent-job source now also includes bounded durable pre-inference
+leases shared with native owner admission. Terminal acknowledgment closes a
+lease; parent exit, cancellation uncertainty, Drop and restart do not. Native
+adoption requires the additive `20261027153000_watcher_job_leases.sql` migration
+and reviewed existing `delegation_journal_dir` binding for legacy jobs. New Rust
+race/reopen/legacy-journal tests are written and await compiled acceptance.
+Existing frontend, clippy, Tauri and governance CI passed on `27c7a1f21`; native
+workspace tests and current pairing are still running at that checkpoint.
+
+Hosted validation run40529828966 on `27c7a1f21` completed: frontend, schema,
+Clippy, Tauri, governance and preservation passed. Native suite:629 passed,
+8 failed,16 skipped; both explicit pairing steps failed. The failures share the
+new fixture's invalid zero-byte closure receipt, which the unchanged production
+CHECK correctly rejected. The fixture now serializes synthetic Finished I/O and
+hashes its positive bytes; no production closure constraint is weakened. This
+correction and the newer producer-lease work need a fresh compiled run.

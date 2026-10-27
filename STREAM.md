@@ -104,3 +104,11 @@ arrival-race proof and compiled acceptance remain unresolved. The host storage
 pair build hold is not implicitly lifted. Use the existing hosted Test workflow
 with watcher_validation=true (no combined release artifact). No PR is ready to
 merge until required checks pass; no live deployment or restart is authorized.
+
+Producer implementation now reserves bounded SQLite job leases before controlled
+child inference under the same workspace lock. Parent exit/Drop/restart keep
+unsettled leases; native reservations fence late children. Existing root-client,
+capture, descendant and legacy-journal custody also gate POST. Added migration
+`20261027153000_watcher_job_leases.sql` must join compatible recovery. Actual SQL
+fences passed in-memory; new Rust race/reopen/journal tests await hosted checks.
+No lease, owner binding or runtime flag was changed on the live installation.

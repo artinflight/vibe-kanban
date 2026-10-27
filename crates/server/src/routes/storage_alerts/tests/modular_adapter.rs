@@ -8,7 +8,8 @@ pub(super) async fn exercise() {
     let (dir, d, first, _) = fixture().await;
     let second_dir = dir.path().join("second");
     std::fs::create_dir(&second_dir).unwrap();
-    let (second, _) = seed_owner(&second_dir, &d, "synthetic-secondary-thread").await;
+    let (mut second, _) = seed_owner(&second_dir, &d, "synthetic-secondary-thread").await;
+    second.max_validation_age_seconds = 300;
     let owner_file = PathBuf::from(std::env::var_os("VK_STORAGE_ALERT_OWNER_FILE").unwrap());
     std::fs::write(&owner_file, serde_json::to_vec(&first).unwrap()).unwrap();
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
@@ -74,6 +75,6 @@ pub(super) async fn exercise() {
     assert_eq!(evidence["status"], "passed");
     assert_eq!(evidence["backend_listener_count"], 1);
     assert_eq!(evidence["owner_targets"], 2);
-    assert_eq!(d.container.launches.load(Ordering::SeqCst), 3);
+    assert_eq!(d.container.launches.load(Ordering::SeqCst), 4);
     println!("MODULAR_NATIVE_EVIDENCE {evidence}");
 }

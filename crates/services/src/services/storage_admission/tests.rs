@@ -58,6 +58,7 @@ async fn fixture_in(pool: SqlitePool) -> (SqlitePool, QueuedMessageService, Owne
         session_id: s.id,
         executor_config: config.clone(),
         max_validation_age_seconds: 60,
+        delegation_journal_dir: None,
     };
     let intent = Intent {
         workspace_id: w.id,
@@ -695,4 +696,184 @@ fn fingerprint_has_a_language_independent_sorted_unicode_vector() {
             Sha256::digest("{\"a\":null,\"z\":[{\"a\":\"é\",\"b\":2}]}".as_bytes())
         )
     );
+}
+
+fn job_admission(
+    pool: &SqlitePool,
+    b: &OwnerBinding,
+    execution: Uuid,
+) -> executors::workspace_admission::JobAdmission {
+    executors::workspace_admission::JobAdmission {
+        pool: pool.clone(),
+        workspace: b.workspace_id,
+        session: b.session_id,
+        execution,
+    }
+}
+
+#[tokio::test]
+async fn independent_job_wins_before_parent_exit_and_holds_only_its_owner_until_terminal() {
+    let (pool, q, b, r) = fixture().await;
+    let parent = create(&pool, b.session_id, Uuid::new_v4()).await.unwrap();
+    // The client may already have observed idle; native authority is acquired
+    // before inference, not by a late stdout spawn notification.
+    let lease = job_admission(&pool, &b, parent.id).reserve().await.unwrap();
+    ExecutionProcess::update_completion(
+        &pool,
+        parent.id,
+        ExecutionProcessStatus::Completed,
+        Some(0),
+    )
+    .await
+    .unwrap();
+    let response = submit(&pool, &q, &b, &r, |_| async {
+        panic!("child lifetime must exclude watcher")
+    })
+    .await
+    .unwrap();
+    assert_eq!(response.reason, "independent_job_lifetime_unsettled");
+    assert!(response.no_admission);
+    assert!(!response.automatic_launch_queued);
+    let (_, other_queue, other, other_request) = fixture_in(pool.clone()).await;
+    assert_eq!(
+        submit(&pool, &other_queue, &other, &other_request, |_| bind(
+            &pool,
+            other.session_id
+        ))
+        .await
+        .unwrap()
+        .outcome,
+        "accepted"
+    );
+    lease.close().await.unwrap();
+    assert_eq!(
+        submit(&pool, &q, &b, &fresh(&r), |_| bind(&pool, b.session_id))
+            .await
+            .unwrap()
+            .outcome,
+        "accepted"
+    );
+}
+
+#[tokio::test]
+async fn watcher_wins_and_late_independent_job_has_no_pre_inference_authority() {
+    let (pool, q, b, r) = fixture().await;
+    let parent = create(&pool, b.session_id, Uuid::new_v4()).await.unwrap();
+    ExecutionProcess::update_completion(
+        &pool,
+        parent.id,
+        ExecutionProcessStatus::Completed,
+        Some(0),
+    )
+    .await
+    .unwrap();
+    let admission = job_admission(&pool, &b, parent.id);
+    let response = submit(&pool, &q, &b, &r, |_| async {
+        // The watcher reservation and parent exit are already durable. An old
+        // producer must fail before issuing its thread/turn start request.
+        assert!(admission.reserve().await.is_err());
+        assert!(create(&pool, b.session_id, Uuid::new_v4()).await.is_err());
+        bind(&pool, b.session_id).await
+    })
+    .await
+    .unwrap();
+    assert_eq!(response.outcome, "accepted");
+    assert!(admission.reserve().await.is_err());
+    let leases: i64 = sqlx::query_scalar("SELECT count(*) FROM watcher_job_leases")
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    assert_eq!(leases, 0);
+    // An accepted owner may use its own ordinary controlled job tools. That
+    // lease does not create another owner or relax its per-action permissions.
+    let own = job_admission(&pool, &b, response.receipt.unwrap().execution_id.unwrap())
+        .reserve()
+        .await
+        .unwrap();
+    own.close().await.unwrap();
+}
+
+#[tokio::test]
+async fn dropped_job_and_database_reopen_do_not_fabricate_child_termination() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("job-leases.sqlite");
+    let options = sqlx::sqlite::SqliteConnectOptions::new()
+        .filename(&path)
+        .create_if_missing(true);
+    let pool = sqlx::sqlite::SqlitePoolOptions::new()
+        .max_connections(2)
+        .connect_with(options.clone())
+        .await
+        .unwrap();
+    let (pool, q, b, r) = fixture_in(pool).await;
+    let parent = create(&pool, b.session_id, Uuid::new_v4()).await.unwrap();
+    let lease = job_admission(&pool, &b, parent.id).reserve().await.unwrap();
+    drop(lease); // Timeout/crash/drop is not a terminal receipt.
+    ExecutionProcess::update_completion(
+        &pool,
+        parent.id,
+        ExecutionProcessStatus::Completed,
+        Some(0),
+    )
+    .await
+    .unwrap();
+    pool.close().await;
+    let reopened = sqlx::sqlite::SqlitePoolOptions::new()
+        .connect_with(options)
+        .await
+        .unwrap();
+    sqlx::migrate!("../db/migrations")
+        .run(&reopened)
+        .await
+        .unwrap();
+    let response = submit(&reopened, &q, &b, &r, |_| async {
+        panic!("unsettled lifetime survives restart")
+    })
+    .await
+    .unwrap();
+    assert_eq!(response.reason, "independent_job_lifetime_unsettled");
+    assert!(response.no_admission);
+    assert_eq!(count(&reopened).await, 1);
+}
+
+#[tokio::test]
+async fn concurrent_job_arrival_parent_exit_and_watcher_admission_have_no_overlap() {
+    for _ in 0..8 {
+        let (pool, q, b, r) = fixture().await;
+        let parent = create(&pool, b.session_id, Uuid::new_v4()).await.unwrap();
+        let job = job_admission(&pool, &b, parent.id);
+        let barrier = Arc::new(tokio::sync::Barrier::new(2));
+        let (lease, response) = tokio::join!(
+            async {
+                barrier.wait().await;
+                job.reserve().await
+            },
+            async {
+                barrier.wait().await;
+                ExecutionProcess::update_completion(
+                    &pool,
+                    parent.id,
+                    ExecutionProcessStatus::Completed,
+                    Some(0),
+                )
+                .await
+                .unwrap();
+                submit(&pool, &q, &b, &r, |_| bind(&pool, b.session_id))
+                    .await
+                    .unwrap()
+            }
+        );
+        match lease {
+            Ok(lease) => {
+                assert_eq!(response.outcome, "deferred");
+                assert_eq!(response.reason, "independent_job_lifetime_unsettled");
+                assert_eq!(count(&pool).await, 1);
+                lease.close().await.unwrap();
+            }
+            Err(_) => {
+                assert_eq!(response.outcome, "accepted");
+                assert_eq!(count(&pool).await, 2);
+            }
+        }
+    }
 }

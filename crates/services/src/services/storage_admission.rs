@@ -25,6 +25,10 @@ pub struct OwnerBinding {
     pub session_id: Uuid,
     pub executor_config: ExecutorConfig,
     pub max_validation_age_seconds: u32,
+    /// Existing controlled-delegation journal directory, reviewed at adoption.
+    /// Legacy bindings still parse, but absent producer custody holds new POSTs.
+    #[serde(default)]
+    pub delegation_journal_dir: Option<std::path::PathBuf>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -372,6 +376,12 @@ where
     if state == "in_flight" && (queued || sessions.iter().any(|id| queue.has_queued(*id))) {
         state = "deferred";
         reason = "owner_user_work_pending";
+    }
+    let job_lifetime_unsettled: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM watcher_job_leases WHERE workspace_id=? AND closed_at IS NULL)")
+        .bind(binding.workspace_id).fetch_one(&mut *tx).await?;
+    if state == "in_flight" && job_lifetime_unsettled {
+        state = "deferred";
+        reason = "independent_job_lifetime_unsettled";
     }
     if state == "in_flight" && running {
         state = "deferred";

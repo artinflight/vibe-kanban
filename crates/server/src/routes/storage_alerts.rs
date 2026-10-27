@@ -140,7 +140,7 @@ pub(crate) async fn submit_bound<D: Deployment>(
                     "native_bound_owner_hold",
                 ));
             }
-            watcher_owner_idle(&deployment.db().pool, binding.workspace_id).await?;
+            watcher_owner_idle(&deployment.db().pool, binding).await?;
             // Read the existing selection; do not synthesize or resolve a model.
             let saved = ExecutionProcess::latest_executor_config_for_session(
                 &deployment.db().pool,
@@ -245,8 +245,23 @@ pub(crate) async fn submit_bound<D: Deployment>(
 /// The durable service also checks every workspace session and both user queues.
 async fn watcher_owner_idle(
     pool: &sqlx::SqlitePool,
-    workspace: Uuid,
+    binding: &OwnerBinding,
 ) -> Result<(), ContainerError> {
+    let workspace = binding.workspace_id;
+    let registered = executors::executors::codex::client::AppServerClient::registered_executions()
+        .map_err(|_| {
+            ContainerError::StorageAdmissionDeferred("native_producer_inventory_unknown")
+        })?;
+    for id in registered {
+        let owned:bool=sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM execution_processes e JOIN sessions s ON s.id=e.session_id WHERE e.id=? AND s.workspace_id=?)")
+            .bind(id).bind(workspace).fetch_one(pool).await?;
+        if owned {
+            return Err(ContainerError::StorageAdmissionDeferred(
+                "native_root_producer_still_registered",
+            ));
+        }
+    }
+    watcher_delegation_journals_closed(pool, binding).await?;
     let unclosed: bool = sqlx::query_scalar(
         "SELECT EXISTS(SELECT 1 FROM execution_processes e JOIN sessions s ON s.id=e.session_id WHERE s.workspace_id=? AND e.run_reason='codingagent' AND NOT EXISTS(SELECT 1 FROM workspace_review_log_finalized f WHERE f.execution_id=e.id) AND NOT EXISTS(SELECT 1 FROM execution_processes newer JOIN coding_agent_turns n ON n.execution_process_id=newer.id JOIN coding_agent_turns old ON old.execution_process_id=e.id WHERE newer.session_id=e.session_id AND newer.created_at > e.created_at AND n.agent_session_id=old.agent_session_id AND old.agent_session_id IS NOT NULL))",
     ).bind(workspace).fetch_one(pool).await?;
@@ -267,9 +282,14 @@ async fn watcher_owner_idle(
         .map_err(|_| {
             ContainerError::StorageAdmissionDeferred("independent_job_inventory_unknown")
         })?;
-    if counts.values().any(|c| c.running > 0 || c.unresolved > 0) {
+    if counts.values().any(|c| c.running > 0) {
         return Err(ContainerError::StorageAdmissionDeferred(
             "owner_independent_jobs_active",
+        ));
+    }
+    if counts.values().any(|c| c.unresolved > 0) {
+        return Err(ContainerError::StorageAdmissionDeferred(
+            "independent_job_inventory_unknown",
         ));
     }
     if !db::models::subagent_job::SubagentJob::watcher_producers_closed(pool, &sessions)
@@ -281,6 +301,89 @@ async fn watcher_owner_idle(
         return Err(ContainerError::StorageAdmissionDeferred(
             "independent_job_producers_not_closed",
         ));
+    }
+    Ok(())
+}
+
+/// Legacy controlled children need custody as well as the new pre-inference
+/// leases. Read the existing bounded journals; never erase uncertain entries.
+/// Reviewed binding is configuration, not a new access-control boundary.
+async fn watcher_delegation_journals_closed(
+    pool: &sqlx::SqlitePool,
+    binding: &OwnerBinding,
+) -> Result<(), ContainerError> {
+    use std::io::Read;
+    let unknown =
+        || ContainerError::StorageAdmissionDeferred("delegation_producer_inventory_unknown");
+    let dir = binding
+        .delegation_journal_dir
+        .as_ref()
+        .ok_or_else(unknown)?;
+    if !dir.is_absolute() || !dir.is_dir() {
+        return Err(unknown());
+    }
+    if let Some(availability) = std::env::var_os("VK_CODEX_ROUTING_AVAILABILITY") {
+        let expected = std::path::PathBuf::from(availability)
+            .parent()
+            .ok_or_else(unknown)?
+            .join("delegation");
+        if expected.canonicalize().map_err(|_| unknown())?
+            != dir.canonicalize().map_err(|_| unknown())?
+        {
+            return Err(unknown());
+        }
+    }
+    let threads:Vec<String>=sqlx::query_scalar("SELECT DISTINCT cat.agent_session_id FROM coding_agent_turns cat JOIN execution_processes e ON e.id=cat.execution_process_id JOIN sessions s ON s.id=e.session_id WHERE s.workspace_id=? AND cat.agent_session_id IS NOT NULL LIMIT 4097")
+        .bind(binding.workspace_id).fetch_all(pool).await?;
+    if threads.len() > 4096 {
+        return Err(unknown());
+    }
+    let mut remaining_bytes = 16 * 1024 * 1024_u64;
+    for thread in threads {
+        if thread.is_empty()
+            || thread.len() > 128
+            || !thread
+                .bytes()
+                .all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_')
+        {
+            return Err(unknown());
+        }
+        let path = dir.join(format!("{thread}.json"));
+        let metadata = match std::fs::symlink_metadata(&path) {
+            Ok(value) => value,
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => continue,
+            Err(_) => return Err(unknown()),
+        };
+        if !metadata.is_file()
+            || metadata.len() > 2 * 1024 * 1024
+            || metadata.len() > remaining_bytes
+        {
+            return Err(unknown());
+        }
+        remaining_bytes -= metadata.len();
+        let mut bytes = Vec::new();
+        std::fs::File::open(path)
+            .map_err(|_| unknown())?
+            .take(2 * 1024 * 1024 + 1)
+            .read_to_end(&mut bytes)
+            .map_err(|_| unknown())?;
+        if bytes.len() > 2 * 1024 * 1024 {
+            return Err(unknown());
+        }
+        let records: std::collections::BTreeMap<String, serde_json::Value> =
+            serde_json::from_slice(&bytes).map_err(|_| unknown())?;
+        if records.len() > 4096
+            || records.values().any(|r| {
+                !matches!(
+                    r["status"].as_str(),
+                    Some("completed" | "failed" | "interrupted" | "blocked" | "cancelled")
+                )
+            })
+        {
+            return Err(ContainerError::StorageAdmissionDeferred(
+                "delegation_job_lifetime_unsettled",
+            ));
+        }
     }
     Ok(())
 }

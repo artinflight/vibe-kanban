@@ -6,6 +6,7 @@ from pathlib import Path
 import tempfile
 import unittest
 import time
+import io
 from unittest.mock import patch
 from types import SimpleNamespace
 
@@ -52,7 +53,7 @@ class TypedWorkerTests(unittest.TestCase):
         code=ast.get_source_segment(NATIVE,node)
         hardware=dict(serial_number='verified',smart_status={'passed':True},temperature={'current':31},
             ata_smart_attributes={'table':[{'id':5,'raw':{'value':0}}]},sata_phy_event_counters={'table':[{'id':1,'value':0}]})
-        identity={'disk_number':3};records=[]
+        identity={'disk_number':3,'partition_number':2,'volume_guid':'fixture'};records=[]
         mm=SimpleNamespace(STOP_PATH='stop',STATE_PATH='state',parse=lambda s:{'Drives':[]},
             bounded_read=lambda s:'{}',pause=lambda r:None,b_outside_monitor_scope=lambda a,b:True,
             check_identity=lambda r:None,check_health=lambda r:records.append(r))
@@ -72,6 +73,22 @@ class TypedWorkerTests(unittest.TestCase):
         exec(code,namespace);namespace['actual_guard'](1024)
         self.assertEqual(records[0]['temperature'],31);self.assertTrue(records[0]['smart_passed'])
         self.assertEqual(records[0]['attributes'],{'5':0})
+        # Full MM identity admission is retained; later checks use live kernel
+        # disk/partition/GUID plus actual SMART/STOP checks, not repeated CIM.
+        namespace['CONFIG'].update(native_identity_mode='admission-plus-kernel-continuity-v1',identity_admission_timeout_seconds=45)
+        namespace['admitted_identity']=None;namespace['kernel_identity']=lambda:dict(identity)
+        calls=[];answers=iter([Child(identity),Child(hardware),Child(hardware)])
+        namespace['subprocess']=SimpleNamespace(run=lambda *a,**k:(calls.append((a,k)) or next(answers)))
+        mm.check_identity=lambda value: self.assertEqual(value,identity)
+        namespace['actual_guard'](1024);namespace['actual_guard'](1024)
+        self.assertEqual(len(calls),3)
+        self.assertEqual(calls[0][1]['timeout'],45)
+        namespace['kernel_identity']=lambda:dict(identity,disk_number=4)
+        with self.assertRaises(AssertionError):namespace['actual_guard'](1024)
+        self.assertEqual(len(calls),3,'changed identity must fail before another operation')
+        mm.bounded_read=lambda _:(_ for _ in ()).throw(PermissionError('STOP unreadable'))
+        with self.assertRaisesRegex(PermissionError,'STOP unreadable'):namespace['actual_guard'](1024)
+        self.assertEqual(len(calls),3,'denied controls must never be bypassed')
 
     def test_actual_space_floor_and_deadline_defer_without_other_process_changes(self):
         config=self.config()
@@ -99,7 +116,7 @@ class TypedWorkerTests(unittest.TestCase):
             self.assertTrue(output.closed,'full readback pipe would prevent terminal wait')
             return 0
         session=DesktopObjects({},guard=lambda:None)
-        session.process=SimpleNamespace(stdin=Pipe(),stdout=output,stderr=Pipe(),wait=wait)
+        session.process=SimpleNamespace(stdin=Pipe(),stdout=output,stderr=io.BytesIO(),wait=wait)
         session.lease=Pipe();session.__exit__(RuntimeError,RuntimeError('own guard stop'),None)
         self.assertTrue(session.lease.closed)
 

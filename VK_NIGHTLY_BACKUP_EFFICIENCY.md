@@ -1,3 +1,58 @@
+# October26 — bounded local metadata and retained B recovery,20:39EDT
+
+The six growing controls are now on native Desktop B;2085306368allocatedB
+were recovered by verified relocation. Later SSD task-only census found
+2321969152allocatedB, dominated by preserved prefix/scale evidence. Those cold
+results are retained; they are not continuing index growth or new archive
+staging. Normal SQLite indexes, rollback journals and index temp work run on B.
+
+Decoupling observation from Desktop is necessary: B observer v5 lost its
+transport at19:36EDT, and old cleanup masked EOF with BrokenPipe. A separate
+15s Windows CIM query timed out; the exact original native cause remains
+unproved. B kernel identity and unchanged SMART/PHY passed. The revised owned
+transport drains only a64KiB diagnostic tail and retains primary failures and
+wait timeouts. It never kills a native child or releases its inherited writer
+lease on an assumed terminal state. Full MM admission remains; subsequent
+checks use actual kernel disk/partition/volume identity plus live SMART, STOP,
+access and capacity, avoiding repeated expensive CIM enumerations. Real normal
+provider qualification passed. This changes Nightly's own probe implementation,
+not MM policy, filesystem permissions or security.
+
+The new sole observer records events locally within an8MiB SQLite page limit
+and a9MiB preallocated PERSIST rollback reservation, synchronous FULL. Measured
+native ext4 allocation adds8192B; bounded status uses two64KiB files at most.
+No content is staged here. Mount loss causes no OS fallback; optional-health
+ENOSPC cannot disable observation. Failed allocation, page exhaustion, aliased
+sidecars and cursor recovery are tested. Actual107010watches/errors0 and a
+kernel-drain/durable-cursor barrier passed. Its first118changed paths were
+copied to native B and separately reopened/hash-verified without reading source
+bodies or inventory. Source code adds nonce-bound verified-delivery ACKs that
+retain newer event generations and require the B prefix for older consumers;
+real compaction adoption is still pending. No local events have been pruned.
+
+The old metadata pass and map merge completed:918974names,753701qualified
+versions reused,0source body reads. A new metadata-only pass handles the later
+v5 failure interval; it is necessary gap recovery, not a nightly global scan.
+It records335946names at20:39EDT and stores all growing work on B. Complete
+prior results remain available. Pending raw logical bytes are not a transfer
+estimate; carrier, prefix and content-addressed reuse still apply.
+
+The frozen147-source SQL cohort has146accepted images, including137older
+independent images reused and9new images/143142689encodedB. The old failed
+large RAM image is preserved unsealed. The corrected sole continuation has
+sealed a new API point and is streaming it; no other accepted image was
+recaptured. The map additionally names66SQL paths outside this historical
+cohort, mostly copied review fixtures. Their explicit disposition remains a
+gate. New source supports verified prior-cohort adoption with unchanged original
+epochs and0duplicate body copy; it is not yet actual expanded-cohort acceptance.
+
+Real B fixture proof passed lost commit ACK/new-session reuse with0duplicate
+uploads and full separate RAM file SHA/Linux metadata restoration. Latest
+focused storage/SQL/map regressions76pass, delivery/reuse sets21/30pass. The
+full hosted suite passed exact9113e7b18; new exact-head CI remains necessary.
+No current full descriptor/composed restore/calendar/next run is accepted.
+The concrete next steps are in HANDOFF.md; older sections retain dated history.
+
 # October26 — native B control storage, 2026-10-26 18:54:49 EDT checkpoint
 
 The user explicitly requested removing growing Nightly control/temp dependence

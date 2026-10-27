@@ -249,6 +249,27 @@ class Store:
         if op=='describe':
             key=name(q['name']);p=self.root/(key+'.binding.json');self.checked(p)
             return json.loads(p.read_text())
+        if op=='inspect-working':
+            # Do not hold a SQLite read cursor across a remote fetch while a
+            # FULL/DELETE writer is committing. These are filesystem progress
+            # counters, never a substitute for accepted SQL/content evidence.
+            key=name(q['name']);binding=self.root/(key+'.binding.json');self.checked(binding)
+            if binding.stat().st_size>4096:raise ValueError('bounded native index binding required')
+            bound=json.loads(binding.read_text());path=self.root/(key+'.sqlite');self.checked(path)
+            identity=self.objects.file_identity(path)
+            if bound!={'checkpoint_sha256':sha(q['checkpoint_sha256']),'inode':identity[:2]}:
+                raise ValueError('inspected working-index binding changed')
+            allocated=getattr(path.stat(),'st_blocks',None)
+            if os.name=='nt':
+                import ctypes
+                api=ctypes.WinDLL('kernel32',use_last_error=True).GetCompressedFileSizeW
+                api.argtypes=[ctypes.c_wchar_p,ctypes.POINTER(ctypes.c_uint32)];api.restype=ctypes.c_uint32
+                high=ctypes.c_uint32();ctypes.set_last_error(0);low=api(str(path),ctypes.byref(high))
+                if low==0xffffffff and ctypes.get_last_error():raise ctypes.WinError(ctypes.get_last_error())
+                allocated=(high.value<<32)|low
+            elif allocated is not None:allocated*=512
+            return dict(working_bytes=identity[2],allocated_bytes=allocated,identity=identity,
+                        metadata_only=True,content_or_SQL_acceptance=False)
         if op=='seed':
             # New control state only: no live/source database is copied. The
             # caller independently reads this tiny B-native seed before use.

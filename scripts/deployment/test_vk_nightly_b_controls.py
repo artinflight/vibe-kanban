@@ -7,6 +7,11 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import threading
+import time
+from contextlib import contextmanager
+from types import SimpleNamespace
+from unittest.mock import patch
 
 from vk_nightly_b_controls import Client,send,recv,packed,current_map,tracking_store,seed
 from vk_nightly_objects import ObjectClient
@@ -47,6 +52,47 @@ class BControlTests(unittest.TestCase):
             if not p.stdin.closed:p.stdin.close()
             if p.poll() is None:p.wait(timeout=10)
             p.stdout.close();p.stderr.close()
+
+    def test_actual_inotify_to_native_protocol_ack_and_B_prefix_after_Desktop_failure(self):
+        from vk_nightly_bounded_spool import held
+        from vk_nightly_tracking import serve,request
+        from vk_nightly_outbox_collector import copy_once
+        from vk_nightly_outbox_export import retained_prefix_report
+        source=self.root/'source';source.mkdir();endpoint=self.root/'source.sock';status=self.root/'source-status'
+        stop=threading.Event();errors=[]
+        target=dict(B_root='B:/vk-backups/test/controls-v1',index_name='outbox',checkpoint_sha256=self.sha)
+        @contextmanager
+        def factory():
+            with held(self.root/'bounded.sqlite',maximum_bytes=256*1024,guard=lambda:None,replica=target) as store:yield store
+        def observe():
+            try:serve({'sources':[str(source)]},None,endpoint,guard=lambda:None,status_path=status,stop=stop,store_factory=factory)
+            except BaseException as error:errors.append(error)
+        thread=threading.Thread(target=observe);thread.start()
+        try:
+            end=time.monotonic()+10
+            while not endpoint.exists():
+                if errors:raise errors[0]
+                if time.monotonic()>end:self.fail('tiny observer failed to enroll')
+                time.sleep(.01)
+            config=dict(source_health=str(status),endpoint=str(endpoint),B_delivery_target=target,
+                        controls={'B_root':target['B_root']},maximum_B_index_bytes=8*1024**2)
+            (source/'changed').write_bytes(b'fixture')
+            with patch('vk_nightly_outbox_collector.DesktopControls',side_effect=ConnectionError('Desktop offline')):
+                with self.assertRaises(ConnectionError):copy_once(config,guard=lambda:None)
+            instance=json.loads(status.read_text())['instance']
+            self.assertTrue(request(endpoint,instance,0,barrier=True)['ready'])
+            @contextmanager
+            def remote(*_,**__):yield SimpleNamespace(client=self.client)
+            with patch('vk_nightly_outbox_collector.DesktopControls',remote):
+                result=copy_once(config,guard=lambda:None)
+            self.assertTrue(result['actual_native_B_reopen_verified']);self.assertFalse(result['whole_baseline_accepted'])
+            with self.assertRaisesRegex(ValueError,'retained B journal prefix'):request(endpoint,instance,0)
+            with tracking_store(self.client,'outbox',self.sha,maximum_bytes=8*1024**2) as store:
+                combined=retained_prefix_report(store,endpoint,instance,0,guard=lambda:None)
+                self.assertIn(str(source/'changed'),combined['changed']);self.assertEqual(combined['source_paths_scanned'],0)
+        finally:
+            stop.set();thread.join(timeout=5)
+        self.assertFalse(thread.is_alive());self.assertEqual(errors,[])
 
     def test_native_transactions_roundtrip_binary_and_reopen_without_recopy(self):
         db=self.client.connect('working',self.sha)
@@ -310,6 +356,13 @@ class BControlTests(unittest.TestCase):
         with self.assertRaises(ValueError):reader.execute('insert into point values(3,?)',(b'denied',))
         writer.execute('commit');self.assertEqual(reader.execute('select count(*) from point').fetchone(),(2,))
         reader.close();writer.close()
+
+    def test_working_inspection_does_not_open_SQL_or_block_an_exclusive_writer(self):
+        writer=self.client.connect('inspect-busy',self.sha);writer.execute('begin exclusive')
+        other=self.start();value=other.call(op='inspect-working',name='inspect-busy',checkpoint_sha256=self.sha)
+        self.assertEqual(value['working_bytes'],len(self.raw));self.assertTrue(value['metadata_only'])
+        self.assertFalse(value['content_or_SQL_acceptance']);self.assertGreater(value['allocated_bytes'],0)
+        writer.execute('rollback');writer.close()
 
     def test_native_coarse_namespace_batches_resume_without_source_body_or_SSD_index(self):
         from vk_nightly_gap_namespace import initialize,advance_B

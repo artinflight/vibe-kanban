@@ -17,6 +17,7 @@ import signal
 import socket
 import sqlite3
 import stat
+import struct
 import threading
 import time
 
@@ -51,7 +52,8 @@ class TrackingStore:
     """Exact complete reports commit atomically before in-memory events drain."""
     @classmethod
     @contextmanager
-    def held(cls,path,*,maximum_bytes=256*1024**2):
+    def held(cls,path,*,maximum_bytes=256*1024**2,journal_mode='DELETE'):
+        if journal_mode not in ('DELETE','PERSIST'):raise ValueError('durable rollback journal mode required')
         path=Path(path)
         if path.resolve()!=path or not path.is_absolute():raise ValueError('canonical tracking path required')
         fd=os.open(path,os.O_RDWR|os.O_CREAT|os.O_NOFOLLOW|os.O_NONBLOCK,0o600)
@@ -63,7 +65,7 @@ class TrackingStore:
                 raise ValueError('owned unique tracking control inode required')
             fcntl.flock(fd,fcntl.LOCK_EX|fcntl.LOCK_NB)
             db=sqlite3.connect(path,timeout=0,isolation_level=None)
-            db.execute('pragma journal_mode=DELETE');db.execute('pragma synchronous=FULL')
+            db.execute('pragma journal_mode='+journal_mode);db.execute('pragma synchronous=FULL')
             db.execute('pragma cache_size=-2048');db.execute('pragma mmap_size=0')
             if type(maximum_bytes) is not int or maximum_bytes<65536:raise ValueError('finite tracking budget required')
             page=db.execute('pragma page_size').fetchone()[0]
@@ -152,10 +154,10 @@ class TrackingStore:
                     history_before_instance_proven=False,source_paths_scanned=0,source_payload_bytes_read=0)
 
 
-def request(endpoint,instance,since,*,maximum_paths=100000,barrier=False):
+def query(endpoint,value):
     with socket.socket(socket.AF_UNIX) as client:
         client.settimeout(30);client.connect(str(endpoint))
-        client.sendall(canonical(dict(instance=instance,since=since,maximum_paths=maximum_paths,barrier=barrier)))
+        client.sendall(canonical(value))
         blocks=[];total=0
         while block:=client.recv(65536):
             total+=len(block)
@@ -164,6 +166,11 @@ def request(endpoint,instance,since,*,maximum_paths=100000,barrier=False):
     value=json.loads(b''.join(blocks))
     if 'request_error' in value:raise ValueError(value['request_error'])
     return value
+
+
+def request(endpoint,instance,since,*,maximum_paths=100000,barrier=False,for_delivery=False):
+    return query(endpoint,dict(instance=instance,since=since,maximum_paths=maximum_paths,
+                               barrier=barrier,for_delivery=for_delivery))
 
 
 def discard_committed(journal,cursor):
@@ -234,8 +241,16 @@ def serve(plan,path,endpoint,*,guard,status_path,stop=None,store_factory=None,st
                         connection.settimeout(5)
                         try:
                             query=json.loads(connection.recv(4096))
+                            _,uid,_=struct.unpack('3i',connection.getsockopt(socket.SOL_SOCKET,socket.SO_PEERCRED,12))
+                            if uid!=os.getuid():raise ValueError('same-owner journal consumer required')
                             if query['instance']!=journal.instance:
                                 raise ValueError('observer epoch changed; current reconciliation required')
+                            if query.get('op')=='acknowledge_delivery':
+                                if not hasattr(store,'acknowledge'):raise ValueError('bounded delivery not supported')
+                                raw=canonical(store.acknowledge(query['instance'],query['proof']))
+                                try:connection.sendall(raw)
+                                except (BrokenPipeError,ConnectionResetError,socket.timeout):pass
+                                continue
                             barrier_sequence=None
                             if query.get('barrier') is True:
                                 with journal.lock:
@@ -255,6 +270,9 @@ def serve(plan,path,endpoint,*,guard,status_path,stop=None,store_factory=None,st
                             if barrier_sequence is not None:
                                 value['barrier']=dict(kernel_drain_completed=True,durable_sequence=barrier_sequence,
                                                      instance=journal.instance)
+                            if query.get('for_delivery') is True:
+                                if not hasattr(store,'offer'):raise ValueError('bounded delivery not supported')
+                                value=store.offer(value)
                             raw=canonical(value)
                             if len(raw)>MAX_RESPONSE:raise ValueError('complete delta exceeds response budget')
                         except (ValueError,KeyError,TypeError) as error:raw=canonical(dict(request_error=str(error)))

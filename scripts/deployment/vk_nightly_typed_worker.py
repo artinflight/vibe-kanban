@@ -27,6 +27,7 @@ from vk_prep_common import save
 from vk_nightly_desktop_controls import DesktopControls,validate_control
 from vk_nightly_b_controls import current_map
 from vk_nightly_b_tracker import write_health
+from vk_nightly_sql_cohort import inherit
 
 
 class ResourceDeferred(OSError):pass
@@ -101,6 +102,12 @@ def configuration(path,expected):
         catalog=Path(value['SQL_catalog'])
         if (not catalog.is_relative_to('/mnt/vk-storage') or catalog.resolve()!=catalog
                 or checksum(catalog)!=value['SQL_catalog_sha256']):raise ValueError('retained SQL catalog binding differs')
+        references=value.get('SQL_reuse_controls',[])
+        if not isinstance(references,list) or len(references)>8:raise ValueError('bounded explicit previous SQL controls required')
+        for reference in references:
+            from vk_nightly_b_controls import name as index_name,sha
+            index_name(reference['index_name']);sha(reference['checkpoint_sha256'])
+            if reference['index_name']==value.get('B_index_name'):raise ValueError('SQL reuse cannot refer to its own mutable state')
     return value
 
 
@@ -180,6 +187,15 @@ def run_SQL(config,*,backend=None):
                     release_verified_ram(p,copy['identity'])
         guard();report('acquiring-current-SQL-source-cohort-and-existing-B-writer-lane')
         with DesktopObjects(config['desktop'],guard=guard) as remote:
+            if config.get('SQL_reuse_controls'):
+                if backend is None or not hasattr(backend,'previous'):
+                    raise ValueError('authenticated B provider required for previous SQL adoption')
+                for reference in config['SQL_reuse_controls']:
+                    if any(all(row.get(k)==reference[k] for k in ('index_name','checkpoint_sha256'))
+                           for row in state.get('inherited_SQL_points',[])):continue
+                    state=inherit(state,backend.previous(reference),reference=reference,
+                                  verify=lambda record:check_accepted(remote.client,record))
+                    report('adopted-accepted-SQL-points-without-recapture-or-recopy')
             for source in config['SQL_sources']:
                 guard()
                 record=state['completed'].get(source) or state['partial'].get(source,{}).get('accepted')
@@ -232,6 +248,13 @@ def run_B(config):
                         except BaseException:
                             if db.in_transaction:db.execute('rollback')
                             raise
+                    def previous(self,reference):
+                        older=controls.client.connect(reference['index_name'],reference['checkpoint_sha256'],readonly=True,working=True)
+                        try:
+                            row=older.execute('select row from SQL_phase_state where id=1').fetchone()
+                            if row is None:raise ValueError('previous SQL state unavailable; preserve target')
+                            return json.loads(row[0])
+                        finally:older.close()
                 return run_SQL(config,backend=Backend())
             finally:db.close()
         with current_map(controls.client,config['B_index_name'],config['B_checkpoint_sha256'],binding=config['map_binding']) as current:
@@ -273,4 +296,5 @@ if __name__=='__main__':
     except (OSError,ValueError,KeyError,RuntimeError) as error:
         print(json.dumps(dict(status='typed_file_worker_blocked',reason=str(error),
             reader_diagnostic=getattr(error,'nightly_reader_diagnostic',None),all_recovery_preserved=True)),file=sys.stderr)
+        for note in getattr(error,'__notes__',[]):print(note[-65536:],file=sys.stderr)
         raise SystemExit(1)

@@ -15,6 +15,7 @@ import subprocess
 from vk_nightly_b_controls import Client,send,recv
 from vk_nightly_desktop_objects import NATIVE,validate
 from vk_nightly_objects import read_control
+from vk_nightly_transport_diagnostics import Diagnostics,finish
 
 
 def validate_control(config,folder):
@@ -59,6 +60,7 @@ class DesktopControls:
             '-o','ConnectTimeout=15','-o','ControlMaster=no','-o','ControlPath=none','desktop',
             'python -B -u -c "import sys,base64;exec(base64.b64decode(sys.stdin.buffer.readline()))"'],
             stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+        self.diagnostics=Diagnostics(self.process.stderr)
         try:
             p=self.process;p.stdin.write(base64.b64encode(program.encode())+b'\n');p.stdin.flush()
             if not select.select([p.stdout],[],[],90)[0]:raise TimeoutError('native B control readiness')
@@ -74,12 +76,6 @@ class DesktopControls:
             if kind is None:
                 send(p.stdin,dict(op='bye'))
                 if recv(p.stdout)!={'closed':True}:raise ValueError('native B control close differs')
-            p.stdin.close()
-            if kind is not None:p.stdout.close()
-            code=p.wait(timeout=60)
-            diagnostic=p.stderr.read(4096).decode(errors='replace')
-            if code and kind is None:raise ValueError('native B control failed: '+diagnostic)
-            if diagnostic and value is not None and hasattr(value,'add_note'):value.add_note(diagnostic)
-        finally:
-            for stream in (p.stdin,p.stdout,p.stderr):
-                if not stream.closed:stream.close()
+        except BaseException as error:
+            finish(p,original=error,diagnostics=getattr(self,'diagnostics',None));raise
+        finish(p,original=value,diagnostics=getattr(self,'diagnostics',None))

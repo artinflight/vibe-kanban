@@ -19,9 +19,12 @@ components from failed v8i without relabeling its parent as accepted. Historical
 The Staging-owned v11 observer ended naturally. The original selector qualifier
 finished at R5; the902818-member map and disjoint new-name qualification are
 retained. Both earlier trackers stopped at14:34EDT on SSD capacity. The user authorized
-removing that dependency: six indexes are verified on native B, and the B-backed
-tracker is now ready. Its new epoch does not erase the earlier gap. A resumable
-B-only metadata reconciliation and supported durable barrier remain required.
+removing that dependency: six indexes are verified on native B. The original
+B tracker later failed, so current source observation uses a strictly bounded
+preallocated SSD event outbox independent of Desktop transport; growing indexes
+and backup bodies remain B-only. Its actual107010-watch barrier and independent
+B forward-copy reopen passed. Neither epoch erases earlier gaps. A later B-only
+metadata reconciliation is active; current baseline and calendar remain open.
 Namespace completeness alone does not prove body/SQL/runtime recoverability.
 
 Live MM scope/pointer and current owner guard were reconciled October26. B needs

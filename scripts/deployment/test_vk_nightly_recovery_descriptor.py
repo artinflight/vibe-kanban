@@ -320,5 +320,33 @@ class RecoveryDescriptorTests(unittest.TestCase):
         def stopped():raise PermissionError('actual owner STOP')
         with self.assertRaisesRegex(PermissionError,'owner STOP'):build(db,reference(path),c,checkpoint=stopped)
 
+    def test_owner_retired_original_root_stays_explicit_and_requires_consumer_binding(self):
+        db,path,c,_,body,controls=self.use();old='/home/retired-monitor'
+        c['original_sources'].append(old)
+        c['original_source_dispositions'][old]=dict(original_history_preserved=True)
+        with self.assertRaisesRegex(ValueError,'retirement dispositions'):build(db,reference(path),c,checkpoint=lambda:None)
+        record=dict(format='vk-nightly-owner-retired-original-source-v1',current_plan_sha256=c['plan_sha256'],
+            owner_authority=dict(decision_id='11111111-1111-4111-8111-111111111111',revision=1,
+                owner_message='synthetic-owner-packet',owner_message_UTC='2026-10-24T23:21:28Z'),
+            retained_recovery_proofs=['7'*64],original_data_deleted=False,historical_recovery_required=True)
+        c['retired_original_sources']={old:record};c['original_source_dispositions'][old]['current_requirement_retirement']=record
+        d=build(db,reference(path),c,checkpoint=lambda:None)
+        self.assertIn(old,d['original_source_dispositions']);self.assertNotIn(old,d['sources'])
+        self.assertFalse(d['original_epoch_complete']);self.assertEqual(d['original_epoch']['unresolved_gap_count'],7)
+        provider=LocalDependencies({'accepted-base':body,'nightly-controls-v1':controls},c['dependencies'],admission_check=lambda:None)
+        args=dict(plan_sha256=c['plan_sha256'],scope_sha256=c['scope_sha256'],required_sources=c['sources'],
+            original_sources=c['original_sources'],required_pins=c['required_pins'],required_SQL=c['required_SQL'])
+        with provider.held(),held_index(provider,*d['indexes']) as index:
+            h=HeldRecoverySet(d,checksum(d),provider,index)
+            with self.assertRaisesRegex(ValueError,'retirement consumer contract'):h.validate(**args)
+            h.validate(**args,required_retired_original_sources=c['retired_original_sources'])
+            self.assertEqual(b''.join(h.blocks('home/state/note')),(body/'note').read_bytes())
+        wrong=copy.deepcopy(c);wrong['retired_original_sources'][old]['current_plan_sha256']='8'*64
+        with self.assertRaisesRegex(ValueError,'retirement contract'):build(db,reference(path),wrong,checkpoint=lambda:None)
+        wrong=copy.deepcopy(c);wrong['retired_original_sources'][old]['retained_recovery_proofs']=[]
+        with self.assertRaisesRegex(ValueError,'retirement contract'):build(db,reference(path),wrong,checkpoint=lambda:None)
+        wrong=copy.deepcopy(c);wrong['retired_original_sources']['/home/state']=record
+        with self.assertRaisesRegex(ValueError,'retirement dispositions'):build(db,reference(path),wrong,checkpoint=lambda:None)
+
 
 if __name__=='__main__':unittest.main()

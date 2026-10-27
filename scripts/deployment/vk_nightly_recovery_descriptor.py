@@ -13,7 +13,7 @@ from vk_nightly_current_map import (SealedMemberIndex, SQL_aliases, decode_membe
                                     pending_replay_for_epoch)
 from vk_nightly_control_format import key
 from vk_nightly_checkpoints import digest,source_path
-from vk_typed_recovery import FORMAT,HeldRecoverySet,canonical,checksum,validate_member
+from vk_typed_recovery import FORMAT,HeldRecoverySet,canonical,checksum,validate_member,validate_retired_originals
 
 
 def sample_runtime_files(paths,*,maximum_bytes,checkpoint):
@@ -89,7 +89,10 @@ def build(database,reference,contract,*,checkpoint):
     for values in (required,original,SQL):
         if not isinstance(values,list) or len(values)!=len(set(values)):raise ValueError('unique explicit consumer source set required')
         for path in values:source_path(path)
-    if not set(original)<=set(required) or set(contract['original_source_dispositions'])!=set(original):
+    retired=contract.get('retired_original_sources',{})
+    validate_retired_originals(retired,original_sources=original,required_sources=required,
+        plan_sha256=contract['plan_sha256'],dispositions=contract['original_source_dispositions'])
+    if set(contract['original_source_dispositions'])!=set(original):
         raise ValueError('original required roots/dispositions must remain explicit')
     original_epoch=contract['original_epoch']
     if (original_epoch.get('complete') is not False or original_epoch.get('original_gaps_repaired') is not False
@@ -196,6 +199,7 @@ def build(database,reference,contract,*,checkpoint):
         installed_consumer_contract_sha256=checksum(contract),
         independent_current_restore_accepted=False,scheduling_authorized=False)
     if qualification is not None:descriptor['current_SQL_qualification']=qualification
+    if retired:descriptor['retired_original_sources']=retired
     # Reuse the ordinary complete-member validator for scope, recipes, root
     # aliases, SQL and pins. This metadata-only interface cannot open bodies or
     # assert dependency leases/readability; the independent consumer still must.
@@ -206,5 +210,5 @@ def build(database,reference,contract,*,checkpoint):
     handle.validate(plan_sha256=contract['plan_sha256'],scope_sha256=contract['scope_sha256'],
         required_sources=required,original_sources=original,required_pins=pins,required_SQL=SQL,
         required_root_aliases=contract.get('root_aliases',{}),required_runtime_files=runtime,
-        required_SQL_qualification=qualification)
+        required_SQL_qualification=qualification,required_retired_original_sources=retired)
     return descriptor

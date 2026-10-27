@@ -332,6 +332,39 @@ def validate_member(name, row, lookup):
             raise ValueError('hardlink metadata/content differs')
 
 
+def validate_retired_originals(retired,*,original_sources,required_sources,plan_sha256,dispositions):
+    """Externally pinned owner dispositions preserve original-root accounting.
+
+    Structure validation is not an approval mechanism: the installed consumer
+    must authenticate the exact owner packet independently of the descriptor.
+    No current root, body or old recovery data is removed by this interface.
+    """
+    import uuid
+    if (not isinstance(retired,dict) or not set(retired)<=set(original_sources)
+            or set(retired)&set(required_sources)
+            or not set(original_sources)<=set(required_sources)|set(retired)):
+        raise ValueError('original current roots require exact explicit owner retirement dispositions')
+    for path,record in retired.items():
+        if path!='/'+key(path.removeprefix('/')):raise ValueError('canonical retired original source required')
+        if not isinstance(record,dict):raise ValueError('typed original-source retirement record required')
+        authority=record.get('owner_authority',{});proofs=record.get('retained_recovery_proofs')
+        if (record.get('format')!='vk-nightly-owner-retired-original-source-v1'
+                or record.get('current_plan_sha256')!=plan_sha256
+                or record.get('original_data_deleted') is not False
+                or record.get('historical_recovery_required') is not True
+                or not isinstance(authority,dict)
+                or not isinstance(authority.get('decision_id'),str)
+                or str(uuid.UUID(authority['decision_id']))!=authority['decision_id']
+                or type(authority.get('revision')) is not int or authority['revision']<1
+                or not isinstance(authority.get('owner_message'),str) or not authority['owner_message']
+                or not isinstance(authority.get('owner_message_UTC'),str) or not authority['owner_message_UTC']
+                or not isinstance(proofs,list) or not proofs or len(proofs)>16 or len(proofs)!=len(set(proofs))
+                or not isinstance(dispositions.get(path),dict)
+                or dispositions[path].get('current_requirement_retirement')!=record):
+            raise ValueError('complete independently pinned original-source retirement contract required')
+        for proof in proofs:digest(proof)
+
+
 class HeldRecoverySet:
     def __init__(self, descriptor, expected_sha256, provider, index):
         if checksum(descriptor) != digest(expected_sha256):
@@ -352,7 +385,7 @@ class HeldRecoverySet:
                  original_sources, required_pins, required_SQL,
                  journal_scope_sha256=None, immutable_sources=None, enrollment_resolution=None,
                  required_root_aliases=None, required_runtime_files=None,
-                 required_SQL_qualification=None):
+                 required_SQL_qualification=None,required_retired_original_sources=None):
         """Validate the complete namespace and exact caller-selected contract.
 
         Required sets come from the consumer's authenticated package, not from
@@ -399,13 +432,18 @@ class HeldRecoverySet:
             if row.get('kind')!='file' or any(row.get(k)!=point[k] for k in ('sha256','bytes')):
                 raise ValueError('separately sampled runtime file differs')
         effective_sources = set(required_sources) | target_roots
+        retired=required_retired_original_sources or {}
+        if d.get('retired_original_sources',{})!=retired:
+            raise ValueError('explicit owner retirement consumer contract differs')
+        validate_retired_originals(retired,original_sources=original_sources,required_sources=required_sources,
+            plan_sha256=plan_sha256,dispositions=d.get('original_source_dispositions',{}))
         journal_scope_sha256 = journal_scope_sha256 or scope_sha256
         if (d.get('format') != FORMAT or d.get('source_prefix') != '/'
                 or d.get('writer_fence_verified') is not False
                 or d.get('original_epoch_complete') is not False
                 or d.get('plan_sha256') != plan_sha256 or d.get('scope_sha256') != scope_sha256
                 or set(d.get('sources', [])) != set(required_sources)
-                or not set(original_sources) <= set(required_sources)
+                or not set(original_sources) <= set(required_sources)|set(retired)
                 or set(d.get('original_source_dispositions', {})) != set(original_sources)
                 or d.get('dependencies') != self.provider.identities
                 or d.get('indexes') != list(self.index.references)

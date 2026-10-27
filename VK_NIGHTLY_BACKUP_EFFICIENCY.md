@@ -1892,6 +1892,13 @@ The accepted162.70GB and later exact body/SQL proofs are reused; this never clai
 a second full copy, original-epoch completeness, a live writer fence or scheduling.
 These new consumer primitives still require actual current-map production adoption.
 
+An original required root can leave the current scope only through an explicit
+owner retirement contract, independently pinned by the consumer and bound to
+the current plan. Its original disposition and retained recovery proof hashes
+remain in the descriptor. Retirement cannot remove a currently required root,
+silently shrink the historical source list, repair old archive gaps, authorize
+deletion or be adopted from a descriptor without the matching consumer contract.
+
 ### Native health observation ownership
 
 V4 and V5 stopped on repeated15s `smartctl` command observation timeouts. Their

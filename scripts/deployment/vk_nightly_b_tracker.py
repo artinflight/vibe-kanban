@@ -16,7 +16,7 @@ import signal
 import stat
 import threading
 
-from vk_nightly_b_controls import tracking_store,seed
+from vk_nightly_b_controls import tracking_store,seed,retry_native_busy
 from vk_nightly_desktop_controls import DesktopControls
 from vk_nightly_tracking import serve
 
@@ -52,7 +52,7 @@ def health_mirror(path,value):
         os.close(fd)
 
 
-def write_health(db,path,value,*,mirror=health_mirror):
+def write_health(db,path,value,*,mirror=health_mirror,guard=None):
     value=dict(value)
     if Path(path).is_relative_to('/mnt/vk-storage') and not os.path.ismount('/mnt/vk-storage'):
         value['optional_SSD_health_mirror_error']='secondary SSD unavailable; no local write attempted'
@@ -63,8 +63,14 @@ def write_health(db,path,value,*,mirror=health_mirror):
         except OSError as error:
             if error.errno not in (errno.ENOSPC,errno.EDQUOT,errno.EROFS,errno.EEXIST):raise
             value['optional_SSD_health_mirror_error']=str(error)
-    db.execute('insert into tracking_health values(1,?) on conflict(id) do update set row=excluded.row',
-               (json.dumps(value,sort_keys=True,separators=(',',':')),))
+    # An independently reopened status reader can briefly hold SQLite's real
+    # shared lock. Retry only this idempotent metadata upsert, never a capture
+    # or body transfer. Genuine native faults/STOP/access still propagate and
+    # every attempt retains the actual client's original host/time admission.
+    check=guard or getattr(getattr(db,'client',None),'guard',lambda:None)
+    retry_native_busy(lambda:db.execute(
+        'insert into tracking_health values(1,?) on conflict(id) do update set row=excluded.row',
+        (json.dumps(value,sort_keys=True,separators=(',',':')),)),guard=check)
 
 
 def run(config,*,guard,mirror=health_mirror):

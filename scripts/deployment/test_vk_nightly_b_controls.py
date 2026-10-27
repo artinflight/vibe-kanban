@@ -819,6 +819,30 @@ class BControlTests(unittest.TestCase):
             store.start(dict(format=FORMAT,instance='B-two',plan_sha256='b'*64,scope_sha256='a'*64,owner_pid=os.getpid()))
             self.assertFalse(store.report('B-one',0)['ready'])
 
+    def test_actual_native_status_reader_contention_retries_only_same_metadata_and_honors_STOP(self):
+        from vk_nightly_b_tracker import write_health
+        writer=self.client.connect('status-contention',self.sha)
+        writer.execute('create table tracking_health(id integer primary key,row text not null)')
+        reader=sqlite3.connect((self.controls/'status-contention.sqlite').as_uri()+'?mode=ro',uri=True,
+                               isolation_level=None,check_same_thread=False)
+        reader.execute('begin');reader.execute('select count(*) from tracking_health').fetchone()
+        errors=[]
+        def release():
+            try:time.sleep(1);reader.execute('commit');reader.close()
+            except BaseException as error:errors.append(error)
+        thread=threading.Thread(target=release);thread.start();checks=[];mirrors=[]
+        try:
+            write_health(writer,self.root/'not-written',dict(sequence=17),mirror=lambda *_:mirrors.append(1),
+                         guard=lambda:checks.append(1))
+            self.assertGreater(len(checks),1);self.assertEqual(mirrors,[1])
+            self.assertEqual(json.loads(writer.execute('select row from tracking_health').fetchone()[0]),dict(sequence=17))
+            def stop():raise PermissionError('actual owner STOP')
+            with self.assertRaisesRegex(PermissionError,'actual owner STOP'):
+                write_health(writer,self.root/'not-written',dict(sequence=18),mirror=lambda *_:None,guard=stop)
+            self.assertEqual(json.loads(writer.execute('select row from tracking_health').fetchone()[0]),dict(sequence=17))
+        finally:thread.join(timeout=3);writer.close()
+        self.assertFalse(errors)
+
     def test_new_native_B_state_seed_needs_no_SSD_source_or_hydration(self):
         digest=seed(self.client);db=self.client.connect('new-seed',digest)
         self.assertEqual(db.execute('select version from nightly_control_seed').fetchone(),(1,));db.close()

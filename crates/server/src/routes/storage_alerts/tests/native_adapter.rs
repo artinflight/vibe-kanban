@@ -9,11 +9,11 @@ type ControlState = (FixtureDeployment, OwnerBinding);
 
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
-struct Control {
+pub(super) struct Control {
     operation: String,
 }
 
-async fn state(State((d, b)): State<ControlState>) -> Json<Value> {
+pub(super) async fn state(State((d, b)): State<ControlState>) -> Json<Value> {
     let execution_count: i64 =
         sqlx::query_scalar("SELECT count(*) FROM execution_processes WHERE session_id=?")
             .bind(b.session_id)
@@ -31,7 +31,7 @@ async fn state(State((d, b)): State<ControlState>) -> Json<Value> {
     }))
 }
 
-async fn control(
+pub(super) async fn control(
     State((d, b)): State<ControlState>,
     Json(command): Json<Control>,
 ) -> Result<Json<Value>, axum::http::StatusCode> {
@@ -95,6 +95,7 @@ async fn control(
         }
         _ => return Err(axum::http::StatusCode::BAD_REQUEST),
     }
+    close_fixture_captures(&d.db().pool).await;
     Ok(state(State((d, b))).await)
 }
 

@@ -28,12 +28,66 @@ use uuid::Uuid;
 
 use crate::error::ApiError;
 
-fn configured() -> Result<OwnerBinding, &'static str> {
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct OwnerRegistry {
+    version: u32,
+    owners: Vec<OwnerBinding>,
+}
+
+#[derive(Deserialize)]
+#[serde(untagged)]
+enum OwnerFile {
+    Legacy(OwnerBinding),
+    Registry(OwnerRegistry),
+}
+
+// Additive configuration only: use the existing route, receipt ledger, owner
+// lock and native launch. This is an allowlist, not new authentication.
+fn select_binding(
+    bytes: &[u8],
+    workspace: Uuid,
+    session: Uuid,
+) -> Result<OwnerBinding, &'static str> {
+    if bytes.len() > 65536 {
+        return Err("Storage alert binding exceeds limit");
+    }
+    let file: OwnerFile =
+        serde_json::from_slice(bytes).map_err(|_| "Invalid storage alert binding")?;
+    let owners = match file {
+        OwnerFile::Legacy(binding) => vec![binding],
+        OwnerFile::Registry(registry) if registry.version == 1 => registry.owners,
+        OwnerFile::Registry(_) => return Err("Unsupported storage alert registry version"),
+    };
+    if owners.is_empty() || owners.len() > 16 {
+        return Err("Invalid storage alert owner count");
+    }
+    let mut seen = std::collections::HashSet::new();
+    if owners.iter().any(|b| {
+        b.workspace_id.is_nil()
+            || b.session_id.is_nil()
+            || !seen.insert((b.workspace_id, b.session_id))
+    }) {
+        return Err("Invalid or duplicate storage alert owner");
+    }
+    owners
+        .into_iter()
+        .find(|b| b.workspace_id == workspace && b.session_id == session)
+        .ok_or("Storage alert owner is not configured")
+}
+
+fn configured(workspace: Uuid, session: Uuid) -> Result<OwnerBinding, &'static str> {
     let path = std::env::var_os("VK_STORAGE_ALERT_OWNER_FILE")
         .ok_or("Storage alert admission is disabled")?;
-    let bytes = std::fs::read(path).map_err(|_| "Storage alert binding unavailable")?;
-    let binding: OwnerBinding =
-        serde_json::from_slice(&bytes).map_err(|_| "Invalid storage alert binding")?;
+    // Bound the read before allocation, including an accidentally replaced file.
+    use std::io::Read;
+    let mut bytes = Vec::new();
+    std::fs::File::open(path)
+        .map_err(|_| "Storage alert binding unavailable")?
+        .take(65537)
+        .read_to_end(&mut bytes)
+        .map_err(|_| "Storage alert binding unavailable")?;
+    let binding = select_binding(&bytes, workspace, session)?;
     if binding.executor_config.executor != BaseCodingAgent::Codex
         || binding
             .executor_config
@@ -59,7 +113,8 @@ async fn submit<D: Deployment>(
     State(deployment): State<D>,
     Json(request): Json<Request>,
 ) -> Result<Json<Response>, ApiError> {
-    let binding = configured().map_err(|reason| ApiError::Conflict(reason.into()))?;
+    let binding = configured(request.intent.workspace_id, request.intent.session_id)
+        .map_err(|reason| ApiError::Conflict(reason.into()))?;
     Ok(Json(submit_bound(&deployment, &binding, &request).await?))
 }
 
@@ -85,6 +140,7 @@ pub(crate) async fn submit_bound<D: Deployment>(
                     "native_bound_owner_hold",
                 ));
             }
+            watcher_owner_idle(&deployment.db().pool, binding.workspace_id).await?;
             // Read the existing selection; do not synthesize or resolve a model.
             let saved = ExecutionProcess::latest_executor_config_for_session(
                 &deployment.db().pool,
@@ -184,6 +240,51 @@ pub(crate) async fn submit_bound<D: Deployment>(
     .await
 }
 
+/// Parent status alone does not close its capture or descendant producers.
+/// This runs while the native workspace admission lock/reservation is held.
+/// The durable service also checks every workspace session and both user queues.
+async fn watcher_owner_idle(
+    pool: &sqlx::SqlitePool,
+    workspace: Uuid,
+) -> Result<(), ContainerError> {
+    let unclosed: bool = sqlx::query_scalar(
+        "SELECT EXISTS(SELECT 1 FROM execution_processes e JOIN sessions s ON s.id=e.session_id WHERE s.workspace_id=? AND e.run_reason='codingagent' AND NOT EXISTS(SELECT 1 FROM workspace_review_log_finalized f WHERE f.execution_id=e.id) AND NOT EXISTS(SELECT 1 FROM execution_processes newer JOIN coding_agent_turns n ON n.execution_process_id=newer.id JOIN coding_agent_turns old ON old.execution_process_id=e.id WHERE newer.session_id=e.session_id AND newer.created_at > e.created_at AND n.agent_session_id=old.agent_session_id AND old.agent_session_id IS NOT NULL))",
+    ).bind(workspace).fetch_one(pool).await?;
+    if unclosed {
+        return Err(ContainerError::StorageAdmissionDeferred(
+            "owner_capture_not_closed",
+        ));
+    }
+    let sessions: Vec<Uuid> = sqlx::query_scalar("SELECT id FROM sessions WHERE workspace_id=?")
+        .bind(workspace)
+        .fetch_all(pool)
+        .await?;
+    let counts =
+        db::models::subagent_job::SubagentJob::active_counts_by_session_ids_with_codex_threads(
+            pool, &sessions,
+        )
+        .await
+        .map_err(|_| {
+            ContainerError::StorageAdmissionDeferred("independent_job_inventory_unknown")
+        })?;
+    if counts.values().any(|c| c.running > 0 || c.unresolved > 0) {
+        return Err(ContainerError::StorageAdmissionDeferred(
+            "owner_independent_jobs_active",
+        ));
+    }
+    if !db::models::subagent_job::SubagentJob::watcher_producers_closed(pool, &sessions)
+        .await
+        .map_err(|_| {
+            ContainerError::StorageAdmissionDeferred("independent_job_inventory_unknown")
+        })?
+    {
+        return Err(ContainerError::StorageAdmissionDeferred(
+            "independent_job_producers_not_closed",
+        ));
+    }
+    Ok(())
+}
+
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 struct BindingQuery {
@@ -239,3 +340,6 @@ async fn no_store(
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+mod registry_tests;

@@ -64,3 +64,32 @@ receipt/execution/owner readbacks, proving unchanged backend PID/startticks/hash
 across the second connection and a condition update. Installed observation/ntfy
 continues separately with native dispatch fail-closed. No live DB edit, restart,
 credential change, deletion, model call, hosted CI or API deployment occurred.
+
+## Native integration in progress, October 27
+
+This branch now contains PR277 by ancestry (integration merge `7495ba41a`),
+plus the same-route multi-owner registry. The prior migration-only handoff above
+is retained history. The current owner is completing native validation here;
+PR277 and its owner's source are preserved. No staging merge or runtime change
+has occurred.
+
+The current isolated pair is `modular_native_integration.py`, driven by
+`native_modular_watchers_decimal_disks_and_hot_second_connection`. It uses the
+real native router, migrated SQLite, default launch and approval bridge with
+synthetic executor I/O. It tests both strict decimal boundaries, capacity reports,
+dedup/recovery and a second unrelated source/target hot-loaded on one backend,
+including actual committed receipt recovery after a lost response. These are
+written scenarios until compiled CI reports a pass. Existing frozen historical
+PR215 pairing remains separately available and is not current-policy evidence.
+
+Admission now additionally checks capture closure, unresolved/running independent
+jobs and the provider's complete descendant graph; missing/unreadable inventory
+or an open producer edge holds dispatch. These conservative checks are not yet
+proof of all independent producer lifetime/arrival races. That native requirement
+remains open, including controlled-delegation journals and executor teardown.
+Do not activate based on inventory snapshots alone.
+
+Safe local client suite: 157 cases,156 passed,1 optional existing-connector check
+skipped without its explicit source path. A native `owner_busy` receipt now covers
+the episode instead of retrying after that owner finishes; capacity/queue holds
+keep durable pending delivery. Current hosted native results are still pending.

@@ -20,7 +20,7 @@ class ReceiptBridge(FakeBridge):
         return {'kind':kind, 'batch_id':document['batch_id'], 'intent_sha256':document['intent_sha256'],
                 'execution_id':self.outcome, 'receipt_id':'fixture-durable-receipt',
                 'definitely_not_admitted':kind in {'deferred','rejected'},
-                'reason':{'accepted':'admitted','deferred':'owner_busy','rejected':'scope_rejected'}[kind]}
+                'reason':{'accepted':'admitted','deferred':'native_capacity_hold','rejected':'scope_rejected'}[kind]}
 
     def send(self, document):
         self.calls.append(copy.deepcopy(document))
@@ -50,7 +50,7 @@ class Receipts(unittest.TestCase):
     def restart(self):
         self.s.close();self.s=m.Store(self.path)
 
-    def test_definite_busy_retries_same_batch_and_intent_after_restart(self):
+    def test_definite_capacity_hold_retries_same_batch_and_intent_after_restart(self):
         self.b.kind='deferred';self.assertEqual(self.poll(),'deferred')
         original=self.b.calls[0];self.restart();self.b.kind='accepted'
         self.assertEqual(self.poll(),'accepted')

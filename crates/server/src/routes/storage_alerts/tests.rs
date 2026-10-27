@@ -39,6 +39,7 @@ use utils::{log_msg::LogMsg, msg_store::MsgStore};
 
 use super::*;
 
+mod modular_adapter;
 mod native_adapter;
 
 #[derive(Clone)]
@@ -200,7 +201,7 @@ impl ContainerService for FixtureContainer {
         let ExecutorActionType::CodingAgentFollowUpRequest(request) = action.typ() else {
             panic!("Must continue existing native owner")
         };
-        assert_eq!(request.session_id, "synthetic-existing-thread");
+        assert!(request.session_id.starts_with("synthetic-"));
         assert!(request.reset_to_message_id.is_none());
         assert!(request.capacity.is_none());
         assert_eq!(request.executor_config.variant.as_deref(), Some("DEFAULT"));
@@ -313,9 +314,17 @@ async fn fixture() -> (tempfile::TempDir, FixtureDeployment, OwnerBinding, Reque
         events: EventService::new(db, Arc::new(MsgStore::new()), Arc::new(RwLock::new(0))),
         queue: QueuedMessageService::new(),
     };
-    tokio::fs::create_dir(dir.path().join("repo"))
-        .await
-        .unwrap();
+    let (binding, request) = seed_owner(dir.path(), &deployment, "synthetic-existing-thread").await;
+    (dir, deployment, binding, request)
+}
+
+async fn seed_owner(
+    dir: &Path,
+    deployment: &FixtureDeployment,
+    thread: &str,
+) -> (OwnerBinding, Request) {
+    let pool = deployment.db().pool.clone();
+    tokio::fs::create_dir(dir.join("repo")).await.unwrap();
     let w = Workspace::create(
         &pool,
         &CreateWorkspace {
@@ -326,10 +335,10 @@ async fn fixture() -> (tempfile::TempDir, FixtureDeployment, OwnerBinding, Reque
     )
     .await
     .unwrap();
-    Workspace::update_container_ref(&pool, w.id, dir.path().to_str().unwrap())
+    Workspace::update_container_ref(&pool, w.id, dir.to_str().unwrap())
         .await
         .unwrap();
-    let repo = Repo::find_or_create(&pool, &dir.path().join("repo"), "Synthetic repository")
+    let repo = Repo::find_or_create(&pool, &dir.join("repo"), "Synthetic repository")
         .await
         .unwrap();
     WorkspaceRepo::create_many(
@@ -391,7 +400,26 @@ async fn fixture() -> (tempfile::TempDir, FixtureDeployment, OwnerBinding, Reque
     )
     .await
     .unwrap();
-    sqlx::query("UPDATE coding_agent_turns SET agent_session_id='synthetic-existing-thread',summary='Verified synthetic final' WHERE id=?").bind(turn.id).execute(&pool).await.unwrap();
+    sqlx::query("UPDATE coding_agent_turns SET agent_session_id=?,summary='Verified synthetic final' WHERE id=?").bind(thread).bind(turn.id).execute(&pool).await.unwrap();
+    close_fixture_captures(&pool).await;
+    let state_path = PathBuf::from(std::env::var_os("CODEX_HOME").unwrap()).join("state_5.sqlite");
+    let state = sqlx::sqlite::SqlitePoolOptions::new()
+        .max_connections(1)
+        .connect_with(
+            sqlx::sqlite::SqliteConnectOptions::new()
+                .filename(state_path)
+                .create_if_missing(true),
+        )
+        .await
+        .unwrap();
+    sqlx::raw_sql("CREATE TABLE IF NOT EXISTS threads(id TEXT PRIMARY KEY, agent_nickname TEXT, rollout_path TEXT, created_at_ms INTEGER, updated_at_ms INTEGER); CREATE TABLE IF NOT EXISTS thread_spawn_edges(parent_thread_id TEXT, child_thread_id TEXT, status TEXT); ")
+        .execute(&state).await.unwrap();
+    sqlx::query("INSERT OR IGNORE INTO threads(id) VALUES (?)")
+        .bind(thread)
+        .execute(&state)
+        .await
+        .unwrap();
+    state.close().await;
     let binding = OwnerBinding {
         workspace_id: w.id,
         session_id: s.id,
@@ -424,7 +452,14 @@ async fn fixture() -> (tempfile::TempDir, FixtureDeployment, OwnerBinding, Reque
         },
         intent,
     };
-    (dir, deployment, binding, request)
+    (binding, request)
+}
+
+// Executor I/O is synthetic in this fixture; this explicitly substitutes the
+// production capture writer's EOF receipt, never a live closure attestation.
+async fn close_fixture_captures(pool: &sqlx::SqlitePool) {
+    sqlx::query("INSERT OR IGNORE INTO workspace_review_log_finalized(execution_id,finalized_at,raw_bytes,raw_sha256) SELECT id,datetime('now'),0,? FROM execution_processes WHERE status != 'running'")
+        .bind("0".repeat(64)).execute(pool).await.unwrap();
 }
 
 #[tokio::test]
@@ -932,6 +967,7 @@ async fn native_alert_recovers_interrupted_user_prompts_without_changing_intent_
     assert_eq!(interrupted.len(), 2);
     let expected =
         CodingAgentTurn::prompt_with_interrupted_context(r.intent.prompt.clone(), &interrupted);
+    close_fixture_captures(&d.db().pool).await;
     let admitted = submit_bound(&d, &b, &r).await.unwrap();
     assert_eq!(admitted.outcome, "accepted");
     let receipt = admitted.receipt.unwrap();
@@ -970,4 +1006,96 @@ async fn native_alert_recovers_interrupted_user_prompts_without_changing_intent_
     assert_eq!(replay.receipt.unwrap().execution_id, Some(process.id));
     assert_eq!(d.container.launches.load(Ordering::SeqCst), 1);
     assert!(!d.queue.has_queued(b.session_id));
+}
+
+#[tokio::test]
+async fn native_independent_job_and_capture_unknown_hold_without_launch() {
+    if !isolated(
+        "native_independent_job_and_capture_unknown_hold_without_launch",
+        false,
+    ) {
+        return;
+    }
+    let (_dir, d, b, mut r) = fixture().await;
+    sqlx::query("DELETE FROM workspace_review_log_finalized")
+        .execute(&d.db().pool)
+        .await
+        .unwrap();
+    let response = submit_bound(&d, &b, &r).await.unwrap();
+    assert_eq!(response.reason, "owner_capture_not_closed");
+    assert!(response.no_admission);
+    close_fixture_captures(&d.db().pool).await;
+    let anchor: Uuid = sqlx::query_scalar("SELECT id FROM execution_processes LIMIT 1")
+        .fetch_one(&d.db().pool)
+        .await
+        .unwrap();
+    db::models::subagent_job::SubagentJob::upsert_spawned(
+        &d.db().pool,
+        b.session_id,
+        anchor,
+        "independent",
+        None,
+    )
+    .await
+    .unwrap();
+    r.attempt_id = Uuid::new_v4();
+    r.validation.observed_at = chrono::Utc::now();
+    let response = submit_bound(&d, &b, &r).await.unwrap();
+    assert_eq!(response.reason, "owner_independent_jobs_active");
+    assert_eq!(d.container.launches.load(Ordering::SeqCst), 0);
+    db::models::subagent_job::SubagentJob::update_status(
+        &d.db().pool,
+        b.session_id,
+        anchor,
+        "independent",
+        db::models::subagent_job::SubagentJobStatus::Completed,
+    )
+    .await
+    .unwrap();
+    let state_path = PathBuf::from(std::env::var_os("CODEX_HOME").unwrap()).join("state_5.sqlite");
+    let state = sqlx::sqlite::SqlitePoolOptions::new()
+        .connect_with(sqlx::sqlite::SqliteConnectOptions::new().filename(state_path))
+        .await
+        .unwrap();
+    // A completed child turn on an open edge must retain producer ownership.
+    sqlx::query(
+        "INSERT INTO thread_spawn_edges VALUES ('synthetic-existing-thread','child','open')",
+    )
+    .execute(&state)
+    .await
+    .unwrap();
+    r.attempt_id = Uuid::new_v4();
+    r.validation.observed_at = chrono::Utc::now();
+    let response = submit_bound(&d, &b, &r).await.unwrap();
+    assert!(matches!(
+        response.reason.as_str(),
+        "owner_independent_jobs_active" | "independent_job_producers_not_closed"
+    ));
+    sqlx::query("UPDATE thread_spawn_edges SET status='closed'")
+        .execute(&state)
+        .await
+        .unwrap();
+    r.attempt_id = Uuid::new_v4();
+    r.validation.observed_at = chrono::Utc::now();
+    assert_eq!(submit_bound(&d, &b, &r).await.unwrap().outcome, "accepted");
+    assert_eq!(d.container.launches.load(Ordering::SeqCst), 1);
+    // Replay still reconciles the exact binding, without re-entering inventory.
+    sqlx::query("DROP TABLE thread_spawn_edges")
+        .execute(&state)
+        .await
+        .unwrap();
+    assert_eq!(submit_bound(&d, &b, &r).await.unwrap().outcome, "accepted");
+    assert_eq!(d.container.launches.load(Ordering::SeqCst), 1);
+}
+
+#[tokio::test]
+#[ignore = "Explicit isolated native HTTP and current modular Python adapter pairing"]
+async fn native_modular_watchers_decimal_disks_and_hot_second_connection() {
+    if !isolated(
+        "native_modular_watchers_decimal_disks_and_hot_second_connection",
+        false,
+    ) {
+        return;
+    }
+    modular_adapter::exercise().await;
 }

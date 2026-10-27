@@ -189,3 +189,56 @@ fn same_child_in_different_sessions_keeps_both_counts() {
     assert_eq!(counts(&jobs, first.session_id), (1, 0));
     assert_eq!(counts(&jobs, second.session_id), (1, 0));
 }
+
+#[tokio::test]
+async fn watcher_requires_complete_closed_producer_graph_at_every_depth() {
+    let pool = memory_pool().await;
+    sqlx::raw_sql("CREATE TABLE threads(id TEXT); CREATE TABLE thread_spawn_edges(parent_thread_id TEXT,child_thread_id TEXT,status TEXT);").execute(&pool).await.unwrap();
+    let roots = vec![SessionAgentThreadRow {
+        session_id: Uuid::new_v4(),
+        execution_process_id: Uuid::new_v4(),
+        agent_session_id: "root".into(),
+    }];
+    assert!(
+        !closed_spawn_graph(&pool, &roots).await.unwrap(),
+        "missing root is unknown"
+    );
+    sqlx::raw_sql("INSERT INTO threads VALUES ('root'); INSERT INTO thread_spawn_edges VALUES ('root','child','open');").execute(&pool).await.unwrap();
+    assert!(
+        !closed_spawn_graph(&pool, &roots).await.unwrap(),
+        "open child remains a producer even after task_complete"
+    );
+    sqlx::query("UPDATE thread_spawn_edges SET status='closed'")
+        .execute(&pool)
+        .await
+        .unwrap();
+    assert!(closed_spawn_graph(&pool, &roots).await.unwrap());
+    // Walk beyond the activity UI's four-level display horizon.
+    for n in 0..8 {
+        sqlx::query("INSERT INTO thread_spawn_edges VALUES (?,?,?)")
+            .bind(if n == 0 {
+                "child".into()
+            } else {
+                format!("child{n}")
+            })
+            .bind(format!("child{}", n + 1))
+            .bind(if n == 7 { "open" } else { "closed" })
+            .execute(&pool)
+            .await
+            .unwrap();
+    }
+    assert!(!closed_spawn_graph(&pool, &roots).await.unwrap());
+    sqlx::query("UPDATE thread_spawn_edges SET status='closed'")
+        .execute(&pool)
+        .await
+        .unwrap();
+    assert!(closed_spawn_graph(&pool, &roots).await.unwrap());
+    sqlx::query("DROP TABLE thread_spawn_edges")
+        .execute(&pool)
+        .await
+        .unwrap();
+    assert!(
+        closed_spawn_graph(&pool, &roots).await.is_err(),
+        "unreadable inventory never grants admission"
+    );
+}

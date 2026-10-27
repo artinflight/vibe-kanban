@@ -140,6 +140,20 @@ class WatchEventsTests(unittest.TestCase):
         self.run_drain(now=time.time()+61)
         self.assertEqual(self.fixture.posts, [])
 
+    def test_native_busy_race_covers_episode_after_owner_finishes(self):
+        self.ingest(event())
+        self.fixture.result = 'deferred'
+        def busy_native(method, path, body):
+            reply = self.fixture(method, path, body)
+            reply['reason'] = reply['receipt']['reason'] = 'owner_busy'
+            return reply
+        self.assertEqual(events.drain(self.store, self.registry, 'disk-space', time.time(), idle, busy_native), 'deferred')
+        self.assertEqual(self.store.db.execute('SELECT delivery FROM incidents').fetchone()[0], 'covered_active_owner')
+        self.fixture.result = 'accepted'
+        self.ingest(event(2))
+        events.drain(self.store, self.registry, 'disk-space', time.time()+61, idle, self.fixture)
+        self.assertEqual(len(self.fixture.posts), 1)
+
     def test_queue_and_unknown_do_not_claim_activity_or_drop_delivery(self):
         self.ingest(event())
         for status in ({**idle(None), 'queued': ['fixture-queue']}, {'inventory_unknown': True}):

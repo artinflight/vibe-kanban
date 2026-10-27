@@ -96,3 +96,11 @@ The owner now authorizes this workspace to complete backend integration and
 native/end-to-end tests through staging merge readiness, reusing PR277. Earlier
 client-only handoff boundaries above describe prior checkpoints. Production
 deployment, main runtime changes and restart remain outside this work.
+
+Native integration checkpoint: PR277 is preserved by merge ancestry `7495ba41a`.
+The additive registry and current-policy native pair now live in this branch.
+Capture/job/descendant checks are conservative layers; full producer lifetime/
+arrival-race proof and compiled acceptance remain unresolved. The host storage
+pair build hold is not implicitly lifted. Use the existing hosted Test workflow
+with watcher_validation=true (no combined release artifact). No PR is ready to
+merge until required checks pass; no live deployment or restart is authorized.

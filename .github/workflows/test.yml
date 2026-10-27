@@ -14,6 +14,10 @@ on:
       - main
   workflow_dispatch:
     inputs:
+      watcher_validation:
+        description: Run validation only, without building a combined release candidate
+        type: boolean
+        default: false
       github_sync_candidate:
         description: Build an immutable automatic-sync + PR245 backend candidate
         type: boolean
@@ -121,6 +125,7 @@ jobs:
               - 'docs/operations/**'
             backend:
               - 'scripts/dot-connector/**'
+              - 'scripts/watcher-events/**'
               - 'crates/api-types/**'
               - 'crates/client-info/**'
               - 'crates/db/**'
@@ -520,6 +525,12 @@ jobs:
           python3 -B -m unittest discover -s crates/server/tests/fixtures/storage-alert-client/tests -v
           cargo nextest run --workspace --exclude vibe-kanban-tauri --run-ignored all --no-fail-fast --success-output immediate -E 'test(native_python_adapter_uses_real_isolated_http_backend)'
 
+      - name: Test current modular watchers against the same native admission backend
+        if: ${{ !cancelled() }}
+        run: |
+          python3 -B -m unittest discover -s scripts/watcher-events/tests -v
+          cargo nextest run --workspace --exclude vibe-kanban-tauri --run-ignored all --no-fail-fast --success-output immediate -E 'test(native_modular_watchers_decimal_disks_and_hot_second_connection)'
+
       - name: Test explicit Dot steering connector
         run: python3 -B -m unittest discover -s scripts/dot-connector -p 'test_*.py' -v
 
@@ -613,7 +624,7 @@ jobs:
   combined-capture-consent-acceptance:
     # Focused validation of the actual production baseline; normal PR/release
     # policy gates remain unchanged. This job never deploys or starts Vibe.
-    if: github.event_name == 'workflow_dispatch' && !inputs.github_sync_candidate
+    if: github.event_name == 'workflow_dispatch' && !inputs.github_sync_candidate && !inputs.watcher_validation
     runs-on: *runner_label
     timeout-minutes: 120
     permissions:

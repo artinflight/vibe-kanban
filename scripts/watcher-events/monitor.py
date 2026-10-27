@@ -216,7 +216,13 @@ class Store:
             self.db.execute('UPDATE batches SET status=?,execution=?,reason=?,receipt=?,updated=? WHERE id=?',
                             (result['kind'], result.get('execution_id'), result['reason'],
                              result.get('receipt_id'), time.time(), bid))
-            self.db.execute('UPDATE incidents SET delivery=? WHERE batch=?', (result['kind'], bid))
+            # A positive native busy receipt closes the preflight/admission
+            # race: the existing owner covers this episode. Never retry it when
+            # that owner later becomes idle. Unknown inventory/queues keep it pending.
+            delivery = ('covered_active_owner' if result['kind'] == 'deferred'
+                        and result['reason'] in ('owner_busy', 'owner_independent_jobs_active')
+                        else result['kind'])
+            self.db.execute('UPDATE incidents SET delivery=? WHERE batch=?', (delivery, bid))
             self.audit(result['kind'], {'batch': bid, 'reason': result['reason']})
 
     def retire_deferred(self, samples):

@@ -39,10 +39,9 @@ async fn queue_message(
         serde_json::json!({"kind": "steering", "payload": &payload}),
     )
     .await?;
-    let result = services::services::admission::run(queue_message_admitted(
-        Extension(session),
-        State(deployment),
-        Json(payload),
+    let result = services::services::admission::run(services::services::admission::owner(
+        session.workspace_id,
+        queue_message_admitted(Extension(session), State(deployment), Json(payload)),
     ))
     .await;
     if result.is_ok() {
@@ -179,9 +178,9 @@ async fn cancel_queued_message(
     Extension(session): Extension<Session>,
     State(deployment): State<DeploymentImpl>,
 ) -> Result<ResponseJson<ApiResponse<QueueStatus>>, ApiError> {
-    services::services::admission::run(cancel_queued_message_admitted(
-        Extension(session),
-        State(deployment),
+    services::services::admission::run(services::services::admission::owner(
+        session.workspace_id,
+        cancel_queued_message_admitted(Extension(session), State(deployment)),
     ))
     .await
 }

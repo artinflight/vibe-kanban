@@ -2,9 +2,14 @@
 use std::{future::Future, sync::OnceLock};
 
 use tokio::sync::Mutex;
-
 static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
 tokio::task_local! { static HELD: bool; }
+
+/// Same workspace lock for ordinary native input, watcher admission and child
+/// producer authority. Unrelated workspaces remain concurrent.
+pub async fn owner<T>(id: uuid::Uuid, work: impl Future<Output = T>) -> T {
+    executors::workspace_admission::owner(id, work).await
+}
 
 pub async fn run<T>(work: impl Future<Output = T>) -> T {
     if automatic_git_sync() {

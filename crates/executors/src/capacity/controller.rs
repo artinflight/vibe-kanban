@@ -857,7 +857,35 @@ pub fn configured() -> io::Result<Option<&'static Mutex<Controller>>> {
 }
 
 pub async fn before_launch(session: Uuid, background: bool) -> io::Result<()> {
+    if STORAGE_ALERT.try_with(|value| *value).unwrap_or(false) {
+        return storage_alert_launch(configured(), session).await;
+    }
     admit_launch(configured(), session, background).await
+}
+
+tokio::task_local! { static STORAGE_ALERT: bool; }
+
+/// Automated storage input cannot exercise the interactive takeover that
+/// revokes other owners' grants. All executor resource/approval gates still run.
+pub async fn storage_alert_scope<T>(work: impl std::future::Future<Output = T>) -> T {
+    STORAGE_ALERT.scope(true, work).await
+}
+
+async fn storage_alert_launch(
+    controller: io::Result<Option<&Mutex<Controller>>>,
+    session: Uuid,
+) -> io::Result<()> {
+    let Some(controller) = controller? else {
+        return Ok(());
+    };
+    let c = controller.lock().await;
+    c.ensure_owner()?;
+    // Managed native goals have their own explicit selection/budget/first-run
+    // authority. A storage incident cannot resume, initialize or take them over.
+    if c.state.goals.contains_key(&session) {
+        return Err(invalid("Storage response cannot take over a managed goal"));
+    }
+    Ok(())
 }
 
 /// Bounded worker admission cannot exercise interactive takeover authority.
@@ -2194,6 +2222,41 @@ mod tests {
         assert!(
             c.bind(&request, "native-thread", Uuid::new_v4(), 1000)
                 .is_err()
+        );
+    }
+    #[tokio::test]
+    async fn storage_alert_admission_keeps_unrelated_grants_and_holds_managed_owner() {
+        let mut f = Fixture::new();
+        f.issue();
+        let session = f.session;
+        let controller = Mutex::new(f.c.take().unwrap());
+        let before = serde_json::to_value(&controller.lock().await.state).unwrap();
+        assert!(
+            storage_alert_launch(Ok(Some(&controller)), Uuid::new_v4())
+                .await
+                .is_ok()
+        );
+        assert_eq!(
+            before,
+            serde_json::to_value(&controller.lock().await.state).unwrap(),
+            "No Nightly revocation or accounting mutation"
+        );
+        assert!(
+            storage_alert_launch(Ok(Some(&controller)), session)
+                .await
+                .is_err()
+        );
+        assert_eq!(
+            before,
+            serde_json::to_value(&controller.lock().await.state).unwrap()
+        );
+        assert!(
+            storage_alert_launch(
+                Err(invalid("synthetic unavailable controller")),
+                Uuid::new_v4()
+            )
+            .await
+            .is_err()
         );
     }
 }

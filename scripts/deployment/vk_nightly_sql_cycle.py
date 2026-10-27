@@ -11,6 +11,7 @@ import hashlib
 import json
 from pathlib import Path
 import re
+import stat
 import time
 from datetime import datetime
 from zoneinfo import ZoneInfo
@@ -23,7 +24,43 @@ from vk_nightly_incremental import advance_suffix
 from vk_nightly_typed_worker import configuration,host_guard,run_B,source_closure
 from vk_nightly_sql_cohort import statistics
 from vk_nightly_checkpoints import source_path
+from vk_nightly_current_map import SQL_aliases,decode_member
 from vk_prep_common import identity
+
+
+def selected_SQL(rows,roots,aliases,excluded=()):
+    """Actual dirty points plus SQL roots whose sidecars are not observed.
+
+    The caller has advanced the authenticated complete journal suffix. A
+    directory root covers its descendants' WAL/SHM names; an isolated file
+    root does not. Retain unchanged accepted SQL points with their old epochs.
+    """
+    directories=set();excluded_paths=set(excluded)
+    for path,binding in roots.items():
+        if not binding:continue
+        if binding.get('identity',[0,0,0])[2]==stat.S_IFDIR:directories.add(path)
+        if binding.get('target_identity',[0,0,0])[2]==stat.S_IFDIR:directories.add(binding['resolved'])
+        for entry in excluded:
+            if entry==path or entry.startswith(path.rstrip('/')+'/'):
+                excluded_paths.add(binding['resolved'].rstrip('/')+entry[len(path):])
+    scope_sources=[];selected=[];always=set(aliases.values());unchanged=0
+    for path,state,raw in rows:
+        source_path(path);scope_sources.append(path)
+        if (not any(path==root or path.startswith(root.rstrip('/')+'/') for root in directories)
+                or any(path==root or path.startswith(root.rstrip('/')+'/') for root in excluded_paths)):
+            always.add(path)
+        if state=='SQLite-needs-image':selected.append(path);continue
+        value=decode_member(raw);point=value.get('SQL_point');member=value.get('member',{})
+        if (state!='verified-file' or not point or point.get('status')!='consistent_SQL_point_verified'
+                or point.get('source')!=path or point.get('method')!='SQLite-backup-API'
+                or point.get('independent',{}).get('integrity')!='ok'
+                or not point.get('B_acceptance_object')
+                or any(point.get(k)!=member.get(k) or point['independent'].get(k)!=member.get(k) for k in ('bytes','sha256'))):
+            raise ValueError('actual accepted SQL point or explicit API demand required')
+        if path in always:selected.append(path)
+        else:unchanged+=1
+    if not always<=set(scope_sources):raise ValueError('mandatory SQL target absent from selected namespace')
+    return scope_sources,selected,sorted(always),unchanged
 
 
 def request(config,worker,source,client,*,guard,report):
@@ -34,6 +71,7 @@ def request(config,worker,source,client,*,guard,report):
     db=client.connect(reference['index_name'],reference['checkpoint_sha256'])
     try:
         db.execute('create table if not exists SQL_cycle_request(id integer primary key,row text not null)')
+        db.execute('create table if not exists tracking_health(id integer primary key,row text not null)')
         row=db.execute('select row from SQL_cycle_request where id=1').fetchone()
     finally:db.close()
     binding=dict(tag=config['cohort_tag'],source_instance=source.reference['instance'],
@@ -60,15 +98,18 @@ def request(config,worker,source,client,*,guard,report):
                 or any(epoch.get(k)!=binding[k] for k in ('plan_sha256','scope_sha256'))
                 or epoch.get('required_root_bindings')!=source.check()['required_root_bindings']):
             raise ValueError('actual completed current SQL namespace/source binding required')
-        sources=[p for p, in current.execute("select s.path from SQL_sources s join members m on s.path='/'||m.name where m.state!='symlink' order by s.path")]
-        if not sources or len(sources)>1024:raise ValueError('finite actual current SQL queue required')
+        rows=current.execute("select s.path,m.state,m.row from SQL_sources s join members m on s.path='/'||m.name where m.state!='symlink' order by s.path").fetchall()
+        if not rows or len(rows)>1024:raise ValueError('finite actual current SQL scope required')
+        all_sources,sources,always,unchanged=selected_SQL(rows,epoch['required_root_bindings'],SQL_aliases(current),
+            source.plan.get('excluded_rebuildable_directories',[]))
         roots=set(epoch['required_root_bindings'])|{v['resolved'] for v in epoch['required_root_bindings'].values() if v}
-        for path in sources:
+        for path in all_sources:
             source_path(path)
             if not any(path==root or path.startswith(root.rstrip('/')+'/') for root in roots):
                 raise ValueError('SQL point is outside actual declared/resolved source roots')
     finally:current.close()
     value=dict(format='vk-nightly-current-SQL-cohort-request-v1',binding=binding,sources=sources,metadata_delta=delta,
+        SQL_scope_sources=all_sources,always_SQL_API_sources=always,unchanged_SQL_points_reused=unchanged,
         original_SQL_epochs_preserved=True,old_SQL_points_not_requalified_by_inheritance=True)
     value['cohort_id']=identity(value);encoded=json.dumps(value,sort_keys=True,separators=(',',':'))
     if len(encoded.encode())>1024**2:raise ValueError('current SQL request exceeds bounded control frame')
@@ -109,12 +150,15 @@ def run(config,worker,*,report):
         source.check()
         if time.monotonic()-last_delivery>=120:
             source.deliver();last_delivery=time.monotonic()
-    points=run_B(actual,at_component_boundary=boundary)
+    points=(run_B(actual,at_component_boundary=boundary) if cohort['sources'] else
+            dict(more_pending=False,deferred_SQL={}))
     with DesktopControls(worker['B_controls'],guard=guard) as remote:
         db=remote.client.connect(actual['B_index_name'],actual['B_checkpoint_sha256'],readonly=True,working=True)
         try:
-            state=json.loads(db.execute('select row from SQL_phase_state where id=1').fetchone()[0])
-            if state['binding']['current_SQL_cohort_id']!=cohort['cohort_id']:raise ValueError('actual current SQL phase cohort differs')
+            if cohort['sources']:
+                state=json.loads(db.execute('select row from SQL_phase_state where id=1').fetchone()[0])
+                if state['binding']['current_SQL_cohort_id']!=cohort['cohort_id']:raise ValueError('actual current SQL phase cohort differs')
+            else:state=dict(completed={},partial={},deferred={})
         finally:db.close()
         current=remote.client.connect(worker['B_index_name'],worker['B_checkpoint_sha256'])
         try:
@@ -129,6 +173,8 @@ def run(config,worker,*,report):
     delivery=source.deliver()
     result=dict(phase='current-SQL-cohort-points-integrated',cohort_id=cohort['cohort_id'],
         requested_SQL_sources=len(cohort['sources']),completed_current_SQL_points=adopted,
+        complete_SQL_scope_sources=len(cohort['SQL_scope_sources']),unchanged_SQL_points_reused=cohort['unchanged_SQL_points_reused'],
+        always_SQL_API_sources=cohort['always_SQL_API_sources'],
         more_pending=points['more_pending'],deferred_SQL=points['deferred_SQL'],cohort_statistics=statistics(state),
         final_B_delivery=delivery,baseline_accepted=False,schedule_enabled=False,
         OS_SSD_payload_bytes=0,OS_SSD_index_bytes=0,runtime_and_composed_restore_still_required=True)

@@ -74,7 +74,7 @@ def capture_SQL_point(source,client,*,allowed_sources,guard,retained_by_sha,ram_
     acceptance. No WAL/main-file shortcut or source journal mode change occurs.
     """
     if cohort_id is not None:digest(cohort_id)
-    if resume is not None and cohort_id is not None and resume.get('SQL_cohort_id')!=cohort_id:
+    if resume is not None and resume.get('SQL_cohort_id')!=cohort_id:
         raise ValueError('retained SQL API point belongs to another qualification cohort')
     path=Path(source);root=ram_path(ram_root)
     if (str(path) not in allowed_sources or not path.is_absolute() or path.resolve()!=path
@@ -241,7 +241,7 @@ def recover_SQL_layout(source,client,captured,retained,*,root,guard,maximum_imag
         raise ValueError('retained complete original API proof required')
     if cohort_id is not None:
         digest(cohort_id)
-        if captured.get('SQL_cohort_id')!=cohort_id:raise ValueError('retained SQL API qualification cohort differs')
+    if captured.get('SQL_cohort_id')!=cohort_id:raise ValueError('retained SQL API qualification cohort differs')
     layout=retained['layout'];initial=captured['initial_SQL_integrity'];size=captured['bytes'];sha=captured['sha256']
     expected=dict(source=str(source),bytes=size,sha256=sha,segments=layout['segments'],
         source_metadata=captured['source_metadata_before'],method='SQLite-backup-API',

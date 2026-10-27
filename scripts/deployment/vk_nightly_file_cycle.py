@@ -119,8 +119,16 @@ def predecessor(reference,source,*,maximum_seconds,report,clock=time.monotonic,s
     started=clock()
     while True:
         source.check()
-        text=subprocess.check_output(['systemctl','--user','show',reference['unit'],
-            '-p','MainPID','-p','ExecMainStatus','-p','ActiveState'],text=True,timeout=15)
+        if clock()-started>=maximum_seconds:raise TimeoutError('finite predecessor wait expired; preserve all work')
+        try:
+            text=subprocess.check_output(['systemctl','--user','show',reference['unit'],
+                '-p','MainPID','-p','ExecMainStatus','-p','ActiveState'],text=True,timeout=15)
+        except subprocess.TimeoutExpired:
+            # A missing observation is not a terminal producer. Re-poll only
+            # this same read-only handle within the original finite window.
+            report(dict(phase='predecessor-observation-timeout-repoll-same-unit',unit=reference['unit'],
+                        producer_terminal_proven=False,no_duplicate_started=True))
+            sleep(max(0,min(30,maximum_seconds-(clock()-started))));continue
         state=dict(line.split('=',1) for line in text.splitlines())
         if state.get('MainPID')=='0':
             if state.get('ActiveState')!='inactive' or state.get('ExecMainStatus')!='0':
@@ -132,7 +140,8 @@ def predecessor(reference,source,*,maximum_seconds,report,clock=time.monotonic,s
                     or any(value.get(k)!=v for k,v in reference['result_binding'].items())):
                 raise ValueError('actual independent metadata predecessor result differs')
             return value
-        if state.get('ActiveState')!='active':raise ValueError('unexpected predecessor state; no duplicate launch')
+        if state.get('ActiveState') not in ('active','activating','deactivating'):
+            raise ValueError('unexpected predecessor state; no duplicate launch')
         if clock()-started>=maximum_seconds:raise TimeoutError('finite predecessor wait expired; preserve all work')
         report(dict(phase='awaiting-existing-metadata-predecessor',unit=reference['unit'],
                     elapsed_seconds=clock()-started,source_payload_bytes_read=0,backup_payload_bytes_copied=0))

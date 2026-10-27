@@ -62,8 +62,9 @@ class SQLPointTests(unittest.TestCase):
         with self.assertRaises(RuntimeError):self.capture(cohort_id='a'*64,on_prepared=stop)
         before=self.client.payload_bytes_sent
         for layout in (None,{k:saved[k] for k in ('layout','manifest')}):
-            with self.assertRaisesRegex(ValueError,'another qualification cohort'):
-                self.capture(cohort_id='b'*64,resume=saved['captured_RAM_point'],resume_layout=layout)
+            for another in ('b'*64,None):
+                with self.assertRaisesRegex(ValueError,'another qualification cohort'):
+                    self.capture(cohort_id=another,resume=saved['captured_RAM_point'],resume_layout=layout)
         self.assertEqual(self.client.payload_bytes_sent,before)
         self.assertTrue(Path(saved['captured_RAM_point']['working_RAM_path']).exists())
         result=self.capture(cohort_id='a'*64,resume=saved['captured_RAM_point'],resume_layout={k:saved[k] for k in ('layout','manifest')})

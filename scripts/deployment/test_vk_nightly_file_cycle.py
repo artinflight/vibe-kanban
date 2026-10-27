@@ -107,5 +107,19 @@ class FileCycleTests(unittest.TestCase):
                 cycle.predecessor(dict(reference,verification_field='any_boolean'),self.source,maximum_seconds=60,report=lambda _:None)
             commands.assert_not_called()
 
+    def test_observation_timeout_repolls_same_predecessor_and_never_proves_failure(self):
+        result,_=self.write('result',dict(actual_independent_normal_B_composition_reopen_verified=True,
+            source_instance='source-epoch'))
+        reference=dict(unit='vk-nightly-existing-metadata.service',result=result,result_binding={})
+        answers=[cycle.subprocess.TimeoutExpired('systemctl',15),
+                 'MainPID=123\nExecMainStatus=0\nActiveState=deactivating\n',
+                 'MainPID=0\nExecMainStatus=0\nActiveState=inactive\n']
+        reports=[]
+        with patch.object(cycle.subprocess,'check_output',side_effect=answers) as commands:
+            value=cycle.predecessor(reference,self.source,maximum_seconds=60,report=reports.append,sleep=lambda _:None)
+        self.assertEqual(value['source_instance'],'source-epoch');self.assertEqual(commands.call_count,3)
+        self.assertFalse(reports[0]['producer_terminal_proven'])
+        self.assertEqual([c.args[0][3] for c in commands.call_args_list],[reference['unit']]*3)
+
 
 if __name__=='__main__':unittest.main()

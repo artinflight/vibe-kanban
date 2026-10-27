@@ -881,12 +881,14 @@ class BControlTests(unittest.TestCase):
         # than relabeling the older completed point above. Equal API bytes
         # still reuse their actual accepted CAS objects.
         import vk_nightly_sql_cycle as cycle
+        import stat
         from vk_nightly_current_map import CurrentMap,decode_member
         from vk_nightly_namespace import observe
         from vk_nightly_qualification import encode_observation
         from vk_change_journal import scope
         from vk_prep_common import identity
-        plan={'sources':[str(self.original)]};roots={str(self.original):dict(resolved=str(self.original),literal=None)}
+        rootid=[self.root.stat().st_dev,self.root.stat().st_ino,stat.S_IFDIR]
+        plan={'sources':[str(self.root)]};roots={str(self.root):dict(resolved=str(self.root),literal=None,identity=rootid,target_identity=rootid)}
         epoch=dict(instance='current-sql-source',plan_sha256=identity(plan),scope_sha256=identity(scope(plan)),
             start_sequence=1,required_root_bindings=roots)
         ns=sqlite3.connect(':memory:');self.addCleanup(ns.close)
@@ -925,11 +927,26 @@ class BControlTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError,'request binding changed'):
                     cycle.run(dict(settings,cohort_tag='a-different-current-cycle'),prepared,report=lambda _:None)
             self.assertEqual(resumed['cohort_id'],result['cohort_id'])
+            later=dict(settings,cohort_tag='next-normal-night',
+                SQL_phase_index=dict(index_name='current-sql-next-night',checkpoint_sha256=self.sha))
+            with patch.object(cycle,'advance_suffix',return_value={'actual_retained_delta':'next empty suffix'}),\
+                 patch.object(worker,'capture_SQL_point',side_effect=AssertionError('unchanged SQL source rescanned')):
+                reused=cycle.run(later,prepared,report=lambda _:None)
+            self.assertEqual(reused['requested_SQL_sources'],0)
+            self.assertEqual(reused['unchanged_SQL_points_reused'],1)
+            self.assertTrue(reused['actual_independent_B_SQL_cycle_receipt_reopen_verified'])
+            self.assertFalse(reused['baseline_accepted'])
         db=self.client.connect('current-sql-main',map_sha,readonly=True,working=True)
-        row=decode_member(db.execute('select row from members where name=?',(str(self.original)[1:],)).fetchone()[0])
+        state,raw=db.execute('select state,row from members where name=?',(str(self.original)[1:],)).fetchone()
+        row=decode_member(raw)
         self.assertEqual(row['SQL_point']['SQL_cohort_id'],result['cohort_id'])
         self.assertEqual(row['SQL_point']['new_B_encoded_payload_bytes'],0)
         self.assertEqual(db.execute('select count(*) from SQL_acceptance_history').fetchone(),(1,));db.close()
+        file_root={str(self.original):dict(resolved=str(self.original),literal=None,identity=[1,2,stat.S_IFREG])}
+        all_sources,pending,always,unchanged=cycle.selected_SQL([(str(self.original),state,raw)],file_root,{})
+        self.assertEqual(pending,[str(self.original)]);self.assertEqual(always,pending);self.assertEqual(unchanged,0)
+        self.assertEqual(cycle.selected_SQL([(str(self.original),state,raw)],roots,{'logical-alias':str(self.original)})[1],pending)
+        self.assertEqual(cycle.selected_SQL([(str(self.original),state,raw)],roots,{},excluded=[str(self.root)])[1],pending)
 
     def test_actual_worker_serial_boundaries_and_completed_body_recovery_before_upload(self):
         import vk_nightly_typed_worker as worker

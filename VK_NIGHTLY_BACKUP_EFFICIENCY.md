@@ -1834,7 +1834,7 @@ request and its completed API points; a different cohort cannot reset/relabel it
 Older independently accepted images remain body candidates. They never become
 freshly qualified merely by importing an older completed SQL state.
 
-Each new cohort uses the consistent SQLite backup API and seals its cohort ID
+Each newly selected point uses the consistent SQLite backup API and seals its cohort ID
 inside both the prepared layout and B acceptance record. Equal API bytes reuse
 accepted CAS/native bodies without another payload copy. Retained RAM points
 and durable B layouts can resume only in their actual cohort. The controller
@@ -1843,3 +1843,14 @@ reopens its normal B phase receipt. Measured images larger than the admitted RAM
 window stay explicit deferrals; no root/DB is silently dropped. An unresolved
 queue template cannot execute as an empty successful SQL phase. Current runtime,
 complete composed restore and scheduling remain separate requirements.
+
+Ordinary SQL cycles select only journal-invalidated points and explicit always-API
+targets. Accepted unchanged databases under tracked directories reuse their old
+point/epoch without a source-body hash or API recapture. File-only, excluded and
+alias target dependencies whose WAL names lack that coverage remain always-API;
+this list is carried to restart binding. An empty selected queue is accepted only
+after reading the actual nonempty SQL scope and its accepted points, not from an
+unresolved template. Native-protocol tests cover that next unchanged night as
+well as mandatory isolated-file/alias/exclusion cases. Observation timeouts only
+re-poll the same predecessor within its finite window; they never prove death or
+launch a replacement. Retained API points cannot have their cohort ID stripped.

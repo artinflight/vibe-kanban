@@ -34,12 +34,14 @@ def checksum(value):
     return hashlib.sha256(canonical(value)).hexdigest()
 
 
-def stream_checksum(stream):
+def stream_checksum(stream,*,checkpoint=lambda:None):
     # Keep metadata authentication compatible with the installed Python runtimes;
     # hashlib.file_digest is only a convenience API added in Python 3.11.
-    h = hashlib.sha256()
+    h = hashlib.sha256();since_check=0;checkpoint()
     for block in iter(lambda: stream.read(BLOCK), b''):
-        h.update(block)
+        h.update(block);since_check+=len(block)
+        if since_check>=16*1024**2:checkpoint();since_check=0
+    checkpoint()
     return h.hexdigest()
 
 
@@ -256,7 +258,7 @@ def held_index(provider, *references):
             stream = stack.enter_context(provider.open(reference['layer'], reference['selector']))
             st = os.fstat(stream.fileno())
             if (st.st_size != reference['bytes']
-                    or stream_checksum(stream) != digest(reference['sha256'])):
+                    or stream_checksum(stream,checkpoint=provider.admission_check) != digest(reference['sha256'])):
                 raise ValueError('authenticated index bytes differ')
             streams.append((stream, fingerprint(st)))
             connection = sqlite3.connect('file:/proc/self/fd/' + str(stream.fileno()) + '?mode=ro&immutable=1', uri=True)

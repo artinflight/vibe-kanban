@@ -333,6 +333,63 @@ class BControlTests(unittest.TestCase):
             draft.request('build-current-descriptor',reference=reference,consumer_contract=contract)
         draft.close()
 
+    def finalization_fixture(self):
+        from test_vk_nightly_recovery_descriptor import fixture
+        root=self.root/'finalizer';root.mkdir()
+        db,path,contract,rows,body,_=fixture(root);db.close();mapsha=self.import_other(path)
+        contract['dependencies']['nightly-controls-v1']['native_root']=str(self.controls)
+        catalog=self.root/'finalizer-base.sqlite'
+        with sqlite3.connect(catalog) as db:
+            db.execute('create table provenance(source_catalog_sha256 text,restore_proof_sha256 text)')
+            db.execute('insert into provenance values(?,?)',('a'*64,'b'*64))
+            db.execute('create table bodies(sha256 text,bytes integer,name text)')
+            note=rows['home/state/note'];db.execute('insert into bodies values(?,?,?)',(note['sha256'],note['bytes'],'note'))
+        db.close();base=self.import_other(catalog)
+        settings=dict(current_map=dict(index_name='finalizer-main',checkpoint_sha256=mapsha),map_layer='nightly-controls-v1',
+            contract=contract,cycle_binding=dict(source_instance='fixture-current',through=20),
+            base_catalog=dict(checkpoint_sha256=base,bytes=catalog.stat().st_size),recipe_catalogs=[],guard=lambda:None)
+        return settings,body,rows
+
+    def test_actual_native_finalize_to_executable_normal_composed_restore(self):
+        from datetime import datetime,timedelta,timezone
+        from vk_nightly_finalize_current import finalize,consumer_packet
+        from vk_nightly_composed_consumer import run
+        from vk_typed_recovery import checksum
+        settings,body,rows=self.finalization_fixture();progress=[]
+        result=finalize(self.client,**settings,report=progress.append)
+        self.assertEqual(result['content_proof']['file_points'],1)
+        self.assertTrue(result['sealed_map']['independent_stream_readback_verified'])
+        self.assertFalse(result['whole_baseline_accepted']);self.assertTrue(progress)
+        again=finalize(self.client,**settings)
+        self.assertEqual(again['descriptor_sha256'],result['descriptor_sha256'])
+        self.assertTrue(again['sealed_map']['reused_completed_snapshot'])
+        # Only this fixture creates the normal POSIX lease. Production must
+        # supply its independently admitted existing provider leases.
+        (self.controls/'RECOVERY_READ.lease').touch()
+        roots={'accepted-base':str(body),'nightly-controls-v1':str(self.controls)}
+        placement=dict(roots=roots,expected_uid=os.getuid(),expected_gid=os.getgid(),
+            root_bindings={k:[Path(p).stat().st_dev,Path(p).stat().st_ino] for k,p in roots.items()},
+            lease_paths={k:str(Path(p)/'RECOVERY_READ.lease') for k,p in roots.items()})
+        packet=consumer_packet(result,provider_placement=placement,readback_sources=['/home/state/note'],
+            scratch_parent=str(self.root),maximum_scratch_bytes=17*1024**2,maximum_readback_bytes=1024**2,
+            remaining_seconds=30,whole_cycle_deadline_UTC=(datetime.now(timezone.utc)+timedelta(seconds=30)).isoformat(),
+            Linux_resource_admission=dict(memory_floor_bytes=0,swap_floor_bytes=0))
+        accepted=run(packet,checksum(packet),guard=lambda:None)
+        self.assertTrue(accepted['independent_composed_restore_verified'])
+        self.assertEqual(accepted['complete_file_points_verified'],1)
+        self.assertEqual(accepted['actual_selected_restore_bytes'],rows['home/state/note']['bytes'])
+        self.assertFalse(accepted['original_epoch_complete']);self.assertFalse(accepted['schedule_enabled'])
+
+    def test_finalizer_refuses_unresolved_points_before_seal_and_requires_SQL_request(self):
+        from vk_nightly_finalize_current import finalize
+        settings,_,_=self.finalization_fixture()
+        db=self.client.connect(settings['current_map']['index_name'],settings['current_map']['checkpoint_sha256'])
+        db.execute("update members set state='file-needs-capture' where name='home/state/note'");db.close()
+        with patch.object(self.client,'seal_checkpoint',side_effect=AssertionError('unfinished map copied')):
+            with self.assertRaisesRegex(ValueError,'unresolved required map points'):finalize(self.client,**settings)
+        settings['contract']['required_SQL']=['/home/state/needed.sqlite']
+        with self.assertRaisesRegex(ValueError,'current SQL request required'):finalize(self.client,**settings)
+
     def test_native_composed_audit_requires_immutable_map_and_accepted_object_identities(self):
         from vk_nightly_current_map import FORMAT,encode_member
         from vk_nightly_b_controls import NativeControlError

@@ -254,11 +254,17 @@ def recover_SQL_layout(source,client,captured,retained,*,root,guard,maximum_imag
         raise ValueError('durable SQL layout/original API proof differs')
     if type(retained['manifest'].get('bytes')) is not int or not 0<retained['manifest']['bytes']<=1024**2:
         raise ValueError('bounded durable SQL manifest required')
-    guard();started=time.monotonic();uploaded=client.payload_bytes_sent
+    guard();started=time.monotonic();uploaded=client.payload_bytes_sent;last_health=None;health_RPC_count=0
     def check():
+        nonlocal last_health,health_RPC_count
         guard()
         if time.monotonic()-started>timeout_seconds:raise TimeoutError('finite SQL recovery; B layout retained')
-        client.health()
+        # The native receiver already guards every decoded block. A separate
+        # roundtrip per retained chunk adds no stronger STOP/capacity check.
+        # Match normal SQL capture's five-second idle/admission keepalive;
+        # retain every-block host guards and the same whole recovery deadline.
+        if last_health is None or time.monotonic()-last_health>=5:
+            client.health();last_health=time.monotonic();health_RPC_count+=1
     fs=os.statvfs(root)
     if fs.f_bavail*fs.f_frsize<size+client.maximum+16*1024**2:
         raise OSError('actual RAM independent SQL recovery scratch unavailable')
@@ -288,9 +294,11 @@ def recover_SQL_layout(source,client,captured,retained,*,root,guard,maximum_imag
         dependency=None,prepared_manifest=retained['manifest'],new_B_encoded_payload_bytes=0,
         source_API_image_bytes=0,original_API_point_bytes=size,baseline_accepted=False,
         source_API_point_qualifies_later_epoch_not_original=True,
+        recovery_health_RPC_count=health_RPC_count,recovery_health_RPC_interval_seconds=5,
         verified_RAM_duplicates=[dict(path=str(restored),identity=restored_identity)])
     if cohort_id is not None:record['SQL_cohort_id']=cohort_id
-    check();record['B_acceptance_object']=client.ensure(json.dumps(record,sort_keys=True,separators=(',',':')).encode())
+    check();record['recovery_health_RPC_count']=health_RPC_count
+    record['B_acceptance_object']=client.ensure(json.dumps(record,sort_keys=True,separators=(',',':')).encode())
     on_prepared(dict(accepted=record));record['new_B_total_encoded_bytes_including_control']=client.payload_bytes_sent-uploaded
     release_verified_ram(restored,restored_identity)
     return record

@@ -156,13 +156,16 @@ class SQLPointTests(unittest.TestCase):
         def no_source(*args,**kwargs):
             if str(self.source) in str(args[0]):self.fail('durable B recovery accessed later live source')
             return connect(*args,**kwargs)
-        with patch('vk_nightly_sql_point.sqlite3.connect',side_effect=no_source):
+        with patch('vk_nightly_sql_point.sqlite3.connect',side_effect=no_source), \
+             patch.object(self.client,'health',wraps=self.client.health) as health:
             result=self.capture(resume=original,resume_layout={k:partial[k] for k in ('layout','manifest')})
         self.assertTrue(result['recovered_from_durable_B_layout'])
         self.assertEqual(result['sha256'],original['sha256']);self.assertEqual(result['source_API_image_bytes'],0)
         self.assertEqual(result['new_B_encoded_payload_bytes'],0)
         self.assertEqual(result['independent']['integrity'],'ok')
         self.assertTrue(result['independent']['independent_Linux_metadata_verified'])
+        self.assertEqual(result['recovery_health_RPC_count'],health.call_count)
+        self.assertLess(health.call_count,len(partial['layout']['segments'])+3)
         self.assertEqual(list(self.root.glob('nightly-sql-*')),[])
 
     def test_changed_durable_SQL_layout_is_rejected_without_source_or_new_scratch(self):

@@ -41,11 +41,16 @@ def verify_prepared(client,worker,sample):
 
 
 def run(config,worker,*,report):
-    started=time.monotonic();guard=lambda:host_guard(worker,started)
+    started=time.monotonic()
+    # Waiting has its own already-declared finite allowance. Applying the
+    # shorter capture timeout here killed a healthy queued one-hour runtime
+    # phase after one hour of a sixteen-hour predecessor wait.
+    guard_config=dict(worker,timeout_seconds=config['maximum_predecessor_seconds'])
+    guard=lambda:host_guard(guard_config,started)
     source=Source(config['source_observer'],worker['B_controls'],guard=guard);source.check()
     ref=config['SQL_predecessor'];read_owned(ref['config'],ref['config_sha256'])
     predecessor(ref,source,maximum_seconds=config['maximum_predecessor_seconds'],report=report)
-    started=time.monotonic()
+    started=time.monotonic();guard_config=worker
     paths=config['runtime_paths']
     if (not isinstance(paths,list) or not 1<=len(paths)<=16 or len(paths)!=len(set(paths))
             or set(paths)!=set(worker['map_binding'].get('source_paths',[]))

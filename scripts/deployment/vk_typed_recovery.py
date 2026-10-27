@@ -9,7 +9,6 @@ callbacks and flock are not a security boundary against an uncooperative owner.
 """
 import base64
 from contextlib import ExitStack, contextmanager
-import fcntl
 from functools import lru_cache
 import hashlib
 import json
@@ -95,6 +94,7 @@ class LocalDependencies:
 
     @contextmanager
     def held(self):
+        import fcntl
         if (self.active or set(self.roots) != set(self.identities)
                 or set(self.lease_paths) != set(self.roots)):
             raise ValueError('invalid or already-held dependency set')
@@ -155,6 +155,9 @@ class ComposedIndex:
     """
     def __init__(self, base, overlay, check):
         self.base, self.overlay, self.check = base, overlay, check
+        from vk_nightly_current_map import runtime_components
+        self.runtime_components=dict(getattr(base,'runtime_components',{}))
+        self.runtime_components.update(runtime_components(overlay,self._entry))
         for connection in (base, overlay):
             if isinstance(connection, sqlite3.Connection):
                 connection.execute('pragma query_only=on')
@@ -342,7 +345,7 @@ class HeldRecoverySet:
     def validate(self, *, plan_sha256, scope_sha256, required_sources,
                  original_sources, required_pins, required_SQL,
                  journal_scope_sha256=None, immutable_sources=None, enrollment_resolution=None,
-                 required_root_aliases=None):
+                 required_root_aliases=None, required_runtime_files=None):
         """Validate the complete namespace and exact caller-selected contract.
 
         Required sets come from the consumer's authenticated package, not from
@@ -375,6 +378,19 @@ class HeldRecoverySet:
                     or target_row.get('kind') not in ('directory', 'file', 'hardlink')):
                 raise ValueError('source-root alias link/target coverage differs')
             target_roots.add(target)
+        runtime=required_runtime_files or {}
+        if (not isinstance(runtime,dict) or d.get('always_runtime_files',{})!=runtime
+                or getattr(self.index,'runtime_components',{})!=runtime):
+            raise ValueError('explicit separately sampled runtime component contract differs')
+        for path,point in runtime.items():
+            if (not isinstance(path,str) or path!='/'+key(path.removeprefix('/'))
+                    or any(path==root or path.startswith(root.rstrip('/')+'/') for root in set(required_sources)|target_roots)
+                    or point.get('kind')!='file' or type(point.get('bytes')) is not int or point['bytes']<0):
+                raise ValueError('finite outside-kernel runtime file point required')
+            for field in ('sha256','source_point_sha256','independent_proof_sha256','component_index_sha256'):digest(point.get(field))
+            row=self.index.entry(path[1:])
+            if row.get('kind')!='file' or any(row.get(k)!=point[k] for k in ('sha256','bytes')):
+                raise ValueError('separately sampled runtime file differs')
         effective_sources = set(required_sources) | target_roots
         journal_scope_sha256 = journal_scope_sha256 or scope_sha256
         if (d.get('format') != FORMAT or d.get('source_prefix') != '/'
@@ -444,7 +460,7 @@ class HeldRecoverySet:
             absolute = '/' + name
             if any(absolute == path or absolute.startswith(path.rstrip('/') + '/') for path in resolved_paths):
                 raise ValueError('vanished enrollment subtree remains in selected map')
-            if not any(absolute == root or absolute.startswith(root.rstrip('/') + '/') for root in effective_sources):
+            if absolute not in runtime and not any(absolute == root or absolute.startswith(root.rstrip('/') + '/') for root in effective_sources):
                 raise ValueError('member outside declared source scope')
             if absolute in required_sources:
                 source_members.add(absolute)
@@ -595,7 +611,9 @@ class HeldRecoverySet:
         self.check()
         return {'format': FORMAT, 'descriptor_sha256': self.expected_sha256,
                 'watched': watched, 'writer_fence_verified': False,
-                'activation_authorized': False, 'fresh_final_SQLite_API_required': True}
+                'activation_authorized': False, 'fresh_final_SQLite_API_required': True,
+                'runtime_files_to_observe_always': sorted(self.descriptor.get('always_runtime_files',{})),
+                'kernel_coverage_for_runtime_files_claimed': False}
 
 
 def read_rows(stream, *, expected_sha256, expected_count):

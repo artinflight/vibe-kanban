@@ -165,6 +165,36 @@ def pending_replay_for_epoch(database,instance):
     return selected[0] if selected else None
 
 
+def runtime_point_reference(record):
+    """Authenticate one independently read-back, separately sampled file point."""
+    accepted=record['accepted'];member=accepted['member'];point=accepted.get('qualification',{});proof=accepted.get('independent_file_proof',{})
+    source=record['source'];key(source.removeprefix('/'))
+    if (source!='/'+source.removeprefix('/') or member.get('kind')!='file'
+            or point.get('source')!=source or point.get('row')!=member or point.get('state')!='qualified-retained-body'
+            or not isinstance(point.get('source_identity'),list) or len(point['source_identity'])!=9
+            or not member.get('segments')
+            or proof.get('independent_ordered_B_readback_sha256')!=member.get('sha256')
+            or proof.get('independent_ordered_B_readback_bytes')!=member.get('bytes')
+            or proof.get('source_metadata')!={k:member[k] for k in ('mode','uid','gid','mtime_ns','xattrs')}):
+        raise ValueError('complete independently read-back runtime file point required')
+    classify(source[1:],dict(member,identity=point['source_identity']),point,SQL_sources=set())
+    component=record['component'];digest(component['sha256'])
+    return dict(kind='file',bytes=member['bytes'],sha256=member['sha256'],
+        source_point_sha256=hashlib.sha256(encode_member(point)).hexdigest(),
+        independent_proof_sha256=hashlib.sha256(encode_member(proof)).hexdigest(),component_index_sha256=component['sha256'])
+
+
+def runtime_components(connection,lookup):
+    if not connection.execute("select 1 from sqlite_master where name='runtime_component_points'").fetchone():return {}
+    result={}
+    for name,raw in connection.execute('select name,row from runtime_component_points order by name'):
+        value=decode_member(raw);point=runtime_point_reference(value)
+        if value['source']!='/'+name or lookup(name)!=value['accepted']['member']:
+            raise ValueError('runtime component point differs from selected member')
+        result['/'+name]=point
+    return result
+
+
 class SealedMemberIndex:
     """Typed-reader view of one authenticated complete current-map image.
 
@@ -201,6 +231,8 @@ class SealedMemberIndex:
             if (not point or point.get('source')!=target or main['sha256']!=proofs[name].get('snapshot_sha256')
                     or main['sha256']!=point.get('sha256') or point.get('independent',{}).get('integrity')!='ok'):
                 raise ValueError('SQL alias lacks an independently accepted target point')
+
+        self.runtime_components=runtime_components(connection,self._entry)
 
     def _entry(self,name):
         key(name)
@@ -657,6 +689,54 @@ class CurrentMap:
             deferred_points=sum(state=='current-namespace-replay-required' for *_,state,encoded in prepared),
             SQL_API_sources_discovered=sum(state=='SQLite-needs-image' for *_,state,encoded in prepared),
             backup_payload_bytes_copied=0,current_baseline_accepted=False)
+
+    def adopt_runtime_component(self,component,reference,expected_files,*,checkpoint):
+        """Merge an authenticated finite runtime component, without claiming watches.
+
+        The native provider authenticates the immutable component image/lease.
+        Current hash pins come from the installed consumer's finite source
+        observation. Main journal scope/roots are unchanged; every normal cycle
+        and restart must independently sample these explicit files again.
+        """
+        self.check();db=self.db
+        row=db.execute('select binding,complete,suffix_complete from namespace_reconciliation where id=1').fetchone()
+        if not row or row[1:]!=(1,1):raise ValueError('complete main namespace/suffix required before runtime component')
+        roots=json.loads(row[0])['required_root_bindings']
+        coverage=set(roots)|{r['resolved'] for r in roots.values() if r}
+        own=component.execute('select binding,complete from metadata').fetchone()
+        if not own or own[1]!=1:raise ValueError('complete independently accepted runtime component required')
+        binding=json.loads(own[0])
+        if (binding.get('format')!='vk-nightly-explicit-runtime-dependency-component-v1'
+                or binding.get('complete_global_scope') is not False or binding.get('kernel_journal_coverage_claimed') is not False
+                or set(binding.get('source_paths',[]))!=set(expected_files)):
+            raise ValueError('exact separate runtime component scope required')
+        prepared=[]
+        for name,state,raw in component.execute('select name,state,row from members order by name'):
+            checkpoint();source='/'+key(name);accepted=decode_member(raw)
+            if (source not in expected_files or state!='verified-file'
+                    or any(source==root or source.startswith(root.rstrip('/')+'/') for root in coverage)):
+                raise ValueError('runtime component cannot replace or widen kernel-journal roots')
+            record=dict(source=source,accepted=accepted,component=reference);point=runtime_point_reference(record)
+            if (any(point.get(k)!=expected_files[source].get(k) for k in ('kind','bytes','sha256'))
+                    or accepted['qualification']['source_identity']!=expected_files[source].get('source_identity')):
+                raise ValueError('runtime component differs from finite current source pins')
+            prepared.append((name,encode_member(record),raw,point))
+        if {'/'+r[0] for r in prepared}!=set(expected_files):raise ValueError('runtime component omits required files')
+        db.execute('create table if not exists runtime_component_points(name text primary key,row blob) without rowid')
+        db.execute('create table if not exists runtime_component_history(name text,sha256 text,row blob,primary key(name,sha256)) without rowid')
+        db.execute('begin immediate')
+        try:
+            for name,record,member,point in prepared:
+                old=db.execute('select row from runtime_component_points where name=?',(name,)).fetchone()
+                if old:db.execute('insert or ignore into runtime_component_history values(?,?,?)',(name,hashlib.sha256(old[0]).hexdigest(),old[0]))
+                db.execute('insert into runtime_component_points values(?,?) on conflict(name) do update set row=excluded.row',(name,record))
+                db.execute("insert into members values(?,'verified-file',?) on conflict(name) do update set state=excluded.state,row=excluded.row",(name,member))
+            checkpoint();self.check();db.execute('commit')
+        except BaseException:
+            if db.in_transaction:db.execute('rollback')
+            raise
+        return dict(always_runtime_files={'/'+n:p for n,_,_,p in prepared},source_payload_bytes_read=0,backup_payload_bytes_copied=0,
+                    kernel_journal_coverage_claimed=False,main_scope_unchanged=True,current_baseline_accepted=False)
 
     def index_completed_file_carriers(self,*,checkpoint,maximum_paths,after=('', '')):
         """Index already independently accepted bodies, including interrupted runs.

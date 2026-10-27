@@ -139,6 +139,57 @@ class BControlTests(unittest.TestCase):
         view=other.connect('sealed-view',first['sha256'],readonly=True)
         self.assertEqual(view.execute('select id,value from point').fetchall(),[(1,b'current accepted fixture point')]);view.close()
 
+    def test_actual_native_runtime_component_adoption_seal_and_complete_descriptor(self):
+        from test_vk_nightly_recovery_descriptor import fixture,runtime_fixture
+        from vk_nightly_b_controls import NativeControlError
+        root=self.root/'native-runtime';root.mkdir()
+        db,path,contract,_,body,_=fixture(root);db.close()
+        runtime,runtime_path,expected,source,_=runtime_fixture(root,body);runtime.close()
+        main_sha=self.import_other(path);component_sha=self.import_other(runtime_path)
+        main=self.client.connect('runtime-main',main_sha)
+        reference=dict(format='vk-nightly-current-member-map-v1',layer='nightly-controls-v1',
+            selector=component_sha+'.sqlite',sha256=component_sha,bytes=runtime_path.stat().st_size)
+        mutable=self.client.connect('runtime-mutable',component_sha)
+        with self.assertRaisesRegex(NativeControlError,'accepted immutable runtime'):
+            main.request('adopt-runtime-component',component_index=mutable.key,component_reference=reference,expected_files=expected)
+        mutable.close()
+        component=self.client.connect('runtime-immutable',component_sha,readonly=True)
+        altered={p:dict(row,source_identity=[0]*9) for p,row in expected.items()}
+        with self.assertRaisesRegex(NativeControlError,'current source pins'):
+            main.request('adopt-runtime-component',component_index=component.key,component_reference=reference,expected_files=altered)
+        adopted=main.request('adopt-runtime-component',component_index=component.key,component_reference=reference,expected_files=expected)
+        self.assertFalse(adopted['kernel_journal_coverage_claimed']);self.assertEqual(adopted['backup_payload_bytes_copied'],0)
+        sealed=self.client.seal_checkpoint(main.key,dict(runtime=adopted['always_runtime_files']));main.close();component.close()
+        contract['dependencies']['nightly-controls-v1']['native_root']=str(self.controls)
+        contract['always_runtime_files']=adopted['always_runtime_files']
+        view=self.client.connect('runtime-descriptor',sealed['sha256'],readonly=True)
+        reference=dict(format='vk-nightly-current-member-map-v1',layer='nightly-controls-v1',
+            selector=sealed['sha256']+'.sqlite',sha256=sealed['sha256'],bytes=sealed['bytes'])
+        descriptor=view.request('build-current-descriptor',reference=reference,consumer_contract=contract)
+        self.assertEqual(descriptor['always_runtime_files'],adopted['always_runtime_files'])
+        self.assertEqual(descriptor['sources'],['/home/state']);self.assertFalse(descriptor['independent_current_restore_accepted'])
+        view.close()
+
+    def test_actual_native_immutable_provider_builds_complete_descriptor_and_refuses_draft(self):
+        from test_vk_nightly_recovery_descriptor import fixture
+        from vk_nightly_b_controls import NativeControlError
+        root=self.root/'descriptor-fixture';root.mkdir()
+        db,path,contract,rows,_,_=fixture(root,SQL=True);db.close()
+        digest=self.import_other(path);contract['dependencies']['nightly-controls-v1']['native_root']=str(self.controls)
+        reference=dict(format='vk-nightly-current-member-map-v1',layer='nightly-controls-v1',selector=digest+'.sqlite',
+            bytes=path.stat().st_size,sha256=digest)
+        view=self.client.connect('descriptor-read',digest,readonly=True)
+        result=view.request('build-current-descriptor',reference=reference,consumer_contract=contract)
+        self.assertEqual(result['member_count'],len(rows));self.assertFalse(result['independent_current_restore_accepted'])
+        self.assertEqual(result['journal']['end'],20)
+        with self.assertRaisesRegex(NativeControlError,'exact admitted immutable'):
+            view.request('build-current-descriptor',reference=dict(reference,sha256='f'*64),consumer_contract=contract)
+        view.close()
+        draft=self.client.connect('descriptor-draft',digest)
+        with self.assertRaisesRegex(NativeControlError,'accepted immutable checkpoint'):
+            draft.request('build-current-descriptor',reference=reference,consumer_contract=contract)
+        draft.close()
+
     def test_sealed_current_map_consumed_by_normal_typed_reader_without_second_index(self):
         from vk_nightly_current_map import FORMAT,SealedMemberIndex,encode_member
         db=self.client.connect('ready-map',self.sha)

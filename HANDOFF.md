@@ -36,20 +36,15 @@ health/package files. No OS/work-SSD backup payload or fallback is allowed.
   First index/reuse completed file-history bodies too; later qualification can
   otherwise demote the same completed body to pending. Do not repeat namespace.
 
-## Newly completed, reusable evidence
+## Retained component inputs
 
-- terminal-gap-recovery-inodes-v10 completed10:21EDT, exit0:
-  783552metadata paths,98567directories,0errors,282386432B B index.
-  Actual normal independent B result reopen passed. Do not repeat this walk.
-- qualification-stage-B-inodes-v10 completed10:34EDT, exit0:
-  18539points;14031retained body matches;4494pending;13SQL discoveries;
-  1deferred. Actual stable hash bytes4971262421; no payload copied.
-  Normal independent B stage/cursor reopen passed. Reuse this stage by identity.
-- The previous body phase is TERMINAL, not still running: file-points-worker-B-inodes-v1
-  stopped10:08EDT at final acceptance on native SQLite BUSY. Its4393phase
-  completions and4398total accepted point-history records remain on B. Its
-  source5691baa74/config036bca0d was never changed while active. New code retries
-  only the verified idempotent acceptance, never the completed upload/readback.
+- terminal-gap-recovery-inodes-v10:783552paths/0errors, completed10:21EDT.
+- qualification-stage-B-inodes-v10:18539points,14031retained/4494pending,
+  13SQL discoveries/1deferred,4971262421hashed bytes; completed10:34EDT.
+  Both normal independent B reopens passed. Do not repeat these phases.
+- file-points-worker-B-inodes-v1 is terminal after10:08EDT SQLite BUSY;
+  all4398accepted history points remain. The successor retries only final
+  idempotent metadata acceptance, never a completed upload/readback.
 
 ## Preserved gaps and corrected failures
 
@@ -97,12 +92,15 @@ current source resolution never proves original archive inclusion. Current
 runtime/served frontend remain a separate later binding. Old runtime observations are preparation, not final-current acceptance.
 The runtime-dependencies-20261027-v1 component still needs gateway.mjs3048B
 and route.json152B; always sample them outside the117-root kernel plan.
+Fresh13:02EDT 3200B source qualification is in b-controls-v1/
+RUNTIME_DEPENDENCY_CURRENT_SAMPLE_20261027.private.json; no B body copied.
 
 Current-set acceptance still needs final body/SQL/runtime integration, a sealed
 authenticated B-backed current descriptor and independent composed restore.
-B-native immutable snapshot plus independent stream/hash/SQLite acceptance
-and normal typed-reader reopening are now implemented/tested. Apply only to
-the completed current map; tests alone are not its actual descriptor acceptance.
+B-native sealing, complete descriptor construction and separate finite runtime
+component adoption are implemented/tested. Adopt fresh gateway/route points
+after body ownership releases; kernel117-root scope stays separate. Then use
+the normal independent reader; source tests are not actual current acceptance.
 Then finish the normal incremental cycle/restart delta interface and actual
 installed worker/config/health integration. The older calendar invokes the
 legacy supervisor/job path; do not enable it merely because its fixtures pass.
@@ -111,9 +109,7 @@ installed binding, interruption/Desktop-off/low-SSD checks and next-run proof.
 
 ## Source/validation continuity
 
-Runtime
-packages remain pinned to their recorded commits; later documentation commits
-do not alter them. PR263 is the sole integration PR. No bytecode tracking. Rust format passes; full format is currently
+Installed packages remain pinned; later source/docs commits do not alter them. PR263 is the sole integration PR. No bytecode tracking. Rust format passes; full format is currently
 blocked by missing Prettier. Run narrow relevant checks/ops and record actual
 exact-head CI separately from older green heads.
 

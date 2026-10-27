@@ -26,8 +26,14 @@ def validate_control(config,folder):
     if hashlib.sha256(source.encode()).hexdigest()!=config['control_module_sha256']:
         raise ValueError('native B control module pin changed')
     portable={}
-    for module in ('vk_nightly_control_format','vk_nightly_file_version','vk_nightly_checkpoints',
-                   'vk_nightly_qualification','vk_nightly_current_map'):
+    modules=('vk_nightly_control_format','vk_nightly_file_version','vk_nightly_checkpoints',
+             'vk_nightly_qualification','vk_nightly_current_map')
+    descriptor=('vk_typed_recovery','vk_nightly_recovery_descriptor')
+    declared=set(config['portable_source_sha256'])
+    if declared-set(modules)-set(descriptor) or bool(declared&set(descriptor)) and not set(descriptor)<=declared:
+        raise ValueError('exact fixed portable descriptor source closure required')
+    if set(descriptor)<=declared:modules+=descriptor
+    for module in modules:
         code=(folder/(module+'.py')).read_text()
         if hashlib.sha256(code.encode()).hexdigest()!=config['portable_source_sha256'][module]:
             raise ValueError('native B portable source pin changed: '+module)

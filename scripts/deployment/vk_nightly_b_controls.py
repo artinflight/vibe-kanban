@@ -374,6 +374,33 @@ class Store:
         if key in self.readonly_identities and self.objects.file_identity(path)!=self.readonly_identities[key]:
             raise ValueError('immutable B checkpoint changed while reading')
         if op=='seal-working':return self.seal_working(key,db,path,q)
+        if op=='adopt-runtime-component':
+            if key not in self.writable:raise ValueError('owned main map writer required')
+            source=name(q['component_index']);component,cp,ci,_=self.handles[source]
+            reference=q['component_reference']
+            if (source not in self.readonly_identities or reference.get('sha256')!=cp.stem
+                    or reference.get('bytes')!=cp.stat().st_size or reference.get('selector')!=cp.name):
+                raise ValueError('actual independently accepted immutable runtime component required')
+            if self.objects.file_identity(cp)!=self.readonly_identities[source]:raise ValueError('runtime component image changed')
+            import vk_nightly_current_map as current
+            value=current.CurrentMap();value.db=db;value.path=path;value.inode=tuple(inode)
+            return value.adopt_runtime_component(component,reference,q['expected_files'],checkpoint=lambda:self.guard(LIMIT))
+        if op=='build-current-descriptor':
+            if key not in self.readonly_identities:
+                raise ValueError('independently accepted immutable checkpoint required for descriptor')
+            reference=q['reference'];contract=q['consumer_contract']
+            if (reference.get('sha256')!=path.stem or reference.get('bytes')!=path.stat().st_size
+                    or reference.get('selector')!=path.name
+                    or not isinstance(contract.get('dependencies'),dict)
+                    or contract['dependencies'].get(reference.get('layer'),{}).get('native_root','').replace('\\','/').rstrip('/').casefold()
+                        !=str(self.root).replace('\\','/').rstrip('/').casefold()):
+                raise ValueError('exact admitted immutable B control reference required')
+            from vk_nightly_recovery_descriptor import build
+            def checked():
+                self.guard(0)
+                if self.objects.file_identity(path)!=self.readonly_identities[key]:
+                    raise ValueError('immutable descriptor image changed')
+            return build(db,reference,contract,checkpoint=checked)
         if op=='check':return dict(in_transaction=db.in_transaction,bytes=path.stat().st_size)
         if op=='storage-status':
             temporary=str(self.temporary_directory)

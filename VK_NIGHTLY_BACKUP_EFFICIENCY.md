@@ -1695,3 +1695,41 @@ by a later demotion to pending: the worker reuses its accepted history body
 without another source capture or upload. Journal boundary callbacks are
 observed outside both object upload and independent readback. The new native
 health/snapshot/worker/current-map/composed-reader suite passes122tests.
+
+The completed-current-map descriptor builder now runs beside an independently
+accepted immutable B index. The installed consumer supplies the full source
+contract, runtime pins, required SQL cohort, root aliases and authenticated
+carrier identities. The builder authenticates every retained current-epoch
+journal input and contiguous cursor, binds actual consistent API-image epochs,
+normalizes only explicitly covered sidecars, and requires actual SQL alias
+targets. It retains original gap-manifest/restore proof identities and never
+relabels later supplements as original archive inclusion.
+
+The same ordinary typed member validator checks the resulting complete map.
+The builder still returns independent_current_restore_accepted=false: actual
+leased dependency readback and composed restoration remain required before
+publishing an operational baseline or enabling the calendar. Native control
+imports for this path require both exact pinned typed-reader and descriptor
+modules. Ordinary Linux dependency consumers retain their real flock leases;
+metadata-only imports do not emulate POSIX locks on Windows. The active capture
+package is immutable and is not replaced by these later source changes.
+
+Separately sampled runtime files are now explicit in the typed descriptor and
+restart catch-up result. Adoption requires an independently accepted immutable
+component, exact current full hash/length/source fingerprint, ordered readback
+proof and unchanged main scope. It preserves prior component points and never
+claims these files were kernel-watched. The normal reader requires the same
+consumer-authenticated runtime point map, validates it against the sealed index,
+and returns runtime_files_to_observe_always for the final restart delta. These
+finite dependencies can be restored without expanding or rewriting the main
+journal's117-root contract. Production adoption still waits for the sole
+current body writer and the actual fresh two-file component proof.
+
+A finite runtime source sampler now independently re-observes only the declared
+files with a stable full hash/fingerprint/Linux-metadata bracket and explicit
+read budget. Actual13:02EDT sampling read3200bytes across the two gateway/route
+files, with no backup copy, new B reader or main inventory. This later source
+point is not yet a captured/adopted component or whole-current acceptance.
+The133focused native-control/current-map/descriptor/typed-worker/reader tests
+pass, including real fixture SQL API-image restore/integrity and outside-scope
+runtime readback/catch-up obligations.

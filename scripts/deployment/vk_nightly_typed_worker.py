@@ -7,6 +7,7 @@ an unaccepted bootstrap configuration cannot be called a commissioned nightly.
 """
 import argparse
 import ast
+from datetime import datetime,timezone
 import hashlib
 import json
 import os
@@ -142,6 +143,11 @@ def configuration(path,expected):
 
 
 def host_guard(config,started):
+    if 'whole_cycle_deadline_UTC' in config:
+        deadline=datetime.fromisoformat(config['whole_cycle_deadline_UTC'])
+        if deadline.tzinfo is None:raise ValueError('aware original whole-cycle deadline required')
+        if datetime.now(timezone.utc)>=deadline:
+            raise ResourceDeferred('original whole-cycle deadline expired; preserve completed points')
     if not os.path.ismount('/mnt/vk-storage'):raise ResourceDeferred('actual secondary SSD mount unavailable')
     # A B-native worker creates no SSD index, rollback journal, state or temp
     # payload. Its optional <=64KiB health mirror cannot be a 2GiB admission

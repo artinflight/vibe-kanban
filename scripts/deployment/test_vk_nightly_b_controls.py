@@ -390,6 +390,124 @@ class BControlTests(unittest.TestCase):
         settings['contract']['required_SQL']=['/home/state/needed.sqlite']
         with self.assertRaisesRegex(ValueError,'current SQL request required'):finalize(self.client,**settings)
 
+    def cycle_fixture(self):
+        from datetime import datetime,timedelta,timezone
+        from vk_nightly_cycle_state import CycleState
+        from vk_nightly_finalize_current import finalize,consumer_packet
+        from vk_nightly_composed_consumer import run
+        from vk_typed_recovery import checksum
+        settings,body,_=self.finalization_fixture();calls=[]
+        (self.controls/'RECOVERY_READ.lease').touch()
+        roots={'accepted-base':str(body),'nightly-controls-v1':str(self.controls)}
+        placement=dict(roots=roots,expected_uid=os.getuid(),expected_gid=os.getgid(),
+            root_bindings={k:[Path(p).stat().st_dev,Path(p).stat().st_ino] for k,p in roots.items()},
+            lease_paths={k:str(Path(p)/'RECOVERY_READ.lease') for k,p in roots.items()})
+        now=[datetime.now(timezone.utc)]
+        binding=dict(started_UTC=now[0].isoformat(),deadline_UTC=(now[0]+timedelta(seconds=120)).isoformat(),
+            previous_accepted_sha256=None,source_instance='actual-RAM-native-fixture',config_sha256='1'*64)
+        store=CycleState(self.client,dict(index_name='cycle-ledger',checkpoint_sha256=self.sha),guard=lambda:None)
+        def phase(name,field):
+            def completed(*_):
+                calls.append(name);return {field:True,'more_pending':False}
+            return completed
+        def candidate(results,deadline,guard):
+            calls.append('candidate');value=finalize(self.client,**dict(settings,guard=guard))
+            packet=consumer_packet(value,provider_placement=placement,readback_sources=['/home/state/note'],
+                scratch_parent=str(self.root),maximum_scratch_bytes=17*1024**2,maximum_readback_bytes=1024**2,
+                remaining_seconds=120,whole_cycle_deadline_UTC=deadline,
+                Linux_resource_admission=dict(memory_floor_bytes=0,swap_floor_bytes=0))
+            return dict(candidate=value,packet=packet)
+        def restore(results,deadline,guard):
+            calls.append('restore');packet=results['candidate']['packet']
+            return run(packet,checksum(packet),guard=guard)
+        adapters=dict(files=phase('files','actual_independent_B_file_cycle_receipt_reopen_verified'),
+            SQL=phase('SQL','actual_independent_B_SQL_cycle_receipt_reopen_verified'),
+            runtime=phase('runtime','actual_independent_B_runtime_component_reopen_verified'),
+            finalize=candidate,restore=restore,guard=lambda:None,now=lambda:now[0])
+        return store,binding,adapters,calls,now
+
+    def test_controlled_body_resume_requires_exact_latest_completed_retained_input(self):
+        from vk_nightly_file_cycle import retained_suffix
+        from test_vk_nightly_recovery_descriptor import fixture
+        from vk_nightly_b_controls import NativeControlError
+        root=self.root/'resume';root.mkdir()
+        db,path,contract,*_=fixture(root)
+        binding=json.loads(db.execute('select binding from namespace_reconciliation where id=1').fetchone()[0])
+        from vk_change_journal import scope
+        from vk_prep_common import identity
+        from vk_nightly_metadata_replay import load_input
+        plan={'sources':contract['sources']};binding.update(plan_sha256=identity(plan),scope_sha256=identity(scope(plan)))
+        old=db.execute('select sha256 from namespace_replay_windows').fetchone()[0]
+        value=load_input(db,old,guard=lambda:None);value['report'].update(plan_sha256=binding['plan_sha256'],scope_sha256=binding['scope_sha256'])
+        raw=json.dumps(value,sort_keys=True,separators=(',',':')).encode();sha=hashlib.sha256(raw).hexdigest()
+        summary=json.loads(db.execute('select summary from namespace_replay_windows').fetchone()[0]);summary['window_sha256']=sha
+        db.execute('update namespace_reconciliation set binding=?',(json.dumps(binding),))
+        db.execute('update namespace_replay_windows set sha256=?,summary=?',(sha,json.dumps(summary)))
+        db.execute('update namespace_replay_inputs set sha256=?,data=?',(sha,raw))
+        db.close();base=self.import_other(path)
+        worker=dict(B_index_name='resume-main',B_checkpoint_sha256=base)
+        view=self.client.connect('resume-main',base);view.close()
+        source=SimpleNamespace(reference=dict(instance=binding['instance']),plan=plan)
+        result=retained_suffix(self.client,worker,source,sha,guard=lambda:None)
+        self.assertTrue(result['resumed_retained_qualified_input']);self.assertEqual(result['source_body_bytes_read'],0)
+        self.assertEqual(result['global_namespace_audits_started'],0)
+        with self.assertRaises((ValueError,NativeControlError)):
+            retained_suffix(self.client,worker,source,'0'*64,guard=lambda:None)
+        source.reference['instance']='different-observer'
+        with self.assertRaisesRegex(ValueError,'latest committed suffix'):
+            retained_suffix(self.client,worker,source,sha,guard=lambda:None)
+
+    def test_actual_native_cycle_interruption_reuses_recorded_phase_then_restores_and_publishes_once(self):
+        from vk_nightly_cycle_state import run_cycle
+        store,binding,adapters,calls,_=self.cycle_fixture()
+        def interrupted(*_):raise ConnectionError('fixture Desktop offline before SQL')
+        with self.assertRaisesRegex(ConnectionError,'Desktop offline'):
+            run_cycle(store,binding,**dict(adapters,SQL=interrupted))
+        self.assertIsNone(store.accepted());self.assertEqual(calls,['files'])
+        # New normal native reader after the original control process exits.
+        send(self.client.output,dict(op='bye'));self.assertEqual(recv(self.client.source),{'closed':True})
+        self.assertEqual(self.children[-1].wait(timeout=10),0)
+        self.client.output.close();self.client=self.start();store.client=self.client
+        result=run_cycle(store,binding,**adapters)
+        self.assertEqual(calls,['files','SQL','runtime','candidate','restore'])
+        self.assertTrue(result['current_recoverable_set_accepted']);self.assertEqual(result['revision'],1)
+        self.assertFalse(result['original_epoch']['complete']);self.assertFalse(result['schedule_enabled'])
+        again=run_cycle(store,binding,**adapters)
+        self.assertTrue(again['reused_completed_publication']);self.assertEqual(again['revision'],1)
+        self.assertEqual(calls,['files','SQL','runtime','candidate','restore'])
+
+    def test_failed_restore_or_expired_original_window_cannot_publish_or_reset_progress(self):
+        from datetime import timedelta
+        from vk_nightly_cycle_state import run_cycle
+        store,binding,adapters,calls,now=self.cycle_fixture()
+        def corrupt(*_):raise ValueError('fixture body readback failed')
+        with self.assertRaisesRegex(ValueError,'body readback failed'):
+            run_cycle(store,binding,**dict(adapters,restore=corrupt))
+        self.assertIsNone(store.accepted());self.assertEqual(len(store.phases(store.initialize(binding))),4)
+        now[0]+=timedelta(seconds=121)
+        with self.assertRaisesRegex(TimeoutError,'original whole-cycle'):
+            run_cycle(store,binding,**adapters)
+        self.assertIsNone(store.accepted());self.assertNotIn('restore',calls)
+
+    def test_whole_cycle_refuses_partial_points_and_unauthenticated_restore_before_pointer(self):
+        from vk_nightly_cycle_state import run_cycle
+        store,binding,adapters,_,_=self.cycle_fixture()
+        with self.assertRaisesRegex(ValueError,'incomplete files'):
+            run_cycle(store,binding,**dict(adapters,files=lambda *_:dict(more_pending=True)))
+        self.assertIsNone(store.accepted())
+        def fabricated(*_):return dict(independent_composed_restore_verified=True)
+        with self.assertRaisesRegex(ValueError,'authenticated normal composed restore'):
+            run_cycle(store,binding,**dict(adapters,restore=fabricated))
+        self.assertIsNone(store.accepted())
+
+    def test_cycle_receipt_tampering_and_accepted_pointer_conflict_are_not_silent_reuse(self):
+        from vk_nightly_cycle_state import run_cycle
+        store,binding,adapters,_,_=self.cycle_fixture();run_cycle(store,binding,**adapters)
+        db=self.client.connect('cycle-ledger',self.sha)
+        try:db.execute("update nightly_cycle_phases set receipt='{}' where ordinal=0")
+        finally:db.close()
+        with self.assertRaisesRegex(ValueError,'phase chain differs'):run_cycle(store,binding,**adapters)
+
     def test_native_composed_audit_requires_immutable_map_and_accepted_object_identities(self):
         from vk_nightly_current_map import FORMAT,encode_member
         from vk_nightly_b_controls import NativeControlError

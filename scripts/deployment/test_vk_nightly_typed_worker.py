@@ -38,6 +38,14 @@ class TypedWorkerTests(unittest.TestCase):
             config=self.config();config['schedule_enabled']=True;p.write_text(json.dumps(config))
             with self.assertRaisesRegex(ValueError,'whole-cycle'):worker.configuration(p,worker.checksum(p))
 
+    def test_original_whole_cycle_deadline_is_checked_before_any_resource_or_payload_work(self):
+        with patch.object(worker.os.path,'ismount') as mounted:
+            with self.assertRaisesRegex(worker.ResourceDeferred,'original whole-cycle deadline'):
+                worker.host_guard(dict(whole_cycle_deadline_UTC='2020-01-01T00:00:00+00:00'),time.monotonic())
+            mounted.assert_not_called()
+            with self.assertRaisesRegex(ValueError,'aware original'):
+                worker.host_guard(dict(whole_cycle_deadline_UTC='2020-01-01T00:00:00'),time.monotonic())
+
     def test_mismatched_MM_source_refuses_before_writer_or_SSH(self):
         with tempfile.TemporaryDirectory() as root:
             p=Path(root)/'guard.py';p.write_text('not the reviewed guard')

@@ -26,6 +26,7 @@ from vk_nightly_inode_journal import require_full_coverage
 from vk_nightly_outbox_collector import copy_once
 from vk_nightly_outbox_export import retained_prefix_report
 from vk_nightly_tracking import TrackingStore
+from vk_nightly_metadata_replay import load_input,replay_cursor
 from vk_nightly_typed_worker import configuration,host_guard,run_B,source_closure
 from vk_nightly_b_tracker import health_mirror,write_health
 from vk_prep_common import identity
@@ -149,6 +150,32 @@ def predecessor(reference,source,*,maximum_seconds,report,clock=time.monotonic,s
         sleep(max(0,min(30,maximum_seconds-(clock()-started))))
 
 
+def retained_suffix(client,worker,source,input_sha256,*,guard):
+    """Resume a completed exact metadata input, without enrolling a new suffix.
+
+    Used only after a controlled producer handover. Source delivery may keep
+    newer events safely on B; this body continuation does not relabel them as
+    part of the original selected input or invalidate completed file versions.
+    """
+    if not re.fullmatch('[0-9a-f]{64}',input_sha256):raise ValueError('exact retained input digest required')
+    db=client.connect(worker['B_index_name'],worker['B_checkpoint_sha256'],readonly=True,working=True)
+    try:
+        row=db.execute('select binding,complete,suffix_complete from namespace_reconciliation where id=1').fetchone()
+        if not row or row[1:]!=(1,1):raise ValueError('complete retained namespace and suffix required')
+        binding=json.loads(row[0]);value=load_input(db,input_sha256,guard=guard)
+        point=db.execute('select complete,through,summary from namespace_replay_windows where sha256=?',(input_sha256,)).fetchone()
+        if (binding['instance']!=source.reference['instance']
+                or binding['plan_sha256']!=identity(source.plan) or binding['scope_sha256']!=identity(scope(source.plan))
+                or not point or point[0]!=1 or value['report']['instance']!=binding['instance']
+                or value['report']['sequence']!=point[1]
+                or replay_cursor(db,binding['instance'],binding['start_sequence'])!=point[1]):
+            raise ValueError('retained qualified input is not the exact latest committed suffix')
+        return dict(json.loads(point[2]),input_sha256=input_sha256,resumed_retained_qualified_input=True,
+            normal_B_metadata_reopen_verified=True,global_namespace_audits_started=0,
+            source_body_bytes_read=0,SSD_index_bytes=0,baseline_accepted=False,schedule_enabled=False)
+    finally:db.close()
+
+
 def run(config,worker,*,report):
     started=time.monotonic();guard=lambda:host_guard(worker,started)
     source=Source(config['source_observer'],worker['B_controls'],guard=guard)
@@ -159,10 +186,14 @@ def run(config,worker,*,report):
     started=time.monotonic();source.deliver();last_delivery=time.monotonic()
     with DesktopControls(worker['B_controls'],guard=guard) as remote:
         target=source.config['B_delivery_target']
-        delta=advance_suffix(remote.client,index_name=worker['B_index_name'],checkpoint_sha256=worker['B_checkpoint_sha256'],
-            journal_name=target['index_name'],journal_checkpoint_sha256=target['checkpoint_sha256'],plan=source.plan,
-            maximum_paths=config['maximum_delta_paths'],maximum_journal_bytes=worker['B_controls']['maximum_index_bytes'],
-            guard=guard,on_progress=report)
+        if config.get('resume_qualified_input_sha256'):
+            delta=retained_suffix(remote.client,worker,source,config['resume_qualified_input_sha256'],guard=guard)
+            report(dict(delta,phase='resuming-exact-completed-qualified-input'))
+        else:
+            delta=advance_suffix(remote.client,index_name=worker['B_index_name'],checkpoint_sha256=worker['B_checkpoint_sha256'],
+                journal_name=target['index_name'],journal_checkpoint_sha256=target['checkpoint_sha256'],plan=source.plan,
+                maximum_paths=config['maximum_delta_paths'],maximum_journal_bytes=worker['B_controls']['maximum_index_bytes'],
+                guard=guard,on_progress=report)
         def boundary():
             nonlocal last_delivery
             source.check()

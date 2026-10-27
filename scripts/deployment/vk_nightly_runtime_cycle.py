@@ -51,6 +51,16 @@ def run(config,worker,*,report):
     ref=config['SQL_predecessor'];read_owned(ref['config'],ref['config_sha256'])
     predecessor(ref,source,maximum_seconds=config['maximum_predecessor_seconds'],report=report)
     started=time.monotonic();guard_config=worker
+    return capture_component(config,worker,source,guard=guard,report=report)
+
+
+def capture_component(config,worker,source,*,guard,report):
+    """Fixed synchronous parent calls only after its actual SQL receipt.
+
+    The standalone entrypoint still awaits its exact systemd predecessor.
+    This core never invents a predecessor or resets the parent's deadline.
+    """
+    guard();source.check()
     paths=config['runtime_paths']
     if (not isinstance(paths,list) or not 1<=len(paths)<=16 or len(paths)!=len(set(paths))
             or set(paths)!=set(worker['map_binding'].get('source_paths',[]))

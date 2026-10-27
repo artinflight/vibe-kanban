@@ -67,6 +67,33 @@ class ConsumerTests(unittest.TestCase):
         self.assertTrue(records[-1]['result']['independent_composed_restore_verified'])
         self.assertEqual(list(self.root.glob('nightly-composed-consumer-*')),[])
 
+    def test_actual_memory_bootstrap_and_normal_streamed_consumer_without_install_or_payload_staging(self):
+        from vk_nightly_remote_consumer import run as streamed,LOADER
+        with patch('vk_nightly_remote_consumer.command',return_value=[sys.executable,'-B','-u','-c',LOADER]):
+            value=streamed({},self.packet,guard=lambda:None)
+        self.assertTrue(value['independent_composed_restore_verified'])
+        self.assertEqual(value['consumer_packet_sha256'],checksum(self.packet))
+        self.assertEqual(list(self.root.glob('nightly-composed-consumer-*')),[])
+
+    def test_fixed_B_placement_bridge_refuses_other_distro_volume_before_consumer(self):
+        import base64,re
+        from types import SimpleNamespace
+        from vk_nightly_remote_consumer import command
+        value=command({})[-1]
+        bridge=base64.b64decode(re.search("b64decode\\('([A-Za-z0-9+/=]+)'\\)",value)[1]).decode()
+        compile(bridge,'existing-B-consumer-bridge','exec')
+        good=dict(DistributionName='VK-Candidate-20261009',BasePath=r'\\?\B:\vk-backups\vk-safe-release-20261009\linux-candidate\distribution')
+        for actual in (good,dict(good,BasePath=r'C:\wrong-placement')):
+            with patch('subprocess.run',return_value=SimpleNamespace(returncode=0,stdout=json.dumps(actual))), \
+                 patch('subprocess.call',return_value=0) as launch:
+                if actual==good:
+                    with self.assertRaises(SystemExit) as terminal:exec(bridge,{})
+                    self.assertEqual(terminal.exception.code,0)
+                    argv=launch.call_args.args[0];self.assertIn('setpriv',argv);self.assertIn('1000',argv)
+                else:
+                    with self.assertRaisesRegex(ValueError,'exact accepted B placement'):exec(bridge,{})
+                    launch.assert_not_called()
+
     def test_wrong_packet_placement_contract_and_actual_STOP_refuse_before_scratch(self):
         with self.assertRaisesRegex(ValueError,'packet differs'):run(self.packet,'0'*64,guard=lambda:None)
         wrong=copy.deepcopy(self.packet);wrong['provider_placement']['root_bindings']['accepted-base'][1]+=1

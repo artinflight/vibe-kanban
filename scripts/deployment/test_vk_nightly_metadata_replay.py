@@ -186,6 +186,34 @@ class MetadataReplayTests(unittest.TestCase):
             self.assertEqual(m.db.execute("select state from members where name='home/a'").fetchone(),('file-needs-qualification',))
             self.assertEqual(m.adopt_qualifications([request],lambda *_:[],checkpoint=lambda:None)['adopted'],1)
 
+    def test_successor_cursor_does_not_inherit_a_larger_prior_epoch_counter(self):
+        from vk_nightly_metadata_replay import replay_cursor
+        with CurrentMap.held(self.path,binding=self.binding) as m:
+            self.apply(m,self.inputs())
+            new=dict(self.epoch,instance='successor',start_sequence=3)
+            m.db.execute('update namespace_reconciliation set binding=?,suffix_complete=0',(json.dumps(new),))
+            report,replay=self.inputs()
+            report.update(instance='successor',since=3,sequence=7,barrier=dict(kernel_drain_completed=True,instance='successor',durable_sequence=7))
+            replay.update(instance='successor',since=3,through=7)
+            self.assertEqual(replay_cursor(m.db,'successor',3),3)
+            result=self.apply(m,(report,replay));self.assertEqual(result['through'],7)
+            self.assertEqual(replay_cursor(m.db,'successor',3),7)
+            self.assertEqual(replay_cursor(m.db,self.epoch['instance'],17),25)
+            self.assertEqual(m.db.execute('select count(*) from namespace_replay_windows').fetchone(),(2,))
+
+    def test_retired_epoch_incomplete_replay_is_retained_but_not_a_new_epoch_input(self):
+        from vk_nightly_metadata_replay import stage_input
+        from vk_nightly_current_map import pending_replay_for_epoch
+        with CurrentMap.held(self.path,binding=self.binding) as m:
+            report,replay=self.inputs();sha=stage_input(m.db,report,replay,guard=lambda:None)
+            def stop():raise OSError('owned interrupted replay')
+            with self.assertRaises(OSError):self.apply(m,(report,replay),checkpoint=stop)
+            self.assertEqual(pending_replay_for_epoch(m.db,self.epoch['instance']),sha)
+            m.db.execute('create table namespace_reconciliation_history(binding text)')
+            m.db.execute('insert into namespace_reconciliation_history values(?)',(json.dumps(self.epoch),))
+            self.assertIsNone(pending_replay_for_epoch(m.db,'successor'))
+            self.assertEqual(m.db.execute('select complete from namespace_replay_windows where sha256=?',(sha,)).fetchone(),(0,))
+
     def test_next_suffix_requires_previous_exact_cursor(self):
         with CurrentMap.held(self.path,binding=self.binding) as m:
             self.apply(m,self.inputs())

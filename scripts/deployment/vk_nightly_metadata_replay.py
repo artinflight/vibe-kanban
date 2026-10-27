@@ -32,6 +32,13 @@ def durable_report(store,instance,since,*,guard,maximum_paths=100000):
     return report
 
 
+def replay_cursor(database,instance,start_sequence):
+    """Observer counters are per epoch; old larger counters remain history."""
+    if not database.execute("select 1 from sqlite_master where name='namespace_replay_windows'").fetchone():return start_sequence
+    value=database.execute("select max(through) from namespace_replay_windows where complete=1 and json_extract(summary,'$.instance')=?",(instance,)).fetchone()[0]
+    return start_sequence if value is None else value
+
+
 def stage_input(database,report,replay,*,guard):
     raw=json.dumps(dict(report=report,replay=replay),sort_keys=True,separators=(',',':'),allow_nan=False).encode()
     if len(raw)>MAXIMUM_INPUT_BYTES:raise ValueError('bounded metadata replay input exceeded')

@@ -139,6 +139,32 @@ def terminal_epoch_successor(previous,current,proof):
     return json.dumps(proof,sort_keys=True,separators=(',',':'))
 
 
+def pending_replay_for_epoch(database,instance):
+    """Retain old incomplete inputs without confusing a successor's cursor."""
+    if not database.execute("select 1 from sqlite_master where name='namespace_replay_windows'").fetchone():return None
+    selected=[]
+    for sha, in database.execute('select sha256 from namespace_replay_windows where complete=0').fetchall():
+        parts=[];total=0
+        if not database.execute("select 1 from sqlite_master where name='namespace_replay_inputs'").fetchone():
+            raise ValueError('resume exact retained unfinished replay input')
+        for number,(part,data) in enumerate(database.execute('select part,data from namespace_replay_inputs where sha256=? order by part',(sha,))):
+            if number!=part or not isinstance(data,bytes) or not 0<len(data)<=65536:
+                raise ValueError('retained unfinished replay input part differs')
+            total+=len(data)
+            if total>16*1024**2:raise ValueError('bounded retained replay exceeded')
+            parts.append(data)
+        raw=b''.join(parts)
+        if hashlib.sha256(raw).hexdigest()!=sha:raise ValueError('retained unfinished replay input hash differs')
+        old=json.loads(raw)['report']['instance']
+        if old==instance:selected.append(sha);continue
+        if not database.execute("select 1 from sqlite_master where name='namespace_reconciliation_history'").fetchone():
+            raise ValueError('unfinished replay has no authenticated retired namespace')
+        if not database.execute("select 1 from namespace_reconciliation_history where json_extract(binding,'$.instance')=?",(old,)).fetchone():
+            raise ValueError('unfinished replay epoch is not retained in namespace history')
+    if len(selected)>1:raise ValueError('multiple unfinished inputs in the same epoch')
+    return selected[0] if selected else None
+
+
 class SealedMemberIndex:
     """Typed-reader view of one authenticated complete current-map image.
 
@@ -893,10 +919,12 @@ class CurrentMap:
         db.execute('create table if not exists namespace_replay_history(window_sha256 text,name text,old_state text,row blob,disposition text,primary key(window_sha256,name)) without rowid')
         prior=db.execute('select since,through,last_name,complete,summary from namespace_replay_windows where sha256=?',(sha,)).fetchone()
         if prior and prior[3]:return dict(json.loads(prior[4]),already_complete=True)
-        unfinished=db.execute('select sha256 from namespace_replay_windows where complete=0').fetchall()
-        if unfinished and unfinished!=[(sha,)]:raise ValueError('resume exact retained unfinished replay input')
+        unfinished_rows=db.execute('select sha256 from namespace_replay_windows where complete=0').fetchall()
+        if any(window!=sha for window, in unfinished_rows):
+            unfinished=pending_replay_for_epoch(db,report['instance'])
+            if unfinished is not None and unfinished!=sha:raise ValueError('resume exact retained unfinished replay input')
         if not prior:
-            previous=db.execute('select max(through) from namespace_replay_windows where complete=1').fetchone()[0]
+            previous=db.execute("select max(through) from namespace_replay_windows where complete=1 and json_extract(summary,'$.instance')=?",(report['instance'],)).fetchone()[0]
             expected=binding['start_sequence'] if previous is None else previous
             if report['since']!=expected:raise ValueError('metadata suffix cursor gap or rewind')
             db.execute('begin immediate')

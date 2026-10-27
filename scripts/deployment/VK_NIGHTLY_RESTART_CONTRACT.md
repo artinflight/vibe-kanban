@@ -211,3 +211,12 @@ original gaps and later events still explicit. The retained-point file phase is
 running separately, with direct-B bodies and periodic verified journal delivery.
 It is not a commissioned ordinary calendar. Current SQL/runtime binding,
 composed current restore and final ordinary-worker acceptance remain required.
+
+An explicitly installed `verified_SSH_route` may use the Desktop's observed
+private LAN address with its existing verified SSH host-key name. Control,
+body and prefix-reader sessions share the same route constructor; strict host
+checking and disabled host-key updates remain in force. Native MM/STOP, hardware,
+volume identity, capacity and provider/writer leases are unchanged. This changes
+only per-invocation placement; it installs no network/security configuration and
+does not rewrite an active producer. A missing or mismatched endpoint fails
+closed. Current runtime route evidence and fresh B admission stay private.

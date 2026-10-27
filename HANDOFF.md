@@ -33,7 +33,8 @@ Selected qualification/adoption is now source-tested against native B protocol,
 with exact pending-row ownership, current epoch, retained global hash matching,
 explicit deferred/SQL promotion and no rehash after a committed lost reply.
 It is not yet applied alongside this file phase: both require the same map lease.
-Its next finite phase must reuse the current map and all accepted file points.
+Next phase reuses the map/accepted points and EXISTING_LAN_NATIVE_B_ADMISSION
+with verified_SSH_route; leave the current pinned producer unchanged.
 
 Historical V6 namespace919022/753699reuse and all147 SQL points remain
 accepted component evidence. The204-regular SQL successor completed exit0,

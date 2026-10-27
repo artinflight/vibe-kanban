@@ -8,6 +8,7 @@ are changed. The local controller supplies actual host admission throughout.
 import base64
 import fcntl
 import hashlib
+import ipaddress
 import json
 import os
 from pathlib import Path
@@ -110,7 +111,36 @@ final_guard(1048576)
 '''
 
 
+def ssh_command(config,remote_command):
+    """Same existing Desktop identity; optional already-verified LAN placement.
+
+    The trusted installed config, never a recovery manifest, selects the route.
+    Host keys remain strict and use the existing Tailnet identity; no key,
+    credential, SSH configuration, firewall or listener is changed. Normal
+    native volume/MM/STOP/health admission still runs on the selected endpoint.
+    """
+    command=['ssh','-T','-o','BatchMode=yes','-o','StrictHostKeyChecking=yes',
+        '-o','UpdateHostKeys=no','-o','ConnectTimeout=15','-o','ControlMaster=no','-o','ControlPath=none']
+    route=config.get('verified_SSH_route')
+    if route is not None:
+        if (not isinstance(route,dict) or set(route)!={'format','hostname','host_key_alias','identity_probe_sha256'}
+                or route.get('format')!='vk-nightly-existing-Desktop-LAN-route-v1'
+                or route.get('host_key_alias')!='100.70.23.123'
+                or not isinstance(route.get('identity_probe_sha256'),str)
+                or len(route['identity_probe_sha256'])!=64
+                or any(c not in '0123456789abcdef' for c in route['identity_probe_sha256'])):
+            raise ValueError('exact verified existing Desktop route required')
+        try:address=ipaddress.IPv4Address(route['hostname'])
+        except (ipaddress.AddressValueError,TypeError) as error:raise ValueError('canonical private Desktop IPv4 required') from error
+        if (str(address)!=route['hostname'] or not address.is_private or address.is_loopback
+                or address.is_link_local or address.is_multicast or address.is_unspecified):
+            raise ValueError('canonical private Desktop IPv4 required')
+        command.extend(['-o','Hostname='+str(address),'-o','HostKeyAlias='+route['host_key_alias']])
+    return command+['desktop',remote_command]
+
+
 def validate(config,objects):
+    ssh_command(config,'true')
     root=config['B_root']
     if (not isinstance(root,str) or not root.startswith('B:/vk-backups/') or '\\' in root
             or any(p in ('','.','..') for p in root[3:].split('/'))):
@@ -151,9 +181,7 @@ class DesktopObjects:
             if not stat.S_ISREG(os.fstat(fd).st_mode):raise ValueError('existing regular writer lease required')
             fcntl.flock(fd,fcntl.LOCK_EX|fcntl.LOCK_NB)
             native='CONFIG='+repr(self.config)+'\nMM_SOURCE='+repr(mm)+'\nOBJECT_SOURCE='+repr(objects)+'\n'+NATIVE
-            command=['ssh','-T','-o','BatchMode=yes','-o','StrictHostKeyChecking=yes','-o','ConnectTimeout=15',
-                '-o','ControlMaster=no','-o','ControlPath=none','desktop',
-                'python -B -u -c "import sys,base64;exec(base64.b64decode(sys.stdin.buffer.readline()))"']
+            command=ssh_command(self.config,'python -B -u -c "import sys,base64;exec(base64.b64decode(sys.stdin.buffer.readline()))"')
             self.process=subprocess.Popen(command,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,
                                           pass_fds=(fd,))
             self.diagnostics=Diagnostics(self.process.stderr)

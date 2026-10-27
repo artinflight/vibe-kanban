@@ -110,7 +110,7 @@ print(json.dumps(dict(status='prefix_verified',bytes=total,sha256=h.hexdigest())
 
 def read_prefix(session,prefix,sink):
     """Run serially within the exact active DesktopObjects writer admission."""
-    from vk_nightly_desktop_objects import NATIVE
+    from vk_nightly_desktop_objects import NATIVE,ssh_command
     settings=session.config.get('prefix_reader')
     if (not isinstance(settings,dict) or settings.get('distribution')!='VK-Candidate-20261009'
             or settings.get('expected_uid')!=1000
@@ -134,9 +134,8 @@ def read_prefix(session,prefix,sink):
     mm=Path(session.config['MM_source']).read_text();objects=Path(__file__).with_name('vk_nightly_objects.py').read_text()
     if hashlib.sha256(mm.encode()).hexdigest()!=session.config['MM_sha256']:raise ValueError('current MM pin changed')
     program='CONFIG='+repr(session.config)+'\nMM_SOURCE='+repr(mm)+'\nOBJECT_SOURCE='+repr(objects)+'\nPREFIX='+repr(prefix)+'\nLINUX_READER='+repr(LINUX_READER)+'\n'+setup+NATIVE_READER
-    command=['ssh','-T','-o','BatchMode=yes','-o','StrictHostKeyChecking=yes','-o','ConnectTimeout=15',
-        '-o','ControlMaster=no','-o','ControlPath=none','desktop',
-        'python -B -u -c "import sys,base64;exec(base64.b64decode(sys.stdin.buffer.readline()))"']
+    command=ssh_command(session.config,
+        'python -B -u -c "import sys,base64;exec(base64.b64decode(sys.stdin.buffer.readline()))"')
     p=subprocess.Popen(command,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,
                        pass_fds=(session.lease.fileno(),))
     try:

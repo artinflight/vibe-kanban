@@ -1,3 +1,54 @@
+# October26,23:40EDT — regular SQL completion and explicit primary-DB dependency
+
+The current204-regular-source cohort completed successfully in1390.2s. It
+inherited138accepted points and captured only66additional API points:
+214269952raw image bytes and59438743encoded B payload bytes. The terminal
+collector adopted all66new points into the B map and compared all204complete
+records. No regular SQL points remain pending; the old cohort and all carriers
+remain retained. Collector work recopied0body bytes and recaptured0source bytes.
+This is component acceptance, not complete current SQL/baseline acceptance.
+
+A failed collector equality assertion exposed a real scope distinction:
+SQL_sources contains205names, comprising204regular sources plus the live
+logical DB symlink. That symlink's actual target is outside the current declared
+roots/map. The148-image V8i catalog already has an independently verified old
+166748160B target image; retain its epoch and current_source_qualified=false.
+Do not recapture that older carrier or substitute its old point for current data.
+A metadata-only addendum prepares explicit logical/target roots(115to117).
+Normal sealed-member consumption now refuses this unresolved SQL alias, requires
+its actual accepted target point, and keeps the link itself intact. The trusted
+bounded-delta anchor can require this critical API source on every cycle/final
+delta, even when WAL commits do not modify the main inode. Unchanged ordinary
+workspaces still incur0inventory/body reads. No active plan was replaced.
+
+An actual tiny API snapshot passed native-B adoption, sealed-member consumption,
+independent recipe readback/fullSHA, SQLite integrity/content and Linux metadata
+checks. A missing-target negative fixture exercises the observed primary-DB
+failure. The full production member/dependency map remains unaccepted pending
+this binding, gap reconciliation and remaining file components.
+
+The current directory-event outbox was independently copied/reopened on B and
+ACKed through616165with2458changed names,0source walk/body reads. Preserve the
+raw old-package pre-ACK flag; local_acknowledged records actual compaction.
+This preserves observed namespace events, without repairing the known external
+hardlink observation gap. The full-inode launcher now rejects a measured kernel
+quota shortfall before allocating a new spool or consuming any watches. No host
+resource setting was changed and no full observer/schedule was activated.
+
+Fresh task-only metadata census,including directory blocks:2355613696allocatedB.
+The preserved prefix is1101697024B, two old scale fixtures778391552B, and old
+fixture metadata148357120B. Growing indexes/temp work remain on B. The finite
+SQL package is434176allocatedB with bounded small health/output; native-B work
+continues without unused SSD-index headroom and has no OS fallback. Active local
+observation remains8MiB DB plus9MiB rollback reservation,small health files and
+native allocation overhead; closed prior spools remain retained separately.
+
+Source bf0d20797 passed716hosted tests/1skip and general CI. Later source has
+100focused alias/map/reader/coverage cases and separate admission evidence;
+collect its exact-head CI before adopting it. Rust format/ops pass; local full
+formatting remains unavailable because Prettier is absent. Whole baseline,
+ordinary-cycle commissioning, schedule and next run remain unaccepted.
+
 # October26,22:44EDT — completed B map/SQL and discovered coverage limit
 
 The six index relocations released2085306368allocatedB on the SSD without

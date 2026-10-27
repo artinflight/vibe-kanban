@@ -49,6 +49,13 @@ def decode_member(raw):
     return json.loads(value)
 
 
+def SQL_aliases(connection):
+    """Retain SQL names that are links as dependencies, never empty coverage."""
+    if not connection.execute("select 1 from sqlite_master where name='SQL_sources'").fetchone():return {}
+    return {name:decode_member(raw)['member']['target'] for name,raw in connection.execute(
+        "select m.name,m.row from members m join SQL_sources s on s.path='/' || m.name where m.state='symlink'")}
+
+
 class SealedMemberIndex:
     """Typed-reader view of one authenticated complete current-map image.
 
@@ -73,6 +80,18 @@ class SealedMemberIndex:
             if proof.get('source')!=source:raise ValueError('SQL sidecar/main source differs')
             main=self.entry(source[1:])
             if main['sha256']!=proof.get('snapshot_sha256'):raise ValueError('SQL sidecar image binding differs')
+        aliases=SQL_aliases(connection);proofs=reference.get('consistent_SQL_aliases',{})
+        if set(aliases)!=set(proofs):raise ValueError('explicit consistent-SQL alias dependency required')
+        for name,target in aliases.items():
+            if not isinstance(target,str) or not target.startswith('/') or proofs[name].get('source')!=target:
+                raise ValueError('SQL alias target differs from actual member')
+            try:
+                main=self._entry(key(target[1:]))
+                point=decode_member(connection.execute('select row from members where name=?',(target[1:],)).fetchone()[0]).get('SQL_point')
+            except KeyError as error:raise ValueError('SQL alias needs its actual captured target') from error
+            if (not point or point.get('source')!=target or main['sha256']!=proofs[name].get('snapshot_sha256')
+                    or main['sha256']!=point.get('sha256') or point.get('independent',{}).get('integrity')!='ok'):
+                raise ValueError('SQL alias lacks an independently accepted target point')
 
     def _entry(self,name):
         key(name)

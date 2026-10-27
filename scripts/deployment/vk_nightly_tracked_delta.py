@@ -34,7 +34,17 @@ def select(anchor,report,*,required_sql,maximum_paths,enumerate_subtree):
     if (not isinstance(changed,list) or len(changed)!=len(set(changed))
             or not isinstance(events,dict) or set(changed)!=set(events)):
         raise ReconciliationRequired('complete changed-path/event set required')
-    selected=set();subtrees=set();SQL=set();deleted=set()
+    always=anchor.get('always_SQL_API_sources',[])
+    if (not isinstance(always,list) or any(not isinstance(path,str) for path in always)
+            or len(always)!=len(set(always)) or not set(always)<=set(required_sql)
+            or any(not isinstance(path,str) or not path.startswith('/') or str(PurePosixPath(path))!=path
+                   or '..' in PurePosixPath(path).parts or '\x00' in path
+                   or not any(under(path,root) for root in sources) for path in always)):
+        raise ReconciliationRequired('always-snapshotted SQL dependencies must be explicitly bound in source scope')
+    # A critical SQL alias target may live outside a directory root. Its WAL
+    # need not modify the main inode, so its API snapshot is always required.
+    # Ordinary unchanged workspaces still incur zero inventory/content reads.
+    selected=set();subtrees=set();SQL=set(always);deleted=set()
     def add(path):
         if (not isinstance(path,str) or not path.startswith('/') or str(PurePosixPath(path))!=path
                 or '..' in PurePosixPath(path).parts or '\x00' in path):

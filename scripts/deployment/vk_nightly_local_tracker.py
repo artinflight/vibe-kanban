@@ -17,10 +17,19 @@ import threading
 from vk_nightly_bounded_spool import held
 from vk_nightly_b_tracker import write_health
 from vk_nightly_tracking import serve
-from vk_nightly_inode_journal import Journal as InodeJournal
+from vk_nightly_inode_journal import Journal as InodeJournal,check_watch_demand
+
+
+def admit_inode_observation(config,*,read_limit=lambda:int(Path('/proc/sys/fs/inotify/max_user_watches').read_text())):
+    if config.get('watch_all_selected_inodes') is True:
+        # A retained namespace supplies a lower bound, not a policy threshold
+        # or substitute for real enrollment. Reject a known impossible launch
+        # before allocating another spool or consuming any kernel watches.
+        check_watch_demand(config.get('retained_inode_watch_minimum'),read_limit())
 
 
 def run(config, *, guard):
+    admit_inode_observation(config)
     stop=threading.Event()
     signal.signal(signal.SIGTERM,lambda *_:stop.set())
     signal.signal(signal.SIGINT,lambda *_:stop.set())

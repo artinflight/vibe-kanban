@@ -130,6 +130,15 @@ class TrackedDeltaTests(unittest.TestCase):
         result=self.delta(forbidden)
         self.assertEqual(result['paths'],[]);self.assertEqual(result['unchanged_paths_scanned'],0)
 
+    def test_critical_SQL_dependency_requires_API_even_without_main_inode_events(self):
+        self.anchor['always_SQL_API_sources']=['/source/db.sqlite']
+        result=self.delta(lambda _:self.fail('unchanged workspace walked'))
+        self.assertEqual(result['SQLite_API_sources'],['/source/db.sqlite'])
+        self.assertEqual(result['unchanged_paths_scanned'],0)
+        for paths in (['/outside'],['/source/not-declared.sqlite']):
+            self.anchor['always_SQL_API_sources']=paths
+            with self.assertRaises(ReconciliationRequired):self.delta()
+
     def test_new_nested_subtree_is_enumerated_once_and_SQL_sidecars_select_API(self):
         self.events({'/source/new':0x40000100,'/source/new/inside':0x40000080,'/source/db.sqlite-wal':8})
         seen=[]

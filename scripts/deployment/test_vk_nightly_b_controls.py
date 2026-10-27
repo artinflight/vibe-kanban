@@ -157,6 +157,31 @@ class BControlTests(unittest.TestCase):
             self.assertTrue(self.client.call(op='accept-SQL-point',name='sql-member-map',record=record)['already_accepted'])
             self.assertEqual(index.execute('select state from members').fetchone(),('verified-file',))
             self.assertEqual(index.execute('select count(*) from SQL_acceptance_history').fetchone(),(1,))
+            # Consume the accepted point through the normal sealed member
+            # view, then independently restore exactly that selected recipe.
+            # A verified SQL flag alone must not stand in for usable content.
+            from vk_nightly_current_map import SealedMemberIndex,encode_member
+            alias=self.root/'logical.sqlite';alias.symlink_to(source)
+            link=observe(alias);row={k:link[k] for k in ('kind','target','uid','gid','mode','mtime_ns','xattrs')}
+            index.execute('insert into SQL_sources values(?)',(str(alias),))
+            index.execute('insert into members values(?,?,?)',(str(alias)[1:],'symlink',encode_member(dict(member=row))))
+            with self.assertRaisesRegex(ValueError,'alias dependency'):
+                SealedMemberIndex(index,lambda:None,{'consistent_SQL_sidecars':{}})
+            proofs={str(alias)[1:]:dict(source=str(source),snapshot_sha256=record['sha256'])}
+            reader=SealedMemberIndex(index,lambda:None,{'consistent_SQL_sidecars':{},'consistent_SQL_aliases':proofs})
+            self.assertEqual(reader.entry(str(alias)[1:])['target'],str(source))
+            member=reader.entry(str(source)[1:]);restored=io.BytesIO()
+            for segment in member['segments']:client.verify(segment,restored)
+            raw=restored.getvalue()
+            self.assertEqual(hashlib.sha256(raw).hexdigest(),member['sha256'])
+            self.assertEqual(len(raw),member['bytes'])
+            with sqlite3.connect(':memory:') as reopened:
+                reopened.deserialize(raw)
+                self.assertEqual(reopened.execute('pragma integrity_check').fetchall(),[('ok',)])
+                self.assertEqual(reopened.execute('select value from actual').fetchall(),[('retained',)])
+            reopened.close()
+            for key in ('uid','gid','mode','mtime_ns','xattrs'):
+                self.assertEqual(member[key],record['source_metadata_before'][key])
         finally:index.close()
 
     def test_inode_demand_deduplicates_aliases_from_retained_metadata_only(self):

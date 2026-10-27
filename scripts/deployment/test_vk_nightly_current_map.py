@@ -239,5 +239,16 @@ class CurrentMapTests(unittest.TestCase):
         self.assertEqual(list(reader.entries()),[('home/a',self.version['row'])])
         with self.assertRaises(KeyError):reader.entry('home/a-wal')
 
+    def test_SQL_alias_cannot_hide_a_required_target_outside_the_current_map(self):
+        with CurrentMap.held(self.path,binding=self.binding,create=True) as m:
+            self.compile(m)
+            m.db.execute('insert into SQL_sources values(?)',('/home/live.sqlite',))
+            m.db.execute('insert into members values(?,?,?)',('home/live.sqlite','symlink',
+                encode_member(dict(member=dict(kind='symlink',target='/separate/live.sqlite')))))
+        db=sqlite3.connect(self.path);self.addCleanup(db.close)
+        with self.assertRaisesRegex(ValueError,'alias dependency'):SealedMemberIndex(db,lambda:None,{})
+        reference={'consistent_SQL_aliases':{'home/live.sqlite':dict(source='/separate/live.sqlite',snapshot_sha256='a'*64)}}
+        with self.assertRaisesRegex(ValueError,'actual captured target'):SealedMemberIndex(db,lambda:None,reference)
+
 
 if __name__=='__main__':unittest.main()

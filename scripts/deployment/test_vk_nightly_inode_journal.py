@@ -79,3 +79,14 @@ class InodeJournalTests(unittest.TestCase):
         with self.assertRaises(WatchAdmissionError):check_watch_demand(849199,248899)
         check_watch_demand(100,248899) # Necessary condition only, not real enrollment.
         with self.assertRaises(ValueError):check_watch_demand(True,248899)
+
+    def test_full_observer_admission_refuses_known_shortfall_before_state_or_watches(self):
+        from vk_nightly_local_tracker import admit_inode_observation,run
+        config=dict(watch_all_selected_inodes=True,retained_inode_watch_minimum=889894)
+        with self.assertRaises(WatchAdmissionError):admit_inode_observation(config,read_limit=lambda:248899)
+        admit_inode_observation(config,read_limit=lambda:1048576)
+        with self.assertRaises(ValueError):admit_inode_observation(dict(watch_all_selected_inodes=True),read_limit=lambda:1048576)
+        with patch('vk_nightly_local_tracker.admit_inode_observation',side_effect=WatchAdmissionError('known shortfall')),\
+             patch('vk_nightly_local_tracker.serve') as serve:
+            with self.assertRaises(WatchAdmissionError):run(config,guard=lambda:None)
+        serve.assert_not_called()

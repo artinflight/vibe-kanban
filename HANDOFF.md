@@ -1,4 +1,4 @@
-# Nightly — current pickup,October26 22:44EDT
+# Nightly — current pickup,October26 23:40EDT
 
 Finish the existing operational Nightly goal/PR263. No backend restart. Calendar
 is disabled; next run null. Do not duplicate active jobs or accepted bodies.
@@ -32,9 +32,24 @@ and MAP_V6_RECONCILIATION_STATUS retain exact epochs. All147 SQL points in
 capture-worker-B-v6 are independently accepted:137old images reused,10new,
 831428846encodedB. The large API image passed independent RAM fullSHA/SQLite/
 Linuxmetadata. Original failed unsealed RAM inode33476 remains preserved.
-SQL_V6_MAP_ADOPTION adopted138selected points from their actual B acceptance
-objects with0recapture/recopy. Remaining66SQL names total193630208logical
-main bytes;9nonselected old cohort names remain in the old recovery graph.
+SQL_V6_MAP_ADOPTION adopted138selected points without recapture/recopy.
+The204-regular-source successor finished1390.2s/exit0:138points inherited,
+66new API points/214269952rawB/59438743encodedB,0deferred/partials. Collector
+CURRENT_SQL_V7_COLLECTED_V2 adopted66more points and verified all204records
+against the B map. No capture/restore/body writer remains active. Preserve the
+original failed collector assertion and corrected version separately.
+
+The205th enrolled SQL name is the live logical DB symlink. Its actual working90
+outside-target is not in the current member map. V8i already retains an
+independently restored166748160B image SHA dcca2e1ba2a6d322d043be8ee2f98ee6e21c59c909d6a445d4c2ffa6cb8e6f09;
+that is an older carrier, not current qualification. Never call204regular points
+complete current SQL scope. CRITICAL_SQL_ALIAS_BINDING_PREPARATION prepares
+additive logical/target roots(115to117), planSHA
+a2c48a1b92816e4e1ef8763c201af5b7edb9be3c2f3fa94d90c3c0327e2ea455,
+without changing the active observer. Normal sealed-map consumption now requires
+an actual accepted target point, and the bounded-delta interface supports bound
+always_SQL_API_sources for critical aliases whose WAL lies outside a directory
+root. No payload was recaptured for this diagnosis.
 
 REAL TRACKING LIMIT: V7 directory-only observation cannot witness writes via
 external hardlinks. Retained B namespace metadata contains889894distinct
@@ -48,29 +63,30 @@ resource admission. Administrator resource-setting authority is needed for a
 proposed1048576watch ceiling, followed by real enrollment/memory/handover proof.
 This planning number is not a user limit, reservation or readiness claim.
 
-Remaining: reconcile/capture66additional SQL points; qualify17182unresolved
-file versions and capture only needed chunks for70167points, using retained
-prefix/CAS bodies first. Their64342833998logicalB are NOT transfer demand.
-Apply383-name closing suffix, proven V6/V7 bridge and actual current events;
-retain the newly identified alias-observation gap explicitly. Pin runtime and
-accept the complete composed descriptor/readback. Integrate ordinary bounded
-cycle/health and only then enable02:00America/Toronto. Calendar disabled/next
-run null. Root migration is separate. All original restore/components remain.
+Remaining: obtain administrator watch-resource action; enroll the full-inode
+observer with explicit critical SQL alias roots and validate its actual resource
+use. Reconcile alias gap/additive roots without dropping prior scope. Qualify
+17182unresolved versions and capture only required chunks for70167points using
+retained prefix/CAS carriers. Their64342833998logicalB are NOT transfer demand.
+Bind current critical SQL/runtime; accept composed current restore and ordinary
+finite cycle/health; only then enable02:00America/Toronto. Calendar disabled,
+next run null. Root migration is separate. All original restore epochs remain.
 
-Sole new SQL phase vk-nightly-B-current-SQL-v7-20261027 PID413807/start27699116
-uses immutable a775fa6ff, configSHA
-0a29bff0fc07af5b61b99c1cb85b6d2a0279f6d1409e0d10d65ae9df3a5b25b1.
-It inherited138points and handles only66new names. Do not duplicate it.
-Its original progress counters include inherited totals; preserve raw receipts
-and use tested SQL cohort statistics to separate incremental bytes. Local
-package434176allocatedB plus bounded health/finite log fits measured1MiB new
-control envelope, preserving the unchanged2GiB SSD floor. No source body onSSD.
+Directory event preservation now reaches616165/2458names, normal B readback
+SHA077bd796277dd50065f27ed29d78657743940c2bbe3218d17016b788284ea356.
+Keep its raw pre-ACK local_changes_pruned=false field; actual local_acknowledged
+616165 proves the nonce-bound ACK. This is namespace proof, not alias-gap repair.
 
-Current change also retains genuine access/STOP/corruption failures, treats
-only real native BUSY/competing leases as temporary, and repeats full native
-B identity/SMART admission at final acceptance. Exact a775fa6ff passed715hosted recovery tests/1skip and86focused RAM
-regressions; later accounting correction passed9focused tests and needs its
-own exact-head CI. Full current baseline and schedule remain unaccepted.
+Fresh own-root allocated footprint2355613696B including directories; cold
+prefix1101697024B, two scale fixtures778391552B, old test metadata148357120B.
+All preserved. Active bounded outbox and closed prior spools are counted once.
+SQL package434176allocatedB and bounded health/finite output fit1MiB new local
+metadata; B runtime does not need unused SSD index/journal headroom. No body is
+staged on SSD. Actual floors and mount/access/STOP/memory checks are preserved.
+
+Source bf0d20797 passed716hosted recovery tests/1skip and general CI. New alias/
+full-observer/delta work passed100focused tests plus launch-admission cases;
+new exact-head CI remains necessary. Full baseline and calendar are unaccepted.
 Required formatter attempted: Rustpassed, Prettier unavailable.
 Complete prior pickup is retained in
 [the dated archive](HANDOFF_NIGHTLY_HISTORY_20261027_0124.md), bound by

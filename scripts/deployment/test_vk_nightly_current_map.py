@@ -166,6 +166,16 @@ class CurrentMapTests(unittest.TestCase):
             self.assertIsNone(m.db.execute("select name from sqlite_master where name='namespace_reconciliation_history'").fetchone())
             self.assertIsNone(m.db.execute('select path from SQL_sources where path=?',('/outside/sql',)).fetchone())
 
+    def test_additive_Linux_roots_use_POSIX_validation_on_native_Windows(self):
+        from pathlib import PureWindowsPath
+        from unittest.mock import patch
+        from vk_nightly_current_map import additive_scope_SQL_sources
+        old,new,proof=self.additive_namespace_fixture()
+        previous=json.loads(old.execute('select binding from gap_meta').fetchone()[0])
+        current=json.loads(new.execute('select binding from gap_meta').fetchone()[0])
+        with patch('vk_nightly_current_map.Path',PureWindowsPath):
+            self.assertEqual(additive_scope_SQL_sources(previous,current,proof,{'/home/sql'}),['/outside/sql'])
+
     def test_relocated_pointer_fails_closed_with_provider_instruction_before_SQLite_open(self):
         with tempfile.TemporaryDirectory(dir='/dev/shm') as root:
             p=Path(root)/'moved.sqlite';p.write_bytes(b'VK_NIGHTLY_B_CONTROL_POINTER_V1\n{}\n');p.chmod(0o400)

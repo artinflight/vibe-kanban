@@ -68,16 +68,18 @@ proof readback passed06:15EDT: V7_V9_ADDITIVE_HANDOVER,
 proofe37e9711c6404af85c1727aa703192bf8c380734e61447505cec58e258b95e63.
 Only then V7 closed normally; all prior source spools remain retained.
 
-Single finite controller PID3939278 is live in
-vk-nightly-inodes-v9-followthrough-20261027.service. Its immutable source is
-tracking-worker-local-inodes-v9/followthrough.private.py; planSHA
-70d8e2b66bb9f05c560cef245688b0b8e5dca673e29525625d25430df4a2d03e.
-It reconciles the old gap once on B indexgap-namespace-inodes-v9-20261027,
-with0source-body reads/0SSDindex bytes. FOLLOWTHROUGH_STATUS has live progress;
-GAP_NAMESPACE_RESULT or FOLLOWTHROUGH_STOP is authoritative when terminal.
-Do not duplicate this job. It resumes completed B directory cursors under the
-same healthy epoch and authenticates the existing B handover before doing so.
-Old gaps remain explicit; full baseline/calendar remain unaccepted.
+The finite V9 metadata controller completed exit0:920540paths,
+107026directories,0pending/0errors,340353024B index on native B. Closing
+barrier930803 retains257changed names for suffix replay. Its authoritative
+GAP_NAMESPACE_RESULT is in tracking-worker-local-inodes-v9; sourcebody/SSDindex
+bytes0. Do not repeat the namespace audit. Original epochs remain unrepaired.
+
+Map workerV3 stopped before scope mutation: native Windows Path() rejected
+Linux source names. Its STOP/private log remain preserved. The correction uses
+portable POSIX member validation, with an explicit Windows-path regression.
+Reuse the completed namespace and B proof in the corrected map worker; existing
+map rows/carriers/SQL images were not recopied. Actual B preflight already
+matched the old map/root bindings and identified the one required SQL target.
 
 The additive map integration is source-tested, not yet applied: exact B proof
 hash, all old bindings and complete new namespace are required; old absences/
@@ -86,8 +88,8 @@ adds its regular target to SQL_sources, never implicit raw-main acceptance.
 The source test batch passed80cases, including real buffered barriers and
 native protocol rejection of a wrong proof hash. Prettier remains unavailable.
 
-Remaining: collect the same B metadata job, explicitly replay any errors and
-its journal suffix, then adopt the tested additive map transition. Qualify
+Remaining: adopt the completed B namespace with the corrected map worker,
+then replay its journal suffix. Qualify
 17182unresolved versions and capture only required chunks for70167points using
 retained prefix/CAS carriers. Their64342833998logicalB are NOT transfer demand.
 Bind current critical SQL/runtime; accept composed current restore and ordinary

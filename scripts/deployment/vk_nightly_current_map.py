@@ -78,8 +78,11 @@ def additive_scope_SQL_sources(previous,current,proof,SQL_sources):
             or set(added)!=set(new)-set(old)):
         raise ValueError('exact nonempty added roots required')
     for name in added:
-        if not isinstance(name,str) or not name.startswith('/') or str(Path(name))!=name or '..' in Path(name).parts:
+        # These are Linux source names even when this classifier runs next to
+        # SQLite on Windows B. Native Path() is only for the control indexes.
+        if not isinstance(name,str) or not name.startswith('/'):
             raise ValueError('canonical additive source root required')
+        key(name[1:])
     reports=[proof.get('old_namespace'),proof.get('new_before'),proof.get('new_after')]
     for number,report in enumerate(reports):
         expected=previous if number==0 else current

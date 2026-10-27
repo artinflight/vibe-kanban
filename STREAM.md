@@ -27,8 +27,8 @@ B forward-copy reopen passed; this does not cover external hardlink writes.
 The owner-approved1048576watch limit is live. V8's later real queue overflow
 is preserved; its earlier ready proof is historical. Corrected V9 tracks891k
 inodes with bounded raw draining. Actual new/old/new barriers and independent
-B readback passed before V7 closed. The single existing finite controller is
-reconciling old-gap metadata on B; current result/stop receipts decide outcome.
+B readback passed before V7 closed. The single finite controller completed920540metadata paths/errors0 on B.
+Map adoption reuses that completed epoch after a portable source-path fix.
 Additive map integration requires that actual proof and full later namespace,
 retains old epochs/absences and explicitly enrolls the critical SQL target.
 The B-only namespace/map reconciliation completed; baseline/calendar stay open.

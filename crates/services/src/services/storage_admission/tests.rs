@@ -881,16 +881,20 @@ async fn concurrent_job_arrival_parent_exit_and_watcher_admission_have_no_overla
 #[tokio::test]
 async fn unbound_reservation_is_pending_uncertainty_not_confirmed_owner_activity() {
     let (pool, q, b, r) = fixture().await;
-    assert!(
-        tokio::time::timeout(
-            std::time::Duration::from_millis(10),
-            submit(&pool, &q, &b, &r, |_| std::future::pending::<
-                Result<(), ContainerError>,
-            >())
-        )
-        .await
-        .is_err()
-    );
+    let reached = Arc::new(tokio::sync::Notify::new());
+    let mut inflight = Box::pin(submit(&pool, &q, &b, &r, |_| async {
+        reached.notify_one();
+        std::future::pending::<Result<(), ContainerError>>().await
+    }));
+    tokio::time::timeout(std::time::Duration::from_secs(5), async {
+        tokio::select! {
+            _=reached.notified()=>{},
+            result=&mut inflight=>panic!("reserved launch must remain in flight: {result:?}"),
+        }
+    })
+    .await
+    .unwrap();
+    drop(inflight); // cancel only after the native reservation actually committed
     let mut later = r.clone();
     later.batch_id = Uuid::new_v4();
     later.attempt_id = Uuid::new_v4();

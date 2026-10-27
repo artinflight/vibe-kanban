@@ -792,9 +792,23 @@ def retry_native_busy(operation,*,guard,timeout_seconds=10,clock=time.monotonic,
 
 
 class Client:
-    def __init__(self,source,output,*,guard=lambda:None):self.source=source;self.output=output;self.guard=guard
+    def __init__(self,source,output,*,guard=lambda:None):
+        self.source=source;self.output=output;self.guard=guard;self.operation_metrics={}
+    def metrics(self):
+        return dict(format='vk-nightly-control-roundtrips-v1',
+            requests=sum(v['requests'] for v in self.operation_metrics.values()),
+            wait_seconds=sum(v['wait_seconds'] for v in self.operation_metrics.values()),
+            operations={k:dict(v) for k,v in self.operation_metrics.items()},
+            SQL_text_or_parameters_recorded=False)
     def call(self,**query):
-        self.guard();send(self.output,query);value=recv(self.source)
+        self.guard();started=time.monotonic()
+        operation=query.get('op','unknown')
+        if operation not in self.operation_metrics and len(self.operation_metrics)>=64:operation='other'
+        metric=self.operation_metrics.setdefault(operation,dict(requests=0,wait_seconds=0.0,maximum_wait_seconds=0.0))
+        try:send(self.output,query);value=recv(self.source)
+        finally:
+            elapsed=time.monotonic()-started;metric['requests']+=1;metric['wait_seconds']+=elapsed
+            metric['maximum_wait_seconds']=max(metric['maximum_wait_seconds'],elapsed)
         if 'error' in value:
             temporary=not value.get('guard_reason') and (value['error_type']=='BlockingIOError'
                 or value['error_type']=='OperationalError' and value['error'] in ('database is locked','database table is locked'))

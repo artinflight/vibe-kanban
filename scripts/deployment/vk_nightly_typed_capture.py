@@ -35,6 +35,7 @@ def capture_pending(current_map,client,*,guard,maximum_members,maximum_source_by
     db.execute('create table if not exists file_acceptance(name text primary key,proof blob not null) without rowid')
     done=0;deferred=0;source_bytes=0;initial_upload=client.payload_bytes_sent
     reused_before=client.native_receipts_reused
+    readbacks_before=client.independent_readback_objects;readback_bytes_before=client.independent_readback_bytes
     for name,raw in current_map.pending_files(maximum_members):
         guard();current_map.source_phase_check()
         value=decode_member(raw);point=value['qualification'];row=value['member']
@@ -53,7 +54,18 @@ def capture_pending(current_map,client,*,guard,maximum_members,maximum_source_by
             return dict(completed_members=done,source_bytes_read=source_bytes,
                         encoded_payload_bytes_sent=client.payload_bytes_sent-initial_upload,
                         next_point_bytes=row['bytes'],more_pending=True,current_baseline_accepted=False)
-        sink=ChunkSink(client,chunk_bytes=chunk_bytes)
+        independent=HashSink()
+        class OrderedReadback:
+            prefix_read=False
+            def write(self,block):
+                if not self.prefix_read:
+                    if prefix is not None:
+                        before=independent.bytes;read_prefix(prefix,independent)
+                        if independent.bytes-before!=prefix['bytes']:
+                            raise ValueError('authenticated prefix reader length differs')
+                    self.prefix_read=True
+                return independent.write(block)
+        sink=ChunkSink(client,chunk_bytes=chunk_bytes,readback_sink=OrderedReadback())
         prefix_retry_bytes=0
         try:
             try:transfer=capture_qualified_version(point,sink,guard=guard,prefix=prefix)
@@ -69,11 +81,6 @@ def capture_pending(current_map,client,*,guard,maximum_members,maximum_source_by
                              encoded_payload_bytes_sent=client.payload_bytes_sent-initial_upload))
             continue
         new_segments=sink.finish();segments=(prefix['segments'] if prefix else [])+new_segments
-        independent=HashSink()
-        if prefix is not None:
-            before=independent.bytes;read_prefix(prefix,independent)
-            if independent.bytes-before!=prefix['bytes']:raise ValueError('authenticated prefix reader length differs')
-        for segment in new_segments:client.verify(segment,independent)
         if (independent.bytes!=row['bytes'] or independent.hash.hexdigest()!=row['sha256']
                 or sum(s['bytes'] for s in segments)!=row['bytes']):
             raise ValueError('ordered independently restored full file differs; keep pending point')
@@ -83,6 +90,7 @@ def capture_pending(current_map,client,*,guard,maximum_members,maximum_source_by
                    prefix_retry_source_bytes=prefix_retry_bytes,
                    independent_ordered_B_readback_bytes=independent.bytes,
                    independent_ordered_B_readback_sha256=independent.hash.hexdigest(),
+                   independent_readback_strategy='ordered-object-acceptance-readback-v1',
                    source_metadata=dict(mode=row['mode'],uid=row['uid'],gid=row['gid'],
                                         mtime_ns=row['mtime_ns'],xattrs=row['xattrs']),
                    original_epoch_repaired=False,current_baseline_accepted=False)
@@ -95,6 +103,8 @@ def capture_pending(current_map,client,*,guard,maximum_members,maximum_source_by
             accepted,proof,checkpoint=guard),guard=guard)
         done+=1;source_bytes+=row['bytes']+prefix_retry_bytes
         on_progress(dict(completed_members=done,last_name=name,source_bytes_read=source_bytes,
+                         independent_object_readbacks=client.independent_readback_objects-readbacks_before,
+                         independent_object_readback_bytes=client.independent_readback_bytes-readback_bytes_before,
                          encoded_payload_bytes_sent=client.payload_bytes_sent-initial_upload))
     more=db.execute("select 1 from members where state='file-needs-capture' limit 1").fetchone() is not None
     deferred_table=db.execute("select 1 from sqlite_master where name='file_transfer_deferred'").fetchone()
@@ -102,5 +112,7 @@ def capture_pending(current_map,client,*,guard,maximum_members,maximum_source_by
     return dict(completed_members=done,source_bytes_read=source_bytes,
                 encoded_payload_bytes_sent=client.payload_bytes_sent-initial_upload,
                 native_receipts_reused=client.native_receipts_reused-reused_before,
+                independent_object_readbacks=client.independent_readback_objects-readbacks_before,
+                independent_object_readback_bytes=client.independent_readback_bytes-readback_bytes_before,
                 more_pending=more or requalify,requires_source_requalification=requalify,deferred_source_points=deferred,
                 current_baseline_accepted=False)

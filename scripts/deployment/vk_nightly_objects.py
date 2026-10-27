@@ -302,6 +302,7 @@ class ObjectClient:
         self.source=source;self.output=output;self.guard=guard;self.ram_root=Path(ram_root)
         self.maximum=maximum_object_bytes
         self.payload_bytes_sent=0;self.native_receipts_reused=0;self.candidates_recovered=0
+        self.independent_readback_bytes=0;self.independent_readback_objects=0
         if (not (self.ram_root==Path('/dev/shm') or self.ram_root.is_relative_to('/dev/shm'))
                 or not any(s.split()[4]=='/dev/shm' and ' - tmpfs ' in s for s in Path('/proc/self/mountinfo').read_text().splitlines())):
             raise ValueError('actual admitted /dev/shm tmpfs restore required')
@@ -318,7 +319,7 @@ class ObjectClient:
                 or reply.get('bytes')!=image['bytes']):raise ValueError('retained SQL native proof differs')
         return reply
 
-    def ensure(self,raw):
+    def ensure(self,raw,*,readback_sink=None):
         if not isinstance(raw,bytes) or len(raw)>self.maximum:raise ValueError('bounded RAM object required')
         self.guard();sha=hashlib.sha256(raw).hexdigest();size=len(raw)
         fs=os.statvfs(self.ram_root)
@@ -342,13 +343,19 @@ class ObjectClient:
             self.output.write(struct.pack('!I',0));self.output.flush();reply=read_control(self.source)
         if not reused:
             if not reply or reply.get('status')!='readback':raise ValueError('native candidate readback unavailable')
-            reply=self._restore(sha,size)
+            reply=self._restore(sha,size,readback_sink)
         receipt=reply['receipt']
         if (receipt.get('raw_sha256')!=sha or receipt.get('raw_bytes')!=size
                 or receipt.get('independent_RAM_reopened_hash_verified') is not True):
             raise ValueError('native object receipt differs')
-        return dict(layer='nightly-objects-v1',selector=sha+'.zlib',encoding='zlib',bytes=size,sha256=sha,
-                    encoded_bytes=receipt['encoded_bytes'],encoded_sha256=receipt['encoded_sha256'],reused=reused)
+        segment=dict(layer='nightly-objects-v1',selector=sha+'.zlib',encoding='zlib',bytes=size,sha256=sha,
+                     encoded_bytes=receipt['encoded_bytes'],encoded_sha256=receipt['encoded_sha256'],reused=reused)
+        # New/recovered candidates already passed this actual independent RAM
+        # reopen. Feed those verified bytes directly into the ordered file
+        # hash; do not recall/reopen the same object again. Previously accepted
+        # objects still require an actual readback for this composed file.
+        if reused and readback_sink is not None:self.verify(segment,readback_sink)
+        return segment
 
     def _restore(self,sha,size,sink=None):
         # Independently allocate/reopen in verified tmpfs, one bounded chunk at
@@ -374,6 +381,7 @@ class ObjectClient:
         control(self.output,dict(raw_sha256=sha,raw_bytes=size,independent_RAM_reopened_hash_verified=True))
         reply=read_control(self.source)
         if not reply or reply.get('status')!='accepted':raise ValueError('independent object acceptance not persisted')
+        self.independent_readback_bytes+=size;self.independent_readback_objects+=1
         os.unlink(path)  # only this freshly verified disposable RAM duplicate
         return reply
 
@@ -431,9 +439,10 @@ class ObjectClient:
 
 class ChunkSink:
     """Bounded RAM chunker for the existing qualified-point source streamer."""
-    def __init__(self,client,*,chunk_bytes):
+    def __init__(self,client,*,chunk_bytes,readback_sink=None):
         if type(chunk_bytes) is not int or not 0<chunk_bytes<=client.maximum:raise ValueError('admitted finite chunk size required')
         self.client=client;self.limit=chunk_bytes;self.buffer=bytearray();self.segments=[];self.raw_bytes=0
+        self.readback_sink=readback_sink
 
     def write(self,block):
         size=len(block);view=memoryview(block)
@@ -443,7 +452,9 @@ class ChunkSink:
         self.raw_bytes+=size;return size
 
     def _flush(self):
-        segment=self.client.ensure(bytes(self.buffer));segment.pop('reused',None)
+        if self.readback_sink is None:segment=self.client.ensure(bytes(self.buffer))
+        else:segment=self.client.ensure(bytes(self.buffer),readback_sink=self.readback_sink)
+        segment.pop('reused',None)
         self.segments.append(segment);self.buffer.clear()
 
     def finish(self):

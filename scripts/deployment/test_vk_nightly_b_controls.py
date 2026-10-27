@@ -54,6 +54,17 @@ class BControlTests(unittest.TestCase):
             if p.poll() is None:p.wait(timeout=10)
             p.stdout.close();p.stderr.close()
 
+    def test_query_metrics_measure_roundtrips_without_recording_SQL_or_parameters(self):
+        db=self.client.connect('metric-fixture',self.sha)
+        try:
+            self.assertEqual(db.execute('select value from point where id=?',(123456789,)).fetchall(),[])
+            value=self.client.metrics()
+            self.assertGreaterEqual(value['operations']['execute']['requests'],1)
+            self.assertGreaterEqual(value['operations']['fetch']['requests'],1)
+            self.assertGreater(value['wait_seconds'],0)
+            self.assertNotIn('123456789',json.dumps(value));self.assertNotIn('select value',json.dumps(value))
+        finally:db.close()
+
     def test_actual_inotify_to_native_protocol_ack_and_B_prefix_after_Desktop_failure(self):
         from vk_nightly_bounded_spool import held
         from vk_nightly_tracking import serve,request

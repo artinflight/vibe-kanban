@@ -348,6 +348,7 @@ def run_B(config,*,at_component_boundary=lambda:None,source_report=None):
             def report(value,*,force=False):
                 if not force and time.monotonic()-last_status[0]<5:return
                 write_health(current.db,Path(config['status']),dict(value,worker_PID=os.getpid(),
+                    control_roundtrips=controls.client.metrics(),
                     control_storage='native-Desktop-B',baseline_accepted=False,schedule_enabled=False,
                     OS_SSD_payload_bytes=0,OS_SSD_index_journal_bytes=0,elapsed_seconds=time.monotonic()-started))
                 last_status[0]=time.monotonic()

@@ -26,6 +26,8 @@ mm=types.ModuleType('current_MM_guard');exec(MM_SOURCE,mm.__dict__)
 job=pathlib.Path(CONFIG['B_root']);baseline=CONFIG['baseline']
 admitted_identity=None
 health_timeout_used=False
+health_observations=0
+health_query_seconds=0.0
 def kernel_identity():
  import ctypes,ctypes.wintypes as wt
  api=ctypes.WinDLL('kernel32',use_last_error=True)
@@ -99,20 +101,25 @@ def control_identity():
    admitted_identity=dict(identity)
  return identity
 def actual_guard(remaining):
- global admitted_identity,health_timeout_used
+ global admitted_identity,health_timeout_used,health_observations,health_query_seconds
  # Observation patience is an implementation bound, not an owner safety
  # threshold. Keep data IO stopped while waiting for a successful fresh read.
  deadline=CONFIG.get('native_health_read_timeout_seconds',90)
  try:
   with health_gate():
    identity=control_identity()
+   query_started=time.monotonic()
    p=subprocess.run(['C:/ProgramData/MediaArchiveMonitor/smartctl/bin/smartctl.exe',
       '-j','-i','-H','-A','-l','sataphy','/dev/pd3'],capture_output=True,timeout=deadline)
+   query_seconds=time.monotonic()-query_started
  except subprocess.TimeoutExpired:
   # A missing observation never authorizes I/O. One read-only requalification
   # per finite session may recover a transient command timeout. No work runs
   # between attempts: all STOP/MM/access checks and full identity run again.
   # Never retry an actual denied operation, changed counter or failed SMART.
+  print(json.dumps(dict(event='native-health-observation-unavailable',
+      timeout_seconds=deadline,reported_drive_fault=False,data_IO_permitted=False,
+      final_failure=health_timeout_used,UTC=datetime.datetime.now(datetime.timezone.utc).isoformat())),file=sys.stderr,flush=True)
   if health_timeout_used:raise
   health_timeout_used=True;admitted_identity=None
   print(json.dumps(dict(event='native-health-read-timeout-requalification',
@@ -122,7 +129,8 @@ def actual_guard(remaining):
  p.check_returncode();j=json.loads(p.stdout)
  attrs={x['id']:x['raw']['value'] for x in j['ata_smart_attributes']['table'] if x['id'] in [5,187,188,197,198,199]}
  phy={x['id']:x['value'] for x in j['sata_phy_event_counters']['table']}
- assert j['serial_number']==baseline['NativeSerial'] and j['smart_status']['passed'] is True
+ assert j['serial_number']==baseline['NativeSerial'],'destination native serial changed'
+ assert j['smart_status']['passed'] is True,'reported B SMART health failure'
  assert attrs=={x['id']:x['raw']['value'] for x in baseline['Attributes']},'B SMART counters changed'
  assert phy=={x['id']:x['value'] for x in baseline['Phy']},'B PHY counters changed'
  health=dict(serial=j['serial_number'],attributes={str(k):v for k,v in attrs.items()},
@@ -135,18 +143,34 @@ def actual_guard(remaining):
  assert os.stat('B:/').st_dev==CONFIG['volume_device'] and identity['disk_number']==3
  free=shutil.disk_usage('B:/').free
  assert free>CONFIG['protected_B_bytes']+remaining+1048576,'actual B protected floor/commitment'
- return dict(identity=identity,health=health,free_bytes=free,health_timeout_requalification_used=health_timeout_used,UTC=datetime.datetime.now(datetime.timezone.utc).isoformat())
+ health_observations+=1;health_query_seconds+=query_seconds
+ metrics=dict(event='native-health-observation',query_seconds=query_seconds,
+     health_observations=health_observations,health_query_seconds=health_query_seconds,
+     reported_drive_fault=False,UTC=datetime.datetime.now(datetime.timezone.utc).isoformat())
+ print(json.dumps(metrics),file=sys.stderr,flush=True)
+ return dict(identity=identity,health=health,free_bytes=free,health_timeout_requalification_used=health_timeout_used,
+     health_poll_seconds=CONFIG.get('native_health_poll_seconds',5),**metrics)
 assert hashlib.sha256(MM_SOURCE.encode()).hexdigest()==CONFIG['MM_sha256']
 assert hashlib.sha256(OBJECT_SOURCE.encode()).hexdigest()==CONFIG['object_module_sha256']
 mm.evidence();before=actual_guard(CONFIG['maximum_object_bytes']+1048576)
 mm.no_reparse(str(job));job.mkdir(parents=True,exist_ok=True)
 objects=types.ModuleType('nightly_objects');exec(OBJECT_SOURCE,objects.__dict__)
 last_check=time.monotonic()
+last_health_check=last_check
 def progress_guard(remaining):
- global last_check
+ global last_check,last_health_check
  assert shutil.disk_usage('B:/').free>CONFIG['protected_B_bytes']+remaining+1048576
- if time.monotonic()-last_check>=5:
-  actual_guard(remaining);last_check=time.monotonic()
+ now=time.monotonic()
+ if now-last_health_check>=CONFIG.get('native_health_poll_seconds',5):
+  # Full fresh health at admission, finite polling intervals and completion.
+  # Slow/unavailable reads block IO; they are not reported drive faults.
+  actual_guard(remaining);last_health_check=last_check=time.monotonic()
+ elif now-last_check>=5:
+  # Keep the original five-second STOP/MM/kernel-identity observation bound
+  # independently of expensive SMART. Capacity remains checked on every call.
+  identity=control_identity()
+  assert os.stat('B:/').st_dev==CONFIG['volume_device'] and identity['disk_number']==3
+  last_check=time.monotonic()
 def final_guard(remaining):
  global admitted_identity
  # Full fresh MM identity/health again at the acceptance boundary. Only
@@ -208,6 +232,10 @@ def validate(config,objects):
         raise ValueError('finite reviewed identity admission deadline required')
     if type(config.get('native_health_read_timeout_seconds',90)) is not int or config.get('native_health_read_timeout_seconds',90) not in (15,90):
         raise ValueError('finite native health observation deadline required')
+    if type(config.get('native_health_poll_seconds',5)) is not int or config.get('native_health_poll_seconds',5) not in (5,60):
+        raise ValueError('finite reviewed native health polling interval required')
+    if config.get('native_health_poll_seconds',5)==60 and config.get('native_identity_mode')!='admission-plus-kernel-continuity-v1':
+        raise ValueError('separate health cadence requires live kernel identity continuity')
 
 
 def native_admission_timeout(config):

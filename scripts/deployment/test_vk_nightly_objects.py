@@ -42,6 +42,19 @@ class ObjectTests(unittest.TestCase):
         self.assertTrue(second['reused']);self.assertEqual(client.payload_bytes_sent,sent)
         self.assertEqual(list(self.root.glob('nightly-object-restore-*')),[])
 
+    def test_ordered_sink_uses_actual_independent_readback_once_for_new_and_reused_objects(self):
+        from unittest.mock import patch
+        p=self.receiver();client=self.client(p);raw=b'actual independent body'*100
+        output=io.BytesIO()
+        with patch.object(client,'_restore',wraps=client._restore) as recall:
+            client.ensure(raw,readback_sink=output)
+            self.assertEqual(output.getvalue(),raw);self.assertEqual(recall.call_count,1)
+            output=io.BytesIO();sent=client.payload_bytes_sent
+            client.ensure(raw,readback_sink=output)
+            self.assertEqual(output.getvalue(),raw);self.assertEqual(recall.call_count,2)
+            self.assertEqual(client.payload_bytes_sent,sent)
+        client.health()
+
     def test_interrupted_independent_readback_resumes_same_candidate_no_payload_recopy(self):
         p=self.receiver();raw=b'interrupted point'*200;sha=hashlib.sha256(raw).hexdigest()
         control(p.stdin,dict(sha256=sha,bytes=len(raw)))

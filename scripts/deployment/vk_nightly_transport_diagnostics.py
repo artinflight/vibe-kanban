@@ -1,5 +1,7 @@
 """Bounded stderr draining and first-error-preserving owned SSH cleanup."""
 import threading
+import json
+import sys
 
 
 class Diagnostics:
@@ -38,6 +40,15 @@ def finish(process,*,original=None,diagnostics=None,timeout=60):
     if diagnostics is not None:
         diagnostics.thread.join(timeout=.5)
         detail=diagnostics.text()
+        # Only the bounded native health telemetry, never arbitrary stderr or
+        # SQL parameters. The last successful observation carries cumulative
+        # query count/time, including final acceptance, for the owned unit log.
+        health=[]
+        for line in detail.splitlines():
+            try:value=json.loads(line)
+            except (ValueError,TypeError):continue
+            if isinstance(value,dict) and value.get('event')=='native-health-observation':health.append(value)
+        if health:print(json.dumps(dict(event='native-health-session-summary',last_observation=health[-1])),file=sys.stderr,flush=True)
         if diagnostics.done.is_set() and not process.stderr.closed:process.stderr.close()
     else:
         detail=''

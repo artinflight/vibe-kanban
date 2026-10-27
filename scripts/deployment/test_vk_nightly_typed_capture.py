@@ -47,6 +47,8 @@ class TypedCaptureTests(unittest.TestCase):
         with CurrentMap.held(self.path,binding=self.binding,create=True) as m:
             self.prepare(m);result=self.run_batch(m)
             self.assertEqual(result['completed_members'],1);self.assertFalse(result['more_pending'])
+            self.assertEqual(result['independent_object_readbacks'],3)
+            self.assertEqual(result['independent_object_readback_bytes'],12288)
             row=decode_member(m.db.execute('select row from members').fetchone()[0])
             self.assertEqual(row['independent_file_proof']['independent_ordered_B_readback_sha256'],self.point['row']['sha256'])
             uploaded=self.client.payload_bytes_sent;self.assertEqual(self.run_batch(m)['completed_members'],0)
@@ -79,7 +81,9 @@ class TypedCaptureTests(unittest.TestCase):
             with patch.object(self.client,'verify',wraps=self.client.verify) as verify:
                 result=self.run_batch(m)
             self.assertEqual(len(calls),2);self.assertEqual(uploaded[0],uploaded[1])
-            self.assertEqual(verify.call_count,3);self.assertEqual(result['source_bytes_read'],12288)
+            # Two new chunks feed their already-independent acceptance reads
+            # directly; only the repeated accepted first chunk needs a recall.
+            self.assertEqual(verify.call_count,1);self.assertEqual(result['source_bytes_read'],12288)
             self.assertEqual(result['completed_members'],1)
             self.assertEqual(m.db.execute('select count(*) from file_acceptance').fetchone(),(1,))
 

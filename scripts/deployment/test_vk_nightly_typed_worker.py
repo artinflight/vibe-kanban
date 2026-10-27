@@ -47,6 +47,17 @@ class TypedWorkerTests(unittest.TestCase):
                     with DesktopObjects(config,guard=lambda:None):pass
                 start.assert_not_called()
 
+    def test_separate_health_cadence_requires_explicit_interval_and_kernel_continuity(self):
+        from vk_nightly_desktop_objects import validate
+        config=self.config()['desktop'];objects=Path(worker.__file__).with_name('vk_nightly_objects.py').read_text()
+        config['native_health_poll_seconds']=60
+        with self.assertRaisesRegex(ValueError,'kernel identity continuity'):validate(config,objects)
+        config.update(native_identity_mode='admission-plus-kernel-continuity-v1',identity_admission_timeout_seconds=45)
+        validate(config,objects)
+        for invalid in (0,True,3600):
+            config['native_health_poll_seconds']=invalid
+            with self.assertRaisesRegex(ValueError,'polling interval'):validate(config,objects)
+
     def test_selected_qualification_without_authenticated_source_refuses_before_B_access(self):
         with patch.object(worker,'DesktopControls') as remote:
             with self.assertRaisesRegex(ValueError,'authenticated current source'):
@@ -92,7 +103,8 @@ class TypedWorkerTests(unittest.TestCase):
             subprocess=SimpleNamespace(run=lambda *a,**k:next(answers),TimeoutExpired=subprocess.TimeoutExpired),base64=base64,json=json,
             os=SimpleNamespace(stat=lambda p:SimpleNamespace(st_dev=123)),
             shutil=SimpleNamespace(disk_usage=lambda p:SimpleNamespace(free=10000000)),
-            datetime=__import__('datetime'))
+            datetime=__import__('datetime'),time=__import__('time'),sys=SimpleNamespace(stderr=__import__('io').StringIO()),
+            health_observations=0,health_query_seconds=0.0)
         namespace['health_timeout_used']=False;namespace['admitted_identity']=None
         namespace['health_gate']=__import__('contextlib').nullcontext
         exec(code,namespace);namespace['actual_guard'](1024)

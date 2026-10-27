@@ -6,6 +6,7 @@ import datetime
 import io
 import json
 import subprocess
+import time
 import unittest
 from types import SimpleNamespace
 from unittest.mock import Mock
@@ -34,7 +35,8 @@ class NativeHealthTests(unittest.TestCase):
         class Job:
             def __truediv__(self,_):return self
             def stat(self):raise FileNotFoundError
-        space=dict(admitted_identity=dict(disk_number=3),health_timeout_used=False,job=Job(),baseline=baseline,
+        space=dict(admitted_identity=dict(disk_number=3),health_timeout_used=False,health_observations=0,
+            health_query_seconds=0.0,time=time,job=Job(),baseline=baseline,
             CONFIG=dict(native_identity_mode='admission-plus-kernel-continuity-v1',identity_ps='probe',
                 volume_device=123,protected_B_bytes=0),mm=mm,kernel_identity=lambda:dict(disk_number=3),
             subprocess=SimpleNamespace(run=run,TimeoutExpired=subprocess.TimeoutExpired),base64=base64,json=json,
@@ -101,6 +103,43 @@ class NativeHealthTests(unittest.TestCase):
         self.assertEqual(native_admission_timeout({'native_health_read_timeout_seconds':15,'identity_admission_timeout_seconds':45}),210)
         for bad in [0,-1,True,1000000]:
             with self.assertRaises(ValueError):native_admission_timeout({'native_health_read_timeout_seconds':bad})
+
+    def polling(self,interval):
+        now=[0.0];health=Mock();identity=Mock(return_value={'disk_number':3});space_check=Mock(return_value=SimpleNamespace(free=10**10))
+        space=dict(last_check=0.0,last_health_check=0.0,CONFIG=dict(protected_B_bytes=0,volume_device=123,
+            native_health_poll_seconds=interval),time=SimpleNamespace(monotonic=lambda:now[0]),actual_guard=health,
+            control_identity=identity,shutil=SimpleNamespace(disk_usage=space_check),
+            os=SimpleNamespace(stat=lambda _:SimpleNamespace(st_dev=123)))
+        node=next(n for n in ast.parse(NATIVE).body if isinstance(n,ast.FunctionDef) and n.name=='progress_guard')
+        exec(compile(ast.Module(body=[node],type_ignores=[]),'<actual-native-polling>','exec'),space)
+        return space,now,health,identity,space_check
+
+    def test_separate_health_cadence_preserves_STOP_identity_and_every_call_capacity(self):
+        for interval,expected in [(5,120),(60,10)]:
+            space,now,health,identity,capacity=self.polling(interval)
+            for second in range(1,601):now[0]=second;space['progress_guard'](0)
+            self.assertEqual(health.call_count,expected)
+            # Full health includes identity/STOP before and after the query.
+            self.assertEqual(health.call_count+identity.call_count,120)
+            self.assertEqual(capacity.call_count,600)
+
+    def test_STOP_or_identity_fault_between_health_polls_still_fails_without_health_query(self):
+        space,now,health,identity,_=self.polling(60);now[0]=5
+        identity.side_effect=PermissionError('real STOP/access denial')
+        with self.assertRaisesRegex(PermissionError,'real STOP'):space['progress_guard'](0)
+        health.assert_not_called()
+
+    def test_low_capacity_blocks_even_inside_cheap_poll_interval(self):
+        space,now,health,identity,capacity=self.polling(60);now[0]=1
+        capacity.return_value=SimpleNamespace(free=1)
+        with self.assertRaisesRegex(AssertionError,''):space['progress_guard'](1024)
+        health.assert_not_called();identity.assert_not_called()
+
+    def test_unavailable_or_faulted_due_health_blocks_and_does_not_advance_poll_age(self):
+        for error in (subprocess.TimeoutExpired('smartctl',90),AssertionError('reported B SMART health failure')):
+            space,now,health,_,_=self.polling(60);now[0]=60;health.side_effect=error
+            with self.assertRaises(type(error)):space['progress_guard'](0)
+            self.assertEqual(space['last_health_check'],0)
 
 
 if __name__=='__main__':unittest.main()

@@ -1,4 +1,4 @@
-# Nightly — current pickup,October26 23:40EDT
+# Nightly — current pickup,October27 EDT
 
 Finish the existing operational Nightly goal/PR263. No backend restart. Calendar
 is disabled; next run null. Do not duplicate active jobs or accepted bodies.
@@ -59,11 +59,16 @@ coverage. Opt-in full-inode source correction and hardlink/symlink/rename/
 refusal tests are prepared; operational restart-delta selection rejects old
 namespace-only coverage. No host limit or active package was changed.
 A10000-file RAM trial used25672KiB actual Python peakRSS; it is not full-scale
-resource admission. Administrator resource-setting authority is needed for a
-proposed1048576watch ceiling, followed by real enrollment/memory/handover proof.
+resource admission. Owner approval for1048576watches was verified October27
+09:01UTC. The approved sudo -n sysctl attempt failed: password required. The
+live limit remains248899; administrator authentication, not further approval,
+is required. WATCH_LIMIT_APPROVED_AUTHENTICATION_BLOCKED_20261027 retains the
+exact attempt and existing observer memory. Full enrollment was not started.
 This planning number is not a user limit, reservation or readiness claim.
 
-Remaining: obtain administrator watch-resource action; enroll the full-inode
+Remaining: authenticated administrator runs
+`sudo /usr/sbin/sysctl -w fs.inotify.max_user_watches=1048576`; verify readback,
+then enroll the full-inode
 observer with explicit critical SQL alias roots and validate its actual resource
 use. Reconcile alias gap/additive roots without dropping prior scope. Qualify
 17182unresolved versions and capture only required chunks for70167points using

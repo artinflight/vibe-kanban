@@ -25,7 +25,9 @@ preallocated SSD event outbox independent of Desktop transport; growing indexes
 and backup bodies remain B-only. Its actual107010-directory-watch barrier and independent
 B forward-copy reopen passed; this does not cover external hardlink writes.
 The full-inode correction needs actual kernel resource admission; retained
-metadata needs889894watches versus248899available. No setting was changed.
+metadata needs889894watches versus248899available. The owner approved1048576
+on October27; sudo refused for missing administrator authentication. No setting
+was changed and no full-inode enrollment was attempted. Approval is not pending.
 The B-only namespace/map reconciliation completed; baseline/calendar stay open.
 Namespace completeness alone does not prove body/SQL/runtime recoverability.
 

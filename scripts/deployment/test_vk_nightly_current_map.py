@@ -125,6 +125,45 @@ class CurrentMapTests(unittest.TestCase):
             self.assertEqual(m.db.execute('select count(*) from namespace_terminal_gaps').fetchone(),(1,))
             self.assertEqual(m.db.execute('select suffix_complete from namespace_reconciliation').fetchone(),(0,))
 
+    def test_pending_full_hash_reuses_an_existing_body_without_rehash_or_new_copy(self):
+        point=dict(self.version,state='qualified-pending-body',row=dict(self.version['row']))
+        point['row'].pop('segments')
+        with CurrentMap.held(self.path,binding=self.binding,create=True) as m:
+            m.compile(self.ns,lambda name:dict(point,source='/'+name),SQL_sources=[],checkpoint=lambda:None,maximum_paths=10)
+            before=m.db.execute("select row from members where name='home/a'").fetchone()[0]
+            def carriers(sha,size):
+                self.assertEqual((sha,size),(point['row']['sha256'],point['row']['bytes']))
+                return [self.version['row']]
+            result=m.reuse_pending_carriers(carriers,checkpoint=lambda:None,maximum_paths=1)
+            self.assertEqual(result['retained_file_points_reused'],1)
+            self.assertEqual(result['backup_payload_bytes_copied'],0);self.assertTrue(result['more_names'])
+            state,raw=m.db.execute("select state,row from members where name='home/a'").fetchone()
+            self.assertEqual(state,'verified-file');v=decode_member(raw)
+            self.assertEqual(v['member'],self.version['row'])
+            self.assertFalse(v['retained_carrier_reuse']['new_independent_readback_claimed'])
+            self.assertEqual(m.db.execute("select row from retained_file_carrier_history where name='home/a'").fetchone(),(before,))
+            # Lost reply starts from the same key; completed point is skipped.
+            replay=m.reuse_pending_carriers(lambda *_:[],checkpoint=lambda:None,maximum_paths=10)
+            self.assertEqual(replay['retained_file_points_reused'],0)
+            self.assertEqual(m.db.execute("select state from members where name='home/b'").fetchone(),('file-needs-capture',))
+
+    def test_pending_carrier_mismatch_or_commit_failure_preserves_pending_source_point(self):
+        point=dict(self.version,state='qualified-pending-body',row=dict(self.version['row']));point['row'].pop('segments')
+        with CurrentMap.held(self.path,binding=self.binding,create=True) as m:
+            m.compile(self.ns,lambda name:dict(point,source='/'+name),SQL_sources=[],checkpoint=lambda:None,maximum_paths=10)
+            before=m.db.execute('select name,state,row from members order by name').fetchall()
+            with self.assertRaisesRegex(ValueError,'full hash'):
+                m.reuse_pending_carriers(lambda *_:[dict(self.version['row'],sha256='f'*64)],checkpoint=lambda:None,maximum_paths=10)
+            count=0
+            def interrupted():
+                nonlocal count
+                count+=1
+                if count==2:raise OSError('synthetic interrupted reuse')
+            with self.assertRaisesRegex(OSError,'interrupted reuse'):
+                m.reuse_pending_carriers(lambda *_:[self.version['row']],checkpoint=interrupted,maximum_paths=10)
+            self.assertEqual(m.db.execute('select name,state,row from members order by name').fetchall(),before)
+            self.assertEqual(m.db.execute('select count(*) from retained_file_carrier_history').fetchone(),(0,))
+
     def additive_namespace_fixture(self):
         import copy
         old=self.later_namespace();old_binding=json.loads(old.execute('select binding from gap_meta').fetchone()[0])
@@ -352,6 +391,21 @@ class CurrentMapTests(unittest.TestCase):
         self.assertEqual(decode_member(encode_observation(value)),value)
         for raw in (encode_member(value)[:-1],encode_member(value)+b'extra'):
             with self.assertRaises(ValueError):decode_member(raw)
+
+    def test_refresh_rejects_a_catalog_point_for_a_different_observed_inode_or_xattrs(self):
+        import copy
+        for field in ('inode','ctime','xattrs'):
+            with self.subTest(field=field),tempfile.TemporaryDirectory(dir=self.tmp.name) as folder:
+                with CurrentMap.held(Path(folder)/'map.sqlite',binding=self.binding,create=True) as m:
+                    self.compile(m,qualified=lambda name:None)
+                    point=copy.deepcopy(self.version)
+                    if field=='inode':point['source_identity'][1]+=1
+                    elif field=='ctime':point['source_identity'][5]+=1
+                    else:point['row']['xattrs']={'user.new':'eA=='}
+                    before=m.db.execute('select name,state,row from members order by name').fetchall()
+                    result=m.refresh_unresolved(lambda name:dict(point,source='/'+name),checkpoint=lambda:None,maximum_paths=10)
+                    self.assertEqual(result['resolved_versions'],0)
+                    self.assertEqual(m.db.execute('select name,state,row from members order by name').fetchall(),before)
 
     def test_refresh_only_unresolved_keys_and_resume_past_still_unknown_names(self):
         with CurrentMap.held(self.path,binding=self.binding,create=True) as m:

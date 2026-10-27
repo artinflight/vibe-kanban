@@ -632,6 +632,59 @@ class CurrentMap:
             SQL_API_sources_discovered=sum(state=='SQLite-needs-image' for *_,state,encoded in prepared),
             backup_payload_bytes_copied=0,current_baseline_accepted=False)
 
+    def reuse_pending_carriers(self,carriers,*,checkpoint,maximum_paths,after=''):
+        """Resolve already-hashed points against accepted body catalogs only.
+
+        This never observes/hashes/copies source or fabricates a new readback.
+        Retained body epochs/proofs stay with their authenticated providers;
+        the qualified source point supplies the later Linux metadata/identity.
+        Missing matches remain ordinary pending transfers. Prior points survive
+        in history; an interrupted batch is atomic and completed rows are skipped.
+        """
+        if type(maximum_paths) is not int or not 1<=maximum_paths<=8192:
+            raise ValueError('bounded qualified-carrier selection required')
+        if after:key(after)
+        self.check();db=self.db
+        if not db.execute('select complete from metadata').fetchone()[0]:raise ValueError('complete namespace required')
+        batch=db.execute("select name,row from members where state='file-needs-capture' and name>? order by name limit ?",
+                         (after,maximum_paths)).fetchall()
+        prepared=[];reused_bytes=0
+        for name,raw in batch:
+            old=decode_member(raw);row=old['member'];point=old['qualification']
+            if (point.get('source')!='/'+name or point.get('state')!='qualified-pending-body'
+                    or point.get('row')!=row or row.get('segments')):
+                raise ValueError('exact hashed pending point required before carrier reuse')
+            digest(row['sha256']);candidate=next(iter(carriers(row['sha256'],row['bytes'])),None)
+            if candidate is None:continue
+            if candidate.get('kind')!='file' or candidate.get('sha256')!=row['sha256'] or candidate.get('bytes')!=row['bytes']:
+                raise ValueError('accepted carrier differs from qualified full hash/length')
+            member=dict(row,segments=candidate.get('segments'))
+            qualification=dict(point,state='qualified-retained-body',row=member)
+            classify(name,dict(member,identity=point['source_identity']),qualification,SQL_sources=set())
+            value=dict(old,member=member,qualification=qualification,
+                retained_carrier_reuse=dict(qualified_point_sha256=hashlib.sha256(raw).hexdigest(),
+                    source_payload_bytes_reread=0,backup_payload_bytes_copied=0,
+                    new_independent_readback_claimed=False,accepted_carrier_epochs_preserved=True))
+            prepared.append((name,hashlib.sha256(raw).hexdigest(),raw,encode_member(value)))
+            reused_bytes+=row['bytes']
+        checkpoint();db.execute('create table if not exists retained_file_carrier_history '
+            '(name text,point_sha256 text,row blob not null,primary key(name,point_sha256)) without rowid')
+        db.execute('begin immediate')
+        try:
+            for name,sha,old,new in prepared:
+                db.execute('insert or ignore into retained_file_carrier_history values(?,?,?)',(name,sha,old))
+                updated=db.execute("update members set state='verified-file',row=? where name=? and state='file-needs-capture' and row=?",(new,name,old))
+                if updated.rowcount!=1:raise ValueError('pending point changed during carrier resolution')
+            checkpoint();self.check();db.execute('commit')
+        except BaseException:
+            if db.in_transaction:db.execute('rollback')
+            raise
+        last=batch[-1][0] if batch else after
+        more=db.execute("select 1 from members where state='file-needs-capture' and name>? limit 1",(last,)).fetchone() is not None
+        return dict(processed=len(batch),last_name=last,more_names=more,retained_file_points_reused=len(prepared),
+            retained_file_bytes_reused=reused_bytes,source_payload_bytes_read=0,backup_payload_bytes_copied=0,
+            current_baseline_accepted=False)
+
     def attach_base_prefixes(self,base,*,checkpoint,maximum_paths,after=''):
         """Reference smaller accepted same-name bodies; never copy or assume append.
 
@@ -942,6 +995,13 @@ class CurrentMap:
                 version=qualified(name)
                 if version is None or version.get('state') not in ('qualified-retained-body','qualified-pending-body','current-version-deferred'):
                     continue
+                if version['state'] in ('qualified-retained-body','qualified-pending-body'):
+                    # A newer catalog entry is not proof of this namespace
+                    # version. Require the full kernel identity and attributes,
+                    # as for initial later-epoch reconciliation.
+                    if (version.get('source_identity')!=observation['identity']
+                            or any(version['row'].get(k)!=observation[k]
+                                   for k in ('mode','uid','gid','mtime_ns','bytes','xattrs'))):continue
                 state,new=classify(name,observation,version,SQL_sources=sources)
                 if state=='SQLite-needs-image':sources.add('/'+name);newSQL.append('/'+name)
                 if state!=old_state or new!=value:

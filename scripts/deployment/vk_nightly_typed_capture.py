@@ -14,6 +14,7 @@ from vk_nightly_current_map import decode_member
 from vk_nightly_objects import ChunkSink
 from vk_nightly_file_version import capture_qualified_version,PrefixMismatch,QualifiedVersionUnavailable
 from vk_nightly_checkpoints import digest
+from vk_nightly_b_controls import retry_native_busy
 
 
 class HashSink:
@@ -87,7 +88,11 @@ def capture_pending(current_map,client,*,guard,maximum_members,maximum_source_by
                    original_epoch_repaired=False,current_baseline_accepted=False)
         accepted=dict(value,member=member,qualification=dict(point,row=member,state='qualified-retained-body'),
                       independent_file_proof=proof)
-        current_map.accept_file(name,hashlib.sha256(raw).hexdigest(),accepted,proof,checkpoint=guard)
+        # A concurrent bounded metadata reader can briefly hold a native
+        # SQLite read lock. Retry only final idempotent acceptance, retaining
+        # the completed upload/readback instead of recopying the point.
+        retry_native_busy(lambda:current_map.accept_file(name,hashlib.sha256(raw).hexdigest(),
+            accepted,proof,checkpoint=guard),guard=guard)
         done+=1;source_bytes+=row['bytes']+prefix_retry_bytes
         on_progress(dict(completed_members=done,last_name=name,source_bytes_read=source_bytes,
                          encoded_payload_bytes_sent=client.payload_bytes_sent-initial_upload))

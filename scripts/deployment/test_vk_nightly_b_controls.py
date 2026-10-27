@@ -138,6 +138,26 @@ class BControlTests(unittest.TestCase):
                 self.assertIs(type(caught.exception),expected)
                 self.assertEqual(caught.exception.native_error_type,kind)
 
+    def test_native_busy_retry_keeps_real_guards_access_and_owner_failures(self):
+        from vk_nightly_b_controls import retry_native_busy,NativeControlDeferred,NativeControlError
+        for failure in [NativeControlError(dict(error_type='PermissionError',error='access denied')),
+                        NativeControlError(dict(error_type='Blocked',error='OWNER_PAUSE')),
+                        NativeControlDeferred(dict(error_type='BlockingIOError',error='other owner'))]:
+            calls=[]
+            def denied():calls.append(True);raise failure
+            with self.assertRaises(type(failure)):retry_native_busy(denied,guard=lambda:None,sleep=lambda _:None)
+            self.assertEqual(len(calls),1)
+        busy=NativeControlDeferred(dict(error_type='OperationalError',error='database is locked'))
+        def locked():raise busy
+        ticks=iter([0,11])
+        with self.assertRaises(NativeControlDeferred):retry_native_busy(locked,guard=lambda:None,clock=lambda:next(ticks),sleep=lambda _:None)
+        calls=[]
+        def guard():
+            calls.append(True)
+            if len(calls)==2:raise OSError('real memory floor')
+        with self.assertRaisesRegex(OSError,'real memory floor'):
+            retry_native_busy(locked,guard=guard,sleep=lambda _:None)
+
     def test_actual_consistent_API_point_is_adopted_once_only_from_exact_B_acceptance(self):
         from vk_nightly_current_map import CurrentMap
         from vk_nightly_namespace import observe
@@ -476,6 +496,14 @@ class BControlTests(unittest.TestCase):
         base.executemany('insert into bodies values(?,?,?)',[('d'*64,2,'home/a'),('a'*64,3,'home/a')]);base.commit();base.close()
         bdigest=self.import_other(bp);base=self.client.connect('base-prefixes',bdigest,readonly=True)
         db=self.client.connect('pending-map',digest)
+        reusable=self.client.connect('carrier-reuse-map',digest)
+        reused=self.client.call(op='reuse-current-file-carriers',name='carrier-reuse-map',base_index='base-prefixes',recipe_indexes=[],maximum_paths=10)
+        self.assertEqual(reused['retained_file_points_reused'],1)
+        self.assertEqual(reused['retained_file_bytes_reused'],3)
+        self.assertEqual(reused['source_payload_bytes_read'],0);self.assertEqual(reused['backup_payload_bytes_copied'],0)
+        self.assertEqual(reusable.execute('select state from members').fetchone(),('verified-file',))
+        self.assertEqual(self.client.call(op='reuse-current-file-carriers',name='carrier-reuse-map',base_index='base-prefixes',recipe_indexes=[],maximum_paths=10)['retained_file_points_reused'],0)
+        reusable.close()
         result=self.client.call(op='attach-base-prefixes',name='pending-map',base_index='base-prefixes',maximum_paths=128)
         self.assertEqual(result['candidate_prefix_bytes'],2);self.assertEqual(result['backup_payload_bytes_copied'],0)
         state,raw=db.execute('select state,row from members').fetchone()

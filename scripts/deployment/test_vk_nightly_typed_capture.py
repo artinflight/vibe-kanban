@@ -66,6 +66,23 @@ class TypedCaptureTests(unittest.TestCase):
             self.assertEqual(result['completed_members'],1);self.assertEqual(self.client.payload_bytes_sent,uploaded)
             self.assertEqual(result['native_receipts_reused'],3)
 
+    def test_native_read_contention_retries_only_verified_acceptance_without_recopy(self):
+        from vk_nightly_b_controls import NativeControlDeferred
+        from unittest.mock import patch
+        with CurrentMap.held(self.path,binding=self.binding,create=True) as m:
+            self.prepare(m);original=m.accept_file;calls=[];uploaded=[]
+            def accept(*args,**kwargs):
+                calls.append(True);uploaded.append(self.client.payload_bytes_sent)
+                if len(calls)==1:raise NativeControlDeferred(dict(error_type='OperationalError',error='database is locked'))
+                return original(*args,**kwargs)
+            m.accept_file=accept
+            with patch.object(self.client,'verify',wraps=self.client.verify) as verify:
+                result=self.run_batch(m)
+            self.assertEqual(len(calls),2);self.assertEqual(uploaded[0],uploaded[1])
+            self.assertEqual(verify.call_count,3);self.assertEqual(result['source_bytes_read'],12288)
+            self.assertEqual(result['completed_members'],1)
+            self.assertEqual(m.db.execute('select count(*) from file_acceptance').fetchone(),(1,))
+
     def test_changed_source_and_insufficient_phase_keep_original_point_unaccepted(self):
         with CurrentMap.held(self.path,binding=self.binding,create=True) as m:
             self.prepare(m)

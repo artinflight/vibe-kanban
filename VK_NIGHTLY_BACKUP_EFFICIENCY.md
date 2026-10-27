@@ -1619,3 +1619,27 @@ unchanged scope/roots and a verified terminal owner, and refuses continuity or
 whole-baseline claims. Missing/tampered proofs and lost replies pass native
 protocol regression tests. The active body phase must release its map lease
 before later metadata adoption; accepted component copies remain reusable.
+
+Before a pending-file transfer, a finite native-B metadata pass can now match
+its already-qualified complete hash/length against accepted base/recipe bodies.
+An exact match reuses the existing carrier with current point metadata and
+retained old-row history; it claims no new readback. Missing matches stay pending.
+Mismatch, interrupted transaction and lost-reply regressions pass. Apply only
+after the current body writer releases its map lease, then measure actual
+reused bytes before budgeting another body phase; old logical pending size is
+not a measured transfer requirement.
+
+The older body unit stopped10:08EDT on a final SQLite acceptance lock; its
+completed files/chunks remain retained. Capture now retries only that verified,
+idempotent metadata acceptance on typed SQLITE_BUSY/LOCKED, with fresh real
+guards and a finite wait. It never repeats upload/readback for a short read
+lock and never retries access, STOP, integrity or competing-owner failures.
+Unresolved refresh also requires exact inode/ctime/attributes before accepting
+a catalog point; an old hash alone cannot qualify a changed namespace member.
+
+At10:21EDT the V10 later namespace completed783552paths/errors0 and normal
+independent B reopen. The hash-only stage completed10:34EDT:18539points,
+14031retained matches,4494pending bodies,13SQL discoveries and1deferred point;
+actual B stage reopen passed. These are reusable components, not full current
+restore/calendar acceptance. Baseline composition and subsequent capture
+consume them after the original body writer is verified terminal.

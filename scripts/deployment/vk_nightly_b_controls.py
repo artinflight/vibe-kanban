@@ -18,6 +18,7 @@ import shutil
 import sqlite3
 import struct
 import tempfile
+import time
 
 LIMIT=4*1024**2
 BLOCK=65536
@@ -465,7 +466,7 @@ class Store:
             if json.loads(saved).get('barrier')!=report.get('barrier'):raise ValueError('replay barrier differs from actual B delivery')
             mapped=current.CurrentMap();mapped.db=db;mapped.path=path;mapped.inode=tuple(inode)
             return mapped.apply_metadata_replay(report,value['replay'],checkpoint=lambda:self.guard(path.stat().st_size+LIMIT),maximum_paths=q['maximum_paths'])
-        if op=='adopt-qualifications':
+        if op in ('adopt-qualifications','reuse-current-file-carriers'):
             import vk_nightly_current_map as current
             base,bp,bi,_=self.handles[name(q['base_index'])]
             recipes=[]
@@ -487,6 +488,9 @@ class Store:
                     found=catalog.execute("select row from versions where json_extract(row,'$.sha256')=? and json_extract(row,'$.bytes')=? order by name,layer limit 1",(digest,size)).fetchone()
                     if found:yield json.loads(found[0]);return
             value=current.CurrentMap();value.db=db;value.path=path;value.inode=tuple(inode)
+            if op=='reuse-current-file-carriers':
+                return value.reuse_pending_carriers(carriers,checkpoint=lambda:self.guard(path.stat().st_size+LIMIT),
+                    maximum_paths=q['maximum_paths'],after=q.get('after',''))
             return value.adopt_qualifications(q['records'],carriers,checkpoint=lambda:self.guard(path.stat().st_size+LIMIT))
         if op=='attach-base-prefixes':
             import vk_nightly_current_map as current
@@ -589,6 +593,25 @@ class NativeControlError(ValueError):
 
 class NativeControlDeferred(NativeControlError):
     """Only actual competing ownership/SQLite BUSY, never denied controls."""
+
+
+def retry_native_busy(operation,*,guard,timeout_seconds=10,clock=time.monotonic,sleep=time.sleep):
+    """Retry the same rolled-back SQLite operation, never its body transfer.
+
+    Only the protocol's typed SQLITE_BUSY/LOCKED signal qualifies. Access,
+    STOP/health/ownership and integrity failures propagate without retry. Each
+    attempt checks the caller's real guards; the finite wait cannot extend the
+    owning phase deadline or authorize another producer.
+    """
+    if not isinstance(timeout_seconds,(int,float)) or not 0<timeout_seconds<=60:
+        raise ValueError('finite native SQLite contention wait required')
+    start=clock()
+    while True:
+        guard()
+        try:return operation()
+        except NativeControlDeferred as error:
+            if error.native_error_type!='OperationalError' or clock()-start>=timeout_seconds:raise
+            guard();sleep(.05)
 
 
 class Client:

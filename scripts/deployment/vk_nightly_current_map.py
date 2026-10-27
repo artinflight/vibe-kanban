@@ -658,6 +658,49 @@ class CurrentMap:
             SQL_API_sources_discovered=sum(state=='SQLite-needs-image' for *_,state,encoded in prepared),
             backup_payload_bytes_copied=0,current_baseline_accepted=False)
 
+    def index_completed_file_carriers(self,*,checkpoint,maximum_paths,after=('', '')):
+        """Index already independently accepted bodies, including interrupted runs.
+
+        Only exact stored acceptance rows/proofs qualify. This B-only metadata
+        index never reopens a source or recopies body bytes. Caller keyset
+        cursors make rebuilding it bounded and duplicate commits idempotent.
+        """
+        if type(maximum_paths) is not int or not 1<=maximum_paths<=8192 or len(after)!=2:
+            raise ValueError('bounded completed-file history cursor required')
+        if after[0]:key(after[0]);digest(after[1])
+        elif after[1]:raise ValueError('paired completed-file history cursor required')
+        self.check();db=self.db
+        exists=db.execute("select 1 from sqlite_master where name='file_acceptance_history'").fetchone()
+        rows=db.execute('select name,version_sha256,proof,accepted_row from file_acceptance_history '
+            'where accepted_row is not null and (name,version_sha256)>(?,?) order by name,version_sha256 limit ?',
+            (*after,maximum_paths)).fetchall() if exists else []
+        prepared=[]
+        for name,version,encoded_proof,raw in rows:
+            checkpoint();accepted=decode_member(raw);proof=decode_member(encoded_proof);member=accepted['member']
+            if (hashlib.sha256(raw).hexdigest()!=version or accepted.get('independent_file_proof')!=proof
+                    or proof.get('independent_ordered_B_readback_sha256')!=member.get('sha256')
+                    or proof.get('independent_ordered_B_readback_bytes')!=member.get('bytes')
+                    or proof.get('source_metadata')!={k:member[k] for k in ('mode','uid','gid','mtime_ns','xattrs')}
+                    or accepted.get('qualification',{}).get('state')!='qualified-retained-body'
+                    or not member.get('segments')):
+                raise ValueError('completed file history lacks exact original readback proof')
+            digest(member['sha256']);prepared.append((member['sha256'],member['bytes'],encode_member(member),name,version))
+        db.execute('create table if not exists completed_file_carriers '
+            '(sha256 text,bytes integer,row blob,history_name text,history_version text,primary key(sha256,bytes)) without rowid')
+        db.execute('begin immediate')
+        try:
+            db.executemany('insert or ignore into completed_file_carriers values(?,?,?,?,?)',prepared)
+            checkpoint();self.check();db.execute('commit')
+        except BaseException:
+            if db.in_transaction:db.execute('rollback')
+            raise
+        last=tuple(rows[-1][:2]) if rows else tuple(after)
+        more=bool(exists and db.execute('select 1 from file_acceptance_history where accepted_row is not null '
+            'and (name,version_sha256)>(?,?) limit 1',last).fetchone())
+        return dict(processed=len(rows),last_key=last,more_names=more,
+            indexed_body_versions=db.execute('select count(*) from completed_file_carriers').fetchone()[0],
+            source_payload_bytes_read=0,backup_payload_bytes_copied=0)
+
     def reuse_pending_carriers(self,carriers,*,checkpoint,maximum_paths,after=''):
         """Resolve already-hashed points against accepted body catalogs only.
 
@@ -674,13 +717,16 @@ class CurrentMap:
         if not db.execute('select complete from metadata').fetchone()[0]:raise ValueError('complete namespace required')
         batch=db.execute("select name,row from members where state='file-needs-capture' and name>? order by name limit ?",
                          (after,maximum_paths)).fetchall()
-        prepared=[];reused_bytes=0
+        prepared=[];reused_bytes=0;completed_reused=0
+        has_completed=bool(db.execute("select 1 from sqlite_master where name='completed_file_carriers'").fetchone())
         for name,raw in batch:
             old=decode_member(raw);row=old['member'];point=old['qualification']
             if (point.get('source')!='/'+name or point.get('state')!='qualified-pending-body'
                     or point.get('row')!=row or row.get('segments')):
                 raise ValueError('exact hashed pending point required before carrier reuse')
-            digest(row['sha256']);candidate=next(iter(carriers(row['sha256'],row['bytes'])),None)
+            digest(row['sha256']);own=db.execute('select row,history_name,history_version from completed_file_carriers where sha256=? and bytes=?',
+                (row['sha256'],row['bytes'])).fetchone() if has_completed else None
+            candidate=decode_member(own[0]) if own else next(iter(carriers(row['sha256'],row['bytes'])),None)
             if candidate is None:continue
             if candidate.get('kind')!='file' or candidate.get('sha256')!=row['sha256'] or candidate.get('bytes')!=row['bytes']:
                 raise ValueError('accepted carrier differs from qualified full hash/length')
@@ -691,6 +737,9 @@ class CurrentMap:
                 retained_carrier_reuse=dict(qualified_point_sha256=hashlib.sha256(raw).hexdigest(),
                     source_payload_bytes_reread=0,backup_payload_bytes_copied=0,
                     new_independent_readback_claimed=False,accepted_carrier_epochs_preserved=True))
+            if own:
+                value['retained_carrier_reuse']['completed_file_history']=dict(name=own[1],version_sha256=own[2])
+                completed_reused+=1
             prepared.append((name,hashlib.sha256(raw).hexdigest(),raw,encode_member(value)))
             reused_bytes+=row['bytes']
         checkpoint();db.execute('create table if not exists retained_file_carrier_history '
@@ -708,7 +757,7 @@ class CurrentMap:
         last=batch[-1][0] if batch else after
         more=db.execute("select 1 from members where state='file-needs-capture' and name>? limit 1",(last,)).fetchone() is not None
         return dict(processed=len(batch),last_name=last,more_names=more,retained_file_points_reused=len(prepared),
-            retained_file_bytes_reused=reused_bytes,source_payload_bytes_read=0,backup_payload_bytes_copied=0,
+            retained_file_bytes_reused=reused_bytes,completed_file_points_reused=completed_reused,source_payload_bytes_read=0,backup_payload_bytes_copied=0,
             current_baseline_accepted=False)
 
     def attach_base_prefixes(self,base,*,checkpoint,maximum_paths,after=''):

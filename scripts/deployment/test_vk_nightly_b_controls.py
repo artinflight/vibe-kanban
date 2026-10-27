@@ -112,6 +112,86 @@ class BControlTests(unittest.TestCase):
             stop.set();thread.join(timeout=5)
         self.assertFalse(thread.is_alive());self.assertEqual(errors,[])
 
+    def seal_request(self,key,binding):
+        request=dict(format='vk-nightly-B-working-checkpoint-v1',index=key,binding=binding)
+        digest=hashlib.sha256(json.dumps(request,sort_keys=True,separators=(',',':')).encode()).hexdigest()
+        return dict(request_sha256=digest,binding=binding)
+
+    def test_native_seal_independent_readback_immutable_reopen_and_lost_reply_reuse(self):
+        db=self.client.connect('live-map',self.sha)
+        db.execute('insert into point values(1,?)',(b'current accepted fixture point',))
+        request=self.seal_request('live-map',dict(instance='epoch',sequence=123))
+        first=db.request('seal-working',**request)
+        self.assertEqual(first['status'],'needs_independent_readback')
+        image=self.controls/(first['sha256']+'.sqlite');original_image=image.read_bytes()
+        self.assertFalse(image.with_suffix('.import.json').exists())
+        self.assertEqual(self.client.readback(first['sha256']),first['bytes'])
+        self.client.call(op='acknowledge',sha256=first['sha256'],independent_stream_sha256=first['sha256'],Linux_metadata=first['Linux_metadata'])
+        files=set(self.controls.iterdir())
+        # Simulate a lost response and later working progress: same request
+        # must return the original image, not silently capture a later epoch.
+        db.execute('insert into point values(2,?)',(b'later point',));db.close()
+        other=self.start();live=other.connect('live-map',self.sha)
+        reused=live.request('seal-working',**request)
+        self.assertTrue(reused['reused_completed_snapshot'])
+        self.assertEqual(reused['sha256'],first['sha256']);self.assertEqual(set(self.controls.iterdir()),files)
+        self.assertEqual(image.read_bytes(),original_image);live.close()
+        view=other.connect('sealed-view',first['sha256'],readonly=True)
+        self.assertEqual(view.execute('select id,value from point').fetchall(),[(1,b'current accepted fixture point')]);view.close()
+
+    def test_sealed_current_map_consumed_by_normal_typed_reader_without_second_index(self):
+        from vk_nightly_current_map import FORMAT,SealedMemberIndex,encode_member
+        db=self.client.connect('ready-map',self.sha)
+        db.execute('create table metadata(format text,complete integer)');db.execute('insert into metadata values(?,1)',(FORMAT,))
+        db.execute('create table members(name text primary key,state text,row blob)')
+        db.execute('create table SQL_sources(path text primary key)')
+        member=dict(kind='file',bytes=3,sha256=hashlib.sha256(b'abc').hexdigest(),mode=0o640,uid=1000,gid=1000,mtime_ns=123,xattrs=[])
+        db.execute('insert into members values(?,?,?)',('home/note','verified-file',encode_member(dict(member=member))))
+        sealed=self.client.seal_checkpoint('ready-map',dict(instance='ready-epoch',sequence=42));db.close()
+        self.assertTrue(sealed['independent_stream_readback_verified']);self.assertFalse(sealed['whole_baseline_accepted'])
+        other=self.start();view=other.connect('ordinary-recovery',sealed['sha256'],readonly=True)
+        index=SealedMemberIndex(view,lambda:view.request('check'),dict(sha256=sealed['sha256']))
+        self.assertEqual(list(index.entries()),[('home/note',member)]);view.close()
+
+    def test_native_seal_rejects_uncommitted_reader_bad_binding_and_tampered_image(self):
+        from vk_nightly_b_controls import NativeControlError
+        db=self.client.connect('live-map',self.sha);request=self.seal_request('live-map',dict(epoch='fixture'))
+        db.execute('begin immediate')
+        with self.assertRaisesRegex(NativeControlError,'committed writable'):db.request('seal-working',**request)
+        db.rollback();db.execute('insert into point values(1,?)',(b'separate image from original seed',))
+        with self.assertRaisesRegex(NativeControlError,'request binding'):db.request('seal-working',**dict(request,binding=dict(epoch='different')))
+        first=db.request('seal-working',**request);db.close()
+        read=self.client.connect('live-map',self.sha,readonly=True,working=True)
+        with self.assertRaisesRegex(NativeControlError,'committed writable'):read.request('seal-working',**request)
+        read.close()
+        image=self.controls/(first['sha256']+'.sqlite')
+        with image.open('r+b') as f:f.seek(100);f.write(b'X')
+        db=self.client.connect('live-map',self.sha)
+        with self.assertRaisesRegex(NativeControlError,'receipt or image differs'):db.request('seal-working',**request)
+        db.close()
+
+    def test_interrupted_native_backup_keeps_working_point_and_unaccepted_partial(self):
+        import vk_nightly_objects as objects
+        from vk_nightly_b_controls import Store
+        store=Store(self.controls,objects,guard=lambda _:None);self.addCleanup(store.close)
+        store.open(dict(name='interrupt-map',checkpoint_sha256=self.sha))
+        db,path,_,_=store.handles['interrupt-map'];db.execute('insert into point values(1,zeroblob(1048576))')
+        request=self.seal_request('interrupt-map',dict(epoch='interrupted'))
+        calls=0
+        def stop(_):
+            nonlocal calls
+            calls+=1
+            if calls>=3:raise PermissionError('synthetic actual STOP')
+        store.guard=stop
+        with self.assertRaisesRegex(PermissionError,'actual STOP'):
+            store.seal_working('interrupt-map',db,path,request)
+        store.guard=lambda _:None
+        self.assertEqual(db.execute('select length(value) from point').fetchall(),[(1048576,)])
+        self.assertFalse((self.controls/('snapshot-'+request['request_sha256']+'.json')).exists())
+        partials=list(self.controls.glob('snapshot-*.partial'));self.assertEqual(len(partials),1)
+        done=store.seal_working('interrupt-map',db,path,request)
+        self.assertEqual(done['native_integrity'],'ok');self.assertTrue(partials[0].exists())
+
     def test_embedded_temp_placement_preserves_python_default_and_restores_SQLite_scope(self):
         import vk_nightly_objects as objects
         from vk_nightly_b_controls import Store

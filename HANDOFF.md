@@ -24,17 +24,18 @@ health/package files. No OS/work-SSD backup payload or fallback is allowed.
   Approximately770k successful watches,467432KiB RSS/1.06GB cgroup including
  511MB file cache/84MB kernel; no high/max/OOM events at that checkpoint.
   This observer stays running independently of Desktop transport.
-- Terminal composition V12: vk-nightly-B-current-composition-inodes-v12-20261027.service,
-  PID2679296, started11:31:39EDT, sourcea527b909a73bf1e255ac6c2eef3b00309f96d729.
-  Package current-composition-B-inodes-v12; configSHA
-  49209f00108aeea0760f0de98c40ef02b19a1a7f4f05f0125668ea65a8a36b69.
-  CPU25%,High1536MiB/Max2GiB,Swap0,Tasks64; own3h deadline/hard3h5min.
-  It stopped11:52EDT on a15s native SMART read timeout; no map/body writer
-  remains. All committed B metadata/components survive; no recapture occurred.
-  It resumes the retained cursor in8192-name calls, then consumes the actual
-  epoch suffix, refreshes staged qualifications and reuses accepted whole bodies.
-  B source-event delivery is serial/every120s plus an explicit suffix boundary.
-  Check its actual terminal receipt before preparing the next payload phase.
+- Composition V13 is successfully terminal at12:10:30EDT, unit
+  vk-nightly-B-current-composition-inodes-v13-20261027.service, MainPID0/exit0.
+  Source2b540cf4dd826414fa25b00688fc0776d4dc2638; package current-composition-B-inodes-v13,
+  configSHAd9f06f90af8b5742e0687371ff65d367c3c568bd12b34f80bfcc09ab24ed8b72.
+  Normal independent B reopen passed; native map1284141056B. It consumed
+  actual epoch suffix284178..3944253:3225changed/7065replayed paths,
+  unchanged source paths scanned0. Reused8624file points/44269832049raw B
+  bytes without any body recapture/copy. All4398accepted history points remain.
+  Initial residual demand:61251pending files/23247891411logical B,
+  6928unqualified/1503231416logical B,218SQL sources (not net transfer).
+  First index/reuse completed file-history bodies too; later qualification can
+  otherwise demote the same completed body to pending. Do not repeat namespace.
 
 ## Newly completed, reusable evidence
 
@@ -77,8 +78,8 @@ Native subprocess failures now retain explicit context instead of generic EOF.
 
 ## Baseline/commissioning work still required
 
-Resume V12's retained cursor after finite full health requalification; then
-independently reopen its completed suffix/current map.
+Reuse the accepted V13 namespace/suffix result; next perform the finite
+completed-file-history lookup and residual-only qualification/capture.
 Inspect exact residual states and the single deferred point. Reuse accepted
 body matches and existing SQL points; capture only unresolved current versions.
 Cold SQL can reuse verified images; live/WAL/always-API sources need actual API
@@ -97,9 +98,9 @@ without pretending the117-root kernel plan covers them.
 
 Current-set acceptance still needs final body/SQL/runtime integration, a sealed
 authenticated B-backed current descriptor and independent composed restore.
-The working-index provider currently imports immutable original checkpoints;
-add/test B-native sealing of a completed current working index without SSD
-hydration before treating a mutable working index as an accepted descriptor.
+B-native immutable snapshot plus independent stream/hash/SQLite acceptance
+and normal typed-reader reopening are now implemented/tested. Apply only to
+the completed current map; tests alone are not its actual descriptor acceptance.
 Then finish the normal incremental cycle/restart delta interface and actual
 installed worker/config/health integration. The older calendar invokes the
 legacy supervisor/job path; do not enable it merely because its fixtures pass.

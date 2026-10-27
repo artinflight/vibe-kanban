@@ -80,7 +80,7 @@ class Store:
     def __init__(self,root,objects,*,guard,maximum_index_bytes=4*1024**3):
         self.root=Path(root);self.objects=objects;self.guard=guard;self.maximum=maximum_index_bytes
         if self.root.resolve()!=self.root or not self.root.is_dir():raise ValueError('existing canonical B control directory required')
-        self.handles={};self.cursors={};self.next_cursor=0;self.readonly_identities={};self.pending_rows={};self.exhausted={}
+        self.handles={};self.writable=set();self.cursors={};self.next_cursor=0;self.readonly_identities={};self.pending_rows={};self.exhausted={}
         self.cache_bytes=128*1024**2;self.guard_reason=None;self.temporary_configured=False
 
     def configure(self,db):
@@ -188,6 +188,63 @@ class Store:
             return receipt
         atomic_new(proof,receipt);return receipt
 
+    def seal_working(self,key,db,path,q):
+        """Make a resumable B-native control image, never a source-body copy.
+
+        A successful image is still unaccepted until the ordinary independent
+        stream/hash and acknowledge path passes. The request binds its logical
+        epoch separately from immutable bytes. Lost replies reuse the exact
+        image; later writes to the working descendant cannot alter it.
+        """
+        if key not in self.writable or db.in_transaction:
+            raise ValueError('owned committed writable index required for sealing')
+        request=dict(format='vk-nightly-B-working-checkpoint-v1',index=key,binding=q['binding'])
+        canonical=json.dumps(request,sort_keys=True,separators=(',',':'),allow_nan=False).encode()
+        if len(canonical)>65536 or hashlib.sha256(canonical).hexdigest()!=sha(q['request_sha256']):
+            raise ValueError('exact bounded working-checkpoint request binding required')
+        manifest=self.root/('snapshot-'+q['request_sha256']+'.json')
+        if manifest.exists():
+            self.checked(manifest)
+            if manifest.stat().st_size>131072:raise ValueError('bounded working-checkpoint receipt required')
+            result=json.loads(manifest.read_text());image=self.checkpoint(result['sha256'])
+            if result['request']!=request or self.objects.file_identity(image)!=result['image_identity'] or self.hash(image)!=result['sha256']:
+                raise ValueError('retained working-checkpoint receipt or image differs')
+            return dict(result,reused_completed_snapshot=True)
+        size=path.stat().st_size;page_size=db.execute('pragma page_size').fetchone()[0]
+        if size>self.maximum:raise ValueError('working-checkpoint exceeds admitted image budget')
+        self.guard(size+2*LIMIT);before=self.objects.file_identity(path)
+        temporary=self.root/('snapshot-'+q['request_sha256']+'-'+os.urandom(8).hex()+'.partial')
+        # Reserve the pathname exclusively; never replace retained partials.
+        with temporary.open('xb'):pass
+        target=sqlite3.connect(temporary,isolation_level=None)
+        try:
+            self.configure(target);target.execute('pragma synchronous=FULL')
+            target.execute('pragma page_size='+str(page_size))
+            target.execute('pragma max_page_count='+str(self.maximum//page_size))
+            def progress(status,remaining,total):
+                if status not in (sqlite3.SQLITE_OK,sqlite3.SQLITE_DONE):
+                    raise sqlite3.OperationalError('snapshot backup could not progress: '+str(status))
+                self.guard(remaining*page_size+2*LIMIT)
+            db.backup(target,pages=256,progress=progress,sleep=0)
+            if target.execute('pragma integrity_check').fetchall()!=[('ok',)]:
+                raise ValueError('native working-checkpoint integrity failed; partial retained')
+        finally:target.close()
+        with temporary.open('r+b') as stream:os.fsync(stream.fileno())
+        if self.objects.file_identity(path)!=before:
+            raise ValueError('working index changed while sealing; partial retained')
+        if temporary.stat().st_size>self.maximum:raise ValueError('sealed image exceeds admitted byte budget')
+        digest=self.hash(temporary);image=self.checkpoint(digest)
+        if image.exists():
+            if self.hash(image)!=digest:raise ValueError('working-checkpoint content collision')
+            # The separately retained partial is never mistaken for an accepted image.
+        else:os.rename(temporary,image)
+        result=dict(format='vk-nightly-B-working-checkpoint-result-v1',request=request,
+            request_sha256=q['request_sha256'],sha256=digest,bytes=image.stat().st_size,
+            image_identity=self.objects.file_identity(image),source_identity=before,
+            Linux_metadata=dict(origin='native-B-control-image-not-source-Linux-metadata'),
+            native_integrity='ok',status='needs_independent_readback',reused_completed_snapshot=False)
+        self.guard(0);atomic_new(manifest,result);return result
+
     def authorizer(self,action,a,b,db,trigger):
         if action in (sqlite3.SQLITE_ATTACH,sqlite3.SQLITE_DETACH,sqlite3.SQLITE_CREATE_VTABLE,sqlite3.SQLITE_DROP_VTABLE):
             return sqlite3.SQLITE_DENY
@@ -256,6 +313,7 @@ class Store:
                 if actual!=self.maximum//page:raise ValueError('native SQLite page ceiling differs from admitted index budget')
             db.set_authorizer(self.authorizer)
             self.handles[key]=(db,path,self.objects.file_identity(path)[:2],lease)
+            if not readonly:self.writable.add(key)
             if readonly and not working_read:self.readonly_identities[key]=self.objects.file_identity(path)
             return dict(open=True,in_transaction=False,bytes=path.stat().st_size)
         except BaseException:
@@ -315,6 +373,7 @@ class Store:
         if self.objects.file_identity(path)[:2]!=inode:raise ValueError('open B control index substituted')
         if key in self.readonly_identities and self.objects.file_identity(path)!=self.readonly_identities[key]:
             raise ValueError('immutable B checkpoint changed while reading')
+        if op=='seal-working':return self.seal_working(key,db,path,q)
         if op=='check':return dict(in_transaction=db.in_transaction,bytes=path.stat().st_size)
         if op=='storage-status':
             temporary=str(self.temporary_directory)
@@ -382,7 +441,7 @@ class Store:
             for cid,(owner,cursor) in list(self.cursors.items()):
                 if owner==key:
                     cursor.close();del self.cursors[cid];self.pending_rows.pop(cid,None);self.exhausted.pop(cid,None)
-            db.close();lease.__exit__(None,None,None);del self.handles[key];self.readonly_identities.pop(key,None)
+            db.close();lease.__exit__(None,None,None);del self.handles[key];self.readonly_identities.pop(key,None);self.writable.discard(key)
             return dict(closed=True)
         if op=='accept-SQL-point':
             # Accept only the exact independently sealed body record, not a
@@ -495,6 +554,11 @@ class Store:
             if json.loads(saved).get('barrier')!=report.get('barrier'):raise ValueError('replay barrier differs from actual B delivery')
             mapped=current.CurrentMap();mapped.db=db;mapped.path=path;mapped.inode=tuple(inode)
             return mapped.apply_metadata_replay(report,value['replay'],checkpoint=lambda:self.guard(path.stat().st_size+LIMIT),maximum_paths=q['maximum_paths'])
+        if op=='index-completed-file-carriers':
+            import vk_nightly_current_map as current
+            value=current.CurrentMap();value.db=db;value.path=path;value.inode=tuple(inode)
+            return value.index_completed_file_carriers(checkpoint=lambda:self.guard(LIMIT),
+                maximum_paths=q['maximum_paths'],after=q.get('after',('', '')))
         if op in ('adopt-qualifications','reuse-current-file-carriers'):
             import vk_nightly_current_map as current
             base,bp,bi,_=self.handles[name(q['base_index'])]
@@ -671,6 +735,27 @@ class Client:
                 or value['error_type']=='OperationalError' and value['error'] in ('database is locked','database table is locked'))
             raise (NativeControlDeferred if temporary else NativeControlError)(value)
         return value['result']
+    def seal_checkpoint(self,key,binding,*,on_progress=lambda _:None):
+        """Seal a committed native index and independently accept exact bytes.
+
+        This accepts only an immutable metadata image. It makes no current-set,
+        source coverage, body restore, journal or scheduling acceptance claim.
+        """
+        request=dict(format='vk-nightly-B-working-checkpoint-v1',index=name(key),binding=binding)
+        digest=hashlib.sha256(json.dumps(request,sort_keys=True,separators=(',',':'),allow_nan=False).encode()).hexdigest()
+        result=self.call(op='seal-working',name=key,binding=binding,request_sha256=digest)
+        if result['request']!=request or result['request_sha256']!=digest or result['native_integrity']!='ok':
+            raise ValueError('native working-checkpoint binding differs')
+        if self.readback(result['sha256'],on_progress=on_progress)!=result['bytes']:
+            raise ValueError('independent working-checkpoint length differs')
+        accepted=self.call(op='acknowledge',sha256=result['sha256'],
+            independent_stream_sha256=result['sha256'],Linux_metadata=result['Linux_metadata'])
+        if (accepted['sha256']!=result['sha256'] or accepted['bytes']!=result['bytes']
+                or accepted.get('native_integrity')!='ok' or accepted.get('independent_readback') is not True):
+            raise ValueError('ordinary immutable checkpoint acceptance differs')
+        return dict(result,acceptance=accepted,independent_stream_readback_verified=True,
+                    whole_baseline_accepted=False)
+
     def readback(self,digest,*,sink=None,on_progress=lambda _:None):
         self.guard();send(self.output,dict(op='readback',sha256=digest));header=recv(self.source)
         h=hashlib.sha256();left=header['bytes'];reported=0

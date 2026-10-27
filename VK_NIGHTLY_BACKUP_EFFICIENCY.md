@@ -1665,3 +1665,21 @@ access denial, STOP, failed SMART or changed counter still fails closed. Five
 actual embedded-guard regressions pass these branches. No deadline or hardware
 criterion changes. The separate SQLite temporary-scope cleanup passes the
 178-test focused suite; Python's global tempfile default remains unchanged.
+
+At12:10:30EDT V13 completed actual B namespace/suffix composition and normal
+independent reopening. It replayed7065metadata paths from3225changed names
+through3944253, scanned0unchanged source paths, and reused8624accepted file
+points/44269832049raw body bytes without recapture or copying. All4398recent
+file acceptance records remain. Residual logical demand is23.25GB qualified
+files plus1.50GB unqualified files and218SQL sources; these are not measured
+new encoded transfer bytes. Original terminal epoch gaps remain explicit.
+
+The native provider now seals committed working indexes to immutable B-only
+SQLite images with exact request/epoch bindings, integrity and full native
+hash. Ordinary independent streamed readback/acknowledgement precedes normal
+typed-reader use. Lost replies reuse the exact completed image after later
+working writes; uncommitted/reader ownership, tampering and guard failures
+refuse adoption. Interrupted unaccepted partials and working originals survive.
+Completed file-history lookup separately validates original accepted-row hashes
+and ordered-readback proofs before reusing their bodies. Its bounded keyset
+index and pending resolution perform no source/body read or transfer.

@@ -147,6 +147,50 @@ class CurrentMapTests(unittest.TestCase):
             self.assertEqual(replay['retained_file_points_reused'],0)
             self.assertEqual(m.db.execute("select state from members where name='home/b'").fetchone(),('file-needs-capture',))
 
+    def completed_point_fixture(self,m):
+        point=dict(self.version,state='qualified-pending-body',row=dict(self.version['row']));point['row'].pop('segments')
+        m.compile(self.ns,lambda name:dict(point,source='/'+name),SQL_sources=[],checkpoint=lambda:None,maximum_paths=10)
+        original=m.db.execute("select row from members where name='home/a'").fetchone()[0];old=decode_member(original)
+        member=dict(old['member'],segments=self.version['row']['segments'])
+        proof=dict(independent_ordered_B_readback_sha256=member['sha256'],independent_ordered_B_readback_bytes=member['bytes'],
+            source_metadata={k:member[k] for k in ('mode','uid','gid','mtime_ns','xattrs')})
+        accepted=dict(old,member=member,qualification=dict(old['qualification'],row=member,state='qualified-retained-body'),independent_file_proof=proof)
+        m.db.execute('create table file_acceptance(name text primary key,proof blob)')
+        m.accept_file('home/a',hashlib.sha256(original).hexdigest(),accepted,proof,checkpoint=lambda:None)
+        # A later independent hash observation may classify this same body as
+        # pending again; the completed upload/readback is still authoritative.
+        m.db.execute("update members set state='file-needs-capture',row=? where name='home/a'",(original,))
+        return member
+
+    def test_completed_interrupted_run_body_reused_without_old_catalog_or_new_copy(self):
+        with CurrentMap.held(self.path,binding=self.binding,create=True) as m:
+            member=self.completed_point_fixture(m)
+            indexed=m.index_completed_file_carriers(checkpoint=lambda:None,maximum_paths=1)
+            self.assertEqual(indexed['indexed_body_versions'],1);self.assertFalse(indexed['more_names'])
+            self.assertEqual(m.index_completed_file_carriers(checkpoint=lambda:None,maximum_paths=1)['indexed_body_versions'],1)
+            def forbidden(*_):self.fail('completed body should not need older catalog or source')
+            reused=m.reuse_pending_carriers(forbidden,checkpoint=lambda:None,maximum_paths=10)
+            self.assertEqual(reused['completed_file_points_reused'],2)
+            self.assertEqual(reused['backup_payload_bytes_copied'],0)
+            self.assertEqual(decode_member(m.db.execute("select row from members where name='home/a'").fetchone()[0])['member'],member)
+            self.assertEqual(m.db.execute('select count(*) from file_acceptance_history').fetchone(),(1,))
+
+    def test_completed_file_index_rejects_bad_proof_and_rolls_back_on_guard_failure(self):
+        with CurrentMap.held(self.path,binding=self.binding,create=True) as m:
+            self.completed_point_fixture(m)
+            count=0
+            def stop():
+                nonlocal count
+                count+=1
+                if count==2:raise OSError('synthetic actual STOP at commit')
+            with self.assertRaisesRegex(OSError,'STOP at commit'):
+                m.index_completed_file_carriers(checkpoint=stop,maximum_paths=1)
+            self.assertEqual(m.db.execute('select count(*) from completed_file_carriers').fetchone(),(0,))
+            m.db.execute('update file_acceptance_history set proof=?',(encode_member(dict(forged=True)),))
+            with self.assertRaisesRegex(ValueError,'exact original readback'):
+                m.index_completed_file_carriers(checkpoint=lambda:None,maximum_paths=1)
+            self.assertEqual(m.db.execute('select count(*) from completed_file_carriers').fetchone(),(0,))
+
     def test_pending_carrier_mismatch_or_commit_failure_preserves_pending_source_point(self):
         point=dict(self.version,state='qualified-pending-body',row=dict(self.version['row']));point['row'].pop('segments')
         with CurrentMap.held(self.path,binding=self.binding,create=True) as m:

@@ -70,6 +70,7 @@ class TypedWorkerTests(unittest.TestCase):
             os=SimpleNamespace(stat=lambda p:SimpleNamespace(st_dev=123)),
             shutil=SimpleNamespace(disk_usage=lambda p:SimpleNamespace(free=10000000)),
             datetime=__import__('datetime'))
+        namespace['health_timeout_used']=False
         exec(code,namespace);namespace['actual_guard'](1024)
         self.assertEqual(records[0]['temperature'],31);self.assertTrue(records[0]['smart_passed'])
         self.assertEqual(records[0]['attributes'],{'5':0})

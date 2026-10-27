@@ -1,117 +1,104 @@
-# Nightly — current pickup, October27 EDT
+# Nightly pickup — October27,14:43EDT
 
-Finish the existing Nightly commissioning goal/PR263 in workspace604d. No backend
-restart. Scheduling is disabled, next run null. Do not duplicate independent
-jobs, accepted carriers, database capture or the completed namespace audit.
-Read current RESULT/STOP/STATUS receipts; a progress mirror can predate a STOP.
+Finish commissioning in existing workspace604d/PR263. No backend restart.
+Schedule disabled; next run null. Preserve all carriers, SQL points, partials,
+failed epochs and active independent jobs. Read STOP/RESULT before any STATUS.
 
-Private evidence root:
+Private root D:
 /mnt/vk-storage/vk-nightly-efficiency-20261017/commissioning-20261026
-Native controls/objects:
-B:/vk-backups/vk-nightly-efficiency-20261026/{controls-v1,objects-v1}
-All backup bodies/growing indexes/SQLite temporary work belong on B. Local
-source observation uses fixed8MiB SQLite plus9MiB reserved rollback and bounded
-health/package files. No OS/work-SSD backup payload or fallback is allowed.
+Native recovery roots: B:/vk-backups/vk-nightly-efficiency-20261026/
+{controls-v1,objects-v1}. All bodies, growing indexes and SQLite temporary work
+stay B. Local observer uses8MiB outbox+9MiB reserved rollback; code/status bounded.
+LATEST_STATUS.private.json records fresh units/startticks, resources and phases.
 
-## Actual independent ownership
+## Current actual jobs — do not duplicate
 
-- Source observer V10 is terminal13:10:23EDT, MainPID0/exit1, epoch
-  2f32f888fa134b9496467b4fba4fc0e7. Unknown watch779294/mask8; intact SQLite
-  SHA61977f098f9dcb58b1bd804c40c635ce585e0dfeaf361a8be602af2b786be89d,
-  cursor5807284/B ACK5803171/64pending names. Receipt b-controls-v1/
-  INODE_V10_TERMINAL_GAP_20261027.private.json. Preserve the epoch and spools.
-  A later corrected observer and metadata gap reconciliation must precede
-  current baseline acceptance; prior journal component proof stays historical.
-- V13 composition is terminal12:10:30EDT/exit0. Its retained RESULT under
-  current-composition-B-inodes-v13 independently reopened B and reused8624file
-  points/44269832049raw bytes with0source-body reads. Source2b540cf4d,
-  configSHAd9f06f90af8b5742e0687371ff65d367c3c568bd12b34f80bfcc09ab24ed8b72.
-  Retain its suffix284178..3944253 and4398accepted history points. V14 derives
-  current demand; V13 logical residuals are not a net transfer estimate.
+Source V11: vk-nightly-bounded-inode-observer-v11-20261027.service,
+PID3849155/start32997998, epoch31ab8db49caf4f9699c7c0bd75c363a2,
+source17c43149a, configSHAe4bb83f02c2e71f8aebc768cb35d6feda255a181bf1cd24aa85d7dbe2c2641ed.
+tracking-worker-local-inodes-v11/MEMORY_ENROLLMENT_R2.private.json passed:
+peakRSS480186368B/cgroup1023799296B, high/max/OOM0. Live1048576watch ceiling;
+14:43 source ready/errors0,771601watches. Do not enumerate giant fdinfo watch lists.
 
-## Retained component inputs
+Gap reader terminal14:11EDT/exit0. terminal-gap-recovery-inodes-v11/RESULT.private.json
+independently reopened785371paths/98703directories/errors0 on B. Old terminal
+proofa2e87a3471b10066116ce5de194e3bac29a99b8fbd86f94d5ead90576f1ce0fc
+is retained; later metadata never repairs original epochs.
 
-V10 namespace783552paths/errors0 and qualification18539points are accepted
-component inputs; normal B reopens passed. Qualification read4971262421B,
-reusing14031body matches and finding4494pending/13SQL/1deferred. Preserve them.
-
-## Preserved gaps and corrected failures
-
-V9's failed epoch/spool remains preserved, with B terminal-gap proof
-42851975fc11ad79e25d214472fc056b2d97cd36c0958cfac41582a16961189b.
-Its unsealed oversized report was not retained; exact duplicate makeup is unknown.
-V10's1GiB map-budget defect and V11/V12 native SMART-timeout evidence remain in
-the guide/private receipts. The4GiB map budget and finite full native health
-requalification passed V13 without relaxing STOP/access/identity/counter checks.
-
-Body phase vk-nightly-B-file-points-inodes-v2-20261027.service is terminal
-13:12:40EDT, MainPID0/exit1: source observer no longer ready. STOP is authoritative.
-STATUS retained604completed points,4735398282source bytes/1398510917encoded sent,
-0SSD payload/index bytes. All completed points/partial CAS objects survive;
-reuse their actual B acceptance ledger, never repeat completed transfers.
-Installed source028c45e14f8ecdc7346ac8fb9ba3775f577eb01b, configSHA
-50c2f289a1963ec70c51db8dd511b3ea070716513ea8e68ef4ea8b099f058735.
-
-RAM stress reproduced late inode events after IN_IGNORED. Corrected tracking
-retains a bounded8192-name retirement ledger and reobserves known dirty names;
-unknown WDs/overflow/access/root loss remain faults. Pinned FD enrollment fixes
-symlink ABA/transient name races.198 focused tests pass, including5000 mixed
-mutation rounds. Do not overwrite old packages or claim old epochs repaired.
-
-Current successor V11: vk-nightly-bounded-inode-observer-v11-20261027.service,
-PID3849155/start32997998, epoch31ab8db49caf4f9699c7c0bd75c363a2, source17c43149a,
-configSHAe4bb83f02c2e71f8aebc768cb35d6feda255a181bf1cd24aa85d7dbe2c2641ed.
-Memory collector R2 completed: peakRSS480186368B/cgroup1023799296B,
-no high/max/OOM events. The sole gap reader is now terminal14:11EDT/exit0:
-terminal-gap-recovery-inodes-v11/RESULT.private.json independently reopened
-785371paths/98703directories/errors0 on B. Terminal proofa2e87a3471b10066116ce5de194e3bac29a99b8fbd86f94d5ead90576f1ce0fc
-preserves the old stopped epoch rather than repairing it.
-Current sole composition: vk-nightly-B-current-composition-inodes-v14-20261027.service,
-PID63270, source20ff90110fb513b29efd7737329c0ca30079380f,
+Sole composition: vk-nightly-B-current-composition-inodes-v14-20261027.service,
+PID63270/start33249196, source20ff90110fb513b29efd7737329c0ca30079380f,
 configSHA41fc79ad371a0ffe261d7c3fa0fad9a5b6787078c7c0680992e841df07a7f8bf.
 Read current-composition-B-inodes-v14/{STATUS,STOP,RESULT}.private.json.
-It adopts that completed namespace and retained hashes/history, then uses the
-normal changed-only delta helper. No second namespace or body capture is running.
+It adopts the completed namespace, qualified hashes and completed body history,
+then advances the normal B journal suffix. Internal deadline17:13EDT. It has
+read/copied no source payload; its per-RPC processed count is not a global total.
 
-## Baseline/commissioning work still required
+Installed serial successor: vk-nightly-B-current-file-cycle-inodes-v4-20261027.service,
+PID330418/start33416954, sourceb42b1d9cd323100afbea3c69bc836d1b8e720a01,
+controllerSHAed5f852f7233caaf14c4dc6842983bbd1ffa91aaf99e7a76cf8c70768e6069bb,
+workerSHAe07fa001f5fc14c216800e54fbddce5c89ae38aaf5644a64d5380b2f49d66f81.
+Package file-points-worker-B-inodes-v4. Its CYCLE_STATUS currently awaits V14.
+It never launches/restarts that predecessor. Only exact successful independent
+V14 result permits source delivery/new bounded suffix, unresolved qualification,
+accepted body/prefix reuse, direct-B capture and full per-file readback. Final
+phase receipt gets a normal independent B reopen. No whole-baseline claim.
+CPU25%, High1536MiB/Max2GiB/Swap0/Tasks64; <=3h predecessor wait+8h admitted
+file phase, no automatic retry. Source-read ceilings8GiB qualification+32GiB
+capture are bounds, not measured new B demand. New code/status <=3MiB including
+retained failed V3 preflight. No SSD backup body/index/temp. V3 never launched:
+its own overly strict check rejected the exact shared0664 plan; V4 authenticates
+its digest without changing permissions. No actual access denial was bypassed.
 
-Await V14, retaining V13 and the new namespace proofs; then perform the finite
-completed-file-history lookup and residual-only qualification/capture.
-Inspect exact residual states and the single deferred point. Reuse accepted
-body matches and existing SQL points; capture only unresolved current versions.
-The critical alias points to working90.sqlite outside its logical
-parent: require the actual target image and always_SQL_API_sources, not raw WAL.
-Do not assume204regular SQL points cover all later SQL discoveries/aliases.
+## Reusable proofs and explicit gaps
 
-Retain accepted162.70GB independent restore, all137/148/204SQL evidence and later
-supplements. Original7783archive gaps/6546loose-object IDs stay explicit;
-current source resolution never proves original archive inclusion. Current
-runtime/served frontend remain a separate later binding. Old runtime observations are preparation, not final-current acceptance.
-The separate runtime-dependencies-20261027-v1 component still needs gateway/route
-3200B outside the117-root kernel plan.
-Fresh13:02EDT 3200B source qualification is in b-controls-v1/
-RUNTIME_DEPENDENCY_CURRENT_SAMPLE_20261027.private.json; no B body copied.
+Historical162704613801B independent restore/137DB images and all later148/204
+SQL/41+older components remain. Original7783archive gaps/6546loose Git IDs are
+explicit; current Git resolution never proves original inclusion. V13 RESULT
+reused8624file versions/44269832049raw B with no body copies. Its old demand is
+not current net transfer. V10 qualification18539points/4971262421hashed B remains
+reusable after exact identity matching. V2 body STOP13:12:40 retained604completed
+points/4735398282source bytes/1398510917encoded sent; reuse actual B ledger.
 
-Current-set acceptance still needs final body/SQL/runtime integration, a sealed
-authenticated B-backed current descriptor and independent composed restore.
-B-native sealing, complete descriptor construction and separate finite runtime
-component adoption are implemented/tested. Adopt fresh gateway/route points
-after body ownership releases; kernel117-root scope stays separate. Then use
-the normal independent reader; source tests are not actual current acceptance.
-Then finish the normal incremental cycle/restart delta interface and actual
-installed worker/config/health integration. The older calendar invokes the
-legacy supervisor/job path; do not enable it merely because its fixtures pass.
-Commission the02:00America/Toronto schedule only after whole acceptance, exact
-installed binding, interruption/Desktop-off/low-SSD checks and next-run proof.
+V9/V10 stopped unknown-watch epochs and all spools survive. V10 terminal
+b-controls-v1/INODE_V10_TERMINAL_GAP_20261027.private.json binds raw
+SHA61977f098f9dcb58b1bd804c40c635ce585e0dfeaf361a8be602af2b786be89d,
+sequence5807284/B ACK5803171/64pending names. A real late callback after
+IN_IGNORED was reproduced/fixed with bounded known-retirement attribution and
+pinned-FD enrollment; genuinely unknown/overflow/access/root loss still fails.
+Read the topic guide for exact predecessor failures/tests. Never repeat namespace.
 
-## Source/validation continuity
+## Next remaining acceptance
 
-Installed packages remain pinned; later source/docs commits do not alter them. PR263 is the sole integration PR. No bytecode tracking. Rust format passes; full format is currently
-blocked by missing Prettier. Run narrow relevant checks/ops and record actual
-exact-head CI separately from older green heads.
+Collect V14 and the already installed V4; resolve actual deferred names using
+retained points. Then current SQL qualification, finite runtime component,
+sealed current descriptor and independent normal composed-reader acceptance.
+A frozen older SQL cohort preserves its old timestamp; blindly inheriting its
+completed state does not qualify current data. Use actual current SQL sources,
+qualify unchanged cold images or fresh API points, and always API the critical
+working90.sqlite alias target whose WAL is outside its logical parent. Do not
+assume old204count covers all later sources. Preserve RAM partials on failure.
 
-Earlier source/bindings remain in Git/private receipts and the full
-[historical archive](HANDOFF_HISTORY_20261017.md), plus the
-[Nightly archive](HANDOFF_NIGHTLY_HISTORY_20261027_0124.md).
+Runtime-dependencies-20261027-v1 still needs gateway/route3200B outside117kernel
+roots; b-controls-v1/RUNTIME_DEPENDENCY_CURRENT_SAMPLE_20261027.private.json is
+13:02 source qualification only, not B capture or final-current binding. Fresh
+actual backend/frontend/alias pins are required. Adopt its accepted immutable
+component through the implemented normal map/descriptor path after writer release.
 
-Integrated Staging source notes: [retained pickup](STAGING_SOURCE_PICKUP_20261027.md).
+Then finish/install the complete accepted cycle/consumer, persistent source and
+health lifecycle. Legacy calendar still invokes the old supervisor: do not enable
+it on file-phase tests alone. Only after actual whole-cycle acceptance commission
+02:00America/Toronto and verify worker/config/calendar/next run plus Desktop-off,
+low-SSD and interrupted recovery. No backend/Staging restart or cutover needed.
+
+## Source and validation
+
+PR263 b42b1d9cd is pushed, MERGEABLE. Exact recovery and branch-freshness CI passed;
+other combined checks were still running14:43.95 focused local tests passed,
+including actual native-protocol source handover, interrupted qualification and
+file readback/reuse. Ops/diff checks pass; Rust format passes, full pnpm format
+fails because Prettier is absent. This is not current-baseline/schedule acceptance.
+
+Older continuity: [topic](VK_NIGHTLY_BACKUP_EFFICIENCY.md),
+[Nightly archive](HANDOFF_NIGHTLY_HISTORY_20261027_0124.md),
+[history](HANDOFF_HISTORY_20261017.md),
+[integrated Staging notes](STAGING_SOURCE_PICKUP_20261027.md).

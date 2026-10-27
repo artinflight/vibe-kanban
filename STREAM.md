@@ -27,13 +27,16 @@ October27 RAM stress reproduced a final inode callback after IN_IGNORED. The fix
 retains at most8192 explicitly retired names, dirties/re-enrolls current names,
 and still rejects unknown WDs, missing parents, overflow and access failures.
 Pinned O_PATH enrollment also closes symlink/name replacement races.198 focused
-checks pass; a new observer epoch and explicit stopped-interval reconciliation
-are required. This does not retrospectively repair either stopped epoch.
+checks pass. New V11 enrollment/memory proof and stopped-interval namespace
+reconciliation completed; V14 composes those retained inputs. This never
+retrospectively repairs either stopped epoch.
 A later V10 complete namespace and18539-point qualification stage now provide
 reusable inputs; the current B-only composition resumes those exact results.
 Additive map integration requires that actual proof and full later namespace,
 retains old epochs/absences and explicitly enrolls the critical SQL target.
-The B-only namespace/map reconciliation completed; baseline/calendar stay open.
+The B-only namespace completed. V14 map composition runs; its installed serial
+file successor awaits exact success before consuming only unresolved versions.
+Baseline/calendar stay open.
 Namespace completeness alone does not prove body/SQL/runtime recoverability.
 
 Live MM scope/pointer and current owner guard were reconciled October26. B needs

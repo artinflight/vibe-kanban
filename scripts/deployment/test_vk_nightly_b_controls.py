@@ -149,7 +149,8 @@ class BControlTests(unittest.TestCase):
                 ('PermissionError','STOP access denied',None,NativeControlError),
                 ('Blocked','OWNER_PAUSE_OR_MALFORMED',None,NativeControlError),
                 ('OperationalError','database is locked','real guard failure',NativeControlError),
-                ('DatabaseError','database disk image is malformed',None,NativeControlError)]:
+                ('DatabaseError','database disk image is malformed',None,NativeControlError),
+                ('TimeoutExpired','required SMART query timed out',None,NativeControlError)]:
             with self.subTest(kind=kind,message=message,reason=reason):
                 source=io.BytesIO();send(source,dict(error_type=kind,error=message,guard_reason=reason));source.seek(0)
                 client=Client(source,io.BytesIO())

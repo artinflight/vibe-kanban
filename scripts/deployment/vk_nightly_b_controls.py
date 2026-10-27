@@ -17,6 +17,7 @@ import re
 import shutil
 import sqlite3
 import struct
+import subprocess
 import tempfile
 import time
 import traceback
@@ -599,7 +600,7 @@ def serve(root,source,output,*,objects,guard,maximum_index_bytes=4*1024**3):
                 if objects.file_identity(path)!=identity:raise ValueError('checkpoint changed during readback')
                 send(output,dict(sha256=store.hash(path)));continue
             try:result=store.call(q)
-            except (OSError,ValueError,sqlite3.Error,KeyError) as error:
+            except (OSError,ValueError,sqlite3.Error,KeyError,subprocess.SubprocessError) as error:
                 context=dict(operation=str(q.get('op',''))[:128],index=str(q.get('name',''))[:128],
                     sqlite_errorcode=getattr(error,'sqlite_errorcode',None),sqlite_errorname=getattr(error,'sqlite_errorname',None),
                     frames=[dict(function=f.name,line=f.lineno) for f in traceback.extract_tb(error.__traceback__)[-8:]])
@@ -618,7 +619,8 @@ class NativeControlError(ValueError):
     def __init__(self,value):
         self.native_error_type=value['error_type'];self.guard_reason=value.get('guard_reason');self.native_context=value.get('native_context')
         super().__init__('native B '+value['error_type']+': '+value['error']+
-                         ('; '+self.guard_reason if self.guard_reason else ''))
+                         ('; '+self.guard_reason if self.guard_reason else '')+
+                         ('; context='+json.dumps(self.native_context,sort_keys=True)[:2048] if self.native_context else ''))
 
 
 class NativeControlDeferred(NativeControlError):

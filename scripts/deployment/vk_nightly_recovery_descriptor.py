@@ -122,6 +122,11 @@ def build(database,reference,contract,*,checkpoint):
         source=decode_member(raw)['required_SQL_source']
         if source not in SQL_points:raise ValueError('sidecar has no actual consistent SQL target')
         sidecars[name]=dict(source=source,snapshot_sha256=SQL_points[source]['sha256'])
+    explicit_always=contract.get('always_SQL_API_sources',[])
+    if (not isinstance(explicit_always,list) or len(explicit_always)!=len(set(explicit_always))
+            or not set(explicit_always)<=set(SQL_points)):
+        raise ValueError('always-current SQL API dependencies must have captured target points')
+    always_SQL=sorted(set(explicit_always)|set(aliases.values()))
     alias_proofs={}
     for name,target in aliases.items():
         if target not in SQL_points:raise ValueError('SQL alias lacks its independently accepted resolved target')
@@ -155,8 +160,10 @@ def build(database,reference,contract,*,checkpoint):
     descriptor=dict(format=FORMAT,source_prefix='/',plan_sha256=contract['plan_sha256'],scope_sha256=contract['scope_sha256'],
         sources=required,original_source_dispositions=contract['original_source_dispositions'],original_epoch=original_epoch,
         original_epoch_complete=False,writer_fence_verified=False,dependencies=contract['dependencies'],indexes=[reference],
+        bounded_delta_start_sequence=journal['end'],
         member_count=count,member_map_sha256=h.hexdigest(),SQLite=SQL_points,journal=journal,
-        root_aliases=contract.get('root_aliases',{}),always_runtime_files=runtime,installed_consumer_contract_sha256=checksum(contract),
+        root_aliases=contract.get('root_aliases',{}),always_runtime_files=runtime,always_SQL_API_sources=always_SQL,
+        installed_consumer_contract_sha256=checksum(contract),
         independent_current_restore_accepted=False,scheduling_authorized=False)
     # Reuse the ordinary complete-member validator for scope, recipes, root
     # aliases, SQL and pins. This metadata-only interface cannot open bodies or

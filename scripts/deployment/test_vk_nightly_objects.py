@@ -55,6 +55,67 @@ class ObjectTests(unittest.TestCase):
         self.assertEqual(client.payload_bytes_sent,0);self.assertEqual(client.candidates_recovered,1)
         self.assertEqual((before.st_ino,before.st_size,before.st_mtime_ns),(after.st_ino,after.st_size,after.st_mtime_ns))
 
+    def test_native_accepted_probe_reuses_exact_receipts_without_payload_or_RAM_copy(self):
+        from unittest.mock import patch
+        p=self.receiver();client=self.client(p)
+        rows=[client.ensure(b'first verified'),client.ensure(b'second verified')]
+        before={f.name:(f.stat().st_ino,f.stat().st_size,f.stat().st_mtime_ns) for f in self.store.iterdir()}
+        sent=client.payload_bytes_sent
+        with patch('vk_nightly_objects.os.statvfs',side_effect=AssertionError('metadata probe allocated scratch')):
+            proof=client.probe_accepted([rows[0],rows[1],rows[0]])
+        self.assertEqual(proof['objects_verified'],2);self.assertEqual(proof['payload_bytes_read'],0)
+        self.assertFalse(proof['fresh_body_decode_claimed']);self.assertTrue(proof['prior_independent_readback_proofs_reused'])
+        self.assertEqual(client.payload_bytes_sent,sent)
+        self.assertEqual(before,{f.name:(f.stat().st_ino,f.stat().st_size,f.stat().st_mtime_ns) for f in self.store.iterdir()})
+        self.assertEqual(list(self.root.glob('nightly-object-restore-*')),[])
+        self.assertEqual(client.probe_accepted(rows)['ordered_receipt_set_sha256'],proof['ordered_receipt_set_sha256'])
+        client.health() # No unread payload/frame remains on the protocol.
+
+    def test_native_probe_missing_receipt_never_requests_upload_or_creates_candidate(self):
+        p=self.receiver();client=self.client(p);sha=hashlib.sha256(b'missing').hexdigest()
+        row=dict(layer='nightly-objects-v1',selector=sha+'.zlib',encoding='zlib',bytes=7,
+                 sha256=sha,encoded_bytes=15,encoded_sha256='a'*64)
+        client.health();before=set(self.store.iterdir())
+        with self.assertRaisesRegex(ValueError,'metadata proof unavailable'):client.probe_accepted([row])
+        self.assertEqual(client.payload_bytes_sent,0);self.assertEqual(set(self.store.iterdir()),before)
+
+    def test_native_probe_detects_same_length_rewrite_even_with_restored_mtime(self):
+        p=self.receiver();client=self.client(p);row=client.ensure(b'accepted body')
+        target=self.store/row['selector'];before=target.stat();encoded=target.read_bytes()
+        target.write_bytes(bytes([encoded[0]^1])+encoded[1:]);os.utime(target,ns=(before.st_atime_ns,before.st_mtime_ns))
+        with self.assertRaisesRegex(ValueError,'metadata proof unavailable'):client.probe_accepted([row])
+        self.assertEqual(target.stat().st_size,before.st_size);self.assertEqual(target.stat().st_ino,before.st_ino)
+        self.assertNotEqual(target.read_bytes(),encoded)
+
+    def test_native_probe_refuses_changed_encoding_and_candidate_only_proof(self):
+        p=self.receiver();client=self.client(p);row=client.ensure(b'accepted point')
+        with self.assertRaisesRegex(ValueError,'metadata proof unavailable'):
+            client.probe_accepted([dict(row,encoded_sha256='0'*64)])
+        # Make a genuine completed candidate, then interrupt before its
+        # independent restore acknowledgement. A probe may never adopt it.
+        q=self.receiver();raw=b'unaccepted candidate';sha=hashlib.sha256(raw).hexdigest()
+        control(q.stdin,dict(sha256=sha,bytes=len(raw)));self.assertEqual(read_control(q.stdout)['status'],'send')
+        encoded=zlib.compress(raw);q.stdin.write(struct.pack('!I',len(encoded))+encoded+struct.pack('!I',0));q.stdin.flush()
+        self.assertEqual(read_control(q.stdout)['status'],'readback');self.assertEqual(exact(q.stdout,len(raw)),raw)
+        q.stdin.close();self.assertNotEqual(q.wait(timeout=3),0)
+        candidate=dict(layer='nightly-objects-v1',selector=sha+'.zlib',encoding='zlib',bytes=len(raw),
+            sha256=sha,encoded_bytes=len(encoded),encoded_sha256=hashlib.sha256(encoded).hexdigest())
+        before={f.name:f.stat().st_ino for f in self.store.iterdir()}
+        resumed=self.client(self.receiver())
+        with self.assertRaisesRegex(ValueError,'metadata proof unavailable'):resumed.probe_accepted([candidate])
+        self.assertEqual({f.name:f.stat().st_ino for f in self.store.iterdir()},before)
+        self.assertEqual(resumed.payload_bytes_sent,0)
+
+    def test_probe_validates_entire_batch_before_sending_and_preserves_guard_denials(self):
+        from unittest.mock import patch
+        p=self.receiver();client=self.client(p);row=client.ensure(b'accepted point')
+        for rows in ([],[row]*65,[dict(row,layer='outside')],[row,dict(row,encoded_sha256='0'*64)]):
+            with self.assertRaises(ValueError):client.probe_accepted(rows)
+        client.health()
+        with patch.object(client,'guard',side_effect=PermissionError('actual STOP unreadable')):
+            with self.assertRaisesRegex(PermissionError,'STOP unreadable'):client.probe_accepted([row])
+        client.health()
+
     def test_partial_stream_retained_without_accepted_receipt(self):
         p=self.receiver();raw=b'missing finish';sha=hashlib.sha256(raw).hexdigest()
         control(p.stdin,dict(sha256=sha,bytes=len(raw)));self.assertEqual(read_control(p.stdout)['status'],'send')

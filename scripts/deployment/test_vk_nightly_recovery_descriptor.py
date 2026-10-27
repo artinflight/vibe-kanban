@@ -141,6 +141,7 @@ class RecoveryDescriptorTests(unittest.TestCase):
         d=build(db,reference(path),contract,checkpoint=lambda:None)
         self.assertFalse(d['independent_current_restore_accepted']);self.assertFalse(d['original_epoch_complete'])
         self.assertEqual(d['original_epoch']['unresolved_gap_count'],7)
+        self.assertEqual(d['always_SQL_API_sources'],['/home/state/state.sqlite'])
         provider=LocalDependencies({'accepted-base':body,'nightly-controls-v1':controls},contract['dependencies'],admission_check=lambda:None)
         with provider.held(),held_index(provider,*d['indexes']) as index:
             h=HeldRecoverySet(d,checksum(d),provider,index)
@@ -158,6 +159,29 @@ class RecoveryDescriptorTests(unittest.TestCase):
                 self.assertEqual(independent.execute('select value from retained').fetchall(),[('current',)])
             finally:independent.close()
             self.assertEqual(d['indexes'][0]['consistent_SQL_aliases']['home/state/live.sqlite']['source'],'/home/state/state.sqlite')
+
+    def test_normal_reader_derives_legacy_SQL_alias_dependency_and_rejects_explicit_drop(self):
+        db,path,c,_,body,controls=self.use(SQL=True)
+        d=build(db,reference(path),c,checkpoint=lambda:None)
+        provider=LocalDependencies({'accepted-base':body,'nightly-controls-v1':controls},c['dependencies'],admission_check=lambda:None)
+        args=dict(plan_sha256=c['plan_sha256'],scope_sha256=c['scope_sha256'],required_sources=c['sources'],
+            original_sources=c['original_sources'],required_pins=c['required_pins'],required_SQL=c['required_SQL'])
+        with provider.held(),held_index(provider,*d['indexes']) as index:
+            removed=copy.deepcopy(d);removed['always_SQL_API_sources']=[]
+            with self.assertRaisesRegex(ValueError,'alias targets'):
+                HeldRecoverySet(removed,checksum(removed),provider,index).validate(**args)
+            legacy=copy.deepcopy(d);del legacy['always_SQL_API_sources']
+            handle=HeldRecoverySet(legacy,checksum(legacy),provider,index);handle.validate(**args)
+            watched=lambda start:dict(ready=True,errors=[],instance=d['journal']['instance'],
+                scope_sha256=d['journal']['scope_sha256'],sequence=d['journal']['end'])
+            self.assertEqual(handle.catchup(watched)['always_SQL_API_sources'],['/home/state/state.sqlite'])
+            seen=[]
+            handle=HeldRecoverySet(d,checksum(d),provider,index);handle.validate(**args)
+            result=handle.catchup(lambda since:(seen.append(since) or watched(since)))
+            self.assertEqual(seen,[20]);self.assertEqual(result['baseline_journal_through'],20)
+            invalid=copy.deepcopy(d);invalid['bounded_delta_start_sequence']=10
+            with self.assertRaisesRegex(ValueError,'bounded delta'):
+                HeldRecoverySet(invalid,checksum(invalid),provider,index).validate(**args)
 
     def test_separate_runtime_point_preserves_kernel_scope_and_requests_finite_restart_resample(self):
         db,path,c,_,body,controls=self.use()

@@ -139,6 +139,79 @@ class BControlTests(unittest.TestCase):
         view=other.connect('sealed-view',first['sha256'],readonly=True)
         self.assertEqual(view.execute('select id,value from point').fetchall(),[(1,b'current accepted fixture point')]);view.close()
 
+    def test_normal_incremental_suffix_uses_real_inode_events_and_native_B_resume(self):
+        from test_vk_nightly_recovery_descriptor import fixture,current_view
+        from vk_nightly_inode_journal import Journal
+        from vk_nightly_tracking import FORMAT as TRACKING_FORMAT,source_bindings
+        from vk_nightly_namespace import replay_metadata,observe
+        from vk_nightly_outbox_export import export
+        from vk_nightly_incremental import advance_suffix
+        from vk_prep_common import identity
+        from vk_change_journal import scope
+        root=self.root/'ordinary-cycle';root.mkdir()
+        db,path,_,rows,body,_=fixture(root)
+        source=root/'source';source.mkdir()
+        (source/'note').write_bytes((body/'note').read_bytes())
+        (source/'untouched').write_bytes((body/'note').read_bytes())
+        plan={'sources':[str(source)]};journal=Journal(plan);self.addCleanup(journal.close)
+        journal.tree(source);journal.ready=True
+        def report(since):
+            value=journal.report(since)
+            return dict(value,format=TRACKING_FORMAT,plan_sha256=identity(plan),since=since,terminal=None,
+                barrier=dict(instance=value['instance'],durable_sequence=value['sequence'],kernel_drain_completed=True))
+        initial=report(0);binding=dict(instance=initial['instance'],start_sequence=initial['sequence'],
+            plan_sha256=identity(plan),scope_sha256=identity(scope(plan)),required_root_bindings=source_bindings(plan))
+        # The fixture's accepted member image is prepared on RAM, not a real
+        # production baseline. Native import/independent stream ACK are real.
+        db.execute('delete from members')
+        from vk_nightly_current_map import encode_member
+        prefix=str(source)[1:]
+        db.execute('insert into members values(?,?,?)',(prefix,'directory',encode_member(dict(member=rows['home/state']))))
+        for name in ('note','untouched'):
+            db.execute('insert into members values(?,?,?)',(prefix+'/'+name,'verified-file',encode_member(dict(member=rows['home/state/note']))))
+        db.execute('update namespace_reconciliation set binding=?',(json.dumps(binding),))
+        db.execute('delete from namespace_replay_windows');db.execute('delete from namespace_replay_inputs')
+        current_view(db,path).apply_metadata_replay(initial,replay_metadata(plan,initial,instance=initial['instance'],
+            since=initial['sequence'],maximum_paths=16,checkpoint=lambda:None),checkpoint=lambda:None,maximum_paths=16)
+        db.close();digest=self.import_other(path)
+        native_binding=dict(initial,owner_pid=os.getpid())
+        def deliver(since):
+            value=report(since)
+            with tracking_store(self.client,'ordinary-journal',self.sha,maximum_bytes=8*1024**2) as ledger:
+                return export(native_binding,value,ledger,guard=lambda:None)
+        deliver(0)
+        (source/'note').write_bytes(b'actual current version')
+        delivered=deliver(initial['sequence'])
+        args=dict(index_name='ordinary-map',checkpoint_sha256=digest,journal_name='ordinary-journal',
+            journal_checkpoint_sha256=self.sha,plan=plan,maximum_paths=16,maximum_journal_bytes=8*1024**2,guard=lambda:None)
+        with patch('vk_nightly_namespace.os.walk',side_effect=AssertionError('unchanged workspace walked')),patch('vk_nightly_namespace.observe',wraps=observe) as observed:
+            result=advance_suffix(self.client,**args)
+            self.assertEqual([str(call.args[0]) for call in observed.call_args_list],[str(source/'note')])
+        self.assertTrue(result['normal_B_metadata_reopen_verified']);self.assertEqual(result['through'],delivered['sequence'])
+        self.assertEqual(result['global_namespace_audits_started'],0);self.assertEqual(result['source_body_bytes_read'],0)
+        view=self.client.connect('ordinary-map',digest,readonly=True,working=True)
+        self.assertEqual(view.execute('select state from members where name=?',(prefix+'/untouched',)).fetchone(),('verified-file',))
+        self.assertEqual(view.execute('select state from members where name=?',(prefix+'/note',)).fetchone(),('file-needs-qualification',));view.close()
+        with patch('vk_nightly_namespace.observe',side_effect=AssertionError('unchanged metadata sampled')):
+            empty=advance_suffix(self.client,**args)
+        self.assertEqual(empty['replayed_paths'],0)
+        (source/'note').write_bytes(b'later point after retained checkpoint')
+        deliver(delivered['sequence'])
+        real_call=self.client.call
+        def lost_reply(**query):
+            answer=real_call(**query)
+            if query['op']=='replay-current-map':raise TimeoutError('injected after native commit')
+            return answer
+        with patch.object(self.client,'call',side_effect=lost_reply):
+            with self.assertRaisesRegex(TimeoutError,'after native commit'):advance_suffix(self.client,**args)
+        with patch('vk_nightly_namespace.observe',side_effect=AssertionError('completed metadata replayed')):
+            resumed=advance_suffix(self.client,**args)
+        self.assertTrue(resumed['normal_B_metadata_reopen_verified'])
+        view=self.client.connect('ordinary-map',digest,readonly=True,working=True)
+        self.assertEqual(view.execute('select count(*) from members').fetchone(),(3,))
+        self.assertEqual(view.execute('select count(*) from namespace_replay_history where name=?',(prefix+'/note',)).fetchone(),(2,))
+        view.close()
+
     def test_actual_native_runtime_component_adoption_seal_and_complete_descriptor(self):
         from test_vk_nightly_recovery_descriptor import fixture,runtime_fixture
         from vk_nightly_b_controls import NativeControlError

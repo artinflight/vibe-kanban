@@ -247,6 +247,16 @@ class TrackedDeltaTests(unittest.TestCase):
         result=self.delta(forbidden)
         self.assertEqual(result['paths'],[]);self.assertEqual(result['unchanged_paths_scanned'],0)
 
+    def test_accepted_root_alias_targets_are_delta_scope_without_an_unchanged_walk(self):
+        self.anchor['root_aliases']={'/source':dict(literal='/physical',resolved='/physical')}
+        self.events({'/physical/changed':2})
+        self.assertEqual(self.delta(lambda _:self.fail('unchanged alias tree walked'))['paths'],['/physical/changed'])
+        for aliases in ({'/undeclared':dict(literal='/physical',resolved='/physical')},
+                        {'/source':dict(literal='/physical',resolved='/other')},
+                        {'/source':dict(literal='/source/recursive',resolved='/source/recursive')}):
+            self.anchor['root_aliases']=aliases
+            with self.assertRaises(ReconciliationRequired):self.delta()
+
     def test_critical_SQL_dependency_requires_API_even_without_main_inode_events(self):
         self.anchor['always_SQL_API_sources']=['/source/db.sqlite']
         result=self.delta(lambda _:self.fail('unchanged workspace walked'))

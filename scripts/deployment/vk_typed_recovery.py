@@ -155,6 +155,12 @@ class ComposedIndex:
     """
     def __init__(self, base, overlay, check):
         self.base, self.overlay, self.check = base, overlay, check
+        self.SQL_alias_sources={}
+        for name in getattr(base,'SQL_alias_sources',{}):
+            try:row=self._entry(name)
+            except KeyError:continue
+            if row.get('kind')=='symlink':self.SQL_alias_sources[name]=row['target']
+        self.always_SQL_API_sources=sorted(set(self.SQL_alias_sources.values()))
         from vk_nightly_current_map import runtime_components
         self.runtime_components=dict(getattr(base,'runtime_components',{}))
         self.runtime_components.update(runtime_components(overlay,self._entry))
@@ -498,6 +504,22 @@ class HeldRecoverySet:
                     or any(row.get(f) != component.get(f) for f in ('bytes', 'sha256'))):
                 raise ValueError('consistent SQLite component binding differs')
             digest(component.get('independent_proof_sha256'))
+        always=d.get('always_SQL_API_sources',[])
+        inherited=getattr(self.index,'always_SQL_API_sources',[])
+        if (not isinstance(always,list) or len(always)!=len(set(always))
+                or not (set(always)|set(inherited))<=set(required_SQL)
+                or 'always_SQL_API_sources' in d and not set(inherited)<=set(always)):
+            raise ValueError('consistent SQL alias targets must remain always-current API dependencies')
+        # Legacy descriptors remain readable. Their actual sealed alias points
+        # still derive the mandatory target list for bounded restart consumers.
+        self.always_SQL_API_sources=sorted(set(always)|set(inherited))
+        bounded=d.get('bounded_delta_start_sequence')
+        if bounded is not None:
+            if (type(bounded) is not int or bounded!=journal['end']
+                    or not d.get('indexes') or d['indexes'][0].get('format')!='vk-nightly-current-member-map-v1'
+                    or type(journal.get('retained_window_count')) is not int or journal['retained_window_count']<1):
+                raise ValueError('bounded delta requires a complete current-map journal suffix')
+            digest(journal.get('retained_window_chain_sha256'))
         if enrollment_resolution is not None:
             enrollment_resolution.validate_anchor(journal, plan_sha256=plan_sha256, required_sources=required_sources)
         self.enrollment_resolution = enrollment_resolution
@@ -602,7 +624,11 @@ class HeldRecoverySet:
                     'enrollment_resolution_sha256': resolution.expected_sha256,
                     'writer_fence_verified': False, 'activation_authorized': False,
                     'fresh_final_SQLite_API_required': True}
-        watched = journal_reader(anchor['start'])
+        # The complete sealed current map already consumed its authenticated
+        # suffix. Ordinary restart consumers need only events AFTER that point.
+        # Legacy mixed-prefix descriptors retain their original start contract.
+        since=self.descriptor.get('bounded_delta_start_sequence',anchor['start'])
+        watched = journal_reader(since)
         if (watched.get('ready') is not True or watched.get('errors')
                 or watched.get('instance') != anchor['instance']
                 or watched.get('scope_sha256') != anchor['scope_sha256']
@@ -612,6 +638,8 @@ class HeldRecoverySet:
         return {'format': FORMAT, 'descriptor_sha256': self.expected_sha256,
                 'watched': watched, 'writer_fence_verified': False,
                 'activation_authorized': False, 'fresh_final_SQLite_API_required': True,
+                'baseline_journal_through': since,
+                'always_SQL_API_sources': self.always_SQL_API_sources,
                 'runtime_files_to_observe_always': sorted(self.descriptor.get('always_runtime_files',{})),
                 'kernel_coverage_for_runtime_files_claimed': False}
 

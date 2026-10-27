@@ -168,12 +168,58 @@ def retained_SQL_probe(path,expected,*,allowed_root,expected_sha256,guard):
     return dict(status='retained_SQL_verified',sha256=h.hexdigest(),bytes=info.st_size,identity=before)
 
 
+def accepted_object_receipt(root,sha,size):
+    """Reuse only the unchanged native inode's independently accepted bytes.
+
+    This reads bounded receipt metadata, never the encoded body. Callers hold
+    the real store lease/admission; it is not a new decode/readback proof.
+    """
+    final,_,accepted=object_paths(Path(root),sha)
+    if type(size) is not int or size<0:raise ValueError('exact nonnegative object size required')
+    regular(accepted)
+    with accepted.open('rb') as stream:raw=stream.read(MAX_CONTROL+1)
+    if len(raw)>MAX_CONTROL:raise ValueError('accepted object receipt excessive')
+    receipt=json.loads(raw);info=regular(final)
+    if (receipt.get('raw_sha256')!=sha or receipt.get('raw_bytes')!=size
+            or receipt.get('independent_RAM_reopened_hash_verified') is not True
+            or file_identity(final)!=receipt.get('identity')
+            or receipt.get('encoded_bytes')!=info.st_size):
+        raise ValueError('accepted object/identity changed; preserve and reconcile')
+    object_paths(Path(root),receipt.get('encoded_sha256'))
+    return receipt
+
+
+def object_segment(segment,maximum):
+    sha=segment.get('sha256');object_paths(Path('.'),sha);size=segment.get('bytes')
+    if (segment.get('layer')!='nightly-objects-v1' or segment.get('selector')!=sha+'.zlib'
+            or segment.get('encoding')!='zlib' or type(size) is not int or not 0<=size<=maximum
+            or type(segment.get('encoded_bytes')) is not int or segment['encoded_bytes']<1):
+        raise ValueError('exact bounded accepted object segment required')
+    object_paths(Path('.'),segment.get('encoded_sha256'))
+    return {k:segment[k] for k in ('layer','selector','encoding','bytes','sha256','encoded_bytes','encoded_sha256')}
+
+
 def _receive(root,source,output,*,guard,maximum_object_bytes,retained_SQL_root=None):
     while True:
         query=read_control(source)
         if query is None:return
         if query.get('operation')=='health':
             guard(0);control(output,dict(status='health_passed'));continue
+        if query.get('operation')=='probe-accepted-objects':
+            segments=query.get('segments')
+            if not isinstance(segments,list) or not 1<=len(segments)<=64:
+                raise ValueError('bounded accepted-object metadata batch required')
+            records=[];seen=set()
+            for segment in segments:
+                segment=object_segment(segment,maximum_object_bytes);guard(0)
+                if segment['sha256'] in seen:raise ValueError('unique accepted object batch required')
+                seen.add(segment['sha256'])
+                receipt=accepted_object_receipt(root,segment['sha256'],segment['bytes'])
+                if any(receipt[k]!=segment[k] for k in ('encoded_bytes','encoded_sha256')):
+                    raise ValueError('accepted encoded object binding differs')
+                records.append(receipt)
+            control(output,dict(status='accepted-identities-verified',receipts=records,
+                                payload_bytes_read=0,new_payload_bytes_written=0));continue
         if query.get('operation')=='probe-retained-SQL':
             if retained_SQL_root is None:raise ValueError('retained SQL provider not configured')
             receipt=retained_SQL_probe(query['path'],query['identity'],allowed_root=retained_SQL_root,
@@ -186,15 +232,7 @@ def _receive(root,source,output,*,guard,maximum_object_bytes,retained_SQL_root=N
         guard(size+1024**2)
         already_accepted=False
         if accepted.exists():
-            regular(accepted)
-            with accepted.open('rb') as f:raw=f.read(MAX_CONTROL+1)
-            if len(raw)>MAX_CONTROL:raise ValueError('accepted object receipt excessive')
-            receipt=json.loads(raw);info=regular(final)
-            if (receipt.get('raw_sha256')!=sha or receipt.get('raw_bytes')!=size
-                    or receipt.get('independent_RAM_reopened_hash_verified') is not True
-                    or not stat.S_ISREG(info.st_mode) or info.st_nlink!=1
-                    or file_identity(final)!=receipt.get('identity')):
-                raise ValueError('accepted object/identity changed; preserve and reconcile')
+            receipt=accepted_object_receipt(root,sha,size)
             if operation=='ensure':
                 control(output,dict(status='reused',receipt=receipt));continue
             already_accepted=True
@@ -338,6 +376,40 @@ class ObjectClient:
         if not reply or reply.get('status')!='accepted':raise ValueError('independent object acceptance not persisted')
         os.unlink(path)  # only this freshly verified disposable RAM duplicate
         return reply
+
+    def probe_accepted(self,segments):
+        """Normal native metadata authentication for retained body-proof reuse.
+
+        Missing, changed, unaccepted or differently encoded objects fail closed;
+        this operation never sends source bytes or recovers a candidate. A
+        physical decode is still required for a body without an accepted proof.
+        """
+        if not isinstance(segments,list) or not 1<=len(segments)<=64:
+            raise ValueError('bounded accepted-object metadata batch required')
+        unique={}
+        for segment in segments:
+            value=object_segment(segment,self.maximum);sha=value['sha256']
+            if sha in unique and unique[sha]!=value:raise ValueError('conflicting accepted object references')
+            unique[sha]=value
+        expected=list(unique.values());self.guard()
+        control(self.output,dict(operation='probe-accepted-objects',segments=expected))
+        reply=read_control(self.source)
+        if (not reply or reply.get('status')!='accepted-identities-verified'
+                or reply.get('payload_bytes_read')!=0 or reply.get('new_payload_bytes_written')!=0
+                or not isinstance(reply.get('receipts'),list) or len(reply['receipts'])!=len(expected)):
+            raise ValueError('accepted object metadata proof unavailable')
+        h=hashlib.sha256()
+        for segment,receipt in zip(expected,reply['receipts']):
+            if (receipt.get('raw_sha256')!=segment['sha256'] or receipt.get('raw_bytes')!=segment['bytes']
+                    or receipt.get('independent_RAM_reopened_hash_verified') is not True
+                    or not isinstance(receipt.get('identity'),list) or len(receipt['identity'])<5
+                    or any(receipt.get(k)!=segment[k] for k in ('encoded_bytes','encoded_sha256'))):
+                raise ValueError('accepted object metadata binding differs')
+            h.update(json.dumps(dict(segment=segment,receipt=receipt),sort_keys=True,separators=(',',':'),allow_nan=False).encode()+b'\n')
+        self.guard()
+        return dict(format='vk-nightly-accepted-object-identities-v1',objects_verified=len(expected),
+            ordered_receipt_set_sha256=h.hexdigest(),payload_bytes_read=0,new_payload_bytes_written=0,
+            prior_independent_readback_proofs_reused=True,fresh_body_decode_claimed=False)
 
     def verify(self,segment,sink):
         """Compose file readback from accepted B chunks without body uploads."""

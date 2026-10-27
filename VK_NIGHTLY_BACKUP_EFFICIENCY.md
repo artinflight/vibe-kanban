@@ -1770,3 +1770,34 @@ independent decode/integrity check, injected source-delivery failure after the
 completed point was committed, and successful resumption without recapture or
 new object inodes. This prepares durable journal delivery during SQL catch-up;
 it does not qualify an older SQL epoch as current or accept a whole baseline.
+
+
+### Normal current-map delta and retained-object authentication
+
+`vk_nightly_incremental.advance_suffix` is the normal B-backed metadata stage.
+It consumes the actual delivered source epoch after the map's completed cursor,
+persists its exact bounded input on B, resumes a retained partial transaction,
+and reopens the normal readonly B provider. It never runs a bootstrap namespace
+walk, hashes unchanged source bodies or claims whole-backup acceptance. A real
+inotify/native-protocol fixture verifies changed-only metadata observation,
+unchanged-workspace reuse, an empty following suffix, and lost-reply recovery
+without duplicate completed history. The full capture/SQL/runtime/restore and
+publication stages remain necessary before calendar adoption.
+
+Current descriptors now bind their ordinary delta start to the fully consumed
+journal end. Restart consumers therefore avoid replaying the baseline's already
+closed interval. Legacy descriptors preserve their original start contract.
+The alias-aware selector accepts only the authenticated direct root targets,
+including physical worktree paths, without expanding scope from arbitrary links.
+Consistent SQL aliases derive mandatory always-API target dependencies (including
+a target whose WAL is outside its logical parent's watches). The ordinary reader
+checks that dependency, retains legacy restoration, and returns it for catch-up.
+
+`ObjectClient.probe_accepted` authenticates up to64 unchanged native B object
+identities and their original independent RAM-readback receipts per request.
+It checks raw/encoded hashes and lengths against the exact component references
+and native file change identity; it sends/reads no payload and allocates no
+restore image. Missing receipts, candidate-only bodies, same-length rewrites,
+encoding mismatches, STOP/access or admission failures remain failures. This is
+retained-proof authentication, never a fresh decode or whole-restore receipt.
+New/unproven bodies still require the existing complete independent readback.

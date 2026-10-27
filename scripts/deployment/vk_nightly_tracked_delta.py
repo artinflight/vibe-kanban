@@ -30,7 +30,22 @@ def select(anchor,report,*,required_sql,maximum_paths,enumerate_subtree):
         raise ReconciliationRequired('accepted baseline and uninterrupted exact journal coverage required')
     if type(maximum_paths) is not int or maximum_paths<1:raise ValueError('finite delta budget required')
     sources=anchor.get('sources')
-    if not isinstance(sources,list) or not sources:raise ValueError('bound required source roots missing')
+    def canonical(path):
+        return (isinstance(path,str) and path.startswith('/') and str(PurePosixPath(path))==path
+                and '..' not in PurePosixPath(path).parts and '\x00' not in path)
+    if (not isinstance(sources,list) or not sources or len(sources)!=len(set(sources))
+            or any(not canonical(path) for path in sources)):
+        raise ValueError('bound required source roots missing')
+    aliases=anchor.get('root_aliases',{})
+    if not isinstance(aliases,dict) or not set(aliases)<=set(sources):
+        raise ReconciliationRequired('accepted source-root alias contract differs')
+    effective=set(sources)
+    for alias,binding in aliases.items():
+        if (not isinstance(binding,dict) or set(binding)!={'literal','resolved'}
+                or not canonical(binding.get('resolved')) or binding['literal']!=binding['resolved']
+                or under(binding['resolved'],alias)):
+            raise ReconciliationRequired('canonical accepted root alias target required')
+        effective.add(binding['resolved'])
     changed=report.get('changed');events=report.get('events')
     if (not isinstance(changed,list) or len(changed)!=len(set(changed))
             or not isinstance(events,dict) or set(changed)!=set(events)):
@@ -40,7 +55,7 @@ def select(anchor,report,*,required_sql,maximum_paths,enumerate_subtree):
             or len(always)!=len(set(always)) or not set(always)<=set(required_sql)
             or any(not isinstance(path,str) or not path.startswith('/') or str(PurePosixPath(path))!=path
                    or '..' in PurePosixPath(path).parts or '\x00' in path
-                   or not any(under(path,root) for root in sources) for path in always)):
+                   or not any(under(path,root) for root in effective) for path in always)):
         raise ReconciliationRequired('always-snapshotted SQL dependencies must be explicitly bound in source scope')
     runtime=anchor.get('always_runtime_files',{})
     if not isinstance(runtime,dict):raise ReconciliationRequired('explicit accepted runtime dependency map required')
@@ -62,7 +77,7 @@ def select(anchor,report,*,required_sql,maximum_paths,enumerate_subtree):
         if (not isinstance(path,str) or not path.startswith('/') or str(PurePosixPath(path))!=path
                 or '..' in PurePosixPath(path).parts or '\x00' in path):
             raise ValueError('canonical changed source required')
-        if not any(under(path,root) for root in sources):raise ValueError('changed path outside bound source roots')
+        if not any(under(path,root) for root in effective):raise ValueError('changed path outside bound source roots')
         selected.add(path)
         if len(selected|set(runtime))>maximum_paths:raise ReconciliationRequired('bounded final delta exceeded; finish Nightly catch-up first')
     for path in changed:

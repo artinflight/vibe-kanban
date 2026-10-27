@@ -232,6 +232,8 @@ class SealedMemberIndex:
                     or main['sha256']!=point.get('sha256') or point.get('independent',{}).get('integrity')!='ok'):
                 raise ValueError('SQL alias lacks an independently accepted target point')
 
+        self.SQL_alias_sources=dict(aliases)
+        self.always_SQL_API_sources=sorted(set(aliases.values()))
         self.runtime_components=runtime_components(connection,self._entry)
 
     def _entry(self,name):

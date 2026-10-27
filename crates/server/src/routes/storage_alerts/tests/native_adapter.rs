@@ -25,6 +25,8 @@ pub(super) async fn state(State((d, b)): State<ControlState>) -> Json<Value> {
     ).bind(b.session_id).fetch_optional(&d.db().pool).await.unwrap().flatten();
     Json(json!({
         "launches": d.container.launches.load(Ordering::SeqCst),
+        "server_pid":std::process::id(),
+        "server_start_ticks":super::modular_adapter::process_start_ticks(),
         "queued": d.queue.get_status(b.session_id),
         "execution_count": execution_count,
         "latest_prompt": prompt,

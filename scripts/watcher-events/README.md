@@ -110,3 +110,12 @@ new fixture's invalid zero-byte closure receipt, which the unchanged production
 CHECK correctly rejected. The fixture now serializes synthetic Finished I/O and
 hashes its positive bytes; no production closure constraint is weakened. This
 correction and the newer producer-lease work need a fresh compiled run.
+
+Run40534170360 on `aacb66155`:642 native tests passed,16 intentionally ignored;
+all baseline CI jobs passed except the current modular pairing. The historical
+paired adapter passed both initial and WAL-reopen phases. The current pair reached
+its final condition-edit scenario, where its injected scheduler had not advanced
+past the dispatcher's retained backoff. The test now uses the actual saved next
+attempt/cooldown deadline; production backoff remains unchanged. Acceptance also
+adds both-low coalescing and actual Rust backend PID/start/executable comparison
+across hot configuration. These test additions await the next exact-head run.

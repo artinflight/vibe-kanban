@@ -4,6 +4,35 @@ use serde_json::json;
 
 use super::*;
 
+pub(super) fn process_start_ticks() -> String {
+    std::fs::read_to_string("/proc/self/stat")
+        .unwrap()
+        .rsplit_once(')')
+        .unwrap()
+        .1
+        .split_whitespace()
+        .nth(19)
+        .unwrap()
+        .to_owned()
+}
+
+fn process_identity() -> serde_json::Value {
+    use std::io::Read;
+
+    use sha2::{Digest, Sha256};
+    let mut file = std::fs::File::open(std::env::current_exe().unwrap()).unwrap();
+    let mut digest = Sha256::new();
+    let mut bytes = [0; 65536];
+    loop {
+        let count = file.read(&mut bytes).unwrap();
+        if count == 0 {
+            break;
+        }
+        digest.update(&bytes[..count]);
+    }
+    json!({"pid":std::process::id(),"start_ticks":process_start_ticks(),"binary_sha256":format!("{:x}",digest.finalize())})
+}
+
 pub(super) async fn exercise() {
     let (dir, d, first, _) = fixture().await;
     let second_dir = dir.path().join("second");
@@ -40,11 +69,12 @@ pub(super) async fn exercise() {
             .await
             .unwrap();
     });
+    let identity = process_identity();
     let descriptor = dir.path().join("modular-descriptor.json");
     std::fs::write(&descriptor,serde_json::to_vec(&json!({
         "fixture_protocol":"modular-native-fixture-v1", "base_url":format!("http://{address}/api"),
         "control_url":format!("http://{address}/__fixture"),"state_root":dir.path(),
-        "owner_file":owner_file,"owners":[first,second],"server_epoch":Uuid::new_v4()
+        "owner_file":owner_file,"owners":[first,second],"server_identity":identity
     })).unwrap()).unwrap();
     let driver = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("../../scripts/watcher-events/modular_native_integration.py");
@@ -73,8 +103,14 @@ pub(super) async fn exercise() {
     );
     let evidence: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
     assert_eq!(evidence["status"], "passed");
+    assert_eq!(
+        identity,
+        process_identity(),
+        "same native backend PID/start/executable throughout configuration updates"
+    );
+    assert_eq!(evidence["server_identity"], identity);
     assert_eq!(evidence["backend_listener_count"], 1);
     assert_eq!(evidence["owner_targets"], 2);
-    assert_eq!(d.container.launches.load(Ordering::SeqCst), 4);
+    assert_eq!(d.container.launches.load(Ordering::SeqCst), 5);
     println!("MODULAR_NATIVE_EVIDENCE {evidence}");
 }

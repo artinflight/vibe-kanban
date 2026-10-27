@@ -53,7 +53,10 @@ def run(d):
                          {'Content-Type': 'application/json'})
             reply = conn.getresponse()
             assert reply.status == 200
-            return json.loads(reply.read(65536))
+            result = json.loads(reply.read(65536))
+            assert result['server_pid'] == d['server_identity']['pid']
+            assert result['server_start_ticks'] == d['server_identity']['start_ticks']
+            return result
         finally:
             conn.close()
 
@@ -72,18 +75,20 @@ def run(d):
     with patch.object(native_http, 'HTTPConnection', connection):
         # Both exact strict decimal boundaries exercise the real Disk cycle,
         # injected notification receipts, native HTTP codec and execution ledger.
-        for key, threshold in [('os', 10_000_000_000), ('ssd', 25_000_000_000)]:
-            store = monitor.Store(root / (key + '.sqlite'))
+        for label, thresholds in [('os', {'os': 10_000_000_000}),
+                                  ('ssd', {'ssd': 25_000_000_000}),
+                                  ('both', {'os': 10_000_000_000, 'ssd': 25_000_000_000})]:
+            store = monitor.Store(root / (label + '.sqlite'))
             now = time.time()
             b = binding(d['owners'][0])
             config = {**b, 'activation_approved': True, 'ntfy_wake': True,
-                      'state_file': str(root / (key + '.sqlite')),
+                      'state_file': str(root / (label + '.sqlite')),
                       'admission_protocol': native.PROTOCOL,
-                      'volumes': {key: {'phone': key == 'ssd'}},
+                      'volumes': {key: {'phone': key == 'ssd'} for key in thresholds},
                       'native_transport': {'enabled': True, 'route': 'existing_local_gateway_v1',
                           'executor_config_sha256': b['executor_config_sha256'],
                           'max_validation_age_seconds': 60}}
-            samples = {key: sample(key, threshold, now)}
+            samples = {key: sample(key, threshold, now) for key, threshold in thresholds.items()}
             notifications = []
 
             def bridge_factory(config):
@@ -106,29 +111,32 @@ def run(d):
             meta, result = tick({}, now)
             assert control()['launches'] == baseline
             assert store.db.execute('SELECT count(*) FROM incidents').fetchone()[0] == 0
-            samples = {key: sample(key, threshold-1, now)}
+            samples = {key: sample(key, threshold-1, now) for key, threshold in thresholds.items()}
             meta, result = tick(meta, now)
             assert result['status'] == 'accepted', result
             assert control()['launches'] == baseline+1
             prompt = control()['latest_prompt']
-            for expected in (str(threshold-1)+' bytes', str(threshold)+' bytes', '/dev/synthetic-'+key):
-                assert expected in prompt, (expected, prompt)
-            incident = store.db.execute('SELECT id FROM incidents').fetchone()[0]
+            for key, threshold in thresholds.items():
+                for expected in (str(threshold-1)+' bytes', str(threshold)+' bytes', '/dev/synthetic-'+key):
+                    assert expected in prompt, (expected, prompt)
+            incident = store.db.execute('SELECT id FROM incidents ORDER BY id').fetchall()
+            assert len(incident) == len(thresholds)
+            assert store.db.execute('SELECT count(*) FROM batches').fetchone()[0] == 1
             posts = counts['POST']
             meta, _ = tick(meta, now)
             assert counts['POST'] == posts
-            assert store.db.execute('SELECT id FROM incidents').fetchone()[0] == incident
+            assert store.db.execute('SELECT id FROM incidents ORDER BY id').fetchall() == incident
             control('complete')
-            # Only observations use an injected earlier time. No backend clocks
+            # Only recovery observation timestamps are injected. No backend clocks
             # or real capacity readings are changed, and recovery sends no POST.
             for i in range(3):
                 at = now + (i+1)*60
-                samples = {key: sample(key, threshold+2_000_000_000, at)}
+                samples = {key: sample(key, threshold+2_000_000_000, at) for key, threshold in thresholds.items()}
                 meta, _ = tick(meta, at)
-            assert store.db.execute('SELECT recovered FROM incidents').fetchone()[0] is not None
+            assert store.db.execute('SELECT count(*) FROM incidents WHERE recovered IS NULL').fetchone()[0] == 0
             assert counts['POST'] == posts
             store.close()
-            checks.append(key+'_strict_decimal_native_receipt_exact_report_dedup_recovery')
+            checks.append(label+'_strict_decimal_native_receipt_exact_report_dedup_recovery')
 
         # Add an unrelated source/rule/target and native allowlist entry while
         # the SAME Rust listener, deployment, queue and DB remain alive.
@@ -170,7 +178,7 @@ def run(d):
         assert watch_events.drain(store, registry, 'printer-owner', time.time(), lambda _: idle, lose_reply) == 'unknown'
         row = store.db.execute('SELECT * FROM batches').fetchone()
         bid = row['id']; posts = counts['POST']
-        assert control(second=True)['launches'] == 3
+        assert control(second=True)['launches'] == 4
         store.close(); store = watch_events.EventStore(store_path)
         # Reconcile after process reopen even with an unknown current inventory.
         watch_events.drain(store, registry, 'printer-owner', time.time()+61,
@@ -204,9 +212,12 @@ def run(d):
         ingest(changed_event)
         # Inject scheduler time to exercise expired cooldown without waiting or
         # changing wall clocks. The event/native validation timestamp stays real.
-        assert watch_events.drain(store, registry, 'printer-owner', time.time()+61,
-                                  lambda _: idle, lose_reply) == 'accepted'
-        assert counts['POST'] == posts+1 and control(second=True)['launches'] == 4
+        scheduler_now = max(time.time()+61, store.meta('next_attempt', 0)+1,
+                            store.meta('last_accepted', 0)+61)
+        outcome = watch_events.drain(store, registry, 'printer-owner', scheduler_now,
+                                     lambda _: idle, lose_reply)
+        assert outcome == 'accepted', outcome
+        assert counts['POST'] == posts+1 and control(second=True)['launches'] == 5
         assert store.db.execute('SELECT count(*) FROM incidents').fetchone()[0] == 2
         control('complete', second=True)
         store.close()
@@ -215,7 +226,7 @@ def run(d):
                        'real_native_commit_lost_ack_client_reopen_GET_only',
                        'replayed_event_one_incident_one_execution'])
     return {'fixture_protocol': d['fixture_protocol'], 'status': 'passed', 'evidence': checks,
-            'backend_listener_count': 1, 'owner_targets': 2, 'server_epoch': d['server_epoch'],
+            'backend_listener_count': 1, 'owner_targets': 2, 'server_identity': d['server_identity'],
             'http_counts': counts, 'executor_io': 'synthetic; native launch/approval/receipt path real'}
 
 

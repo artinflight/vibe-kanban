@@ -107,6 +107,18 @@ class TrackingTests(unittest.TestCase):
         finally:stop.set();thread.join(timeout=5)
         self.assertEqual(errors,[]);self.assertFalse(thread.is_alive())
 
+    def test_compaction_signal_does_not_convert_access_faults_to_retry(self):
+        from vk_nightly_tracking import query,RetainedPrefixRequired
+        from unittest.mock import patch
+        import json
+        for message in ('STOP owner pause','PermissionError: denied',
+                        'retained B journal prefix required through denied',
+                        'retained B journal prefix required through -2'):
+            with patch('vk_nightly_tracking.socket.socket') as socket:
+                socket.return_value.__enter__.return_value.recv.side_effect=[json.dumps({'request_error':message}).encode(),b'']
+                with self.assertRaises(ValueError) as caught:query('/not-used',{})
+                self.assertIs(type(caught.exception),ValueError)
+
     def test_real_coverage_fault_commits_once_and_stops_with_original_reason(self):
         from vk_nightly_tracking import CoverageFault
         from vk_nightly_inode_journal import Journal

@@ -96,7 +96,9 @@ class BControlTests(unittest.TestCase):
                 result=copy_once(config,guard=lambda:None)
             self.assertTrue(result['actual_native_B_reopen_verified']);self.assertFalse(result['whole_baseline_accepted'])
             self.assertTrue(result['local_changes_pruned']);self.assertEqual(result['local_changes_pruned_through'],result['sequence'])
-            with self.assertRaisesRegex(ValueError,'retained B journal prefix'):request(endpoint,instance,0)
+            from vk_nightly_tracking import RetainedPrefixRequired
+            with self.assertRaises(RetainedPrefixRequired) as compacted:request(endpoint,instance,0)
+            self.assertEqual(compacted.exception.through,result['sequence'])
             with tracking_store(self.client,'outbox',self.sha,maximum_bytes=8*1024**2) as store:
                 combined=retained_prefix_report(store,endpoint,instance,0,guard=lambda:None)
                 self.assertIn(str(source/'changed'),combined['changed']);self.assertEqual(combined['source_paths_scanned'],0)

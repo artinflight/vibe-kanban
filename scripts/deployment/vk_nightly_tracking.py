@@ -30,6 +30,13 @@ FORMAT='vk-nightly-tracking-v1'
 MAX_RESPONSE=16*1024**2
 
 
+class RetainedPrefixRequired(ValueError):
+    """A verified delivery advanced; reopen the same B prefix snapshot."""
+    def __init__(self,through):
+        self.through=through
+        super().__init__('retained B journal prefix required through '+str(through))
+
+
 class CoverageFault(RuntimeError):
     """A durable explicit gap, never an apparently healthy running observer."""
 
@@ -175,7 +182,13 @@ def query(endpoint,value):
             if total>MAX_RESPONSE:raise ValueError('complete bounded tracking response required')
             blocks.append(block)
     value=json.loads(b''.join(blocks))
-    if 'request_error' in value:raise ValueError(value['request_error'])
+    if 'request_error' in value:
+        message=value['request_error'];prefix='retained B journal prefix required through '
+        if isinstance(message,str) and message.startswith(prefix):
+            number=message[len(prefix):]
+            if number.isascii() and number.isdecimal() and len(number)<=19:
+                raise RetainedPrefixRequired(int(number))
+        raise ValueError(message)
     return value
 
 

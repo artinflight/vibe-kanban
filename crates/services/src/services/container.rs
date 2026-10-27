@@ -156,6 +156,10 @@ impl Drop for CancelOnDropStream {
 
 #[derive(Debug, Error)]
 pub enum ContainerError {
+    #[error("Storage response owner is already reserved")]
+    StorageOwnerBusy,
+    #[error("Storage response admission held: {0}")]
+    StorageAdmissionDeferred(&'static str),
     #[error(transparent)]
     GitServiceError(#[from] GitServiceError),
     #[error(transparent)]
@@ -180,7 +184,8 @@ pub enum ContainerError {
 
 impl ContainerError {
     pub fn is_execution_limit_reached(&self) -> bool {
-        matches!(self, Self::ExecutorError(err) if err.is_execution_limit_reached())
+        matches!(self, Self::StorageOwnerBusy)
+            || matches!(self, Self::ExecutorError(err) if err.is_execution_limit_reached())
     }
 }
 
@@ -1528,11 +1533,9 @@ pub trait ContainerService: Send + Sync {
         executor_action: &ExecutorAction,
         run_reason: &ExecutionProcessRunReason,
     ) -> Result<ExecutionProcess, ContainerError> {
-        super::admission::run(self.start_execution_admitted(
-            workspace,
-            session,
-            executor_action,
-            run_reason,
+        super::admission::run(super::admission::owner(
+            workspace.id,
+            self.start_execution_admitted(workspace, session, executor_action, run_reason),
         ))
         .await
     }
@@ -1544,6 +1547,12 @@ pub trait ContainerService: Send + Sync {
         executor_action: &ExecutorAction,
         run_reason: &ExecutionProcessRunReason,
     ) -> Result<ExecutionProcess, ContainerError> {
+        if *run_reason != ExecutionProcessRunReason::DevServer
+            && super::storage_admission::candidate_execution_id().is_none()
+            && super::storage_admission::owner_reserved(&self.db().pool, workspace.id).await?
+        {
+            return Err(ContainerError::StorageOwnerBusy);
+        }
         super::original_worker::before_start(session.id, executor_action)
             .await
             .map_err(|e| ContainerError::Other(anyhow!(e)))?;
@@ -1643,7 +1652,7 @@ pub trait ContainerService: Send + Sync {
         let execution_process = ExecutionProcess::create(
             &self.db().pool,
             &create_execution_process,
-            Uuid::new_v4(),
+            super::storage_admission::candidate_execution_id().unwrap_or_else(Uuid::new_v4),
             &repo_states,
         )
         .await?;

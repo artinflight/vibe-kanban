@@ -16,6 +16,7 @@ pub mod notification;
 pub mod oauth_credentials;
 pub mod original_worker;
 pub mod pr_monitor;
+pub mod storage_admission;
 
 #[cfg(feature = "qa-mode")]
 pub mod qa_repos;

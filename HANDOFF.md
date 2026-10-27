@@ -1,3 +1,23 @@
+# Frozen physical-policy pairing pickup
+
+PR277 pins Operations PR215 `81887d38d238ce3b0665092bf38a482284441062`:
+fifteen exact Python files plus its disabled example config, sixteen provenance
+hashes. Hosted103-test Python counts and actual mixed OS/physical-SSD native
+pair must be read from the exact run on PR277/private T90/Staging handoffs.
+Predecessor b2497288/7a02102 passed native633 +paired1 +scheduler15; its Python
+count is87run/86pass/1optional connector skip, corrected from completed logs.
+Protocol, native admission and production migration bytes remain unchanged.
+
+Selected physical mode requires NO allocation producer; normal Disk remediation
+still protects allocations/resources/approvals. Physical tuning is proposed,
+OS unchanged. See VK_STORAGE_ALERT_ADMISSION.md and STORAGE_ADMISSION_VALIDATION.md.
+Staging owns the existing20passed copied-data SQL checks and separate private
+candidate/receipt-safe rollback runtime acceptance; do not duplicate/overlay it.
+Direct gateway requests are not application-authenticated and gateway is not
+loopback-only; boundary review remains required. Activation, SSD tuning and
+transport gates stay disabled. No host-heavy build/shared-target growth, live
+migration/binding/access/timer/deploy or Disk dispatch is authorized.
+
 # Pickup
 
 Current bounded follow-up: [compact durable job outcomes](USAGE_JOB_OUTCOMES.md).

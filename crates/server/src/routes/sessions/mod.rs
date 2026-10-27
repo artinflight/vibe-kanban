@@ -140,10 +140,9 @@ pub async fn follow_up(
         serde_json::json!({"kind": "follow_up", "payload": &payload}),
     )
     .await?;
-    let result = services::services::admission::run(follow_up_admitted(
-        Extension(session),
-        State(deployment),
-        Json(payload),
+    let result = services::services::admission::run(services::services::admission::owner(
+        session.workspace_id,
+        follow_up_admitted(Extension(session), State(deployment), Json(payload)),
     ))
     .await;
     if result.is_ok() {

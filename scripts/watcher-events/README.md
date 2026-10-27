@@ -69,16 +69,14 @@ compatibility case skipped without `STORAGE_CONNECTOR_SOURCE`. Native tests use
 real router/SQLite/default launch/approval code with synthetic executor I/O;
 they do not establish a live model turn or completed cleanup.
 
-[Run40534170360](https://github.com/artinflight/vibe-kanban/actions/runs/40534170360)
-passed642 native tests and the historical paired adapter; its current pairing
-exposed a test-clock/backoff assumption, now corrected without relaxing backoff.
-[Run40541114142](https://github.com/artinflight/vibe-kanban/actions/runs/40541114142)
-validates the newer activity/uncertainty cases and current modular pairing.
-Its current modular pair passed, including the actual backend-identity assertions;
-the native suite passed643/644. One new uncertainty test used inconsistent
-synthetic eligible-incident IDs; that input is corrected without changing the
-production validation rule. The next exact-head run must pass before merge
-readiness is claimed.
+[Run40544909753](https://github.com/artinflight/vibe-kanban/actions/runs/40544909753)
+on source `f331e2e369c7f3faa138f19c45c73989c3dd1ca9` is green:644 native tests
+passed (16 intentionally ignored), both explicit native pairings passed, and
+frontend/schema/Clippy/Tauri/governance/preservation checks passed. Existing
+remote checks were skipped by the workflow without its private deploy key;
+no remote deployment paths changed. The current Python suite passed157/158,
+with the optional connector-source compatibility case skipped as described above.
+See retained history/CI logs for earlier failures and their corrections.
 
 The current pair covers strict disk boundaries, both-low coalescing, actual
 receipt/execution binding, lost acknowledgment and client reopen, an unrelated

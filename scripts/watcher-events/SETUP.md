@@ -37,7 +37,10 @@ route, executor or dispatcher is added. Raw JSON is required; an HTTP200 HTML
 frontend fallback is not an admission API. Acceptance binds batch, intent hash,
 known attempt, existing workspace/session, saved config hash and exact native
 execution UUID. Accepted means execution creation committed, not cleanup success.
-Lost or ambiguous replies reconcile GET only. The existing gateway access review
+Lost or ambiguous replies reconcile GET only. Wire protocol v2 alone does not
+prove the modular registry or job-lifetime fence is installed: bind the exact
+reviewed source/artifact and both migration checksums before enabling delivery.
+An unextended PR277 v2 binary is insufficient. The existing gateway access review
 and exact saved CODEX DEFAULT Recommend configuration remain required.
 
 Two migrations must be included in forward and compatible latest-data recovery:

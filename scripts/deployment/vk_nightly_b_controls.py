@@ -404,8 +404,18 @@ class Store:
                 return {member:decode_observation(raw) for member,raw in qualifier.execute(
                     'select name,row from versions where name in ('+','.join('?' for _ in members)+')',members)}
             qualified.many=many
+            extension=None
+            if q.get('source_scope_extension_proof_sha256') is not None:
+                expected=sha(q['source_scope_extension_proof_sha256'])
+                proof_db,proof_path,proof_inode,_=self.handles[name(q['source_scope_extension_index'])]
+                if self.objects.file_identity(proof_path)[:2]!=proof_inode:raise ValueError('scope proof index substituted')
+                record=proof_db.execute('select row from source_outbox_handovers_inodes_v9 where sha256=?',(expected,)).fetchone()
+                if record is None or hashlib.sha256(record[0].encode()).hexdigest()!=expected:
+                    raise ValueError('actual B scope-extension proof missing or changed')
+                extension=json.loads(record[0])
             return value.reconcile_namespace(namespace,qualified,checkpoint=lambda:self.guard(path.stat().st_size+LIMIT),
-                maximum_paths=q['maximum_paths'],allow_unaccepted_epoch_successor=q.get('allow_unaccepted_epoch_successor') is True)
+                maximum_paths=q['maximum_paths'],allow_unaccepted_epoch_successor=q.get('allow_unaccepted_epoch_successor') is True,
+                source_scope_extension=extension)
         if op=='member-demand':
             from vk_nightly_current_map import decode_member
             totals={};largest=[]

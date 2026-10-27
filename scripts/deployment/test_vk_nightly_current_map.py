@@ -98,6 +98,74 @@ class CurrentMapTests(unittest.TestCase):
             self.assertEqual(result['member_states'],{'verified-file':1,'file-needs-qualification':1})
             with self.assertRaisesRegex(ValueError,'durable journal suffix'):SealedMemberIndex(m.db,m.check,{'consistent_SQL_sidecars':{}})
 
+    def additive_namespace_fixture(self):
+        import copy
+        old=self.later_namespace();old_binding=json.loads(old.execute('select binding from gap_meta').fetchone()[0])
+        roots={'/home':dict(identity=[1,99,stat.S_IFDIR],resolved='/home',target_identity=[1,99,stat.S_IFDIR],literal=None)}
+        old_binding['required_root_bindings']=roots
+        old.execute('update gap_meta set binding=?',(json.dumps(old_binding),))
+        alias=dict(self.observation,kind='symlink',target='/outside/sql',identity=[1,80,stat.S_IFLNK,3,123,456,os.getuid(),os.getgid(),1])
+        old.executemany('insert into namespace values(?,?)',[(n,encode_observation(row)) for n,row in [('home/a',self.observation),('home/sql',alias)]])
+        new=self.later_namespace();binding=copy.deepcopy(old_binding)
+        binding.update(instance='full-inodes',plan_sha256='c'*64,scope_sha256='d'*64,start_sequence=30)
+        binding['required_root_bindings'].update({
+            '/home/sql':dict(identity=[1,80,stat.S_IFLNK],resolved='/outside/sql',target_identity=[1,2,stat.S_IFREG],literal='/outside/sql'),
+            '/outside/sql':dict(identity=[1,2,stat.S_IFREG],resolved='/outside/sql',target_identity=[1,2,stat.S_IFREG],literal=None)})
+        new.execute('update gap_meta set binding=?',(json.dumps(binding),))
+        new.executemany('insert into namespace values(?,?)',[(n,encode_observation(row)) for n,row in [('home/a',self.observation),('home/sql',alias),('outside/sql',self.observation)]])
+        def report(b,instance,seq,full):
+            return dict(plan_sha256=b['plan_sha256'],scope_sha256=b['scope_sha256'],instance=instance,
+                        since=0,sequence=seq,ready=True,errors=[],terminal=None,
+                        coverage_model='all-selected-inodes-v1' if full else 'directory-namespace-only-v1',
+                        barrier=dict(kernel_drain_completed=True,durable_sequence=seq,instance=instance))
+        proof=dict(format='vk-nightly-additive-full-inode-overlap-v1',baseline_accepted=False,
+                   old_hardlink_and_alias_gap_repaired=False,full_gap_metadata_reconciliation_required=True,
+                   old_required_root_bindings=roots,new_required_root_bindings=binding['required_root_bindings'],
+                   added_roots=['/home/sql','/outside/sql'],old_namespace=report(old_binding,'old-v7',10,False),
+                   new_before=report(binding,'full-inodes',20,True),new_after=report(binding,'full-inodes',25,True))
+        return old,new,proof
+
+    def test_additive_scope_requires_verified_overlap_and_preserves_SQL_alias_transaction(self):
+        old,new,proof=self.additive_namespace_fixture()
+        with CurrentMap.held(self.path,binding=self.binding,create=True) as m:
+            self.compile(m);m.db.execute('insert into SQL_sources values(?)',('/home/sql',))
+            m.reconcile_namespace(old,lambda n:self.version,checkpoint=lambda:None,maximum_paths=10)
+            with self.assertRaises(ValueError):
+                m.reconcile_namespace(new,lambda n:self.version,checkpoint=lambda:None,maximum_paths=10,allow_unaccepted_epoch_successor=True)
+            def fail():raise OSError('synthetic extension commit failure')
+            with self.assertRaisesRegex(OSError,'extension commit'):
+                m.reconcile_namespace(new,lambda n:self.version,checkpoint=fail,maximum_paths=10,
+                    allow_unaccepted_epoch_successor=True,source_scope_extension=proof)
+            self.assertIsNone(m.db.execute('select path from SQL_sources where path=?',('/outside/sql',)).fetchone())
+            self.assertEqual(m.db.execute('select count(*) from namespace_scope_extensions').fetchone(),(0,))
+            result=m.reconcile_namespace(new,lambda n:self.version,checkpoint=lambda:None,maximum_paths=10,
+                allow_unaccepted_epoch_successor=True,source_scope_extension=proof)
+            self.assertFalse(result['more_names']);self.assertTrue(result['journal_suffix_required'])
+            self.assertEqual(m.db.execute('select path from SQL_sources order by path').fetchall(),[('/home/sql',),('/outside/sql',)])
+            self.assertEqual(m.db.execute('select state from members where name=?',('outside/sql',)).fetchone(),('SQLite-needs-image',))
+            self.assertEqual(m.db.execute('select state from members where name=?',('home/sql',)).fetchone(),('symlink',))
+            self.assertEqual(m.db.execute('select count(*) from namespace_scope_extensions').fetchone(),(1,))
+            with self.assertRaisesRegex(ValueError,'durable journal suffix'):SealedMemberIndex(m.db,m.check,{'consistent_SQL_sidecars':{}})
+
+    def test_additive_scope_rejects_omissions_bad_barriers_and_unready_inode_epoch(self):
+        import copy
+        old,new,good=self.additive_namespace_fixture()
+        with CurrentMap.held(self.path,binding=self.binding,create=True) as m:
+            self.compile(m);m.db.execute('insert into SQL_sources values(?)',('/home/sql',))
+            m.reconcile_namespace(old,lambda n:self.version,checkpoint=lambda:None,maximum_paths=10)
+            variants=[]
+            for key,val in [('coverage_model','directory-namespace-only-v1'),('ready',False),('errors',[{'coverage_lost':16384}]),('barrier',True),('since',False)]:
+                bad=copy.deepcopy(good);bad['new_after'][key]=val;variants.append(bad)
+            bad=copy.deepcopy(good);bad['old_required_root_bindings']={};variants.append(bad)
+            bad=copy.deepcopy(good);bad['added_roots']=['/outside/sql'];variants.append(bad)
+            bad=copy.deepcopy(good);bad['new_after']['scope_sha256']='e'*64;variants.append(bad)
+            for bad in variants:
+                with self.subTest(proof=bad),self.assertRaises(ValueError):
+                    m.reconcile_namespace(new,lambda n:self.version,checkpoint=lambda:None,maximum_paths=10,
+                        allow_unaccepted_epoch_successor=True,source_scope_extension=bad)
+            self.assertIsNone(m.db.execute("select name from sqlite_master where name='namespace_reconciliation_history'").fetchone())
+            self.assertIsNone(m.db.execute('select path from SQL_sources where path=?',('/outside/sql',)).fetchone())
+
     def test_relocated_pointer_fails_closed_with_provider_instruction_before_SQLite_open(self):
         with tempfile.TemporaryDirectory(dir='/dev/shm') as root:
             p=Path(root)/'moved.sqlite';p.write_bytes(b'VK_NIGHTLY_B_CONTROL_POINTER_V1\n{}\n');p.chmod(0o400)

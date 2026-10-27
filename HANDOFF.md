@@ -59,19 +59,35 @@ INODE_V8_LATER_QUEUE_OVERFLOW preserves the exact fault, old source DB/journal
 and all initial proofs. Only that faulted own unit closed normally; V7 remains
 active. Do not use V8's earlier ready receipt as present journal continuity.
 
-Correction separates fast kernel-byte draining from metadata dispatch with a
-finite16MiB RAM FIFO, including actively processing bytes. Inode type counts
-are O(1) instead of repeated900k-entry scans. Tests cover a real over-kernel-
-queue burst while dispatch is locked, genuine overflow under an undersized
-buffer, normal daemon/barrier integration and FD-safe shutdown. No kernel
-queue limit or verification gate was changed. A fresh explicit observer epoch
-and B-only metadata reconciliation are required; no database/body recapture.
-The earlier measurement collector's own128MiB procfs seq_read failure remains
-preserved; use bounded process/cgroup/normal status reads, never huge fdinfo.
+Correction268e17c84 separates kernel-byte draining with a finite16MiB RAM
+FIFO and O(1) type counters. V9 PID3861689/start30300948,epoch
+21487895bcd24324869f9f8e636f8d5e is now tracking891k inodes/errors0.
+ConfigSHA6c79c381efac2c30e8752e59ab3477d1ff6945655c6cf2fabba78ec91609c462.
+V7->V9 new/old/new barriers, both B prefix copies and normal independent B
+proof readback passed06:15EDT: V7_V9_ADDITIVE_HANDOVER,
+proofe37e9711c6404af85c1727aa703192bf8c380734e61447505cec58e258b95e63.
+Only then V7 closed normally; all prior source spools remain retained.
 
-Remaining: enroll the corrected full-inode observer, then finish explicit
-additive-scope handover with critical SQL alias roots. Reconcile the old hardlink/
-alias gap and additive roots without dropping prior scope. Qualify
+Single finite controller PID3939278 is live in
+vk-nightly-inodes-v9-followthrough-20261027.service. Its immutable source is
+tracking-worker-local-inodes-v9/followthrough.private.py; planSHA
+70d8e2b66bb9f05c560cef245688b0b8e5dca673e29525625d25430df4a2d03e.
+It reconciles the old gap once on B indexgap-namespace-inodes-v9-20261027,
+with0source-body reads/0SSDindex bytes. FOLLOWTHROUGH_STATUS has live progress;
+GAP_NAMESPACE_RESULT or FOLLOWTHROUGH_STOP is authoritative when terminal.
+Do not duplicate this job. It resumes completed B directory cursors under the
+same healthy epoch and authenticates the existing B handover before doing so.
+Old gaps remain explicit; full baseline/calendar remain unaccepted.
+
+The additive map integration is source-tested, not yet applied: exact B proof
+hash, all old bindings and complete new namespace are required; old absences/
+epochs and SQL requirements survive atomic transition. The logical SQL alias
+adds its regular target to SQL_sources, never implicit raw-main acceptance.
+The source test batch passed80cases, including real buffered barriers and
+native protocol rejection of a wrong proof hash. Prettier remains unavailable.
+
+Remaining: collect the same B metadata job, explicitly replay any errors and
+its journal suffix, then adopt the tested additive map transition. Qualify
 17182unresolved versions and capture only required chunks for70167points using
 retained prefix/CAS carriers. Their64342833998logicalB are NOT transfer demand.
 Bind current critical SQL/runtime; accept composed current restore and ordinary
@@ -83,16 +99,11 @@ SHA077bd796277dd50065f27ed29d78657743940c2bbe3218d17016b788284ea356.
 Keep its raw pre-ACK local_changes_pruned=false field; actual local_acknowledged
 616165 proves the nonce-bound ACK. This is namespace proof, not alias-gap repair.
 
-Fresh own-root allocated footprint2355613696B including directories; cold
-prefix1101697024B, two scale fixtures778391552B, old test metadata148357120B.
-All preserved. Active bounded outbox and closed prior spools are counted once.
-SQL package434176allocatedB and bounded health/finite output fit1MiB new local
-metadata; B runtime does not need unused SSD index/journal headroom. No body is
-staged on SSD. Actual floors and mount/access/STOP/memory checks are preserved.
-
-Source782d88eb4 passed719hosted recovery tests/1skip. The nine narrow inode/
-refusal/admission tests passed again before actual891k enrollment. Broader
-source acceptance is separate; full baseline and calendar remain unaccepted.
+Cold own-root census remains in SSD_OWN_ALLOCATION_CURRENT_20261027;
+all originals/spools are preserved and charged once. New V9/control metadata
+is inside20MiB; growing indexes and bodies stay on B. Actual mount/access,
+STOP, capacity and memory checks remain; unused SSD-index headroom is not a
+native-B body-phase requirement. Full baseline/calendar remain unaccepted.
 Required formatter attempted: Rustpassed, Prettier unavailable.
 Complete prior pickup is retained in
 [the dated archive](HANDOFF_NIGHTLY_HISTORY_20261027_0124.md), bound by

@@ -1566,3 +1566,13 @@ than the kernel FIFO holds, then verify the normal durable consumer barrier.
 An intentionally small buffer also proves that actual overflow remains fatal
 to incremental acceptance. This correction does not repair the failed V8 epoch
 or make its earlier enrollment receipt a current continuity certificate.
+
+
+An additive root change is distinct from an ordinary same-scope epoch successor.
+Current-map adoption requires the exact overlap proof through its leased native
+B index and verifies its hash, ready new/old/new barriers, preserved old root
+bindings and complete later metadata epoch. It archives prior namespace and
+absence evidence in the same transaction. Existing required SQL aliases add
+their explicit regular target to SQL requirements; that target still needs an
+independently accepted consistent API point. Missing proof, root omission or a
+namespace-only new observer cannot turn this transition into accepted coverage.

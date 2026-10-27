@@ -56,6 +56,57 @@ def SQL_aliases(connection):
         "select m.name,m.row from members m join SQL_sources s on s.path='/' || m.name where m.state='symlink'")}
 
 
+def additive_scope_SQL_sources(previous,current,proof,SQL_sources):
+    """Validate a B-authenticated overlap before a complete new metadata epoch.
+
+    The caller authenticates the exact proof bytes through the normal B index.
+    This never certifies the old directory/hardlink gap: every new-scope member
+    still comes from the complete later namespace and its pending suffix.
+    """
+    if (not isinstance(proof,dict) or proof.get('format')!='vk-nightly-additive-full-inode-overlap-v1'
+            or proof.get('baseline_accepted') is not False
+            or proof.get('old_hardlink_and_alias_gap_repaired') is not False
+            or proof.get('full_gap_metadata_reconciliation_required') is not True):
+        raise ValueError('authenticated explicit additive overlap required')
+    old=proof.get('old_required_root_bindings');new=proof.get('new_required_root_bindings')
+    if (not isinstance(old,dict) or not isinstance(new,dict) or not old
+            or old!=previous.get('required_root_bindings') or new!=current.get('required_root_bindings')
+            or any(new.get(k)!=v for k,v in old.items())):
+        raise ValueError('additive overlap must preserve every old root binding')
+    added=proof.get('added_roots')
+    if (not isinstance(added,list) or not added or len(added)!=len(set(added))
+            or set(added)!=set(new)-set(old)):
+        raise ValueError('exact nonempty added roots required')
+    for name in added:
+        if not isinstance(name,str) or not name.startswith('/') or str(Path(name))!=name or '..' in Path(name).parts:
+            raise ValueError('canonical additive source root required')
+    reports=[proof.get('old_namespace'),proof.get('new_before'),proof.get('new_after')]
+    for number,report in enumerate(reports):
+        expected=previous if number==0 else current
+        if (not isinstance(report,dict) or report.get('ready') is not True or report.get('errors')
+                or report.get('terminal') or type(report.get('since')) is not int or report['since']!=0
+                or not isinstance(report.get('instance'),str) or not report['instance']
+                or type(report.get('sequence')) is not int or report['sequence']<0
+                or any(report.get(k)!=expected.get(k) for k in ('plan_sha256','scope_sha256'))
+                or report.get('barrier')!=dict(kernel_drain_completed=True,durable_sequence=report.get('sequence'),instance=report.get('instance'))):
+            raise ValueError('actual complete overlap barriers required')
+        if number and (report.get('coverage_model')!='all-selected-inodes-v1'
+                       or report.get('instance')!=current.get('instance')):
+            raise ValueError('new complete inode epoch required')
+    if not reports[1]['sequence']<=reports[2]['sequence']<=current['start_sequence']:
+        raise ValueError('new metadata epoch must follow the verified overlap')
+    sources=[]
+    for name in added:
+        root=new[name]
+        if name not in SQL_sources or root.get('literal') is None:continue
+        target=root.get('resolved')
+        if (root['literal']!=target or target not in added
+                or new[target].get('identity',[None,None,None])[2]!=stat.S_IFREG):
+            raise ValueError('added SQL alias requires its exact regular target root')
+        sources.append(target)
+    return sources
+
+
 class SealedMemberIndex:
     """Typed-reader view of one authenticated complete current-map image.
 
@@ -269,7 +320,7 @@ class CurrentMap:
         return dict(already_complete=False, processed=processed, more_members=False, **self.summary())
 
     def reconcile_namespace(self, namespace, qualified, *, checkpoint, maximum_paths,
-                            allow_unaccepted_epoch_successor=False):
+                            allow_unaccepted_epoch_successor=False,source_scope_extension=None):
         """Adopt one complete later metadata epoch without replaying body hashes.
 
         Reuse requires the full nine-field identity AND Linux xattrs from the
@@ -293,9 +344,16 @@ class CurrentMap:
                 raise ValueError('later namespace/observer binding changed; preserve existing reconciliation')
             previous=json.loads(stored)
             suffix=db.execute('select suffix_complete from namespace_reconciliation where id=1').fetchone()[0]
-            if (not complete or suffix or any(previous.get(k)!=binding.get(k) for k in
-                    ('plan_sha256','scope_sha256','required_root_bindings'))):
-                raise ValueError('only completed unaccepted same-scope namespace may have an explicit successor')
+            if not complete or suffix:
+                raise ValueError('only completed unaccepted namespace may have an explicit successor')
+            same_scope=all(previous.get(k)==binding.get(k) for k in
+                           ('plan_sha256','scope_sha256','required_root_bindings'))
+            additional_SQL=[];extension_raw=None
+            if not same_scope:
+                additional_SQL=additive_scope_SQL_sources(previous,binding,source_scope_extension,
+                    {p for p, in db.execute('select path from SQL_sources')})
+                extension_raw=json.dumps(source_scope_extension,sort_keys=True,separators=(',',':'))
+            elif source_scope_extension is not None:raise ValueError('unexpected scope extension for same scope')
             # Preserve the whole old gap/absence evidence before resetting the
             # derived draft cursor. Immutable checkpoints and body versions are
             # untouched. A later current epoch never repairs the original gap.
@@ -304,8 +362,14 @@ class CurrentMap:
                 '(sha256 text primary key,binding text,last_name text,complete integer,suffix_complete integer) without rowid')
             db.execute('create table if not exists namespace_absent_history '
                 '(epoch_sha256 text,name text,old_state text,row blob,disposition text,primary key(epoch_sha256,name)) without rowid')
+            if extension_raw is not None:
+                db.execute('create table if not exists namespace_scope_extensions(sha256 text primary key,row text not null) without rowid')
             db.execute('begin immediate')
             try:
+                if extension_raw is not None:
+                    db.execute('insert into namespace_scope_extensions values(?,?)',
+                               (hashlib.sha256(extension_raw.encode()).hexdigest(),extension_raw))
+                    db.executemany('insert or ignore into SQL_sources values(?)',((p,) for p in additional_SQL))
                 db.execute('insert into namespace_reconciliation_history values(?,?,?,?,?)',
                            (old_digest,stored,last,complete,suffix))
                 db.execute('insert into namespace_absent_history select ?,name,old_state,row,disposition from namespace_absent',(old_digest,))

@@ -486,8 +486,37 @@ class BControlTests(unittest.TestCase):
             qualifier='gap-qualified',maximum_paths=1000)
         self.assertEqual(reconciled['member_states'],{'directory':2,'file-needs-qualification':201})
         self.assertTrue(reconciled['journal_suffix_required'])
-        current.close();qualifier.close()
-        db.close()
+        # Explicitly expanding scope needs an actual hash-authenticated row
+        # in the leased native proof index; a caller flag is insufficient.
+        outside=self.root/'new-source';outside.write_bytes(b'x')
+        expanded=dict(sources=[str(source),str(outside)])
+        newanchor=dict(anchor,instance='two',sequence=10,plan_sha256=identity(expanded),scope_sha256=identity(scope(expanded)))
+        later=self.client.connect('gap-expanded',self.sha);later_binding=initialize(later,expanded,newanchor)
+        advance_B(self.client,'gap-expanded',expanded,later_binding,guard=lambda:None,maximum_directories=100,maximum_paths=1000)
+        def window(b,instance,seq,full):
+            return dict(plan_sha256=b['plan_sha256'],scope_sha256=b['scope_sha256'],instance=instance,
+                        since=0,sequence=seq,ready=True,errors=[],terminal=None,
+                        coverage_model='all-selected-inodes-v1' if full else 'directory-namespace-only-v1',
+                        barrier=dict(kernel_drain_completed=True,durable_sequence=seq,instance=instance))
+        proof=dict(format='vk-nightly-additive-full-inode-overlap-v1',baseline_accepted=False,
+                   old_hardlink_and_alias_gap_repaired=False,full_gap_metadata_reconciliation_required=True,
+                   old_required_root_bindings=binding['required_root_bindings'],new_required_root_bindings=later_binding['required_root_bindings'],
+                   added_roots=[str(outside)],old_namespace=window(binding,'one',2,False),
+                   new_before=window(later_binding,'two',3,True),new_after=window(later_binding,'two',4,True))
+        raw=json.dumps(proof,sort_keys=True,separators=(',',':'));digest=hashlib.sha256(raw.encode()).hexdigest()
+        proofs=self.client.connect('scope-proof',self.sha)
+        proofs.execute('create table source_outbox_handovers_inodes_v9(sha256 text primary key,row text)')
+        proofs.execute('insert into source_outbox_handovers_inodes_v9 values(?,?)',('0'*64,raw))
+        args=dict(op='reconcile-current-map',name='map-after-gap',namespace='gap-expanded',qualifier='gap-qualified',
+                  maximum_paths=1000,allow_unaccepted_epoch_successor=True,source_scope_extension_index='scope-proof')
+        with self.assertRaisesRegex(ValueError,'scope-extension proof missing or changed'):
+            self.client.call(**args,source_scope_extension_proof_sha256='0'*64)
+        proofs.execute('insert into source_outbox_handovers_inodes_v9 values(?,?)',(digest,raw))
+        result=self.client.call(**args,source_scope_extension_proof_sha256=digest)
+        self.assertEqual(result['member_states'],{'directory':2,'file-needs-qualification':202})
+        self.assertEqual(current.execute('select sha256 from namespace_scope_extensions').fetchall(),[(digest,)])
+        self.assertTrue(result['journal_suffix_required']);self.assertFalse(result['current_baseline_accepted'])
+        later.close();proofs.close();current.close();qualifier.close();db.close()
 
     def test_long_native_queries_keep_the_real_guard_and_report_its_stop_reason(self):
         import vk_nightly_objects as objects

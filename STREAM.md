@@ -24,12 +24,13 @@ B tracker later failed, so current source observation uses a strictly bounded
 preallocated SSD event outbox independent of Desktop transport; growing indexes
 and backup bodies remain B-only. Its actual107010-directory-watch barrier and independent
 B forward-copy reopen passed; this does not cover external hardlink writes.
-The owner-approved1048576watch limit is live. V8 enrolled891073watches and
-passed initial memory/barrier proof, then later recorded a real queue overflow.
-Only its faulted own unit closed; all evidence and the V7 observer remain.
-The corrected reader uses bounded asynchronous kernel draining and O(1) watch
-counts; real burst/overflow/barrier tests pass. Fresh enrollment/handover and
-old alias/hardlink gap closure remain required. No calendar is accepted.
+The owner-approved1048576watch limit is live. V8's later real queue overflow
+is preserved; its earlier ready proof is historical. Corrected V9 tracks891k
+inodes with bounded raw draining. Actual new/old/new barriers and independent
+B readback passed before V7 closed. The single existing finite controller is
+reconciling old-gap metadata on B; current result/stop receipts decide outcome.
+Additive map integration requires that actual proof and full later namespace,
+retains old epochs/absences and explicitly enrolls the critical SQL target.
 The B-only namespace/map reconciliation completed; baseline/calendar stay open.
 Namespace completeness alone does not prove body/SQL/runtime recoverability.
 

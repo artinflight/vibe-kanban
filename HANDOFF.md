@@ -113,3 +113,5 @@ exact-head CI separately from older green heads.
 Earlier source/bindings remain in Git/private receipts and the full
 [historical archive](HANDOFF_HISTORY_20261017.md), plus the
 [Nightly archive](HANDOFF_NIGHTLY_HISTORY_20261027_0124.md).
+
+Integrated Staging source notes: [retained pickup](STAGING_SOURCE_PICKUP_20261027.md).

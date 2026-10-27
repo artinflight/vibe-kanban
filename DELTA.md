@@ -2021,6 +2021,80 @@ revision/idempotency protection, separate project attention and responsive UI.
 Coordinated Preserve Dot/CU1.6 and Staging. No production adoption.
 See VK_PROJECT_COLLABORATION.md for validation and release requirements.
 
+## 2026-10-18 — source-only storage admission
+
+Prepared the narrow durable storage response admission contract and native
+implementation from staging5b43524ea, following Operations PR21582805b7.
+Exact batch/intent/owner receipts, queue-preserving owner serialization,
+execution insertion binding and cancellation tombstones keep uncertain sends
+from becoming unsafe retries. No live dispatch, release or activation.
+Validation/compatibility remains explicitly source-bound; shared capacity
+coordination holds additional compiler jobs while the original service test
+reaches its natural terminal checkpoint. See VK_STORAGE_ALERT_ADMISSION.md.
+
+
+## Storage admission continuity correction (2026-10-18)
+
+Resume source/tests from af7b35d with sanitized publication authorized; host
+Cargo/build growth remains held. Correct the queued-user race assertion to
+require normal recovery context; apply the same native recovery to alert turns
+and test ordered failed/killed instructions, partial text, persisted action and
+immutable-intent replay. Hosted nextest uses no-fail-fast for complete evidence.
+See STORAGE_ADMISSION_VALIDATION.md for exact prior CI failure and new results.
+No activation or live dispatch is included.
+
+
+## Coordinated storage v2 adapter seam (2026-10-18)
+
+T90 reviewed unchanged native v2 at45cffa379 for source integration and published
+Operations42bc9ce. Add a cfg(test)-only real loopback router/control fixture and
+exact six-file client/Store/driver snapshot with byte-hash provenance. Normal
+hosted CI explicitly runs initial/client-reopen and native-WAL-reopen phases;
+missing driver cannot silently pass. Host Cargo/build growth stays held.
+See the native contract/checkpoint for evidence and synthetic I/O boundaries.
+
+
+## Actual paired driver failure and coordinated correction (2026-10-18)
+
+Native18456f017 passed633main tests; its explicit paired case failed before
+HTTP due a driver/module name collision. T90 published corrected driver source
+a345ca8dc1c5f50eab3afdc7db214ff3b923e7fd (75client fixtures reported). Repin
+all six exact files; preserve assertions and first/reopen evidence. Hosted
+ignored selection now reuses the main workspace feature graph; scheduling
+subset executes even after failure. New paired hosted success remains required.
+
+
+## Final client exact-pair closure (2026-10-18)
+
+Preserve the existing717c337 repin, add exact published5c2ee7f Python regression
+modules/status helper with twelve-file provenance and hosted76-test invocation.
+Previous native59/clienta345 result stays historical; final native/client CI
+is required. Against nominated PR276/366cfd243, native crate and additive test
+workflow patches pass isolated index checks; shared paths are workflow/continuity
+only. Combined runtime and forward/latest-data rollback remain unaccepted and
+Staging-owned. No host Cargo/build or live service/binding/activation.
+
+## 2026-10-18 Prepared disabled storage transport
+
+Repinned fourteen exact Operations PR215 files at7a02102d6ccf55f2c91223c5128599cefa6492fc,
+including production Bridge/bounded HTTP wiring and87regressions. Hosted paired
+validation is required; predecessor6c658d1/5c2ee7f remains source-bound history.
+Corrected direct-request authentication/gateway exposure claims. Native ABI and
+admission/migration source unchanged; Staging owns its existing combined release/
+copied-data/receipt-safe rollback preparation. All production gates disabled;
+no host compiler, endpoint probe, security change or activation.
+
+## 2026-10-18 Frozen physical-policy pairing
+
+Reviewed/repinned Operations81887d38d238ce3b0665092bf38a482284441062: fifteen
+Python files plus the exact disabled example config required by new regressions.
+Hosted evidence pending for103tests/mixed OS+physical SSD Bridge/HTTP/native WAL
+scenarios. No native/migration change. Physical rollout needs no allocation
+producer; normal Disk allocation protection remains. Staging20copied-data SQL
+checks acknowledged, private runtime/receipt-safe rollback remains separate.
+Corrected predecessor b249/7a Python87run to86pass/1optional connector skip.
+No activation/host build/shared-target growth or live changes.
+
 ## October26 — Nightly commissioning reconciliation
 
 Reconciled existing Nightly branch with Staging; preserved prior STATE/STREAM/

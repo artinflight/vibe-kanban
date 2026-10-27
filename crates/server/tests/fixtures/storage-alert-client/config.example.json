@@ -1,0 +1,39 @@
+{
+  "activation_approved": false,
+  "ssd_tuning_approved": false,
+  "admission_protocol": "storage-admission-v2",
+  "workspace_id": "00000000-0000-4000-8000-000000000001",
+  "session_id": "00000000-0000-4000-8000-000000000002",
+  "notification_env": "/private/existing-notification.env",
+  "state_file": "/private/storage-alert-response/incidents.sqlite",
+  "state_volume": {
+    "path": "/",
+    "uuid": "REPLACE_OS_UUID",
+    "source": "/dev/example-os",
+    "fstype": "ext4"
+  },
+  "volumes": {
+    "os": {
+      "policy": "os_percent",
+      "path": "/",
+      "uuid": "REPLACE_OS_UUID",
+      "source": "/dev/example-os",
+      "fstype": "ext4",
+      "phone": false
+    },
+    "ssd": {
+      "policy": "ssd_physical_free_proposal_v1",
+      "path": "/srv/example-storage",
+      "uuid": "REPLACE_SSD_UUID",
+      "source": "/dev/example-ssd",
+      "fstype": "ext4",
+      "phone": true
+    }
+  },
+  "native_transport": {
+    "enabled": false,
+    "route": "existing_local_gateway_v1",
+    "executor_config_sha256": null,
+    "max_validation_age_seconds": null
+  }
+}

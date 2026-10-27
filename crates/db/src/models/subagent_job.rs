@@ -133,6 +133,29 @@ impl SubagentJob {
         Ok(counts)
     }
 
+    /// Admission is stricter than the activity UI: a completed turn on an open
+    /// child thread is still a producer which can receive work or spawn a child.
+    /// Unknown/unreadable Codex state is never an empty inventory. This read is
+    /// used only after native root capture closure, under the workspace admission
+    /// lock; it does not close threads or mutate the provider's state.
+    pub async fn watcher_producers_closed(
+        pool: &SqlitePool,
+        session_ids: &[Uuid],
+    ) -> Result<bool, sqlx::Error> {
+        let mut roots = find_agent_threads_for_sessions(pool, session_ids).await?;
+        let mut seen = std::collections::HashSet::new();
+        roots.retain(|root| seen.insert(root.agent_session_id.clone()));
+        if roots.is_empty() {
+            return Ok(false);
+        }
+        let codex = codex_state_pool()
+            .await
+            .ok_or_else(|| sqlx::Error::Protocol("Independent-job inventory unavailable".into()))?;
+        let result = closed_spawn_graph(&codex, &roots).await;
+        codex.close().await;
+        result
+    }
+
     pub async fn upsert_spawned(
         pool: &SqlitePool,
         session_id: Uuid,
@@ -392,6 +415,37 @@ async fn find_codex_thread_jobs_in_pool(
     .buffer_unordered(8)
     .collect()
     .await)
+}
+
+async fn closed_spawn_graph(
+    codex: &SqlitePool,
+    roots: &[SessionAgentThreadRow],
+) -> Result<bool, sqlx::Error> {
+    if roots.is_empty() || roots.len() > 4096 {
+        return Ok(false);
+    }
+    let mut query = QueryBuilder::<Sqlite>::new(
+        "WITH RECURSIVE reachable(id) AS (SELECT id FROM threads WHERE id IN (",
+    );
+    let mut separated = query.separated(", ");
+    for root in roots {
+        separated.push_bind(&root.agent_session_id);
+    }
+    separated.push_unseparated(") UNION SELECT e.child_thread_id FROM thread_spawn_edges e JOIN reachable r ON e.parent_thread_id=r.id) SELECT NOT EXISTS(SELECT 1 FROM thread_spawn_edges e JOIN reachable r ON e.parent_thread_id=r.id WHERE e.status != 'closed' OR e.status IS NULL) AND ");
+    // Missing roots must not certify a complete inventory.
+    query.push("(SELECT count(DISTINCT id) FROM threads WHERE id IN (");
+    let mut separated = query.separated(", ");
+    for root in roots {
+        separated.push_bind(&root.agent_session_id);
+    }
+    separated.push_unseparated(")) = ");
+    let distinct = roots
+        .iter()
+        .map(|r| &r.agent_session_id)
+        .collect::<std::collections::HashSet<_>>()
+        .len();
+    query.push_bind(distinct as i64);
+    query.build_query_scalar().fetch_one(codex).await
 }
 
 async fn codex_state_pool() -> Option<SqlitePool> {

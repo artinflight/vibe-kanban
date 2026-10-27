@@ -1785,7 +1785,11 @@ impl LocalContainerService {
 
     /// Consume a queued follow-up and start it when the completed process allows it.
     async fn consume_queued_follow_up(&self, ctx: &ExecutionContext) -> QueuedFollowUpOutcome {
-        services::services::admission::run(self.consume_queued_follow_up_admitted(ctx)).await
+        services::services::admission::run(services::services::admission::owner(
+            ctx.workspace.id,
+            self.consume_queued_follow_up_admitted(ctx),
+        ))
+        .await
     }
 
     async fn consume_queued_follow_up_admitted(
@@ -1840,11 +1844,41 @@ impl LocalContainerService {
 
     /// Start the oldest message that is waiting for global executor capacity.
     async fn consume_capacity_queued_follow_up(&self) -> QueuedFollowUpOutcome {
-        services::services::admission::run(self.consume_capacity_queued_follow_up_admitted()).await
+        services::services::admission::run(async {
+            let Some(session_id) = self.queued_message_service.oldest_capacity_session_id() else {
+                return QueuedFollowUpOutcome::NoQueuedMessage;
+            };
+            let session = match Session::find_by_id(&self.db.pool, session_id).await {
+                Ok(Some(session)) => session,
+                Ok(None) => {
+                    // Preserve the existing missing-owner discard behavior so
+                    // one orphan cannot starve every other capacity queue.
+                    self.queued_message_service.take_queued(session_id);
+                    return QueuedFollowUpOutcome::Discarded;
+                }
+                Err(_) => return QueuedFollowUpOutcome::FailedToStart,
+            };
+            services::services::admission::owner(
+                session.workspace_id,
+                self.consume_capacity_queued_follow_up_admitted(session_id),
+            )
+            .await
+        })
+        .await
     }
 
-    async fn consume_capacity_queued_follow_up_admitted(&self) -> QueuedFollowUpOutcome {
-        let Some(queued_msg) = self.queued_message_service.take_oldest_capacity_queued() else {
+    async fn consume_capacity_queued_follow_up_admitted(
+        &self,
+        session_id: Uuid,
+    ) -> QueuedFollowUpOutcome {
+        if !self
+            .queued_message_service
+            .get_queued(session_id)
+            .is_some_and(|queued| queued.wait_for_capacity)
+        {
+            return QueuedFollowUpOutcome::NoQueuedMessage;
+        }
+        let Some(queued_msg) = self.queued_message_service.take_queued(session_id) else {
             return QueuedFollowUpOutcome::NoQueuedMessage;
         };
 
@@ -2423,6 +2457,12 @@ impl ContainerService for LocalContainerService {
         );
 
         // Always inject workspace/session context
+        env.job_admission = Some(executors::workspace_admission::JobAdmission {
+            pool: self.db.pool.clone(),
+            workspace: workspace.id,
+            session: execution_process.session_id,
+            execution: execution_process.id,
+        });
         env.insert("VK_WORKSPACE_ID", workspace.id.to_string());
         env.insert("VK_SESSION_ID", execution_process.session_id.to_string());
         env.insert("VK_EXECUTION_PROCESS_ID", execution_process.id.to_string());

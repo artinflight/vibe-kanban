@@ -83,12 +83,17 @@ class LocalDependencies:
     index/proof identity. Existing owner-created lease files must be retained;
     this reader creates, retires and repairs nothing.
     """
-    def __init__(self, roots, identities, *, admission_check, lease_paths=None):
+    def __init__(self, roots, identities, *, admission_check, lease_paths=None, expected_root_bindings=None):
         self.roots = {name: Path(path) for name, path in roots.items()}
         self.identities = identities
         self.admission_check = admission_check
         self.lease_paths = lease_paths or {name: root / 'RECOVERY_READ.lease'
                                            for name, root in self.roots.items()}
+        self.expected_root_bindings = ({name:tuple(value) for name,value in expected_root_bindings.items()}
+                                       if expected_root_bindings is not None else None)
+        if self.expected_root_bindings is not None and (set(self.expected_root_bindings)!=set(self.roots)
+                or any(len(value)!=2 for value in self.expected_root_bindings.values())):
+            raise ValueError('exact independently admitted dependency bindings required')
         self.active = False
         self.leases = []
         self.root_ids = {}
@@ -108,6 +113,9 @@ class LocalDependencies:
                 if not stat.S_ISDIR(before.st_mode) or root.resolve() != root:
                     raise ValueError('dependency root must be an exact directory')
                 self.root_ids[name] = before.st_dev, before.st_ino
+                if (self.expected_root_bindings is not None
+                        and self.root_ids[name]!=self.expected_root_bindings[name]):
+                    raise ValueError('independently admitted dependency placement changed: '+str(root))
                 lease_path=Path(self.lease_paths[name])
                 if lease_path not in lease_fds:
                     fd=os.open(lease_path,os.O_RDONLY|os.O_NOFOLLOW)
@@ -274,10 +282,12 @@ def held_index(provider, *references):
             connection.execute('pragma cache_size=-4096')
             connections.append(connection)
 
-        def check():
-            provider.check()
+        def check_indexes():
             if any(fingerprint(os.fstat(f.fileno())) != before for f, before in streams):
                 raise ValueError('authenticated index changed during lease')
+
+        def check():
+            provider.check();check_indexes()
 
         if current_map:
             from vk_nightly_current_map import SealedMemberIndex
@@ -288,6 +298,9 @@ def held_index(provider, *references):
             index = connections[0]
             for overlay in connections[1:]:
                 index = ComposedIndex(index, overlay, check)
+        # Only this held, authenticated index can coalesce the immediately
+        # preceding provider check; no interval or freshness check is skipped.
+        index.check_after_provider = check_indexes
         index.references = tuple(references)
         check()
         yield index
@@ -387,7 +400,9 @@ class HeldRecoverySet:
 
     def check(self):
         self.provider.check()
-        self.index.check()
+        after_provider=getattr(self.index,'check_after_provider',None)
+        if after_provider is None:self.index.check()
+        else:after_provider()
         if checksum(self.descriptor) != self.expected_sha256:
             raise ValueError('held recovery descriptor changed')
 

@@ -55,6 +55,17 @@ class TypedRecoveryTests(unittest.TestCase):
             lease.touch()
             with self.assertRaisesRegex(ValueError,'lease replaced'):provider.check()
 
+    def test_independent_root_binding_checked_without_duplicate_admission_queries(self):
+        roots={'accepted-base':self.base,'current':self.new}
+        expected={name:[path.stat().st_dev,path.stat().st_ino] for name,path in roots.items()}
+        wrong=copy.deepcopy(expected);wrong['current'][1]+=1
+        with self.assertRaisesRegex(ValueError,'independently admitted dependency'):
+            with LocalDependencies(roots,self.identities,admission_check=lambda:None,expected_root_bindings=wrong).held():pass
+        provider=LocalDependencies(roots,self.identities,admission_check=lambda:None,expected_root_bindings=expected)
+        with provider.held():
+            original=self.new/'RECOVERY_READ.lease';original.rename(self.new/'preserved.lease');original.touch()
+            with self.assertRaisesRegex(ValueError,'lease replaced'):provider.check()
+
     def file(self, body, **extra):
         return dict(self.meta, kind='file', bytes=len(body), sha256=hashlib.sha256(body).hexdigest(), **extra)
 

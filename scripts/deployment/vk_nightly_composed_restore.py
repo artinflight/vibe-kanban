@@ -21,7 +21,7 @@ from vk_nightly_sql_point import ram_path,release_verified_ram
 from vk_typed_recovery import checksum,digest
 
 
-def restore_sample(handle,path,folder,*,guard):
+def restore_sample(handle,path,folder,*,guard,local_guard=None):
     """Preserve any failed output; release only this successfully proved copy."""
     name=key(path.removeprefix('/'));row=handle.index.entry(name)
     fd,temporary=tempfile.mkstemp(prefix='nightly-composed-readback-',dir=folder);target=Path(temporary)
@@ -47,7 +47,11 @@ def restore_sample(handle,path,folder,*,guard):
             expected=handle.descriptor['SQLite'][path];digest(expected['schema_sha256'])
             with sqlite3.connect(target.as_uri()+'?mode=ro&immutable=1',uri=True) as db:
                 db.execute('pragma temp_store=MEMORY');db.execute('pragma cache_size=-8192');db.execute('pragma mmap_size=0')
-                def progress():guard();return 0
+                # This immutable image is now in owned tmpfs, already fully
+                # hashed. Keep resource/time admission during local SQL work;
+                # recheck all archive dependencies before/after it, while the
+                # outer controller retains native B STOP/health admission.
+                def progress():(local_guard or guard)();return 0
                 db.set_progress_handler(progress,1000)
                 if db.execute('pragma integrity_check').fetchall()!=[('ok',)]:raise ValueError('composed restored SQLite integrity failed')
                 schema=db.execute('select type,name,tbl_name,sql from sqlite_master order by type,name,tbl_name,sql').fetchall()
@@ -77,7 +81,7 @@ def restore_sample(handle,path,folder,*,guard):
 
 def verify(handle,*,validation_arguments,content_proof,expected_content_proof_sha256,
            expected_catalogs,readback_sources,scratch_parent,maximum_scratch_bytes,
-           maximum_readback_bytes,guard,report=lambda _:None,memory_floor_bytes=None):
+           maximum_readback_bytes,guard,report=lambda _:None,memory_floor_bytes=None,local_guard=None):
     """The caller pins the actual native audit, catalogs and consumer contract.
 
     Success covers the complete selected namespace/proof closure plus actual
@@ -129,9 +133,9 @@ def verify(handle,*,validation_arguments,content_proof,expected_content_proof_sh
     receipts=[]
     for path in readback_sources:
         check()
-        receipts.append(restore_sample(handle,path,folder,guard=lambda:(guard(),handle.check())))
+        receipts.append(restore_sample(handle,path,folder,guard=lambda:(guard(),handle.check()),local_guard=local_guard))
         report(dict(phase='normal-composed-restore-readback',completed=len(receipts),selected=len(rows),
-                    verified_bytes=sum(r['bytes'] for r in receipts),last_source=path))
+                    verified_bytes=sum(r['bytes'] for r in receipts),last_source=path,completed_sample=receipts[-1]))
     check()
     return dict(format='vk-nightly-independent-composed-restore-v1',descriptor_sha256=handle.expected_sha256,
         metadata=metadata,content_proof_sha256=expected_content_proof_sha256,

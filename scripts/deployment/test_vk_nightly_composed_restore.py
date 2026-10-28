@@ -59,6 +59,47 @@ class ComposedRestoreTests(unittest.TestCase):
         self.assertTrue(all(r['Linux_metadata_verified'] for r in result['actual_normal_reader_restore']))
         self.assertEqual(list(self.scratch.iterdir()),[]);self.assertEqual(len(progress),2)
 
+    def test_full_checkpoint_coalesces_only_the_nested_provider_check(self):
+        from unittest.mock import patch
+        d,provider,args,settings,_=self.setup()
+        with provider.held(),held_index(provider,*d['indexes']) as index:
+            handle=HeldRecoverySet(d,checksum(d),provider,index)
+            with patch.object(provider,'check',wraps=provider.check) as checked:
+                handle.check();self.assertEqual(checked.call_count,1)
+            with patch.object(provider,'check',side_effect=PermissionError('actual admission denied')):
+                with self.assertRaises(PermissionError):handle.check()
+
+    def test_local_SQL_progress_keeps_resources_and_rechecks_dependencies_at_acceptance(self):
+        from types import SimpleNamespace
+        from vk_nightly_composed_restore import restore_sample
+        source=self.root/'local-point.sqlite'
+        with sqlite3.connect(source) as db:
+            db.execute('create table records(value integer primary key,body text)')
+            db.executemany('insert into records values(?,?)',[(i,'x'*40) for i in range(12000)])
+            db.commit()
+            schema=db.execute('select type,name,tbl_name,sql from sqlite_master order by type,name,tbl_name,sql').fetchall()
+        data=source.read_bytes();schema_sha=hashlib.sha256(json.dumps(schema,separators=(',',':')).encode()).hexdigest()
+        row=dict(kind='file',uid=os.getuid(),gid=os.getgid(),mode=0o600,mtime_ns=123,xattrs={},bytes=len(data),sha256=hashlib.sha256(data).hexdigest())
+        handle=SimpleNamespace(index=SimpleNamespace(entry=lambda _:row),descriptor={'SQLite':{'/home/state.sqlite':{'schema_sha256':schema_sha}}},
+            blocks=lambda _:(data[i:i+65536] for i in range(0,len(data),65536)),check=lambda:None)
+        full=[];local=[];revoked=[False]
+        def admission():
+            if revoked[0]:raise PermissionError('actual dependency replaced')
+            full.append(True)
+        def resources():
+            local.append(len(full))
+        result=restore_sample(handle,'/home/state.sqlite',self.scratch,guard=admission,local_guard=resources)
+        self.assertEqual(result['SQLite_integrity'],'ok');self.assertGreater(len(local),1)
+        self.assertEqual(len(set(local)),1) # No archive query between local SQL callbacks.
+        def denied():raise OSError('actual RAM admission denied')
+        with self.assertRaises(sqlite3.OperationalError) as failed:
+            restore_sample(handle,'/home/state.sqlite',self.scratch,guard=admission,local_guard=denied)
+        kept=Path(failed.exception.nightly_composed_restore_preserved_path)
+        self.assertEqual(kept.read_bytes(),data)
+        def changed():revoked[0]=True
+        with self.assertRaisesRegex(PermissionError,'dependency replaced'):
+            restore_sample(handle,'/home/state.sqlite',self.scratch,guard=admission,local_guard=changed)
+
     def test_scope_proof_or_required_readback_cannot_be_dropped(self):
         d,provider,args,settings,_=self.setup(SQL=True)
         with provider.held(),held_index(provider,*d['indexes']) as index:

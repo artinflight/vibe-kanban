@@ -83,17 +83,20 @@ def run(packet,expected_sha256,*,guard,report=lambda _:None,clock=time.monotonic
         guard()
         if clock()-started>=timeout or wall_clock()>=deadline_epoch:
             raise TimeoutError('whole-cycle consumer time expired; preserve original set and failed readback')
+    def placement_check():
+        check()
         for path,expected in physical_roots:
             p=Path(path);info=p.lstat()
             if (not p.is_absolute() or p.resolve()!=p or not stat.S_ISDIR(info.st_mode)
                     or (info.st_dev,info.st_ino)!=expected):
                 raise ValueError('independently admitted dependency placement changed: '+path)
-    check()
+    placement_check()
     scratch_parent=ram_path(packet['scratch_parent']);fs=os.statvfs(scratch_parent)
     budget=packet['maximum_scratch_bytes']
     if type(budget) is not int or budget<=0 or fs.f_bavail*fs.f_frsize<budget:
         raise ValueError('actual admitted consumer RAM scratch unavailable')
-    provider=LocalDependencies(roots,contract['dependencies'],admission_check=check,lease_paths=placement['lease_paths'])
+    provider=LocalDependencies(roots,contract['dependencies'],admission_check=check,lease_paths=placement['lease_paths'],
+                               expected_root_bindings=bindings)
     # The private directory is the only new state. Its failed payloads survive
     # any exception. Existing lease files and provider/index paths are untouched.
     scratch=Path(tempfile.mkdtemp(prefix='nightly-composed-consumer-',dir=scratch_parent))
@@ -105,11 +108,12 @@ def run(packet,expected_sha256,*,guard,report=lambda _:None,clock=time.monotonic
                 expected_content_proof_sha256=packet['content_proof_sha256'],expected_catalogs=packet['expected_catalogs'],
                 readback_sources=packet['readback_sources'],scratch_parent=scratch,
                 maximum_scratch_bytes=budget,maximum_readback_bytes=packet['maximum_readback_bytes'],
-                guard=check,report=report,memory_floor_bytes=packet['Linux_resource_admission']['memory_floor_bytes'])
+                guard=check,local_guard=check,report=report,memory_floor_bytes=packet['Linux_resource_admission']['memory_floor_bytes'])
             check();handle.check()
         check();info=scratch.lstat()
         if (info.st_dev,info.st_ino)!=scratch_id:raise ValueError('owned consumer scratch directory changed; preserve')
         scratch.rmdir() # Only this newly created, successfully verified empty RAM directory.
+        placement_check()
         return dict(result,consumer_packet_sha256=expected_sha256,consumer_contract_sha256=packet['consumer_contract_sha256'],
             normal_leased_consumer_entrypoint_verified=True,elapsed_seconds=clock()-started,
             native_B_admission_required_from_controller=True,production_B_placement_claimed_by_this_entrypoint=False,

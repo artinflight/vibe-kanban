@@ -11,14 +11,29 @@ from vk_nightly_generation import render_schedule
 
 
 class UserServiceTimeout(unittest.TestCase):
+    def test_only_digest_bound_hard_stop_calendar_is_rendered_with_timezone_neutral_pulse(self):
+        value=render_schedule('/owned/vk_nightly_calendar.py','/owned/config.json',configuration_sha256='a'*64)
+        settings=configparser.ConfigParser(interpolation=None);settings.read_string(value['service'])
+        service=settings['Service']
+        self.assertEqual(service['TimeoutStartSec'],'25200')
+        self.assertEqual(service['TimeoutStopSec'],'5')
+        self.assertIn('--config-sha256 '+'a'*64,service['ExecStart'])
+        settings=configparser.ConfigParser(interpolation=None);settings.read_string(value['timer'])
+        self.assertEqual(settings['Timer']['OnCalendar'],'*-*-* *:0/15:00 UTC')
+        self.assertFalse(value['enabled'])
+        for job,sha in [('/owned/job.py','a'*64),('/owned/vk_nightly_supervisor.py','a'*64),
+                        ('/owned/vk_nightly_calendar.py','truncated')]:
+            with self.assertRaises(ValueError):render_schedule(job,'/owned/config.json',configuration_sha256=sha)
+
     @unittest.skipUnless(os.environ.get('VK_TEST_USER_SERVICE_TIMEOUT') == '1',
                          'disposable user-service validation is opt-in')
     def test_oneshot_timeout_and_finite_shutdown_grace(self):
         settings = configparser.ConfigParser(interpolation=None)
-        settings.read_string(render_schedule('/owned/job.py', '/owned/config.json')['service'])
+        settings.read_string(render_schedule('/owned/vk_nightly_calendar.py', '/owned/config.json',
+                                            configuration_sha256='a'*64)['service'])
         service = settings['Service']
-        self.assertEqual(service['TimeoutStartSec'], '7200')
-        self.assertEqual(service['TimeoutStopSec'], '30')
+        self.assertEqual(service['TimeoutStartSec'], '25200')
+        self.assertEqual(service['TimeoutStopSec'], '5')
         # Exercise the rendered settings with shortened deadlines, on only an
         # owned sleeper that ignores SIGTERM so shutdown escalation is observed.
         unit = 'vk-nightly-timeout-test-' + uuid.uuid4().hex + '.service'

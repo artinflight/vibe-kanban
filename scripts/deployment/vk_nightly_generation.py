@@ -595,22 +595,28 @@ class NightlyStore:
                     os.close(fd)
 
 
-def render_schedule(job_script, configuration):
+def render_schedule(job_script, configuration, *, configuration_sha256):
     """Source strings only. Installing/enabling a reviewed job is separate adoption.
 
-    job_script is Staging's fixed direct-B capture + promotion composition; it
-    must authenticate capture/mount/readback and approved nightly-only retention.
-    This function neither invents that adapter nor schedules LLM/agent calls.
+    Only the pinned Toronto calendar may launch the accepted whole-cycle
+    worker. The timer is a timezone-neutral wake-up pulse; the calendar owns
+    the 22:00--04:00 Toronto window, including the hard stop and DST. This
+    renderer never installs a service or substitutes for actual acceptance.
     """
     for path in (job_script, configuration):
         if not re.fullmatch('/[A-Za-z0-9_./-]+', str(path)) or '..' in Path(path).parts:
             raise ValueError('fixed absolute reviewed job/configuration paths required')
+    if Path(job_script).name!='vk_nightly_calendar.py':
+        raise ValueError('fixed hard-stop Nightly calendar required; legacy job entrypoint refused')
+    if not re.fullmatch('[0-9a-f]{64}',configuration_sha256):
+        raise ValueError('exact accepted calendar configuration digest required')
     service = ('[Unit]\nDescription=Verified normal VK nightly on B\n'
                '[Service]\nType=oneshot\nNoNewPrivileges=yes\nUMask=0077\n'
-               'TimeoutStartSec=7200\nTimeoutStopSec=30\nExecStart=/usr/bin/python3 -B ' + str(job_script)
-               + ' --config ' + str(configuration) + '\n')
+               'TimeoutStartSec=25200\nTimeoutStopSec=5\nKillMode=control-group\n'
+               'ExecStart=/usr/bin/python3 -B -S ' + str(job_script)
+               + ' --config ' + str(configuration) + ' --config-sha256 ' + configuration_sha256 + '\n')
     timer = ('[Unit]\nDescription=Normal VK nightly schedule\n[Timer]\n'
-             'OnCalendar=*-*-* 02:00:00 America/Toronto\nRandomizedDelaySec=60\nPersistent=true\n'
+             'OnCalendar=*-*-* *:0/15:00 UTC\nAccuracySec=1s\nPersistent=true\n'
              'Unit=vk-normal-nightly.service\n[Install]\nWantedBy=timers.target\n')
     return {'service': service, 'timer': timer, 'enabled': False,
             'schedule_receipt': None, 'test_run_receipt': None}

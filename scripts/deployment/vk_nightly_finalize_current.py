@@ -13,11 +13,47 @@ from vk_nightly_current_map import FORMAT,READY
 from vk_typed_recovery import checksum
 
 
+def bind_SQL_scope(client,current_map,contract,request,*,guard):
+    """Freeze a journal-derived SQL scope against a separate normal map read.
+
+    The installed template explicitly authorizes this discovery within its
+    exact tracked roots. Neither a descriptor nor the SQL producer alone may
+    choose a smaller scope. The final contract contains the full concrete
+    list and independently reopened cohort, never the discovery placeholder.
+    """
+    if contract.get('SQL_scope_authority')!='authenticated-current-map-and-cohort-v1':
+        return
+    if contract.get('required_SQL') is not None:
+        raise ValueError('late-bound SQL contract must not override a concrete required scope')
+    guard();db=client.connect(current_map['index_name'],current_map['checkpoint_sha256'],readonly=True,working=True)
+    try:
+        row=db.execute('select binding,complete,suffix_complete from namespace_reconciliation where id=1').fetchone()
+        if not row or row[1:]!=(1,1):raise ValueError('complete authenticated current SQL namespace required')
+        namespace=json.loads(row[0]);binding=request['binding']
+        if (checksum({k:v for k,v in request.items() if k!='cohort_id'})!=request['cohort_id']
+                or binding.get('source_instance')!=namespace.get('instance')
+                or binding.get('source_root_bindings')!=namespace.get('required_root_bindings')
+                or set(namespace.get('required_root_bindings',{}))!=set(contract['sources'])
+                or any(binding.get(k)!=contract[k] or namespace.get(k)!=contract[k]
+                       for k in ('plan_sha256','scope_sha256'))):
+            raise ValueError('independent SQL scope/namespace/installed root contract differs')
+        rows=db.execute("select s.path,m.state from SQL_sources s left join members m on s.path='/'||m.name order by s.path").fetchall()
+        if not rows or len(rows)>1024 or any(state is None for _,state in rows):
+            raise ValueError('finite complete independently reopened SQL source membership required')
+        required=[path for path,state in rows if state!='symlink']
+        if (len(required)!=len(set(required)) or set(required)!=set(request['SQL_scope_sources'])
+                or len(request['SQL_scope_sources'])!=len(required)):
+            raise ValueError('SQL request omitted or added current map sources')
+        contract['required_SQL']=required
+    finally:db.close()
+    guard()
+
+
 def finalize(client,*,current_map,map_layer,contract,cycle_binding,base_catalog,recipe_catalogs,
              SQL_phase=None,guard,report=lambda _:None):
     guard();contract=json.loads(json.dumps(contract))
     if len(recipe_catalogs)>8:raise ValueError('finite explicit proof catalogs required')
-    if contract['required_SQL'] and SQL_phase is None:
+    if (contract.get('required_SQL') or contract.get('SQL_scope_authority')) and SQL_phase is None:
         raise ValueError('independently reopened current SQL request required')
     if SQL_phase is not None:
         view=client.connect(SQL_phase['index_name'],SQL_phase['checkpoint_sha256'],readonly=True,working=True)
@@ -27,6 +63,7 @@ def finalize(client,*,current_map,map_layer,contract,cycle_binding,base_catalog,
             row=view.execute('select row from SQL_cycle_request where id=1').fetchone()
             if not row:raise ValueError('current SQL cohort request is missing')
             actual=json.loads(row[0])
+            bind_SQL_scope(client,current_map,contract,actual,guard=guard)
             if (checksum({k:v for k,v in actual.items() if k!='cohort_id'})!=actual['cohort_id']
                     or set(actual['SQL_scope_sources'])!=set(contract['required_SQL'])
                     or actual['binding'].get('map_index')!=current_map['index_name']

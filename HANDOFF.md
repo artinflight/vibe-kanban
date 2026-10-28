@@ -1,4 +1,4 @@
-# Nightly pickup — October27, 19:59EDT
+# Nightly pickup — October27, 20:29EDT
 
 Workspace604d/PR263 remains sole Nightly owner. Separate worker/config/calendar;
 no Vibe backend restart or Staging prompt/controller/cutover. All backup bodies,
@@ -21,10 +21,11 @@ D/file-points-worker-B-inodes-v8-optimized-resume. Started18:42:02EDT, original
 absolute file deadline369669.93monotonic (~00:33EDT October28) retained. No loaded
 package/config was edited. Exact retained suffix7b2ddad48873884a4e5dbb32513591f6e445b4b953bc31a802e29e1def8ea054,
 sourceV11/through5446784; no duplicate census/capture or changed observer epoch.
-At19:59:09:4039new completions/739807195sourceB/192973803encodedB;
-4610.8s body phase. Mixed small points and prior carrier reuse are not an ETA.
+At20:28:48:6943new completions/856814698sourceB/216787343encodedB;
+6386.0s body phase. Mixed small points and prior carrier reuse are not an ETA.
 Handover had54084pendingfiles/219SQL-needed/22replay names; these old counts are
-not exact current remaining states or transfer-byte demand. Reopen after terminal.
+not exact current remaining states or transfer-byte demand. A20:25 normal readonly B
+query took0.290s:47454capture/219SQL/9replay points remained; no body read.
 
 SQL5/runtime4 were independently proven idle/zero-payload/no children, then
 stopped19:49:30. FileV8 was never signalled. Their replacements load tested
@@ -88,8 +89,11 @@ Revalidate14runtimepins/3aliases, independent current SQL request and complete
 content closure and actual normal leased B-backed composed consumer. Then prove
 ordinary changed/unchanged/interrupted/Desktop-off/low-space whole cycles fit
 22:00–04:00 before exact worker/calendar adoption and next-run verification.
-250focused tests pass; full format lacks Prettier after Rustformat passed.
-Production proof and final consumer binding remain, not generic permission blockers. No .pyc tracking, cleanup, migration or extra spend.
+254focused tests pass (one optional service test skipped); Rustformat/ops pass,
+full format lacks Prettier. New source fixes lowercase daily SQL index names,
+legacy timer/template22–04 wiring and independent current-map/cohort SQL scope
+binding; these new changes are not loaded into the active producer.
+Full production restore/consumer acceptance remains. No .pyc, cleanup, migration or extra spend.
 
 Read [overnight acceptance](VK_NIGHTLY_OVERNIGHT_ACCEPTANCE.md),
 [previous exact pickup](HANDOFF_NIGHTLY_HISTORY_20261027_1945.md),

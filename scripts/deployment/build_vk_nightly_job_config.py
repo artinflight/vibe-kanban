@@ -15,7 +15,8 @@ from vk_nightly_schedule import block
 from vk_prep_common import identity, storage
 
 
-def build(inventory_path,output,*,compressed_delta=False,chunked_delta=False,plan_path=None,sshfs_binary=None):
+def build(inventory_path,output,*,compressed_delta=False,chunked_delta=False,plan_path=None,sshfs_binary=None,
+          current_service=None,current_service_sha256=None):
     if chunked_delta and not compressed_delta:
         raise ValueError('chunked storage requires the compressed content-delta composition')
     base=Path(__file__).parent;output=storage(output);output.mkdir(exist_ok=False)
@@ -78,8 +79,16 @@ def build(inventory_path,output,*,compressed_delta=False,chunked_delta=False,pla
         'maximum_sqlite_bytes':inventory['maximum_DB_bytes'],'inventory_seconds':inventory['elapsed_seconds'],
         'full_production_transfer_and_runtime_accepted':False,
         'limits_basis':'read-only current census plus finite headroom; tiny fixtures do not predict whole-host throughput'}}
-    config['schedule']={'enabled':False,'timezone':'America/Toronto','hour':2,'minute':0,
-        'poll_minutes':15,'retry_minutes':30,'max_attempts_per_day':16,'window_end_hour':10}
+    config['schedule']={'enabled':False,'timezone':'America/Toronto','hour':22,'minute':0,
+        'poll_minutes':15,'retry_minutes':30,'max_attempts_per_day':16,'window_end_hour':4,'hard_stop':True}
+    if bool(current_service)!=bool(current_service_sha256):
+        raise ValueError('paired current whole-cycle service path and full digest required')
+    if current_service:
+        from vk_nightly_service import load
+        value,_=load(Path(current_service),current_service_sha256)
+        if value.get('existing_components') or value['cycle']['cycle_binding']['cycle_kind']!='incremental':
+            raise ValueError('ordinary current-service template required; commissioning adoption is not recurring acceptance')
+        config['current_service']={'config':str(Path(current_service)),'sha256':current_service_sha256}
     if compressed_delta:
         # Fresh store only: leave the failed raw-format attempt and all legacy
         # recovery/incident/fallback evidence in their existing namespaces.
@@ -103,19 +112,23 @@ def build(inventory_path,output,*,compressed_delta=False,chunked_delta=False,pla
         return block(output,path,checksum(path),Path(config['staging'])/'calendar.log')
     (output/'cron.disabled').write_text('# PROPOSAL ONLY; not installed. Fixed Toronto calendar remains disabled.\n' +
                                        ''.join('# '+line+'\n' for line in entry(path).splitlines()))
-    # This immutable proposal is NOT operational authorization. It exists so a
-    # single final approval can name exact bytes without post-approval editing.
+    # Existing owner authorization covers commissioning after real acceptance.
+    # A source-only package or proposed cron row is never that acceptance.
     proposed=output/'nightly-production.proposed-adoption.private.json'
     proposed.write_text(json.dumps({**config,'adoption_authorized':True,'retention_adopted':True},indent=2)+'\n');os.chmod(proposed,0o600)
-    (output/'cron.proposed').write_text('# Source-only approval proposal. Enable ONLY after full-plan recovery test receipt.\n'+entry(proposed))
+    proposal=entry(proposed)
+    if not current_service:
+        proposal=''.join('# '+line+'\n' for line in proposal.splitlines())
+    (output/'cron.proposed').write_text('# Source-only proposal; actual whole-cycle restore/runtime acceptance required.\n'+proposal)
     validation=subprocess.run(['/usr/bin/crontab','-n',str(output/'cron.proposed')],capture_output=True,text=True)
     if validation.returncode:raise ValueError('cron syntax rejected: '+validation.stderr)
     report={'source_head':subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip(),
       'source_sha256':pins,'disabled_config_sha256':checksum(path),'proposed_adoption_config_sha256':checksum(proposed),
       'cron_proposed_sha256':checksum(output/'cron.proposed'),'cron_syntax_validated':True,'schedule_installed':False,
+      'current_service_bound':bool(current_service),'proposal_commented_until_current_service_bound':not bool(current_service),
       'production_backup_touched':False,'new_privileges':False,'files_sha256':{str(p.relative_to(output)):checksum(p) for p in output.rglob('*') if p.is_file()},
       'exact_scope_amendment':sockets,'historical_plan_changed':False,
-      'adoption_action':'Review exact source/config and exact guarded socket omission; explicitly authorize fresh normal scope enrollment/retention and test-run. Only after full-plan recovery/capacity/runtime acceptance, add only proposed cron row preserving existing disabled entries. No owner commands needed.'}
+      'adoption_action':'Bind the current whole-cycle service and verify actual complete backup/restore, capacity, health and overnight runtime. Only then use the existing owner commissioning authorization to adopt the exact calendar/cron block, preserving unrelated jobs. Missing evidence is not an extra numeric approval gate.'}
     receipt=output/'package.safe.json';receipt.write_text(json.dumps(report,indent=2)+'\n')
     return {'output':str(output),'package_receipt_sha256':checksum(receipt),**{k:report[k] for k in ('disabled_config_sha256','proposed_adoption_config_sha256','cron_proposed_sha256')}}
 
@@ -126,6 +139,9 @@ if __name__=='__main__':
     parser.add_argument('--chunked-delta',action='store_true')
     parser.add_argument('--plan',type=Path)
     parser.add_argument('--sshfs-binary',type=Path)
+    parser.add_argument('--current-service',type=Path)
+    parser.add_argument('--current-service-sha256')
     args=parser.parse_args();print(json.dumps(build(args.inventory,args.output,compressed_delta=args.compressed_delta,
                                                  chunked_delta=args.chunked_delta,plan_path=args.plan,
-                                                 sshfs_binary=args.sshfs_binary),indent=2))
+                                                 sshfs_binary=args.sshfs_binary,current_service=args.current_service,
+                                                 current_service_sha256=args.current_service_sha256),indent=2))

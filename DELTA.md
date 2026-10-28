@@ -2129,3 +2129,8 @@ or operational Nightly acceptance, schedule or backend action.
   point independently restores using300.83MB old prefix+206.92MB new B tail;
   its source JSONL diagnostic remains explicit.564 regression cases pass(one
   skip). Whole current baseline/worker/calendar commissioning remains unfinished.
+
+- 2026-10-27 20:29EDT Nightly: corrected daily native SQL index namespace and
+  stale schedule renderers; current-map/cohort checked SQL contract discovery
+  added.254 focused tests pass/one opt-in skipped; ops/Rustformat pass, Prettier
+  unavailable. Same fileV8 advances; no schedule or whole-baseline acceptance.

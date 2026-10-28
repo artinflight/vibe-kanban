@@ -65,6 +65,22 @@ class BControlTests(unittest.TestCase):
             self.assertNotIn('123456789',json.dumps(value));self.assertNotIn('select value',json.dumps(value))
         finally:db.close()
 
+    def test_scheduled_daily_SQL_index_opens_and_reopens_through_actual_native_protocol(self):
+        from vk_nightly_service import scheduled_cycle
+        template=dict(cycle=dict(cycle_binding=dict(cycle_kind='incremental'),
+            SQL=dict(SQL_phase_index=dict(index_name='template',checkpoint_sha256=self.sha)),finalize={}))
+        value=scheduled_cycle(template,'2026-10-27','4'*64)
+        ref=value['cycle']['SQL']['SQL_phase_index']
+        db=self.client.connect(ref['index_name'],ref['checkpoint_sha256'])
+        db.execute('insert into point values(1,?)',(b'completed fixture SQL point',));db.close()
+        again=scheduled_cycle(template,'2026-10-27','4'*64)['cycle']['SQL']['SQL_phase_index']
+        db=self.client.connect(again['index_name'],again['checkpoint_sha256'],readonly=True,working=True)
+        self.assertEqual(db.execute('select value from point').fetchall(),[(b'completed fixture SQL point',)])
+        db.close()
+        later=scheduled_cycle(template,'2026-10-28','4'*64)['cycle']['SQL']['SQL_phase_index']
+        db=self.client.connect(later['index_name'],later['checkpoint_sha256'])
+        self.assertEqual(db.execute('select value from point').fetchall(),[]);db.close()
+
     def test_actual_inotify_to_native_protocol_ack_and_B_prefix_after_Desktop_failure(self):
         from vk_nightly_bounded_spool import held
         from vk_nightly_tracking import serve,request
@@ -332,6 +348,39 @@ class BControlTests(unittest.TestCase):
         with self.assertRaisesRegex(NativeControlError,'accepted immutable checkpoint'):
             draft.request('build-current-descriptor',reference=reference,consumer_contract=contract)
         draft.close()
+
+    def test_SQL_contract_discovery_requires_exact_independent_native_map_scope_and_roots(self):
+        import copy
+        from test_vk_nightly_recovery_descriptor import fixture
+        from vk_nightly_finalize_current import bind_SQL_scope
+        from vk_typed_recovery import checksum
+        root=self.root/'SQL-contract';root.mkdir()
+        db,path,contract,_,_,_=fixture(root,SQL=True)
+        namespace=json.loads(db.execute('select binding from namespace_reconciliation').fetchone()[0]);db.close()
+        digest=self.import_other(path);ref=dict(index_name='SQL-contract-map'.lower(),checkpoint_sha256=digest)
+        db=self.client.connect(ref['index_name'],ref['checkpoint_sha256']);db.close()
+        request=dict(binding=dict(source_instance=namespace['instance'],
+            source_root_bindings=namespace['required_root_bindings'],plan_sha256=contract['plan_sha256'],
+            scope_sha256=contract['scope_sha256']),SQL_scope_sources=list(contract['required_SQL']))
+        request['cohort_id']=checksum(request)
+        template=dict(contract,required_SQL=None,SQL_scope_authority='authenticated-current-map-and-cohort-v1')
+        actual=copy.deepcopy(template)
+        bind_SQL_scope(self.client,ref,actual,request,guard=lambda:None)
+        self.assertEqual(actual['required_SQL'],contract['required_SQL'])
+        self.assertIsNone(template['required_SQL'])
+        for change in ['omission','root','epoch','digest']:
+            wrong=copy.deepcopy(request)
+            if change=='omission':wrong['SQL_scope_sources']=[]
+            elif change=='root':wrong['binding']['source_root_bindings']={}
+            elif change=='epoch':wrong['binding']['source_instance']='other'
+            if change!='digest':wrong['cohort_id']=checksum({k:v for k,v in wrong.items() if k!='cohort_id'})
+            else:wrong['cohort_id']='0'*64
+            with self.assertRaises(ValueError):
+                bind_SQL_scope(self.client,ref,copy.deepcopy(template),wrong,guard=lambda:None)
+        db=self.client.connect(ref['index_name'],ref['checkpoint_sha256'])
+        db.execute("insert into SQL_sources values('/home/state/unaccounted.sqlite')");db.close()
+        with self.assertRaisesRegex(ValueError,'complete independently reopened'):
+            bind_SQL_scope(self.client,ref,copy.deepcopy(template),request,guard=lambda:None)
 
     def finalization_fixture(self):
         from test_vk_nightly_recovery_descriptor import fixture

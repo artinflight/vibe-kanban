@@ -60,6 +60,9 @@ class ServiceTests(unittest.TestCase):
         self.assertEqual(binding['started_UTC'],'2026-10-28T02:00:00+00:00')
         self.assertEqual(cycle['SQL']['SQL_phase_index'],cycle['finalize']['SQL_phase'])
         self.assertEqual(cycle['SQL']['cohort_tag'],binding['SQL_cohort_tag'])
+        from vk_nightly_b_controls import name as index_name
+        self.assertEqual(index_name(cycle['SQL']['SQL_phase_index']['index_name']),
+                         cycle['SQL']['SQL_phase_index']['index_name'])
         later=service.scheduled_cycle(template,'2026-10-28','4'*64)
         self.assertNotEqual(later['cycle']['SQL']['cohort_tag'],cycle['SQL']['cohort_tag'])
         self.assertEqual(template['cycle']['SQL']['SQL_phase_index']['index_name'],'template')

@@ -223,3 +223,31 @@ readers; they never substitute for the real MCP/native body lanes. Successful
 transient-unit collection is handled by former-process identity plus actual
 native leases and independently reopened B terminal receipts, not invented unit
 success. The current file/SQL/runtime results and composed restore remain needed.
+
+
+## Recurring-path corrections — October27,20:29EDT
+
+Actual native-protocol testing exposed an invalid uppercase suffix in daily SQL
+index names. They are now canonical lowercase names: the same evening reopens
+its completed index and the following evening receives a distinct index. The
+legacy disabled proposal builder now uses22–04/hard-stop settings and leaves its
+cron proposal commented until a pinned ordinary whole-cycle service is bound.
+The separate source-only systemd renderer accepts only the digest-bound Toronto
+calendar, using a UTC fifteen-minute pulse; it cannot launch an arbitrary old
+backup script or the former02:00 schedule. Nothing was enabled by these edits.
+
+An explicitly configured dynamic SQL contract freezes the current journal-derived
+SQL list only after independently reopening both the cohort request and main map.
+Exact roots, plan, tracking epoch, all SQL-source membership and request digest
+must agree. A dropped database, missing member, changed root or different epoch
+fails closed. Concrete externally specified SQL lists retain their strict checks.
+This supports new tracked DBs without treating an old fixed list as current.
+The parent service admission clock now covers the actual remaining whole-cycle
+window; each child phase retains its own finite budget and the shared04:00 stop.
+
+254 focused backup/restore/calendar tests pass; one optional user-manager timeout
+fixture is skipped. Native daily-index and SQL-scope tests use actual RAM-backed
+SQLite protocol processes. Ops and diff checks pass; Rust formatting passes and
+full format stops because Prettier is absent. These are source/integration results,
+not acceptance of tonight's production baseline or an installed recurring service.
+The original fileV8 remains active; SQL6/runtime5 remain waiting, all data retained.

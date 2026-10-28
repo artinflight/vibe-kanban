@@ -11,6 +11,7 @@ from datetime import datetime,timezone
 import hashlib
 import json
 import copy
+import math
 import os
 from pathlib import Path
 import re
@@ -145,7 +146,10 @@ def scheduled_cycle(template,evening,template_sha256):
     day=datetime.fromisoformat(evening).date()
     if day.isoformat()!=evening:raise ValueError('canonical Toronto evening date required')
     start,end=bounds(day);tag='nightly-'+day.strftime('%Y%m%d')+'-'+template_sha256[:16]
-    reference=dict(cycle['SQL']['SQL_phase_index'],index_name=tag+'-SQL')
+    # These names are passed to the native B index protocol, whose canonical
+    # namespace is lowercase. Validate here, before any scheduled body work.
+    from vk_nightly_b_controls import name as index_name
+    reference=dict(cycle['SQL']['SQL_phase_index'],index_name=index_name(tag+'-sql'))
     binding.update(started_UTC=start.isoformat(),deadline_UTC=end.isoformat(),scheduled_night=evening,
         schedule_template_sha256=template_sha256,SQL_cohort_tag=tag,SQL_phase_index=reference)
     cycle['SQL'].update(cohort_tag=tag,SQL_phase_index=reference)
@@ -156,6 +160,7 @@ def scheduled_cycle(template,evening,template_sha256):
 def execute(value,workers,*,report):
     cycle=value['cycle'];binding=cycle['cycle_binding'];started=time.monotonic()
     admitted=dict(workers['files'],whole_cycle_deadline_UTC=binding['deadline_UTC'],
+        timeout_seconds=math.ceil(seconds_left(binding['deadline_UTC'])),
         B_controls=dict(workers['files']['B_controls'],whole_cycle_deadline_UTC=binding['deadline_UTC']),
         desktop=dict(workers['files']['desktop'],whole_cycle_deadline_UTC=binding['deadline_UTC']))
     def guard():host_guard(admitted,started)

@@ -1,79 +1,69 @@
-# Nightly pickup — October28,01:34EDT
+# Nightly pickup — October28,03:28EDT
 
-Goal: accept tonight's current composed restore, then commission22–04Toronto
-with hard04:00stop. No backend restart. Schedule OFF/nextNONE. Preserve accepted
-162704613801B restore, all137/later DBs, components, original gaps and partials,
-including unsealed RAM inode33476/2968010752B. All bodies/indexes stay Desktop B.
+Goal: actual current composed restore, then ordinary measured incremental cycle
+and commission22:00–04:00Toronto with hard04:00stop. No backend restart.
+Schedule OFF, nextNONE. All bodies/indexes Desktop B. Preserve accepted
+162704613801B restore,137/later DBs, original gaps, supplements and partials.
 
 D=/mnt/vk-storage/vk-nightly-efficiency-20261017/commissioning-20261026
-C=D/b-controls-v1. Read D/LATEST_STATUS.private.json first for actual identities.
-C/CURRENT_COMPONENTS_CLOSURE_PREPARED_20261028T0534.private.json SHA
-98904888198d1f5b41108838b1b2df71d523fe31fc5a5e7b12ff4f7bee1c1e59
-preserves this observation and exact component result hashes.
+C=D/b-controls-v1. D/LATEST_STATUS.private.json is the private current index;
+its previous01:33receipt survives in LATEST_STATUS_20261028T0133_RETAINED.private.json.
 
-## Completed components — reuse, never restart
+## Current sole finisher and completed work
 
-FileV9 completed00:30:49:39894new members,13.55GB source/5.59GB encoded;
-5774earlier points reused without source reads/copies. SQL8 completed01:02:27:
-219/219images,6.384GB API bytes/597611433new encoded bytes,no deferred SQL.
-Largest3.053GB image passed independent full hash/SQLite integrity/schema/Linux
-metadata. Runtime7 completed01:03:23:both files,3200raw/1444encoded bytes.
-Exact results/old PID births remain in their original folders and LATEST.
-ObserverV11 PID3849155/start32997998/epoch31ab8db49caf4f9699c7c0bd75c363a2
-continues fixed local outbox/durableB; no new enrollment or global census.
+Unit vk-nightly-current-composed-finisher-e457249c4-providers-20261028.service,
+PID2987660/start37998553. D/current-whole-cycle-e457249c4-SQL-providers;
+configSHA d96f008d9af11858f33171b32b9f2168f607af68382f6b6ce3683eab49be0d3b.
+Started03:25:09after predecessor2653309 and both MCP lanes proven terminal;
+CPU25%/High1536MiB/Max2GiB/Swap0/Tasks64. Original cycle binding and08UTC/04EDT
+harddeadline retained. No active body capture has been duplicated. At03:28,
+889192448B of the immutable2243518464B map independently read back on B.
+Read its newerSTATUS/STOP/RESULT before any action; no replacement while active.
 
-## One current finisher — preserve active progress
+FileV9 completed00:30:49:39894new members,13.55GBsource/5.59GBencoded;
+5774earlier points reused. Subsequent recorded tails closed all pending file
+points, including growing JSONL and two atomic tiny state files, without a new
+namespace census. Original receipts remain unchanged. SQL8 completed01:02:27:
+219/219images,6.384GB APIbytes/597611433new encoded. Recorded SQL extension
+closes2seed copies and mandatory working target:221total scope,218earlier
+points reused. Runtime7 completed01:03:23:3200raw/1444encoded,full independent
+reopen. These three phases already reside in the native whole-cycle ledger;
+resume them, never recapture. ObserverV11 PID3849155/start32997998 remains sole
+full-inode source, epoch31ab8db49caf4f9699c7c0bd75c363a2.
 
-The80deafdcd finisher stopped01:03:59 by wrongly applying expired FileV9 phase
-deadline to immutable artifact authentication. f1d0c8128 fixes this while live
-parent/native transport guards still enforce owner04:00. Terminal invocation,
-controller and MCP body lease release were proven before its successor.
-Current unit vk-nightly-current-composed-finisher-f1d0c8128-20261028.service,
-PID1812287/start37194422; D/current-whole-cycle-f1d0c8128-artifact-authentication;
-serviceSHA4d9c897cdcd6c77e7025efe896fca214728bb28149eb36f3448f3f72ce199da4.
-CPU25%/High1536M/Max2G/Swap0/Tasks64, original binding/start and hard08UTC remain.
-It successfully reopened the component receipts and is capturing only recorded
-tail points, retaining every completed group. At01:32:1019additional commits,
-3.023GB independent readback/882968688encoded bytes. Read newer STATUS; no ETA.
+The later descriptor failure was an incomplete provider contract. All79selected
+retained SQL images passed actual UID1000 normal Linux fullhash readback,
+2067451904B, no copy. The only remaining missing layer was printshop-current-v1:
+20selected names from an existing22member/61474B ZIP with independent Linux
+metadata/hash restore. Fresh normal B fullhash/placement pass now recorded in
+C/CURRENT_PRINTSHOP_PROVIDER_FULL_REOPEN_20261028.private.json;
+C/CURRENT_AUTHENTICATED_PRINTSHOP_PROVIDER_20261028.private.json SHA
+104f829411cd61d12e7aa267541c9b838ebe924f16fb8f3e30f5e21ce0af5506.
+Source e457249c47a9886589026c4bc2c0df71393bb840 authenticates explicit named
+ZIP contracts, rechecks archive/member fullhash and native identity; unknown
+layers and mismatches fail.95focused tests pass; ops/diff/Rustformat pass.
+Fullformat still stops at unavailable Prettier. Source pushed to solePR263.
+Native/control root spelling and SQL lookup corrections from ca67 remain.
 
-Exact recorded gaps are in that folder/RECORDED_GAPS_DIAGNOSIS.private.json:
-two growing JSONL files, one vanished recorded zero-byte lock, two copied seed
-SQLite files discovered after219-point cohort freeze. No omission accepted.
-Source d718ef75c adds double-read complete-record JSONL qualification, strict
-raw fallback, native authenticated empty-namespace+verified-carrier reuse, and
-fixed-namespace SQL closure without redoing accepted images/new suffix.
-162focused tests pass(one skip); additional exact-source-epoch native API/reopen/
-reuse test passes. Local legacy lifecycle fixtures under RAM fail their existing
-SSD-placement rule; not production guard bypass. Ops/diff/Rust format pass;
-full formatting still stops at missing Prettier. Source pushed to solePR263.
+## Remaining actual acceptance and disabled automation
 
-D/current-whole-cycle-d718ef75c-artifact-authentication is PREPARED, NOT STARTED;
-serviceSHA6cd7c4e0a2d75e75926016a9d37b0883e1f83dbd4071472f9e1baac34dd7f4e1.
-Do not duplicate active f1. Collect its actual terminal first; prove original
-PID/cgroup and both MCP lanes released. New native lease acquisition remains
-mandatory. Reuse the exact original cycle binding and all terminal components.
-Do not reset the04:00clock. Finish recorded points/native seal/content proof and
-actual normal B-backed UID1000 composed restore with actual-peak RAM admission.
+D/ordinary-incremental-e457249c4-complete-providers-prepared is prepared only;
+serviceSHA d3d10a43bdbcef5c9215fa2d483fe8a59986b50082958e8a9ec7fd2ae01d6d8e.
+Real crontab-stdin syntax, source preflight and disabled calendar checks pass.
+No ordinary cycle or scheduler has been started. Its COMMISSIONING_COMMANDS
+receipt pins the existing commissioner/journal helper to this exact package,
+including required PYTHONPATH. Do not use earlier80/f1/ca67prepared commands.
 
-## Ordinary service and adoption remain unaccepted
+First collect actual current descriptor/content proof and ordinary UID1000
+B-backed composed restore. Then only after terminal ownership/leases run this
+ordinary package under its original Toronto evening/deadline, prove actual
+journal delivery/reopen/ACK, and qualify/install the exact calendar. The native
+accepted pointer advances only after all5phase receipts and normal restore.
+A failed/late run preserves data and cannot publish or enable scheduling.
+Time remaining is finite; no safe completion estimate is established. Do not
+reset04:00, treat component proof as whole acceptance or weaken any genuine
+STOP/access/identity/capacity/resource/ownership control.
 
-D/ordinary-incremental-d718ef75c-prepared is DISABLED; config/calendars passed
-preflight and real crontab-stdin syntax checks, no scheduler installation.
-ServiceSHAf33356019b8321cabc3441df7486b1480073a369324b6753f8c72b18f5a67f1f.
-Run actual ordinary cycle only after initial current acceptance/lease release;
-keep original evening/04:00bound. Older ordinary packages remain preserved.
-
-Commissioner+journal source in D/commissioner-journal-day-adoption-20261028
-must be rebound to the FINAL ordinary package/config. The existing older
-preparations bind80/f1packages and must not be installed blindly. Journal helper
-uses fixed50s metadata-only delivery under controller/body/legacy birth leases;
-unchanged cursor skips B/SMART. Require an actual normal B reopen/ACK receipt.
-The installer independently checks actual ordinary full-cycle/restore/journal
-proof, adopts that completed night to prevent duplicate first pulse, then enables
-one cron block and reads back exact worker/config/next22Toronto run.
-No code/fixture/partial component is whole-backup acceptance.
-
-Prior pickup survives byte-for-byte in
-[00:01history](HANDOFF_NIGHTLY_HISTORY_20261028_0001.md), plus earlier linked
-histories and [original archive](HANDOFF_HISTORY_20261017.md).
-See [overnight acceptance](VK_NIGHTLY_OVERNIGHT_ACCEPTANCE.md).
+Earlier pickup survives byte-for-byte in
+[01:34history](HANDOFF_NIGHTLY_HISTORY_20261028_0134.md), which links prior
+histories and the [original full archive](HANDOFF_HISTORY_20261017.md). See [overnight acceptance](VK_NIGHTLY_OVERNIGHT_ACCEPTANCE.md).

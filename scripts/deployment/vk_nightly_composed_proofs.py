@@ -36,6 +36,33 @@ def carrier_identity(objects,definition):
     return actual
 
 
+def retained_ordered_proof(database,value,member):
+    """Reopen the exact accepted body version named by a later qualified point.
+
+    Content/hash/ordered recipe proof belongs to the old body epoch. Current
+    metadata remains the later qualifier's point; never relabel the old proof.
+    """
+    reference=value.get('retained_carrier_reuse',{}).get('completed_file_history')
+    if not reference:return None
+    from vk_nightly_control_format import key
+    key(reference['name']);digest(reference['version_sha256'])
+    row=database.execute('select accepted_row,proof from file_acceptance_history where name=? and version_sha256=?',
+                         (reference['name'],reference['version_sha256'])).fetchone()
+    if not row or row[0] is None or hashlib.sha256(row[0]).hexdigest()!=reference['version_sha256']:
+        raise ValueError('retained ordered body history missing or changed')
+    accepted=decode_member(row[0]);original=accepted['member'];proof=decode_member(row[1])
+    if (accepted.get('independent_file_proof')!=proof or original.get('kind')!='file'
+            or any(original.get(k)!=member.get(k) for k in ('bytes','sha256','segments'))
+            or proof.get('independent_ordered_B_readback_sha256')!=member['sha256']
+            or proof.get('independent_ordered_B_readback_bytes')!=member['bytes']
+            or proof.get('source_metadata')!={k:original[k] for k in ('mode','uid','gid','mtime_ns','xattrs')}
+            or value.get('qualification',{}).get('state')!='qualified-retained-body'
+            or value['qualification'].get('row')!=member):
+        raise ValueError('retained ordered body proof or current qualified point differs')
+    return dict(history_reference=reference,original_ordered_proof_sha256=hashlib.sha256(canonical(proof)).hexdigest(),
+                original_body_metadata_preserved=True,current_qualified_metadata_not_relabelled=True)
+
+
 def audit(database,reference,*,base_catalog,recipe_catalogs,objects,objects_root,
           guard,native_carrier=None,named_components=None):
     """Stream one sealed map's proof closure using bounded metadata caches.
@@ -236,7 +263,10 @@ def audit(database,reference,*,base_catalog,recipe_catalogs,objects,objects_root
                     or proof.get('source_metadata')!={k:member[k] for k in ('mode','uid','gid','mtime_ns','xattrs')}):
                 raise ValueError('ordered file readback/hash/Linux metadata proof differs')
             evidence['ordered_file_proof_sha256']=hashlib.sha256(canonical(proof)).hexdigest();ordered+=1
-        if len(recipe)>1 and not (proof or SQL):raise ValueError('multi-segment file lacks full ordered readback proof')
+        if len(recipe)>1 and not (proof or SQL):
+            retained_proof=retained_ordered_proof(database,value,member)
+            if retained_proof is None:raise ValueError('multi-segment file lacks full ordered readback proof: '+name)
+            evidence['retained_ordered_file_proof']=retained_proof;ordered+=1
         if len(recipe)==1 and any(recipe[0][k]!=member[k] for k in ('bytes','sha256')):
             raise ValueError('single-segment full-file hash/length differs')
         for number,segment in enumerate(recipe):

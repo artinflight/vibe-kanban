@@ -103,6 +103,24 @@ class ComposedProofTests(unittest.TestCase):
         newer.execute('delete from components')
         with self.assertRaisesRegex(ValueError,'absent or ambiguous'):run()
 
+    def test_reused_multisegment_reopens_exact_ordered_history_without_relabelling_metadata(self):
+        from vk_nightly_current_map import encode_member
+        row=self.base_file();row['segments']*=2;row['bytes']*=2
+        old=dict(row,mode=0o640,mtime_ns=55)
+        proof=dict(independent_ordered_B_readback_sha256=row['sha256'],independent_ordered_B_readback_bytes=row['bytes'],
+            source_metadata={k:old[k] for k in ('mode','uid','gid','mtime_ns','xattrs')})
+        raw=encode_member(dict(member=old,independent_file_proof=proof));version=hashlib.sha256(raw).hexdigest()
+        self.db.execute('create table file_acceptance_history(name text,version_sha256 text,proof blob,accepted_row blob,primary key(name,version_sha256))')
+        self.db.execute('insert into file_acceptance_history values(?,?,?,?)',('old/name',version,encode_member(proof),raw))
+        value=dict(member=row,qualification=dict(state='qualified-retained-body',row=row),
+            retained_carrier_reuse=dict(completed_file_history=dict(name='old/name',version_sha256=version)))
+        self.db.execute('update members set row=?',(encode_member(value),))
+        self.assertEqual(self.use()['ordered_file_readback_proofs_reused'],1)
+        self.db.execute('update file_acceptance_history set proof=?',(encode_member(dict(proof,independent_ordered_B_readback_bytes=0)),))
+        with self.assertRaisesRegex(ValueError,'retained ordered body proof'):self.use()
+        self.db.execute('update file_acceptance_history set accepted_row=?',(b'changed',))
+        with self.assertRaisesRegex(ValueError,'history missing or changed'):self.use()
+
     def test_named_ZIP_contract_actual_decode_and_fail_closed(self):
         import zipfile
         path=self.root/'component.zip';data=b'verified archived specimen'

@@ -143,6 +143,15 @@ class ConsumerTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,'RAM scratch'):run(wrong,checksum(wrong),guard=lambda:None)
         self.assertEqual(list(self.root.glob('nightly-composed-consumer-*')),[])
 
+    def test_actual_selected_restore_peak_is_admitted_before_materialization(self):
+        wrong=copy.deepcopy(self.packet);wrong['Linux_resource_admission']['memory_floor_bytes']=10**18
+        before=(self.body/'state.sqlite').stat().st_ino
+        with self.assertRaisesRegex(BlockingIOError,'selected restore peak plus installed memory floor') as stopped:
+            run(wrong,checksum(wrong),guard=lambda:None)
+        scratch=Path(stopped.exception.nightly_composed_consumer_preserved_scratch)
+        self.assertEqual(list(scratch.iterdir()),[])
+        self.assertEqual((self.body/'state.sqlite').stat().st_ino,before)
+
     def test_replaying_an_old_packet_cannot_reset_the_whole_cycle_deadline(self):
         wrong=copy.deepcopy(self.packet);wrong['whole_cycle_deadline_UTC']='2020-01-01T00:00:00+00:00'
         with self.assertRaisesRegex(TimeoutError,'already expired'):run(wrong,checksum(wrong),guard=lambda:None)

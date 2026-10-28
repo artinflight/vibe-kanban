@@ -104,7 +104,7 @@ def run(packet,expected_sha256,*,guard,report=lambda _:None,clock=time.monotonic
                 expected_content_proof_sha256=packet['content_proof_sha256'],expected_catalogs=packet['expected_catalogs'],
                 readback_sources=packet['readback_sources'],scratch_parent=scratch,
                 maximum_scratch_bytes=budget,maximum_readback_bytes=packet['maximum_readback_bytes'],
-                guard=check,report=report)
+                guard=check,report=report,memory_floor_bytes=packet['Linux_resource_admission']['memory_floor_bytes'])
             check();handle.check()
         check();info=scratch.lstat()
         if (info.st_dev,info.st_ino)!=scratch_id:raise ValueError('owned consumer scratch directory changed; preserve')

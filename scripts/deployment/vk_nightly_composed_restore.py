@@ -77,7 +77,7 @@ def restore_sample(handle,path,folder,*,guard):
 
 def verify(handle,*,validation_arguments,content_proof,expected_content_proof_sha256,
            expected_catalogs,readback_sources,scratch_parent,maximum_scratch_bytes,
-           maximum_readback_bytes,guard,report=lambda _:None):
+           maximum_readback_bytes,guard,report=lambda _:None,memory_floor_bytes=None):
     """The caller pins the actual native audit, catalogs and consumer contract.
 
     Success covers the complete selected namespace/proof closure plus actual
@@ -110,6 +110,12 @@ def verify(handle,*,validation_arguments,content_proof,expected_content_proof_sh
     total=sum(r['bytes'] for r in rows);peak=max(r['bytes'] for r in rows)
     if peak+16*1024**2>maximum_scratch_bytes or total>maximum_readback_bytes:
         raise ValueError('actual composed restore demand exceeds admitted RAM/readback window')
+    if memory_floor_bytes is not None:
+        if type(memory_floor_bytes) is not int or memory_floor_bytes<0:
+            raise ValueError('actual nonnegative normal-reader memory floor required')
+        memory={r.split(':')[0]:int(r.split()[1])*1024 for r in Path('/proc/meminfo').read_text().splitlines()}
+        if memory['MemAvailable']<peak+144*1024**2+memory_floor_bytes:
+            raise BlockingIOError('actual selected restore peak plus installed memory floor unavailable')
     folder=ram_path(scratch_parent);info=folder.lstat()
     if not stat.S_ISDIR(info.st_mode) or info.st_uid!=os.getuid() or stat.S_IMODE(info.st_mode)&0o077:
         raise ValueError('existing private owned RAM restore directory required')

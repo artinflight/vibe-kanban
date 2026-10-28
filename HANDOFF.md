@@ -1,69 +1,77 @@
-# Nightly pickup — October28,03:28EDT
+# Nightly restore verified — October28,08:13EDT
 
-Goal: actual current composed restore, then ordinary measured incremental cycle
-and commission22:00–04:00Toronto with hard04:00stop. No backend restart.
-Schedule OFF, nextNONE. All bodies/indexes Desktop B. Preserve accepted
-162704613801B restore,137/later DBs, original gaps, supplements and partials.
+Current goal SATISFIED: restore verification completed, discovered bugs fixed,
+verified dependency handoff delivered to existing Staging. No backup recapture,
+backend restart, production switch or schedule activation occurred. Recurring
+Nightly commissioning is a SEPARATE unfinished task: schedule OFF, nextNONE.
+Original22–04Toronto capture cycle remains expired; its pointer was not advanced.
+
+## Actual acceptance
+
+Source09327026008464ebb9ffcc4507631da50b2a62ce (solePR263) passed the actual normal
+UID1000 consumer on existing B-backed VK-Candidate-20261009. Result at
+2026-10-28T08:13:34.667609-04:00; measured normal-only phase1349.8s.
+798077namespace members,660381files/200777178777logical bytes,
+221SQL proof records.15mandatory actual readbacks/368903595B passed
+fullhash/Linuxmetadata; working90 SQL integrity OK + schema matched. Sequential
+RAM payload peak169500672B. All15sample receipts match the final result.
+Previous162.70GB cold restore and all valid layers/images remain; no fresh full
+200GB decode/copy is claimed. Original7783archive gaps and supplemental epochs
+stay explicit; captured points are not a live writer fence.
 
 D=/mnt/vk-storage/vk-nightly-efficiency-20261017/commissioning-20261026
-C=D/b-controls-v1. D/LATEST_STATUS.private.json is the private current index;
-its previous01:33receipt survives in LATEST_STATUS_20261028T0133_RETAINED.private.json.
+P=D/restore-only-093270260-20261028; C=D/b-controls-v1.
+P/RESULT.private.json SHA48eca5b2efdf4c4b8544855dd40bac3d84beae783e4b6fa1eab49050a2fc5f6b.
+P/READBACK_PROOFS.private.json holds15actual sample receipts; SOURCE_VALIDATION
+holds151focused tests +13applicable exact-head hosted checks (consent job skipped).
+Rust/ops/diff checks pass. Full local format stops only at missing Prettier.
+Former owner1103083/start39592858/unitvk-nightly-retained-restore-093270260-20261028
+is terminal/MainPID0/emptycgroup. No consumer/retry/timer was left armed by this work.
 
-## Current sole finisher and completed work
+## Durable B proof and delivered Staging interface
 
-Unit vk-nightly-current-composed-finisher-e457249c4-providers-20261028.service,
-PID2987660/start37998553. D/current-whole-cycle-e457249c4-SQL-providers;
-configSHA d96f008d9af11858f33171b32b9f2168f607af68382f6b6ce3683eab49be0d3b.
-Started03:25:09after predecessor2653309 and both MCP lanes proven terminal;
-CPU25%/High1536MiB/Max2GiB/Swap0/Tasks64. Original cycle binding and08UTC/04EDT
-harddeadline retained. No active body capture has been duplicated. At03:28,
-889192448B of the immutable2243518464B map independently read back on B.
-Read its newerSTATUS/STOP/RESULT before any action; no replacement while active.
+P/DURABLE_B_PROOF.private.json: immutable B controls image
+0720a45cade8fc4e5fd3a30dda10f409bc23b5bcc762c2f696517e416c2daace.sqlite,3207168B;
+B:/vk-backups/vk-nightly-efficiency-20261026/controls-v1. Independent full stream
+readback + separate SQLpart reopen/hash/count PASSED. Payload includes candidate,
+exact packet/descriptors/proofs, actual result, pinned normal-reader source,
+source validation and current runtime metadata observation.0new source bodies.
 
-FileV9 completed00:30:49:39894new members,13.55GBsource/5.59GBencoded;
-5774earlier points reused. Subsequent recorded tails closed all pending file
-points, including growing JSONL and two atomic tiny state files, without a new
-namespace census. Original receipts remain unchanged. SQL8 completed01:02:27:
-219/219images,6.384GB APIbytes/597611433new encoded. Recorded SQL extension
-closes2seed copies and mandatory working target:221total scope,218earlier
-points reused. Runtime7 completed01:03:23:3200raw/1444encoded,full independent
-reopen. These three phases already reside in the native whole-cycle ledger;
-resume them, never recapture. ObserverV11 PID3849155/start32997998 remains sole
-full-inode source, epoch31ab8db49caf4f9699c7c0bd75c363a2.
+Matching shared receipt:
+/mnt/vk-storage/vk-git-recurrence-release-20261017/NIGHTLY_RESTORE_VERIFIED_20261028.private.json
+and C/VERIFIED_RESTORE_CONSUMER_HANDOFF_20261028.private.json;
+SHA70c40501ceb7798a62f61e914fba73a57717990d05fa2bb63c7e4f0148271ce4.
+Old authoritative NIGHTLY_RELEASE_CONSUMER_HANDOFF.private.json remains untouched.
+Verify capsule/header/part digests, then consume its pinned source/packet under
+fresh ordinary B identity/STOP/health/access/capacity/lease and finite read-only
+admission. Never reuse the expired packet deadline as a new admission.
+Staging still owns current-live pin comparison and a consistent bounded final
+journal/file/SQL delta before any separately approved cutover. No global source
+inventory or repeat cold restore is needed merely to recover this accepted set.
+Runtime observation around07:55EDT:14/14captured pins +frontend/DB links unchanged;
+that metadata observation is not current SQL freshness or a writer fence.
 
-The later descriptor failure was an incomplete provider contract. All79selected
-retained SQL images passed actual UID1000 normal Linux fullhash readback,
-2067451904B, no copy. The only remaining missing layer was printshop-current-v1:
-20selected names from an existing22member/61474B ZIP with independent Linux
-metadata/hash restore. Fresh normal B fullhash/placement pass now recorded in
-C/CURRENT_PRINTSHOP_PROVIDER_FULL_REOPEN_20261028.private.json;
-C/CURRENT_AUTHENTICATED_PRINTSHOP_PROVIDER_20261028.private.json SHA
-104f829411cd61d12e7aa267541c9b838ebe924f16fb8f3e30f5e21ce0af5506.
-Source e457249c47a9886589026c4bc2c0df71393bb840 authenticates explicit named
-ZIP contracts, rechecks archive/member fullhash and native identity; unknown
-layers and mismatches fail.95focused tests pass; ops/diff/Rustformat pass.
-Fullformat still stops at unavailable Prettier. Source pushed to solePR263.
-Native/control root spelling and SQL lookup corrections from ca67 remain.
+## Actual failures and fixes preserved
 
-## Remaining actual acceptance and disabled automation
+C0 native audit completed06:30 (P's native_proof_reused_from pins its exact
+candidate/source). Normal C0 then hit its separate90min verification admission
+at07:37:12 inside local-RAM SQLite checking; no drive fault. It queried B paths
+per1000SQL ops and duplicated provider checks. Current source coalesces only
+nested checks, pins external root IDs directly and keeps resource/time checks
+inside local SQLite plus full dependency checks at archive access/acceptance.
+Outer native B STOP/identity/health/capacity and kernel leases remain. No numeric
+resource threshold or security policy was relaxed. Earlier provider/base-name/
+ordered-history fixes also passed the complete native audit. Native audit/map/
+SQLAPI/images/bodies were reused, not recaptured or relabelled.
 
-D/ordinary-incremental-e457249c4-complete-providers-prepared is prepared only;
-serviceSHA d3d10a43bdbcef5c9215fa2d483fe8a59986b50082958e8a9ec7fd2ae01d6d8e.
-Real crontab-stdin syntax, source preflight and disabled calendar checks pass.
-No ordinary cycle or scheduler has been started. Its COMMISSIONING_COMMANDS
-receipt pins the existing commissioner/journal helper to this exact package,
-including required PYTHONPATH. Do not use earlier80/f1/ca67prepared commands.
+The failed169.5MB temporary RAM duplicate was absent after VM idle; its sealed
+B original remains. Old failed run/diagnostics/native proof and earlier recovery
+sources stay preserved. Do not treat old partial/timeout receipts as accepted.
+D/LATEST_STATUS.private.json now records this actual accepted restore and shared
+handoff; it is not recurring-service commissioning acceptance.
 
-First collect actual current descriptor/content proof and ordinary UID1000
-B-backed composed restore. Then only after terminal ownership/leases run this
-ordinary package under its original Toronto evening/deadline, prove actual
-journal delivery/reopen/ACK, and qualify/install the exact calendar. The native
-accepted pointer advances only after all5phase receipts and normal restore.
-A failed/late run preserves data and cannot publish or enable scheduling.
-Time remaining is finite; no safe completion estimate is established. Do not
-reset04:00, treat component proof as whole acceptance or weaken any genuine
-STOP/access/identity/capacity/resource/ownership control.
-
-Earlier pickup survives byte-for-byte in
-[01:34history](HANDOFF_NIGHTLY_HISTORY_20261028_0134.md), which links prior
-histories and the [original full archive](HANDOFF_HISTORY_20261017.md). See [overnight acceptance](VK_NIGHTLY_OVERNIGHT_ACCEPTANCE.md).
+Earlier details survive in [06:08history](HANDOFF_NIGHTLY_HISTORY_20261028_0608.md),
+[03:46history](HANDOFF_NIGHTLY_HISTORY_20261028_0346.md), private
+D/HANDOFF_BEFORE_NORMAL_ONLY_20261028.md and [original history](HANDOFF_HISTORY_20261017.md).
+See [Nightly contract](VK_NIGHTLY_BACKUP_EFFICIENCY.md) and
+[overnight contract](VK_NIGHTLY_OVERNIGHT_ACCEPTANCE.md).

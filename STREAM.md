@@ -55,8 +55,10 @@ Namespace completeness alone does not prove body/SQL/runtime recoverability.
 
 Live MM scope/pointer and current owner guard were reconciled October26. B needs
 no Staging/MM allowance; E/Q/R STOP remains intact. Preserve actual B health,
-access, capacity, applicable owner pauses and writer ownership. Current-set body
-qualification, durable journal integration and exact service adoption remain open.
+access, capacity, applicable owner pauses and writer ownership. Current retained-set composed restore passed October28 at08:13EDT, with exact
+Staging handoff and preserved gaps/epochs. Source093270260 fixes local SQL
+query overhead; no capture or native audit was repeated. Actual ordinary timed
+cycle, installed service/calendar and current cutover delta remain separate.
 
 Prior branch intent and evidence remain in
 [STREAM history](STREAM_NIGHTLY_HISTORY_20261026.md), authenticated by

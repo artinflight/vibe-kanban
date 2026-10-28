@@ -1984,3 +1984,45 @@ lease. Correcting that representation does not relax destination validation.
 A resumed candidate also reopens an already-completed recorded SQL extension
 when its scope exceeds the predecessor cohort, even if all images are ready.
 It must not fall back to the smaller old cohort or repeat completed API copies.
+
+### October28 retained composed restore acceptance
+
+The owner revised this phase to complete restore verification and hand the
+verified dependency to existing Staging. This is separate from commissioning a
+recurring Nightly cycle. The original04:00 capture deadline was not reopened.
+
+At08:13:34EDT the actual unprivileged B-backed normal consumer passed complete
+namespace validation (798077members) and composed proof closure for660381files/
+200777178777logical bytes and221SQL acceptance points. It reused the accepted
+162.70GB cold restore and exact retained Native audit, then actually restored
+15mandatory files/368903595B with full hashes and Linux metadata. The active
+169500672B database passed SQLite integrity and schema checks. Sequential RAM
+payload peak169500672B; OS/workSSD backup payload0. This does not claim another
+fresh200GB decode or repair of original archive gaps. Supplemental epochs remain
+explicit; captured points are not a live writer fence.
+
+Source093270260's normal-only recovery phase took1349.8seconds. The prior C0
+verifier hit its separate90min admission during local SQLite work: callbacks
+repeated B path checks for an image already copied and hashed in RAM. The fix
+retains resource/deadline checks during local SQL, independent root bindings,
+archive access/acceptance checks and outer native B STOP/identity/health/capacity
+checks, while removing nested duplicate provider queries. No safety interval or
+threshold was relaxed.151focused tests and13applicable exact-head hosted checks
+pass. Rust/ops/diff pass; full local format lacks Prettier.
+
+The completed native audit is retained from C0, not relabelled as source093.
+Normal-only recovery independently reopened all five immutable B proof images
+and saved every successful sample receipt through heartbeat updates. Failed
+run diagnostics, all original images/bodies and earlier proofs remain. The old
+VM's transient RAM duplicate was absent after idle; its sealed B source remains.
+
+The matching verified handoff is NIGHTLY_RESTORE_VERIFIED_20261028.private.json
+beside Staging's original sealed packet, which was preserved. Its3.207MB
+immutable B proof/source capsule (0720a45c...c2daace.sqlite under the established
+controls root) passed independent stream readback and separate part reopening.
+It includes exact descriptor/provider/source bindings, actual restore result and
+epochs. Staging must authenticate those digests and obtain fresh read-only
+admission before recall, then own current-live comparison and a consistent
+bounded final journal/file/SQL delta before any separately approved cutover.
+No backend restart, accepted Nightly cycle-pointer update or schedule activation
+occurred. Recurring-service acceptance remains open: scheduleOFF/nextNONE.

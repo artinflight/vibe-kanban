@@ -1926,3 +1926,17 @@ closed. No cached health or weaker counter predicate is introduced. Transport
 admission patience derives from those finite child waits; whole-phase deadlines
 still apply. Operational capture reliability must be collected from the resumed
 retained-map producer, not inferred from the quiet diagnosis or source tests.
+
+### Completed-component deadline authentication
+
+A completed component's immutable configuration and source closure remain
+authentic after its capture-phase deadline. Service loading and terminal B
+receipt adoption authenticate those artifacts without admitting their old
+transport. The live parent guards, fresh DesktopObjects admission, native B
+controls and original whole-night deadline still govern every current request.
+This also permits recurring templates to be authenticated before their current
+Toronto evening deadline is derived. Direct worker execution retains deadline
+validation. Expired live transport and malformed/changed artifacts still fail.
+October28's first finisher failure at01:03EDT preserved all completed file,219SQL
+and2runtime points; their successful receipts are inputs to recovery, not a
+whole-backup acceptance claim.

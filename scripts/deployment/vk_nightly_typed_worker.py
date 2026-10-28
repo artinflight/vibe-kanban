@@ -58,7 +58,7 @@ def source_closure(folder,entry='vk_nightly_typed_worker'):
     return {name+'.py' for name in found}
 
 
-def configuration(path,expected,*,folder=None):
+def configuration(path,expected,*,folder=None,authenticate_only=False):
     # An adopting controller may authenticate an earlier immutable package's
     # DATA/config and source hashes without executing or hotpatching that code.
     # Normal execution still validates against this installed module folder.
@@ -100,7 +100,8 @@ def configuration(path,expected,*,folder=None):
         validate_control(value['B_controls'],folder)
     if value.get('schedule_enabled') is True or value.get('baseline_accepted') is True:
         raise ValueError('file-phase configuration cannot claim whole-cycle acceptance or calendar adoption')
-    validate_desktop(value['desktop'],(folder/'vk_nightly_objects.py').read_text())
+    validate_desktop(value['desktop'],(folder/'vk_nightly_objects.py').read_text(),
+                     check_deadline=not authenticate_only)
     if value.get('phase_kind','file-points') not in ('file-points','SQL-points'):raise ValueError('unknown prepared phase')
     if 'qualification' in value:
         qualification=value['qualification']

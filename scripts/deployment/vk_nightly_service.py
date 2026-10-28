@@ -54,14 +54,14 @@ def load(path,expected,*,folder=None):
     phases={};workers={}
     for name,reference in value['phase_references'].items():
         control=read_owned(reference['config'],reference['sha256'])
-        phases[name]=control;workers[name]=configuration(control['worker_config'],control['worker_config_sha256'])
+        phases[name]=control;workers[name]=configuration(control['worker_config'],control['worker_config_sha256'],authenticate_only=True)
         if control['source_observer']!=value['cycle'][name]['source_observer']:
             raise ValueError('current service source owner differs from installed phase')
     if value['cycle']['cycle_binding']['cycle_kind']=='adopt-existing-commissioning':
         if set(value.get('existing_components',{}))!=set(PROOF):raise ValueError('exact existing chain required')
         for name,reference in value['existing_components'].items():
             old=read_owned(reference['config'],reference['config_sha256'])
-            legacy=configuration(old['worker_config'],old['worker_config_sha256'],folder=Path(old['worker_config']).parent)
+            legacy=configuration(old['worker_config'],old['worker_config_sha256'],folder=Path(old['worker_config']).parent,authenticate_only=True)
             fields=('B_index_name','B_checkpoint_sha256','map_binding')
             if (old['source_observer']!=phases[name]['source_observer']
                     or any(legacy.get(k)!=workers[name].get(k) for k in fields)
@@ -118,7 +118,7 @@ def reopen_component(client,reference,kind,source,*,guard):
     if (value.get(proof) is not True or any(value.get(k)!=v for k,v in reference['result_binding'].items())
             or value.get('final_B_delivery',{}).get('instance')!=source.reference['instance']):
         raise ValueError('actual exact independently reopened existing component result differs')
-    worker=configuration(control['worker_config'],control['worker_config_sha256'],folder=Path(control['worker_config']).parent)
+    worker=configuration(control['worker_config'],control['worker_config_sha256'],folder=Path(control['worker_config']).parent,authenticate_only=True)
     index=(control['SQL_phase_index'] if kind=='SQL' else
            dict(index_name=worker['B_index_name'],checkpoint_sha256=worker['B_checkpoint_sha256']))
     db=client.connect(index['index_name'],index['checkpoint_sha256'],readonly=True,working=True)

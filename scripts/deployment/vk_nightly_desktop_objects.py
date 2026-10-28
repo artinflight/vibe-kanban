@@ -226,8 +226,16 @@ def ssh_command(config,remote_command):
     return command+['desktop',remote_command]
 
 
-def validate(config,objects):
-    if 'whole_cycle_deadline_UTC' in config:seconds_left(config['whole_cycle_deadline_UTC'])
+def validate(config,objects,*,check_deadline=True):
+    if 'whole_cycle_deadline_UTC' in config:
+        if check_deadline:seconds_left(config['whole_cycle_deadline_UTC'])
+        else:
+            # Immutable completed artifacts remain authentic after their phase
+            # expires. This validates shape only; DesktopObjects and live
+            # transport admission always enforce the actual caller deadline.
+            from datetime import datetime
+            if datetime.fromisoformat(config['whole_cycle_deadline_UTC']).tzinfo is None:
+                raise ValueError('aware artifact deadline required')
     ssh_command(config,'true')
     root=config['B_root']
     if (not isinstance(root,str) or not root.startswith('B:/vk-backups/') or '\\' in root

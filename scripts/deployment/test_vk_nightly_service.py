@@ -42,6 +42,25 @@ class ServiceTests(unittest.TestCase):
         # remain independently mandatory in execute/reopen_component.
         self.assertTrue(service.terminal(self.ref,inspect=collected,process_check=lambda _:False))
 
+    def test_terminal_reopen_authenticates_artifact_under_live_parent_guard(self):
+        worker_path=self.root/'old-worker'
+        control,sha=self.saved('controller',dict(worker_config=str(worker_path),worker_config_sha256='1'*64))
+        result=dict(phase='complete',actual_independent_B_file_cycle_receipt_reopen_verified=True,
+                    final_B_delivery=dict(instance='source'))
+        self.saved('result',result)
+        reference=dict(self.ref,config=control,config_sha256=sha)
+        actual={k:v for k,v in result.items() if k!=service.PROOF['files']}
+        db=SimpleNamespace(execute=lambda _:SimpleNamespace(fetchone=lambda:(json.dumps(actual),)),close=lambda:None)
+        client=SimpleNamespace(connect=lambda *a,**kw:db)
+        source=SimpleNamespace(reference=dict(instance='source'),check=lambda:None)
+        worker=dict(B_index_name='map',B_checkpoint_sha256='2'*64)
+        with patch.object(service,'terminal',return_value=True),patch.object(service,'configuration',return_value=worker) as config:
+            self.assertEqual(service.reopen_component(client,reference,'files',source,guard=lambda:None),result)
+            self.assertTrue(config.call_args.kwargs['authenticate_only'])
+            with self.assertRaises(TimeoutError):
+                service.reopen_component(client,reference,'files',source,
+                    guard=lambda:(_ for _ in ()).throw(TimeoutError('parent deadline')))
+
     def test_CLI_wrong_digest_refuses_without_source_or_B_work(self):
         path,_=self.saved('wrong-config',{'format':'vk-nightly-current-service-v1'})
         before=set(self.root.iterdir())

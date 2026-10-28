@@ -38,6 +38,24 @@ class TypedWorkerTests(unittest.TestCase):
             config=self.config();config['schedule_enabled']=True;p.write_text(json.dumps(config))
             with self.assertRaisesRegex(ValueError,'whole-cycle'):worker.configuration(p,worker.checksum(p))
 
+    def test_expired_artifact_authentication_never_admits_live_transport(self):
+        with tempfile.TemporaryDirectory(dir='/dev/shm') as root:
+            p=Path(root)/'config.json';config=self.config()
+            config['desktop']['whole_cycle_deadline_UTC']='2020-01-01T00:00:00+00:00'
+            p.write_text(json.dumps(config));p.chmod(0o600);sha=worker.checksum(p)
+            with self.assertRaises(TimeoutError):worker.configuration(p,sha)
+            authenticated=worker.configuration(p,sha,authenticate_only=True)
+            self.assertEqual(authenticated,config) # never rewrite original epoch
+            with patch('vk_nightly_desktop_objects.subprocess.Popen') as launch:
+                with self.assertRaises(TimeoutError):
+                    with DesktopObjects(authenticated['desktop'],guard=lambda:None):pass
+                launch.assert_not_called()
+            config['desktop']['B_root']='E:/not-a-backup'
+            p.write_text(json.dumps(config))
+            with self.assertRaises(ValueError):worker.configuration(p,worker.checksum(p),authenticate_only=True)
+            with self.assertRaisesRegex(ValueError,'configuration differs'):
+                worker.configuration(p,sha,authenticate_only=True)
+
     def test_original_whole_cycle_deadline_is_checked_before_any_resource_or_payload_work(self):
         with patch.object(worker.os.path,'ismount') as mounted:
             with self.assertRaisesRegex(worker.ResourceDeferred,'original whole-cycle deadline'):

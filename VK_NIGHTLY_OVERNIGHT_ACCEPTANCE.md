@@ -340,3 +340,43 @@ A source-only cron change continuously drains output but retains at most64KiB pe
 wake-up; real RAM shell fixtures verified200KB stdout/stderr drainage and repeated
 bounded replacement. No live cron change occurred. Ops/diff/Rustformat pass;
 full formatting still fails at missing Prettier. Recurring acceptance is pending.
+
+
+## Measured large SQL admission — October27,21:49EDT
+
+The retained unresolved map measured219SQLsources/6335426560logical bytes. A
+read-only SQLite metadata API query independently measured3049046016bytes for
+thread_history_1.sqlite, exceeding the queued512MiB image admission. Three fresh
+host samples had12.84–13.02GB available RAM and9.16GBtmpfs; a two-image ceiling
+of3.25GiB each plus160MiB overhead fits while retaining the existing4GiB free
+memory floor. This is conditional peak admission, not current/exclusive usage.
+The original unsealed2.968GBRAM file remains preserved/already charged in use.
+
+Tested source2a284d4ae checks actual next allocation BEFORE SQL scratch creation:
+two images for a new API point, one additional image for a retained API/layout.
+The original memory floor, actual tmpfs capacity, per-block guards, independent
+SQL/hash/schema/metadata proof and B acceptance-before-duplicate-release remain.
+Normal composed consumer sourcec88d76ce8 also admits actual selected peak plus
+its installed floor before materialization. A ceiling does not authorize an
+allocation that fails fresh guards. Denial fixtures prove no source/scratch copy.
+
+SQL7/runtime6/oldfinisher were exact live idle/zero-body waiters with no children.
+Only those three were stopped after successor preflights; process/group absence
+and real controller-lease release were proven. NewSQL8 PID4176947/start35965218
+has High7GiB/Max8GiB/Swap0; runtime7 PID4176951/start35965221 remainsMax2GiB.
+Same fileV9 PID3735301/start35669970, frozen input, SQL cohort/index, runtime
+component and all completed B objects remain. New finisher PID4185660/start35971110
+uses config204722a2a9629f2999a0c591d061c38a5bccdcb23c79b866ff6da82c2ddc8497
+and passed actual preflight. All native/unit/consumer clocks end by04:00EDT.
+It is waiting, not restore acceptance. At21:48 FileV9 had12384new committed points,
+1341937270source bytes/368301700encoded bytes in3086.24s, with zero OOM events.
+
+The disabled ordinaryc88d76ce8 package separately removes commissioning adoption
+and frozen-input replay, retains fresh bounded journal consumption, configures
+its measured whole-cycle cgroup envelope and passed actual preflight/calendar/
+noninstalling cron syntax checks. It remains disabled pending actual full-cycle
+acceptance. Native crontab truncated its long filename; supported -n stdin
+validated the exact command without installing or reading the live crontab.
+118focused tests and a separate actual2.311sowned user-manager hard-stop fixture
+passed. Full production restore/timing and service-level Desktop-off retry
+classification remain required, not inferred from component fixtures.

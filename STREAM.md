@@ -38,7 +38,10 @@ The B-only namespace and V14 composition completed with independent reopen.
 After a native health-command timeout, fresh actual B health passed and the
 retained-map V6 later stopped on contended status metadata. Exact checkpoint and
 both writer leases were verified before optimized V8 handover. A later actual checkpoint/native-lease proof
-permitted the bounded-group V9/SQL7/runtime6 chain.
+permitted the bounded-group V9/SQL7/runtime6 chain. SQL7/runtime6 were later proven idle
+and replaced by SQL8/runtime7 to admit an actually measured3.05GBSQL image;
+FileV9/tracker/completed data remain unchanged. The new single finisher waits
+for those exact successors; all keep owner04:00 bounds and actual floors.
 They preserve completed versions, selected suffix and original deadlines. Read current handoff;
 whole-baseline/installed calendar acceptance remains open. A separate pinned
 composed finisher now waits for the same chain, then reopens real B receipts

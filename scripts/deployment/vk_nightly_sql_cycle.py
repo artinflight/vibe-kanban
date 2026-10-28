@@ -90,6 +90,10 @@ def recorded_namespace(client,old_reference,worker,*,guard):
                 or replay_cursor(current,namespace['instance'],namespace['start_sequence'])!=previous['metadata_delta']['through']
                 or previous['binding']['map_index']!=worker['B_index_name']
                 or previous['binding']['map_checkpoint_sha256']!=worker['B_checkpoint_sha256']
+                or previous['binding']['source_instance']!=namespace['instance']
+                or previous['binding']['source_root_bindings']!=namespace['required_root_bindings']
+                or previous['binding']['catalog_sha256']!=worker['SQL_catalog_sha256']
+                or previous['binding']['B_root']!=worker['desktop']['B_root']
                 or any(previous['binding'][k]!=namespace[k] for k in ('plan_sha256','scope_sha256'))):
             raise ValueError('recorded SQL closure cannot advance or change the fixed namespace')
         actual={p for p, in current.execute("select s.path from SQL_sources s join members m on s.path='/'||m.name where m.state!='symlink'")}

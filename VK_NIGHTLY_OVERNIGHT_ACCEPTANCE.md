@@ -1,0 +1,497 @@
+# Overnight backup qualification
+
+Nightly is a separate worker, not a Vibe backend restart. The owner-corrected recurring
+window is **22:00–04:00 America/Toronto with a hard stop at04:00**. Scheduling remains off until
+an actual complete incremental backup and composed restore fit that window.
+An initial retained backlog, a throughput estimate, component tests or separate
+historical eight-hour phase limits do not establish that result. Cold commissioning and
+ordinary nightly deltas must be reported separately.
+
+## Measured overhead and correction — October 27
+
+The retained native health receipt measured three successful full SMART/PHY
+queries at 1.172, 1.343 and 1.406 seconds. Earlier observations exceeded the
+wrapper's fifteen-second patience. A timeout establishes an unavailable
+observation, not a reported drive fault. The cause of those slow calls remains
+unproven. Neither physical OOM nor drive damage is inferred.
+
+The old native transports each requested full health every five seconds. The
+new explicit `native_health_poll_seconds=60` configuration separates expensive
+health queries from cheap controls; the default remains five for old packages.
+This is an engineering polling interval, not a user-imposed safety threshold.
+At 600 seconds of active guard calls the executable guard fixture performs ten
+full polls instead of 120. The original five-second STOP/MM/kernel-identity
+observation bound remains; actual free capacity is checked on every guard call.
+Full fresh health and full destination identity remain mandatory at admission
+and final completion. Separate cadence requires kernel identity continuity.
+There is no persistent/shared health-result cache. The existing finite native
+health mutex serializes observations; slow or unavailable due observations
+block I/O. SMART failure, changed counters/identity, STOP and access errors still
+fail closed. Only the existing one finite query-timeout requalification applies.
+
+Successful observations emit cumulative query count and duration; unavailable
+observations explicitly report `reported_drive_fault=false` and permit no I/O.
+Control telemetry records operation counts, total/max roundtrip wait and no SQL
+text/parameters. Source and worker packages must be pinned together before use.
+
+New object acceptance already restores into a separate RAM inode, reopens and
+hashes it. Its verified bytes now feed the ordered full-file hash immediately,
+avoiding a second identical recall/reopen. Previously accepted objects still
+receive an actual readback. Exact prefix ordering, whole-file SHA/length, Linux
+metadata, native durable object acknowledgement and atomic version-bound map
+acceptance remain required. Interrupted map commits reuse completed objects.
+
+In three actual isolated RAM protocol trials per version, a 12,288-byte file
+with three chunks (one repeated) used seven outbound control frames instead of
+eleven and three independent chunk reads instead of five. Median time was
+50.793 ms versus 54.495 ms without artificial delay, and 202.683 ms versus
+309.070 ms with an explicit 25 ms delay per outbound frame. The latter is a
+latency model, **not** a measured production Desktop speedup. No Desktop B
+payload or production reader was created for these fixtures.
+
+## Required production acceptance
+
+1. Preserve the existing producer, accepted map, objects and source epoch. Use
+   an exact terminal/component boundary and existing leases for a serial
+   source/config upgrade; never edit loaded packages or launch a second writer.
+2. Record actual native health durations/counts, control operation wait,
+   changed-name/byte counts, completed-point reuse and end-to-end elapsed time.
+   Do not project the initial backlog as the ordinary nightly delta, or hide
+   unfinished work behind a successful bounded phase.
+3. Complete file, SQL, runtime/alias and immutable current-map acceptance. Run
+   native proof closure and the normal leased composed reader, with independent
+   hash, SQLite/schema and Linux metadata checks. Preserve original gaps and
+   later carrier epochs. Reuse the accepted 162.70 GB restore and completed
+   components; no repeated global census or cold copy is required.
+4. Test unchanged-workspace reuse, interruption, Desktop-off/low-space recovery
+   and the complete ordinary final-delta cycle under its real shared deadline.
+   Whole-cycle wall time includes source delivery, query/health waiting and
+   restore acceptance. A hypothetical sum or individually passing stages is
+   insufficient.
+5. Bind the tested installed worker/config and accepted whole-cycle proof to
+   the calendar, then verify its next run. The legacy calendar targets a former
+   supervisor and must not be enabled as this new integration on source tests.
+
+Current progress, exact live owners and the pending baseline/service integration
+are in [the handoff](HANDOFF.md). The optimized file continuation is now installed
+and advancing; whole-backup and overnight completion remain unverified.
+
+## Executable restore integration and recovered dependency
+
+`vk_nightly_finalize_current.finalize` now uses the normal native B protocol to
+refuse unresolved map/journal states before making a checkpoint, independently
+read back/accept the sealed image, build its typed descriptor and run complete
+body-recipe proof closure against exact immutable catalogs. A required SQL cohort
+comes from an independent normal reopen, with matching map/plan/scope and required
+API selection. The returned candidate cannot publish an accepted baseline.
+
+`vk_nightly_composed_consumer.py --packet-sha256 <full-digest>` reads the owner's
+bounded JSON packet from stdin in the admitted B-backed Linux reader. The packet
+binds the external scope/retirement/runtime/SQL contract, descriptor, actual
+provider device/inode placements, existing leases, native content proof, catalogs,
+selected readbacks, RAM demand and original absolute whole-cycle deadline. It
+rejects root and mismatched UID/GID. It opens the normal leased complete reader,
+hashes/opens the immutable index without copying it, independently restores the
+required samples sequentially in tmpfs, and reports SQLite/schema, Linux metadata
+and actual elapsed time. Missing leases, changed placements, low RAM, STOP or
+expired deadlines fail closed; failed RAM outputs remain preserved. Replaying an
+old packet cannot reset the whole-cycle deadline. The caller must retain the
+existing native B identity/STOP/health/capacity admission and actual source pins;
+the Linux entrypoint does not claim to establish physical B admission itself.
+
+An actual isolated native-protocol fixture passes seal, independent metadata
+readback, immutable content audit and this executable consumer together; replay
+reuses its completed checkpoint. Separate real SQLite/API/protocol fixtures pass
+SQL integrity/schema and lost-RAM layout recovery. These are component/integration
+evidence, not production current-set or overnight acceptance.
+
+Retained SQL layout recovery now paces its extra health RPCs at the same five
+seconds as normal capture. Every-block host guards and native streamed-read
+controls remain. One actual 8,192-byte retained API fixture (two chunks) used one
+extra health RPC instead of four, with identical full SHA/SQLite integrity, zero
+source API reads and zero new body payload. RAM elapsed times were about 48/52 ms;
+no speedup or production timing is inferred from that noise.
+
+The runtime V2 controller genuinely stopped while waiting at 17:33 EDT: its
+one-hour capture timeout was incorrectly applied to its separately declared
+sixteen-hour predecessor wait. The fixed controller uses the existing wait limit
+while waiting, then resets only its original one-hour capture clock. Runtime V3
+was admitted at 17:51 EDT after V2 was proven terminal; it preserves the same
+prepared component, SQL predecessor, source epoch and original absolute wait/
+unit deadlines. All memory/CPU/swap/access guards remain. File V6 and SQL V4 were
+not stopped or replaced. This is recovery of a waiting dependency, not a second
+capture or a claim of runtime/baseline completion.
+
+## Actual optimized handover — October 27, 18:42 EDT
+
+The owner requested a controlled checkpoint/resume. The old file worker stopped
+on an actual SQLite lock in its progress-status upsert before any requested
+signal was sent. Its queued SQL/runtime controllers correctly stopped on that
+failed predecessor. A concurrent checkpoint read may have contributed; the
+observations do not establish causation. This was neither a drive-failure report
+nor loss of completed backup bytes. The corrected upsert retries only the same
+idempotent metadata operation within the existing finite contention allowance,
+retaining actual host/native/STOP controls. It never retries a body capture.
+
+All old controllers were verified terminal, with empty cgroups. The successor
+actually acquired both the inherited MCP writer lease and native B object-store
+lease before launch. A normal independent B reopen passed map `quick_check`,
+retained all 14,594 file-acceptance rows and authenticated the exact selected
+journal input. No immutable baseline or completed body was recopied. The new
+controller resumes that qualified input rather than enrolling a fresh suffix;
+later source events remain durably tracked for subsequent delta consumption.
+The original absolute file and dependent waiting deadlines remain unchanged.
+
+The file, SQL and runtime successor packages pin source `539e0280c`; 224 focused
+tests pass, including actual native SQLite reader contention/STOP, interrupted
+file reuse, exact retained-input reopening, memory-streamed normal consumer and
+whole-cycle publication after independent restore. Actual command lines and
+config/source hashes bind the new loaded packages. Production file progress
+contains the new control-roundtrip and independent-readback telemetry. In one
+80.8-second mixed-file interval it added 89 files, read 404,058 source bytes and
+sent 154,637 encoded bytes to B. This is observed progress, not a supported ETA,
+a same-work before/after speed comparison or overnight acceptance.
+
+The B-resident whole-cycle ledger preserves original deadlines and authenticated
+phase receipts across interruption. Fixed serial integration completes the
+recorded file delta dirtied by SQL selection without chasing another live global
+suffix. An accepted pointer advances transactionally only after a matching normal
+leased consumer result. The fixed existing WSL route checks its registered B
+placement and streams pinned consumer code/packet in memory to UID1000. These
+whole-cycle helpers have isolated native-protocol integration evidence; actual
+complete current-set execution and operational calendar adoption remain open.
+
+
+## Owner-corrected hard stop and executable calendar — October27
+
+The22:00 evening is the run identity until04:00 the next day; midnight and the
+repeated DST hour cannot create another run. Normal nights have six elapsed
+hours, spring-forward five and fall-back seven, always ending at local04:00.
+Tonight's target is04:00EDT October28/08:00UTC. It is not an accepted cutover
+baseline until file, SQL, runtime and normal composed readback actually pass.
+
+The fixed calendar invokes only `vk_nightly_service.py` with the authenticated
+configuration, evening and absolute hard deadline. A monotonic cap prevents a
+backward clock correction extending a run. Graceful owned-group termination
+starts inside the window and escalates only for that newly launched owned group;
+there is no extra payload grace after04:00. Native B guards cap their ownership,
+identity and SMART waits to the same remaining time, check again after a slow
+query and refuse further operations/requalification at expiry. The normal reader
+also checks the absolute deadline. Already-issued kernel IO can finish during
+cleanup; it does not authorize another operation or late baseline acceptance.
+
+Completed atomic objects and independently reopened B ledger phases remain.
+Unaccepted partials are preserved and cannot become an accepted baseline. A
+late success is recorded as window-stopped, never a completed night. The current
+accepted pointer stays intact. Each evening has a deterministic new SQL cohort;
+retrying it reopens the original predecessor/binding and never resets its clock.
+Other activity retains genuine capacity/memory/access/identity/STOP controls and
+the existing shared writer lease; an occupied producer causes deferral, not a
+foreign stop. Daytime pulses do not admit backup work.
+
+Actual tests cover both DST transitions, midnight duplicate exclusion,04:00
+refusal, real owned child stop with completed output preserved and an unrelated
+fixture child left alive, clock rollback, slow native query expiry, exact terminal
+component reuse, actual native B-protocol phase retention and publication refusal
+at04:00. They are RAM fixtures, not tonight's complete production restore proof.
+
+The service can authenticate older immutable package DATA without executing it,
+then use the new independently pinned finishing implementation. It waits only
+for exact original component identities and rejects failed, missing or replaced
+units. The composed consumer holds the actual native object/capture lease and
+must pass final fresh B health before its result can advance the pointer.
+The41 newer v8i file components use their actual immutable catalog layout and
+full archive/record/member bindings;206 older definitions remain independently
+reusable. No catalog conversion or archive recopy is needed.
+
+Scheduling remains OFF. Exact installed complete service/config, current full
+restore and an actual ordinary overnight cycle remain commissioning gates.
+
+
+The current waiting SQL5/runtime4 controllers were proven zero-payload and
+childless, closed normally19:49:30, and replaced serially with SQL6/runtime5 from
+tested source`b732a1ec6`. The active fileV8 PID2494862 was never signalled. The
+replacement units' original cohort/component bindings and caps were rechecked;
+top/native08:00UTC (04:00EDT) guards and actual systemd termination budgets agree.
+This is the current commissioning chain, not proof of a recurring nightly cycle.
+
+The existing normal B-backed guest verified all12candidate provider roots under
+UID/GID1000. Twelve new explicit reader gates now live outside the accepted tree
+under Bcontrols, with actual kernel exclusive/shared-lock refusal checks. The
+162.70GB restored tree and all archive bytes were unchanged. Those gates coordinate
+readers; they never substitute for the real MCP/native body lanes. Successful
+transient-unit collection is handled by former-process identity plus actual
+native leases and independently reopened B terminal receipts, not invented unit
+success. The current file/SQL/runtime results and composed restore remain needed.
+
+
+## Recurring-path corrections — October27,20:29EDT
+
+Actual native-protocol testing exposed an invalid uppercase suffix in daily SQL
+index names. They are now canonical lowercase names: the same evening reopens
+its completed index and the following evening receives a distinct index. The
+legacy disabled proposal builder now uses22–04/hard-stop settings and leaves its
+cron proposal commented until a pinned ordinary whole-cycle service is bound.
+The separate source-only systemd renderer accepts only the digest-bound Toronto
+calendar, using a UTC fifteen-minute pulse; it cannot launch an arbitrary old
+backup script or the former02:00 schedule. Nothing was enabled by these edits.
+
+An explicitly configured dynamic SQL contract freezes the current journal-derived
+SQL list only after independently reopening both the cohort request and main map.
+Exact roots, plan, tracking epoch, all SQL-source membership and request digest
+must agree. A dropped database, missing member, changed root or different epoch
+fails closed. Concrete externally specified SQL lists retain their strict checks.
+This supports new tracked DBs without treating an old fixed list as current.
+The parent service admission clock now covers the actual remaining whole-cycle
+window; each child phase retains its own finite budget and the shared04:00 stop.
+
+254 focused backup/restore/calendar tests pass; one optional user-manager timeout
+fixture is skipped. Native daily-index and SQL-scope tests use actual RAM-backed
+SQLite protocol processes. Ops and diff checks pass; Rust formatting passes and
+full format stops because Prettier is absent. These are source/integration results,
+not acceptance of tonight's production baseline or an installed recurring service.
+The original fileV8 remains active; SQL6/runtime5 remain waiting, all data retained.
+
+
+## Bounded file commit groups — October27
+
+An explicitly pinned `acceptance_batch_members=16` successor may commit up to16
+independently restored file points in one native SQLite FULL transaction. The
+original single-point default remains unchanged for existing packages. Groups
+are bounded to32 members and512KiB of pending proof metadata; larger individual
+proofs use the single-point path. Every original pending-row digest, full-file
+hash/length, Linux metadata and native body readback requirement remains. Guards
+run throughout the transaction and immediately before commit. No completed count
+or acknowledgement precedes commit. A failed group rolls back all its rows; a
+lost acknowledgement reopens identical accepted versions without duplicate data.
+
+Real RAM/native-protocol tests cover a bad second member rolling back the first,
+STOP during a group, lost commit replies, retained native objects and duplicate
+version history. A32-point native FULL-commit benchmark used32 requests versus2
+with16-member groups; three-trial medians were35.82ms versus17.47ms on RAM. This
+is measured protocol/transaction overhead, not a predicted Desktop speedup.
+The active fileV8 remains untouched until an exact checkpoint and actual released
+MCP/native writer leases permit a pinned successor. All accepted data remain.
+290focused tests pass; one optional user-manager fixture is skipped. Actual
+post-handover throughput, full current restore and recurring commissioning remain
+required; none is inferred from these tests.
+
+
+## Actual group-commit production handover — October27,21:04EDT
+
+After a successful committed native checkpoint, only the two idle zero-payload
+waiters were closed. FileV8 received graceful SIGINT20:53:07; its STOP explicitly
+records KeyboardInterrupt and retained completed data. All original processes
+were terminal with empty cgroups before both real MCP/native writer leases were
+acquired and exercised. Native map quick_check passed with22753accepted file rows
+and22781version-history rows; the exact original journal input reopened unchanged.
+No original backup object, map, SQL point or source was retired or recopied.
+
+FileV9/SQL7/runtime6 actually load tested source7ddf7674f. File retains its original
+00:33:13EDT finite deadline; SQL/runtime native and unit bounds respect owner04:00.
+Their actual commands/config/source hashes, births and unchanged CPU/memory/swap
+limits are recorded in the private group-commit installation receipt. This is a
+serial continuation, not a new backup generation or recurring-service adoption.
+
+At21:03EDT, actual file telemetry reached1296new points. One156.22-second interval
+completed624files, read600762source bytes, sent266500encoded bytes and used39
+group-acceptance requests with6.964seconds cumulative wait. The active file unit
+had31.38MB current/32.40MB peak cgroup memory and zero OOM/limit events. These are
+real different-file observations, not a same-work speed comparison or supported
+completion ETA. SQL/runtime, current composed restore and overnight qualification
+remain unaccepted; scheduling is still OFF.
+
+
+## Selected dependencies and actual finisher — October27,21:24EDT
+
+Sourcea37fda389 authenticates a pool of247 retained components, then retains only
+providers selected by complete sealed-map recipes. An unknown carrier still
+fails. The immutable checkpoint records the template-contract digest; the result
+and consumer packet bind the separately derived effective contract. Actual
+selected provider roots/leases must exist; unused candidates need no body read.
+Runtime binding independently reopens the adopted B records, checking exact
+finite paths/hashes/lengths and sealed component digest against installed source
+pins and actual runtime completion. Dynamic SQL scope remains independently
+bound to current namespace/cohort. Selected normal readbacks automatically include
+all pins/runtime files/always-API SQL; explicit byte/scratch ceilings still apply.
+
+The exact finisher configuration dbfc3e0992db816dee949fed2c1d862dff125f7fee2280736f84ee8e8ba495e0
+passed real preflight and is installed as PID3959283/start35819801 in
+vk-nightly-current-composed-finisher-a37fda389-20261028.service. It waits for the
+same three original components; at21:24EDT no new capture was started by it.
+It requires actual terminal identities, both body leases and independently
+reopened exact B phase receipts before final delta/proof/normal composed restore.
+Only the latter actual success can publish the accepted pointer. RuntimeMax and
+native/consumer deadlines end by04:00EDT including termination grace. Local stdout
+is disabled; authoritative B receipts and bounded health mirrors remain. This is
+an initial-backlog finisher, not an accepted timed ordinary incremental cycle.
+
+Same FileV9 reached4704 additional committed files/419401737source bytes and
+142539266encoded bytes in1598.65seconds. SQL/runtime still await it. All14 runtime
+identities matched previous finite observations; no body rehash was needed for
+this preparation. A guarded B metadata query found219SQL sources all pending/no
+legacy SQL dependencies, with source/body bytes0; actual native health passed
+before/final and final query took0.312seconds. Current baseline remains unaccepted.
+
+124focused integration checks pass/one optional user-manager fixture skipped.
+Fixtures include actual native selected-contract finalization followed by normal
+leased restore, omission/changed-pin/provider failures and mandatory SQL readback.
+A source-only cron change continuously drains output but retains at most64KiB per
+wake-up; real RAM shell fixtures verified200KB stdout/stderr drainage and repeated
+bounded replacement. No live cron change occurred. Ops/diff/Rustformat pass;
+full formatting still fails at missing Prettier. Recurring acceptance is pending.
+
+
+## Measured large SQL admission — October27,21:49EDT
+
+The retained unresolved map measured219SQLsources/6335426560logical bytes. A
+read-only SQLite metadata API query independently measured3049046016bytes for
+thread_history_1.sqlite, exceeding the queued512MiB image admission. Three fresh
+host samples had12.84–13.02GB available RAM and9.16GBtmpfs; a two-image ceiling
+of3.25GiB each plus160MiB overhead fits while retaining the existing4GiB free
+memory floor. This is conditional peak admission, not current/exclusive usage.
+The original unsealed2.968GBRAM file remains preserved/already charged in use.
+
+Tested source2a284d4ae checks actual next allocation BEFORE SQL scratch creation:
+two images for a new API point, one additional image for a retained API/layout.
+The original memory floor, actual tmpfs capacity, per-block guards, independent
+SQL/hash/schema/metadata proof and B acceptance-before-duplicate-release remain.
+Normal composed consumer sourcec88d76ce8 also admits actual selected peak plus
+its installed floor before materialization. A ceiling does not authorize an
+allocation that fails fresh guards. Denial fixtures prove no source/scratch copy.
+
+SQL7/runtime6/oldfinisher were exact live idle/zero-body waiters with no children.
+Only those three were stopped after successor preflights; process/group absence
+and real controller-lease release were proven. NewSQL8 PID4176947/start35965218
+has High7GiB/Max8GiB/Swap0; runtime7 PID4176951/start35965221 remainsMax2GiB.
+Same fileV9 PID3735301/start35669970, frozen input, SQL cohort/index, runtime
+component and all completed B objects remain. New finisher PID4185660/start35971110
+uses config204722a2a9629f2999a0c591d061c38a5bccdcb23c79b866ff6da82c2ddc8497
+and passed actual preflight. All native/unit/consumer clocks end by04:00EDT.
+It is waiting, not restore acceptance. At21:48 FileV9 had12384new committed points,
+1341937270source bytes/368301700encoded bytes in3086.24s, with zero OOM events.
+
+The disabled ordinaryc88d76ce8 package separately removes commissioning adoption
+and frozen-input replay, retains fresh bounded journal consumption, configures
+its measured whole-cycle cgroup envelope and passed actual preflight/calendar/
+noninstalling cron syntax checks. It remains disabled pending actual full-cycle
+acceptance. Native crontab truncated its long filename; supported -n stdin
+validated the exact command without installing or reading the live crontab.
+118focused tests and a separate actual2.311sowned user-manager hard-stop fixture
+passed. Full production restore/timing and service-level Desktop-off retry
+classification remain required, not inferred from component fixtures.
+
+
+## Deferred-file closure and Desktop-off retry — October 27, 22:40 EDT
+
+A qualified file can change before its body is captured. The old commissioning
+coordinator rejected that deferred file before reaching its planned final delta.
+The coordinator now requalifies only unresolved recorded names before recording
+the completed file phase. It does not enroll another namespace suffix, alter the
+old receipt, or relabel its epoch as complete. The original receipt and digest
+remain in the composed phase. A different normal native B connection must find
+no unresolved file points before the whole-cycle ledger records completion.
+Interrupted closure reuses already accepted bodies; the original B completion
+status remains readable for authenticated predecessor adoption. Tail progress
+uses the bounded controller mirror, and the cycle ledger stores its final proof.
+Later events can still drain to durable B without selecting a new suffix.
+
+An actual isolated native-protocol fixture changes a qualified source version,
+records the deferred original phase, refuses a forged success Boolean against
+the unresolved B map, qualifies/captures/readbacks the replacement and independently
+reopens it. Repeating after an interrupted coordinator performs no completed
+source hash or body transfer and leaves the original native receipt unchanged.
+This is integration rehearsal, not production current-set acceptance.
+
+Owned SSH exit255 with exact positive network-unavailable diagnostics now maps
+to the calendar's finite deferred retry. Keepalives bound a dead owned transport;
+the pinned route, host keys and normal admission are unchanged. Missing/unknown
+observations, access denial, host-key failure, STOP and reported native faults
+remain blocking. First errors retain their identity and cleanup diagnostics.
+A RAM native-ledger/calendar rehearsal independently reopens a completed file
+phase after simulated Desktop loss and completes the normal restore once,
+without repeating that phase. It does not prove actual overnight runtime.
+
+166 focused transport/calendar/native-control/capture/SQL/runtime/normal-consumer
+checks pass. Ops and diff checks pass; Rust formatting passes, while the required
+full format command still stops at the missing local Prettier executable. No
+whole current baseline, ordinary overnight acceptance or enabled schedule is
+claimed by these tests. Upgrade only a proven idle coordinator after exact
+source/config preflight and controller-lease release; preserve advancing bodies.
+
+
+## Exact-package commissioning entrypoint
+
+`vk_nightly_commission.py --calendar <disabled-config> --sha256 <digest>`
+reopens the accepted native B cycle without starting a capture. It refuses a
+commissioning-only baseline, another worker/config, incomplete component flags,
+an invalid phase chain, a late completion or a missing normal B-backed restore.
+It verifies the deterministic calendar cohort, prior accepted baseline and exact
+service template. The original-gap layer remains part of the accepted descriptor.
+The native fixture covers initial-baseline refusal, complete ordinary restore,
+independent process reopen, wrong-package refusal and timing inconsistency.
+
+After actual production qualification succeeds, the same command with `--install`
+creates a separate enabled configuration, retains both writer/metadata leases and
+fresh host/source/native controls, rechecks the accepted pointer and installs only
+the exact Nightly user-cron block. Existing unrelated cron entries are preserved
+and the installed text is read back. It reports the next eligible quarter-hour
+wake-up or22:00Toronto start and the unchanged hard04:00deadline. Configuration
+collisions and prior calendar state for another config require reconciliation;
+there is no automatic overwrite or retention deletion. The installer is finite
+and non-AI. This entrypoint and its RAM proof do not claim that production
+qualification or cron installation has already occurred.
+
+## Between-run bounded journal delivery
+
+`vk_nightly_journal_delivery.py` is a separate finite metadata operation, not a
+backup producer. The observer must drain to B between nightly body runs so its
+fixed local outbox can remain small. Its minute pulse belongs inside the same
+owned Nightly cron block; body capture still starts only in the Toronto window
+and stops at04:00. Nothing in this addition extends that body window.
+
+The entrypoint authenticates the installed ordinary service, all of its existing
+source/config pins, the observer epoch/root bindings and its own full hash. It
+skips without contacting B when the shared controller/body lane or any exact
+legacy producer birth remains live. The source check and an unchanged successful
+cursor also skip all B/SMART polling. Successful delivery uses the existing FULL
+B transaction, closes its writer, reopens through the normal reader and then
+ACKs precisely the delivered generation. No body or global census is performed.
+The last successful receipt remains at most64KiB; stdout retains only a64KiB tail.
+There is no growing local delivery database or payload fallback.
+
+The cron command bounds one attempt to55seconds plus5seconds cleanup, CPU5%,
+MemoryHigh128MiB/Max256MiB/Swap0/Tasks32. Genuine native identity/capacity/health,
+STOP/access and host headroom checks remain. The existing service classifier
+permits later observation after positively identified temporary admission or
+Desktop network loss. Other failures retain a bounded review record and do not
+minute-retry a denied or integrity-failed operation. An unavailable or slow query
+is not labeled a drive failure. Outbox overflow, observer loss and disconnected
+intervals still require honest gap reconciliation; this is not an unlimited
+Desktop-off journal or permission to declare missing coverage complete.
+
+Commissioning now additionally requires `--journal-script`, `--journal-sha256`,
+`--journal-receipt`, `--legacy-owners` and `--legacy-sha256`. Immediately before
+adoption it independently reopens the actual last delivery on B and matches its
+report hash, epoch, scope and source plan. A local success Boolean is insufficient.
+The installer appends the journal pulse within its one existing owned block,
+leaving unrelated cron and worker resource/window bindings unchanged.
+
+Nineteen focused tests pass, including actual RAM inotify -> native control
+protocol FULL commit -> independent reopen -> ACK, the new commissioning reader,
+real shared-lock exclusion, immutable completed proof on failure and cron shell
+syntax. This fixture substitutes a RAM-native transport, not production B.
+The prepared exact entrypoint also ran against the actual installed80deafdcd
+package and correctly skipped the active legacy producer with `B_probed=false`.
+Actual production delivery, ordinary whole-cycle restore and enabled cron remain
+separate commissioning requirements.
+
+The installer also adopts the independently accepted ordinary run into the
+calendar's completed-night state while holding the actual calendar lease. This
+records zero cron attempts, the accepted cycle/baseline hashes and its real
+completion time. The first cron pulse therefore waits until the next Toronto
+night instead of starting another same-night SQL/file cycle. Out-of-window or
+unverified completion, or a differing incumbent calendar state, cannot manufacture
+this marker. An identical adoption retry after a failed cron update is safe.
+An actual RAM state-file/tick test proves no runner is called for that night and
+that the next eligible start is22:00Toronto; this is not production acceptance.

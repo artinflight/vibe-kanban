@@ -38,7 +38,7 @@ Historical statements describe their dated checkpoint, not present authority.
 | --- | --- | --- |
 | Runtime/restart | [Workflow](VK_WORKFLOW.md), [agent runbook](VK_AGENT_DEPLOYMENT_RUNBOOK.md), [restart protocol](VK_BACKEND_RESTART_PROTOCOL.md) | Latest authoritative actor receipt decides live identity; no restart is armed by this index. |
 | Queue/preparation | [Preparation](VK_PREPARATION_PERFORMANCE.md), [queue source](crates/local-deployment/src/container.rs) | PR262 merged into staging at `7110930b6`; ordinary wakeup needs compiled-artifact start/readback, not source-only claims. |
-| Nightly B/recovery | [Sole integration PR263](https://github.com/artinflight/vibe-kanban/pull/263), [retained restart history](HANDOFF_HISTORY_20261017.md) | Workspace604d is sole backup/package/schedule owner. Counted capacity is not publication or whole-plan restore. Schedule adoption remains unverified; default is 02:00 America/Toronto, DST-aware. |
+| Nightly B/recovery | [Sole integration PR263](https://github.com/artinflight/vibe-kanban/pull/263), [retained restart history](HANDOFF_HISTORY_20261017.md) | Workspace604d is sole backup/package/schedule owner. Counted capacity is not publication or whole-plan restore. Schedule adoption remains unverified; owner window is 22:00–04:00 America/Toronto with a hard stop, DST-aware. |
 | Git preservation | [Automatic sync](VK_AUTOMATIC_GITHUB_SYNC.md), [preservation](VK_TURN_GIT_PRESERVATION.md) | Preserve native ledgers/originals and actual held writer fence. Invalid old watcher coverage cannot be reset or replaced by manifest booleans. Scope-specific handover gates do not block independent backup verification. |
 | Release integration | [Stop PR264](https://github.com/artinflight/vibe-kanban/pull/264), [Dot steering](VK_DOT_SESSION_STEERING.md) | Staging owns combined build/copy/rollback/queue acceptance. Public artifacts omit retained private bindings and cannot replace the live package. |
 | Dot/mobile/reporting | [Notifications](DOT_NOTIFICATION_ROLLOUT.md), [reliability](DOT_RELIABILITY_ROLLOUT.md), [integration](DOT_INTEGRATION_HANDOFF.md), [sent drafts](VK_SENT_STEERING_DRAFT.md) | Preserve mobile, steering, existing connector reporting and paired subscriptions; source-ready and served acceptance are separate. |
@@ -58,3 +58,14 @@ Current release coordination, newer Sidebar adoption and remaining private gates
 [October 17 release status](VK_RELEASE_COORDINATION_20261017.md).
 
 Collapsible issue behavior and approved frontend release: [topic evidence](VK_COLLAPSIBLE_ISSUES.md).
+
+## Nightly integration commissioning — October 26
+
+Nightly remains a separate worker/config/scheduler; it does not require a backend
+restart. Durable tracking is running; the historical restore/components remain
+retained. The October28 retained composed restore is accepted; recurring commissioning
+is not accepted. Live MM scope explicitly excludes B;
+the old copied Staging-only guard is historical. Read the
+current branch [handoff](HANDOFF.md) and [Nightly contract](VK_NIGHTLY_BACKUP_EFFICIENCY.md).
+All earlier Nightly continuity is preserved byte-for-byte in
+[the archive manifest](NIGHTLY_CONTINUITY_ARCHIVE_20261026.json).

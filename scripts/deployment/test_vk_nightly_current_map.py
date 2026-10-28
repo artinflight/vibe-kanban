@@ -1,0 +1,498 @@
+import hashlib
+import json
+import os
+from pathlib import Path
+import sqlite3
+import stat
+import tempfile
+import unittest
+
+from vk_nightly_current_map import CurrentMap, SealedMemberIndex, classify, encode_member, decode_member
+from vk_nightly_qualification import encode_observation,decode_observation
+
+
+class CurrentMapTests(unittest.TestCase):
+    def later_namespace(self):
+        later=sqlite3.connect(':memory:');self.addCleanup(later.close)
+        later.execute('create table namespace(name text primary key,row blob)')
+        later.execute('create table namespace_errors(name text primary key,error blob)')
+        later.execute('create table gap_meta(id integer primary key,binding text,complete integer)')
+        later.execute('insert into gap_meta values(1,?,1)',(json.dumps(dict(instance='new-epoch',plan_sha256='a'*64,
+            scope_sha256='b'*64,start_sequence=17,original_epoch_repaired=False)),))
+        return later
+
+    def test_later_gap_namespace_reuses_only_exact_version_identity_and_retains_absences(self):
+        later=self.later_namespace();rewritten=dict(self.observation,identity=list(self.observation['identity']))
+        rewritten['identity'][5]+=1
+        later.executemany('insert into namespace values(?,?)',[(n,encode_observation(o)) for n,o in
+            [('home/a',self.observation),('home/b',rewritten)]])
+        with CurrentMap.held(self.path,binding=self.binding,create=True) as m:
+            self.ns.execute('insert into namespace values(?,?)',('home/gone',encode_observation(self.observation)))
+            self.compile(m)
+            def q(name):return dict(self.version,source='/'+name)
+            first=m.reconcile_namespace(later,q,checkpoint=lambda:None,maximum_paths=1)
+            self.assertTrue(first['more_names'])
+            self.assertFalse(m.db.execute('select complete from metadata').fetchone()[0])
+            final=m.reconcile_namespace(later,q,checkpoint=lambda:None,maximum_paths=10)
+            self.assertFalse(final['more_names']);self.assertTrue(final['journal_suffix_required'])
+            self.assertEqual(final['member_states'],{'verified-file':1,'file-needs-qualification':1})
+            point=decode_member(m.db.execute("select row from members where name='home/a'").fetchone()[0])['qualification']
+            self.assertEqual(point['journal']['instance'],'new-epoch')
+            self.assertTrue(point['metadata_handover']['exact_source_identity_and_xattrs_reobserved'])
+            self.assertEqual(m.db.execute('select name,disposition from namespace_absent').fetchall(),
+                             [('home/gone','later-gap-absence-needs-journal-suffix')])
+            with self.assertRaisesRegex(ValueError,'durable journal suffix'):
+                SealedMemberIndex(m.db,m.check,{'consistent_SQL_sidecars':{}})
+
+    def test_gap_namespace_xattr_change_cannot_reuse_an_old_body_qualification(self):
+        later=self.later_namespace();changed=dict(self.observation,xattrs={'user.changed':'eA=='})
+        later.execute('insert into namespace values(?,?)',('home/a',encode_observation(changed)))
+        with CurrentMap.held(self.path,binding=self.binding,create=True) as m:
+            self.compile(m)
+            final=m.reconcile_namespace(later,lambda n:self.version,checkpoint=lambda:None,maximum_paths=10)
+            self.assertEqual(final['member_states'],{'file-needs-qualification':1})
+
+    def test_native_batch_lookup_keeps_exact_checks_without_per_file_index_switches(self):
+        later=self.later_namespace()
+        later.executemany('insert into namespace values(?,?)',[(name,encode_observation(self.observation)) for name in ('home/a','home/b')])
+        calls=[]
+        def qualified(_):raise AssertionError('per-file qualifier lookup should not run')
+        def many(names):calls.append(names);return {'home/a':self.version}
+        qualified.many=many
+        with CurrentMap.held(self.path,binding=self.binding,create=True) as m:
+            self.compile(m)
+            result=m.reconcile_namespace(later,qualified,checkpoint=lambda:None,maximum_paths=10)
+            self.assertEqual(calls,[['home/a','home/b']])
+            self.assertEqual(result['member_states'],{'verified-file':1,'file-needs-qualification':1})
+
+    def test_namespace_error_cannot_be_mislabeled_as_an_absent_old_member(self):
+        later=self.later_namespace();later.execute('insert into namespace_errors values(?,?)',('home/a',b'permission denied'))
+        with CurrentMap.held(self.path,binding=self.binding,create=True) as m:
+            self.compile(m)
+            with self.assertRaisesRegex(ValueError,'targeted replay before absence adoption'):
+                m.reconcile_namespace(later,lambda name:None,checkpoint=lambda:None,maximum_paths=10)
+            self.assertEqual(m.db.execute('select count(*) from members').fetchone()[0],2)
+
+    def test_explicit_successor_retains_old_unaccepted_gap_and_absences_atomically(self):
+        first=self.later_namespace();first.execute('insert into namespace values(?,?)',('home/a',encode_observation(self.observation)))
+        second=self.later_namespace();binding=json.loads(second.execute('select binding from gap_meta').fetchone()[0])
+        binding['instance']='next-epoch';second.execute('update gap_meta set binding=?',(json.dumps(binding),))
+        second.executemany('insert into namespace values(?,?)',[(name,encode_observation(self.observation)) for name in ('home/a','home/new')])
+        with CurrentMap.held(self.path,binding=self.binding,create=True) as m:
+            self.compile(m)
+            m.reconcile_namespace(first,lambda n:self.version,checkpoint=lambda:None,maximum_paths=10)
+            old_absences=m.db.execute('select * from namespace_absent').fetchall()
+            with self.assertRaisesRegex(ValueError,'binding changed'):
+                m.reconcile_namespace(second,lambda n:None,checkpoint=lambda:None,maximum_paths=10)
+            def failed_commit():raise OSError('synthetic successor commit failure')
+            with self.assertRaisesRegex(OSError,'successor commit'):
+                m.reconcile_namespace(second,lambda n:None,checkpoint=failed_commit,maximum_paths=10,allow_unaccepted_epoch_successor=True)
+            self.assertEqual(m.db.execute('select * from namespace_absent').fetchall(),old_absences)
+            self.assertEqual(m.db.execute('select count(*) from namespace_reconciliation_history').fetchone(),(0,))
+            result=m.reconcile_namespace(second,lambda n:None,checkpoint=lambda:None,maximum_paths=10,allow_unaccepted_epoch_successor=True)
+            self.assertFalse(result['more_names']);self.assertTrue(result['journal_suffix_required'])
+            self.assertEqual(m.db.execute('select name,old_state,row,disposition from namespace_absent_history').fetchall(),old_absences)
+            history=m.db.execute('select binding,complete,suffix_complete from namespace_reconciliation_history').fetchone()
+            self.assertEqual(json.loads(history[0])['instance'],'new-epoch');self.assertEqual(history[1:],(1,0))
+            self.assertEqual(decode_member(m.db.execute("select row from members where name='home/a'").fetchone()[0])['qualification']['journal']['instance'],'next-epoch')
+            self.assertEqual(result['member_states'],{'verified-file':1,'file-needs-qualification':1})
+            with self.assertRaisesRegex(ValueError,'durable journal suffix'):SealedMemberIndex(m.db,m.check,{'consistent_SQL_sidecars':{}})
+
+    def test_completed_suffix_successor_requires_exact_retained_terminal_gap(self):
+        import copy
+        first=self.later_namespace();first.execute('insert into namespace values(?,?)',('home/a',encode_observation(self.observation)))
+        second=self.later_namespace();old=json.loads(first.execute('select binding from gap_meta').fetchone()[0]);new=dict(old,instance='after-terminal')
+        second.execute('update gap_meta set binding=?',(json.dumps(new),));second.execute('insert into namespace values(?,?)',('home/a',encode_observation(self.observation)))
+        proof=dict(format='vk-nightly-closed-source-epoch-gap-v1',old_instance=old['instance'],new_instance=new['instance'],
+            **{k:old.get(k) for k in ('plan_sha256','scope_sha256','required_root_bindings')},
+            old_owner_verified_terminal=True,old_MainPID=0,old_committed_sequence=old['start_sequence']+1,
+            old_B_delivered_sequence=old['start_sequence'],old_gap_continuity_proven=False,original_epoch_repaired=False,
+            current_baseline_accepted=False,complete_later_metadata_required=True,reason='retained unknown-watch fault',old_source_database_sha256='a'*64)
+        with CurrentMap.held(self.path,binding=self.binding,create=True) as m:
+            self.compile(m);m.reconcile_namespace(first,lambda n:self.version,checkpoint=lambda:None,maximum_paths=10)
+            m.db.execute('update namespace_reconciliation set suffix_complete=1')
+            with self.assertRaisesRegex(ValueError,'terminal gap'):
+                m.reconcile_namespace(second,lambda n:None,checkpoint=lambda:None,maximum_paths=10,allow_unaccepted_epoch_successor=True)
+            for field,bad in [('old_instance','wrong'),('old_MainPID',123),('old_gap_continuity_proven',True),
+                              ('current_baseline_accepted',True),('plan_sha256','f'*64),('old_source_database_sha256','bad')]:
+                with self.subTest(field=field),self.assertRaises(ValueError):
+                    m.reconcile_namespace(second,lambda n:None,checkpoint=lambda:None,maximum_paths=10,
+                        allow_unaccepted_epoch_successor=True,terminal_epoch_gap=dict(proof,**{field:bad}))
+            result=m.reconcile_namespace(second,lambda n:None,checkpoint=lambda:None,maximum_paths=10,
+                allow_unaccepted_epoch_successor=True,terminal_epoch_gap=proof)
+            self.assertFalse(result['current_baseline_accepted']);self.assertTrue(result['journal_suffix_required'])
+            self.assertEqual(m.db.execute('select suffix_complete from namespace_reconciliation_history').fetchone(),(1,))
+            self.assertEqual(m.db.execute('select count(*) from namespace_terminal_gaps').fetchone(),(1,))
+            self.assertEqual(m.db.execute('select suffix_complete from namespace_reconciliation').fetchone(),(0,))
+
+    def test_pending_full_hash_reuses_an_existing_body_without_rehash_or_new_copy(self):
+        point=dict(self.version,state='qualified-pending-body',row=dict(self.version['row']))
+        point['row'].pop('segments')
+        with CurrentMap.held(self.path,binding=self.binding,create=True) as m:
+            m.compile(self.ns,lambda name:dict(point,source='/'+name),SQL_sources=[],checkpoint=lambda:None,maximum_paths=10)
+            before=m.db.execute("select row from members where name='home/a'").fetchone()[0]
+            def carriers(sha,size):
+                self.assertEqual((sha,size),(point['row']['sha256'],point['row']['bytes']))
+                return [self.version['row']]
+            result=m.reuse_pending_carriers(carriers,checkpoint=lambda:None,maximum_paths=1)
+            self.assertEqual(result['retained_file_points_reused'],1)
+            self.assertEqual(result['backup_payload_bytes_copied'],0);self.assertTrue(result['more_names'])
+            state,raw=m.db.execute("select state,row from members where name='home/a'").fetchone()
+            self.assertEqual(state,'verified-file');v=decode_member(raw)
+            self.assertEqual(v['member'],self.version['row'])
+            self.assertFalse(v['retained_carrier_reuse']['new_independent_readback_claimed'])
+            self.assertEqual(m.db.execute("select row from retained_file_carrier_history where name='home/a'").fetchone(),(before,))
+            # Lost reply starts from the same key; completed point is skipped.
+            replay=m.reuse_pending_carriers(lambda *_:[],checkpoint=lambda:None,maximum_paths=10)
+            self.assertEqual(replay['retained_file_points_reused'],0)
+            self.assertEqual(m.db.execute("select state from members where name='home/b'").fetchone(),('file-needs-capture',))
+
+    def completed_point_fixture(self,m):
+        point=dict(self.version,state='qualified-pending-body',row=dict(self.version['row']));point['row'].pop('segments')
+        m.compile(self.ns,lambda name:dict(point,source='/'+name),SQL_sources=[],checkpoint=lambda:None,maximum_paths=10)
+        original=m.db.execute("select row from members where name='home/a'").fetchone()[0];old=decode_member(original)
+        member=dict(old['member'],segments=self.version['row']['segments'])
+        proof=dict(independent_ordered_B_readback_sha256=member['sha256'],independent_ordered_B_readback_bytes=member['bytes'],
+            source_metadata={k:member[k] for k in ('mode','uid','gid','mtime_ns','xattrs')})
+        accepted=dict(old,member=member,qualification=dict(old['qualification'],row=member,state='qualified-retained-body'),independent_file_proof=proof)
+        m.db.execute('create table file_acceptance(name text primary key,proof blob)')
+        m.accept_file('home/a',hashlib.sha256(original).hexdigest(),accepted,proof,checkpoint=lambda:None)
+        # A later independent hash observation may classify this same body as
+        # pending again; the completed upload/readback is still authoritative.
+        m.db.execute("update members set state='file-needs-capture',row=? where name='home/a'",(original,))
+        return member
+
+    def test_completed_interrupted_run_body_reused_without_old_catalog_or_new_copy(self):
+        with CurrentMap.held(self.path,binding=self.binding,create=True) as m:
+            member=self.completed_point_fixture(m)
+            indexed=m.index_completed_file_carriers(checkpoint=lambda:None,maximum_paths=1)
+            self.assertEqual(indexed['indexed_body_versions'],1);self.assertFalse(indexed['more_names'])
+            self.assertEqual(m.index_completed_file_carriers(checkpoint=lambda:None,maximum_paths=1)['indexed_body_versions'],1)
+            def forbidden(*_):self.fail('completed body should not need older catalog or source')
+            reused=m.reuse_pending_carriers(forbidden,checkpoint=lambda:None,maximum_paths=10)
+            self.assertEqual(reused['completed_file_points_reused'],2)
+            self.assertEqual(reused['backup_payload_bytes_copied'],0)
+            self.assertEqual(decode_member(m.db.execute("select row from members where name='home/a'").fetchone()[0])['member'],member)
+            self.assertEqual(m.db.execute('select count(*) from file_acceptance_history').fetchone(),(1,))
+
+    def test_completed_file_index_rejects_bad_proof_and_rolls_back_on_guard_failure(self):
+        with CurrentMap.held(self.path,binding=self.binding,create=True) as m:
+            self.completed_point_fixture(m)
+            count=0
+            def stop():
+                nonlocal count
+                count+=1
+                if count==2:raise OSError('synthetic actual STOP at commit')
+            with self.assertRaisesRegex(OSError,'STOP at commit'):
+                m.index_completed_file_carriers(checkpoint=stop,maximum_paths=1)
+            self.assertEqual(m.db.execute('select count(*) from completed_file_carriers').fetchone(),(0,))
+            m.db.execute('update file_acceptance_history set proof=?',(encode_member(dict(forged=True)),))
+            with self.assertRaisesRegex(ValueError,'exact original readback'):
+                m.index_completed_file_carriers(checkpoint=lambda:None,maximum_paths=1)
+            self.assertEqual(m.db.execute('select count(*) from completed_file_carriers').fetchone(),(0,))
+
+    def test_pending_carrier_mismatch_or_commit_failure_preserves_pending_source_point(self):
+        point=dict(self.version,state='qualified-pending-body',row=dict(self.version['row']));point['row'].pop('segments')
+        with CurrentMap.held(self.path,binding=self.binding,create=True) as m:
+            m.compile(self.ns,lambda name:dict(point,source='/'+name),SQL_sources=[],checkpoint=lambda:None,maximum_paths=10)
+            before=m.db.execute('select name,state,row from members order by name').fetchall()
+            with self.assertRaisesRegex(ValueError,'full hash'):
+                m.reuse_pending_carriers(lambda *_:[dict(self.version['row'],sha256='f'*64)],checkpoint=lambda:None,maximum_paths=10)
+            count=0
+            def interrupted():
+                nonlocal count
+                count+=1
+                if count==2:raise OSError('synthetic interrupted reuse')
+            with self.assertRaisesRegex(OSError,'interrupted reuse'):
+                m.reuse_pending_carriers(lambda *_:[self.version['row']],checkpoint=interrupted,maximum_paths=10)
+            self.assertEqual(m.db.execute('select name,state,row from members order by name').fetchall(),before)
+            self.assertEqual(m.db.execute('select count(*) from retained_file_carrier_history').fetchone(),(0,))
+
+    def additive_namespace_fixture(self):
+        import copy
+        old=self.later_namespace();old_binding=json.loads(old.execute('select binding from gap_meta').fetchone()[0])
+        roots={'/home':dict(identity=[1,99,stat.S_IFDIR],resolved='/home',target_identity=[1,99,stat.S_IFDIR],literal=None)}
+        old_binding['required_root_bindings']=roots
+        old.execute('update gap_meta set binding=?',(json.dumps(old_binding),))
+        alias=dict(self.observation,kind='symlink',target='/outside/sql',identity=[1,80,stat.S_IFLNK,3,123,456,os.getuid(),os.getgid(),1])
+        old.executemany('insert into namespace values(?,?)',[(n,encode_observation(row)) for n,row in [('home/a',self.observation),('home/sql',alias)]])
+        new=self.later_namespace();binding=copy.deepcopy(old_binding)
+        binding.update(instance='full-inodes',plan_sha256='c'*64,scope_sha256='d'*64,start_sequence=30)
+        binding['required_root_bindings'].update({
+            '/home/sql':dict(identity=[1,80,stat.S_IFLNK],resolved='/outside/sql',target_identity=[1,2,stat.S_IFREG],literal='/outside/sql'),
+            '/outside/sql':dict(identity=[1,2,stat.S_IFREG],resolved='/outside/sql',target_identity=[1,2,stat.S_IFREG],literal=None)})
+        new.execute('update gap_meta set binding=?',(json.dumps(binding),))
+        new.executemany('insert into namespace values(?,?)',[(n,encode_observation(row)) for n,row in [('home/a',self.observation),('home/sql',alias),('outside/sql',self.observation)]])
+        def report(b,instance,seq,full):
+            return dict(plan_sha256=b['plan_sha256'],scope_sha256=b['scope_sha256'],instance=instance,
+                        since=0,sequence=seq,ready=True,errors=[],terminal=None,
+                        coverage_model='all-selected-inodes-v1' if full else 'directory-namespace-only-v1',
+                        barrier=dict(kernel_drain_completed=True,durable_sequence=seq,instance=instance))
+        proof=dict(format='vk-nightly-additive-full-inode-overlap-v1',baseline_accepted=False,
+                   old_hardlink_and_alias_gap_repaired=False,full_gap_metadata_reconciliation_required=True,
+                   old_required_root_bindings=roots,new_required_root_bindings=binding['required_root_bindings'],
+                   added_roots=['/home/sql','/outside/sql'],old_namespace=report(old_binding,'old-v7',10,False),
+                   new_before=report(binding,'full-inodes',20,True),new_after=report(binding,'full-inodes',25,True))
+        return old,new,proof
+
+    def test_additive_scope_requires_verified_overlap_and_preserves_SQL_alias_transaction(self):
+        old,new,proof=self.additive_namespace_fixture()
+        with CurrentMap.held(self.path,binding=self.binding,create=True) as m:
+            self.compile(m);m.db.execute('insert into SQL_sources values(?)',('/home/sql',))
+            m.reconcile_namespace(old,lambda n:self.version,checkpoint=lambda:None,maximum_paths=10)
+            with self.assertRaises(ValueError):
+                m.reconcile_namespace(new,lambda n:self.version,checkpoint=lambda:None,maximum_paths=10,allow_unaccepted_epoch_successor=True)
+            def fail():raise OSError('synthetic extension commit failure')
+            with self.assertRaisesRegex(OSError,'extension commit'):
+                m.reconcile_namespace(new,lambda n:self.version,checkpoint=fail,maximum_paths=10,
+                    allow_unaccepted_epoch_successor=True,source_scope_extension=proof)
+            self.assertIsNone(m.db.execute('select path from SQL_sources where path=?',('/outside/sql',)).fetchone())
+            self.assertEqual(m.db.execute('select count(*) from namespace_scope_extensions').fetchone(),(0,))
+            result=m.reconcile_namespace(new,lambda n:self.version,checkpoint=lambda:None,maximum_paths=10,
+                allow_unaccepted_epoch_successor=True,source_scope_extension=proof)
+            self.assertFalse(result['more_names']);self.assertTrue(result['journal_suffix_required'])
+            self.assertEqual(m.db.execute('select path from SQL_sources order by path').fetchall(),[('/home/sql',),('/outside/sql',)])
+            self.assertEqual(m.db.execute('select state from members where name=?',('outside/sql',)).fetchone(),('SQLite-needs-image',))
+            self.assertEqual(m.db.execute('select state from members where name=?',('home/sql',)).fetchone(),('symlink',))
+            self.assertEqual(m.db.execute('select count(*) from namespace_scope_extensions').fetchone(),(1,))
+            with self.assertRaisesRegex(ValueError,'durable journal suffix'):SealedMemberIndex(m.db,m.check,{'consistent_SQL_sidecars':{}})
+
+    def test_additive_scope_rejects_omissions_bad_barriers_and_unready_inode_epoch(self):
+        import copy
+        old,new,good=self.additive_namespace_fixture()
+        with CurrentMap.held(self.path,binding=self.binding,create=True) as m:
+            self.compile(m);m.db.execute('insert into SQL_sources values(?)',('/home/sql',))
+            m.reconcile_namespace(old,lambda n:self.version,checkpoint=lambda:None,maximum_paths=10)
+            variants=[]
+            for key,val in [('coverage_model','directory-namespace-only-v1'),('ready',False),('errors',[{'coverage_lost':16384}]),('barrier',True),('since',False)]:
+                bad=copy.deepcopy(good);bad['new_after'][key]=val;variants.append(bad)
+            bad=copy.deepcopy(good);bad['old_required_root_bindings']={};variants.append(bad)
+            bad=copy.deepcopy(good);bad['added_roots']=['/outside/sql'];variants.append(bad)
+            bad=copy.deepcopy(good);bad['new_after']['scope_sha256']='e'*64;variants.append(bad)
+            for bad in variants:
+                with self.subTest(proof=bad),self.assertRaises(ValueError):
+                    m.reconcile_namespace(new,lambda n:self.version,checkpoint=lambda:None,maximum_paths=10,
+                        allow_unaccepted_epoch_successor=True,source_scope_extension=bad)
+            self.assertIsNone(m.db.execute("select name from sqlite_master where name='namespace_reconciliation_history'").fetchone())
+            self.assertIsNone(m.db.execute('select path from SQL_sources where path=?',('/outside/sql',)).fetchone())
+
+    def test_additive_Linux_roots_use_POSIX_validation_on_native_Windows(self):
+        from pathlib import PureWindowsPath
+        from unittest.mock import patch
+        from vk_nightly_current_map import additive_scope_SQL_sources
+        old,new,proof=self.additive_namespace_fixture()
+        previous=json.loads(old.execute('select binding from gap_meta').fetchone()[0])
+        current=json.loads(new.execute('select binding from gap_meta').fetchone()[0])
+        with patch('vk_nightly_current_map.Path',PureWindowsPath):
+            self.assertEqual(additive_scope_SQL_sources(previous,current,proof,{'/home/sql'}),['/outside/sql'])
+
+    def test_prefix_metadata_preserves_original_carrier_and_never_accepts_uncopied_tail(self):
+        import copy
+        base=sqlite3.connect(':memory:');self.addCleanup(base.close)
+        base.execute('create table provenance(source_catalog_sha256 text,restore_proof_sha256 text)')
+        base.execute('insert into provenance values(?,?)',('a'*64,'b'*64))
+        base.execute('create table bodies(sha256 text,bytes integer,name text)')
+        base.executemany('insert into bodies values(?,?,?)',[(hashlib.sha256(b'ab').hexdigest(),2,'home/a'),
+            (hashlib.sha256(b'abc').hexdigest(),3,'home/a'),('c'*64,1,'home/b')])
+        pending=copy.deepcopy(self.version);pending['state']='qualified-pending-body';pending['row'].pop('segments')
+        with CurrentMap.held(self.path,binding=self.binding,create=True) as m:
+            self.compile(m,qualified=lambda n:dict(pending,source='/'+n))
+            one=m.attach_base_prefixes(base,checkpoint=lambda:None,maximum_paths=1)
+            self.assertTrue(one['more_names']);self.assertEqual(one['candidate_prefix_bytes'],2)
+            value=decode_member(m.db.execute("select row from members where name='home/a'").fetchone()[0])
+            self.assertEqual(value['candidate_accepted_prefix']['segments'][0]['selector'],'home/a')
+            self.assertEqual(value['candidate_accepted_prefix']['independent_proof_sha256'],'b'*64)
+            self.assertEqual(m.db.execute("select state from members where name='home/a'").fetchone(),('file-needs-capture',))
+            self.assertEqual(m.attach_base_prefixes(base,checkpoint=lambda:None,maximum_paths=1)['prefix_candidates_attached'],0)
+            two=m.attach_base_prefixes(base,checkpoint=lambda:None,maximum_paths=8,after=one['last_name'])
+            self.assertFalse(two['more_names']);self.assertEqual(two['candidate_prefix_bytes'],1)
+            self.assertEqual(two['prefix_bytes_actually_reused'],0)
+
+    def test_prefix_binding_failure_rolls_back_and_bad_base_provenance_refuses(self):
+        import copy
+        base=sqlite3.connect(':memory:');self.addCleanup(base.close)
+        base.execute('create table provenance(source_catalog_sha256 text,restore_proof_sha256 text)')
+        base.execute('insert into provenance values(?,?)',('a'*64,'b'*64))
+        base.execute('create table bodies(sha256 text,bytes integer,name text)')
+        base.execute('insert into bodies values(?,?,?)',('c'*64,1,'home/a'))
+        pending=copy.deepcopy(self.version);pending['state']='qualified-pending-body';pending['row'].pop('segments')
+        with CurrentMap.held(self.path,binding=self.binding,create=True) as m:
+            self.compile(m,qualified=lambda n:dict(pending,source='/'+n));calls=0
+            def fail():
+                nonlocal calls
+                calls+=1
+                if calls==2:raise OSError('synthetic prefix commit failure')
+            with self.assertRaisesRegex(OSError,'prefix commit'):m.attach_base_prefixes(base,checkpoint=fail,maximum_paths=8)
+            self.assertNotIn('candidate_accepted_prefix',decode_member(m.db.execute("select row from members where name='home/a'").fetchone()[0]))
+            base.execute("update provenance set restore_proof_sha256='missing'")
+            with self.assertRaises(ValueError):m.attach_base_prefixes(base,checkpoint=lambda:None,maximum_paths=8)
+
+    def test_relocated_pointer_fails_closed_with_provider_instruction_before_SQLite_open(self):
+        with tempfile.TemporaryDirectory(dir='/dev/shm') as root:
+            p=Path(root)/'moved.sqlite';p.write_bytes(b'VK_NIGHTLY_B_CONTROL_POINTER_V1\n{}\n');p.chmod(0o400)
+            with self.assertRaisesRegex(ValueError,'relocated.*native-B'):
+                with CurrentMap.held(p,binding={}):pass
+
+    def setUp(self):
+        self.tmp=tempfile.TemporaryDirectory();self.addCleanup(self.tmp.cleanup)
+        self.path=Path(self.tmp.name)/'map.sqlite';self.binding={'namespace_proof':'a'*64,'qualifier_owner':123}
+        self.metadata=dict(mode=0o600,uid=os.getuid(),gid=os.getgid(),mtime_ns=123,xattrs={})
+        self.observation=dict(self.metadata,kind='file',identity=[1,2,stat.S_IFREG|0o600,3,123,456,os.getuid(),os.getgid(),1],bytes=3)
+        self.version=dict(source='/home/a',state='qualified-retained-body',source_identity=self.observation['identity'],
+                          row=dict(self.metadata,kind='file',bytes=3,sha256=hashlib.sha256(b'abc').hexdigest(),segments=[
+                              dict(layer='accepted-base',selector='old/a',bytes=3,sha256=hashlib.sha256(b'abc').hexdigest())]))
+        self.ns=sqlite3.connect(':memory:');self.addCleanup(self.ns.close)
+        self.ns.execute('create table namespace(name text primary key,row blob) without rowid')
+        self.ns.executemany('insert into namespace values(?,?)',[(n,encode_observation(self.observation)) for n in ['home/a','home/b']])
+
+    def compile(self,handle,qualified=None,maximum_paths=100,checkpoint=lambda:None,**kwargs):
+        return handle.compile(self.ns,qualified or (lambda name:self.version if name=='home/a' else None),
+                              SQL_sources=[],checkpoint=checkpoint,maximum_paths=maximum_paths,**kwargs)
+
+    def test_complete_draft_reuses_carrier_and_keeps_unknown_explicit(self):
+        with CurrentMap.held(self.path,binding=self.binding,create=True) as m:
+            result=self.compile(m)
+            self.assertEqual(result['member_states'],{'file-needs-qualification':1,'verified-file':1})
+            self.assertTrue(result['namespace_composed']);self.assertFalse(result['current_baseline_accepted'])
+            self.assertEqual(result['source_payload_bytes_read'],0)
+            def forbidden(name):raise AssertionError('completed map replayed')
+            result=self.compile(m,forbidden)
+            self.assertTrue(result['already_complete']);self.assertEqual(result['processed'],0)
+
+    def test_bounded_keyset_reopen_never_replays_completed_name(self):
+        with CurrentMap.held(self.path,binding=self.binding,create=True) as m:
+            self.assertTrue(self.compile(m,maximum_paths=1)['more_members'])
+        with CurrentMap.held(self.path,binding=self.binding) as m:
+            seen=[]
+            self.compile(m,qualified=lambda name:seen.append(name))
+            self.assertEqual(seen,['home/b'])
+            self.assertEqual(m.db.execute('select count(*) from members').fetchone()[0],2)
+
+    def test_interrupted_batch_keeps_no_uncommitted_cursor_or_duplicate_rows(self):
+        calls=0
+        def fail():
+            nonlocal calls
+            calls+=1
+            if calls==2:raise OSError('injected control guard/commit failure')
+        with CurrentMap.held(self.path,binding=self.binding,create=True) as m:
+            with self.assertRaises(OSError):self.compile(m,checkpoint=fail)
+            self.assertEqual(m.db.execute('select last_name from metadata').fetchone()[0],'')
+            self.assertEqual(m.db.execute('select count(*) from members').fetchone()[0],0)
+            self.assertTrue(self.compile(m)['namespace_composed'])
+
+    def test_source_mismatch_or_unsealed_segments_refuse_acceptance(self):
+        wrong=dict(self.version,source='/outside')
+        with self.assertRaisesRegex(ValueError,'source/name differs'):
+            classify('home/a',self.observation,wrong,SQL_sources=[])
+        pending=dict(self.version,state='qualified-pending-body')
+        with self.assertRaisesRegex(ValueError,'pending body'):
+            classify('home/a',self.observation,pending,SQL_sources=[])
+
+    def test_pending_body_point_keeps_exact_qualification_for_capture(self):
+        row=dict(self.version['row']);del row['segments']
+        pending=dict(self.version,state='qualified-pending-body',row=row)
+        state,result=classify('home/a',self.observation,pending,SQL_sources=[])
+        self.assertEqual(state,'file-needs-capture');self.assertEqual(result['qualification'],pending)
+
+    def test_SQL_header_discovery_and_sidecar_require_consistent_API(self):
+        q=dict(source='/home/a',state='current-version-deferred',reason='SQLite requires its consistent snapshot API')
+        with CurrentMap.held(self.path,binding=self.binding,create=True) as m:
+            self.ns.execute('insert into namespace values(?,?)',('home/a-wal',encode_observation(self.observation)))
+            result=self.compile(m,qualified=lambda name:q if name=='home/a' else None)
+            self.assertEqual(result['member_states']['SQLite-needs-image'],1)
+            self.assertEqual(result['member_states']['SQLite-sidecar'],1)
+            self.assertEqual(m.db.execute('select path from SQL_sources').fetchall(),[('/home/a',)])
+
+    def test_separately_verified_component_wins_without_mutating_original_observation(self):
+        with CurrentMap.held(self.path,binding=self.binding,create=True) as m:
+            result=self.compile(m,qualified=lambda name:None,special_versions={'home/a':self.version})
+            self.assertEqual(result['member_states']['verified-file'],1)
+
+    def test_binding_change_and_competing_owner_are_refused(self):
+        with CurrentMap.held(self.path,binding=self.binding,create=True):
+            with self.assertRaises(BlockingIOError):
+                with CurrentMap.held(self.path,binding=self.binding):pass
+        with self.assertRaisesRegex(ValueError,'binding differs'):
+            with CurrentMap.held(self.path,binding={'namespace_proof':'b'*64}):pass
+
+    def test_lossless_control_reencoding_preserves_compile_cursor_and_resumes_its_own_cursor(self):
+        with CurrentMap.held(self.path,binding=self.binding,create=True) as m:
+            self.compile(m,maximum_paths=1)
+            original=m.db.execute('select name,state,row from members').fetchone()
+            self.assertFalse(m.reencode(checkpoint=lambda:None,maximum_paths=1)['complete'])
+        with CurrentMap.held(self.path,binding=self.binding) as m:
+            result=m.reencode(checkpoint=lambda:None,maximum_paths=10)
+            self.assertTrue(result['complete'])
+            name,state,raw=m.db.execute('select name,state,row from members').fetchone()
+            self.assertEqual((name,state),(original[0],original[1]))
+            self.assertEqual(decode_member(raw),decode_member(original[2]))
+            self.assertEqual(m.db.execute('select last_name from metadata').fetchone()[0],'home/a')
+            self.assertTrue(self.compile(m)['namespace_composed'])
+
+    def test_control_encoding_roundtrip_legacy_compatibility_and_corruption_refusal(self):
+        value={'qualification':self.version,'member':self.version['row']}
+        self.assertEqual(decode_member(encode_member(value)),value)
+        self.assertEqual(decode_member(encode_observation(value)),value)
+        for raw in (encode_member(value)[:-1],encode_member(value)+b'extra'):
+            with self.assertRaises(ValueError):decode_member(raw)
+
+    def test_refresh_rejects_a_catalog_point_for_a_different_observed_inode_or_xattrs(self):
+        import copy
+        for field in ('inode','ctime','xattrs'):
+            with self.subTest(field=field),tempfile.TemporaryDirectory(dir=self.tmp.name) as folder:
+                with CurrentMap.held(Path(folder)/'map.sqlite',binding=self.binding,create=True) as m:
+                    self.compile(m,qualified=lambda name:None)
+                    point=copy.deepcopy(self.version)
+                    if field=='inode':point['source_identity'][1]+=1
+                    elif field=='ctime':point['source_identity'][5]+=1
+                    else:point['row']['xattrs']={'user.new':'eA=='}
+                    before=m.db.execute('select name,state,row from members order by name').fetchall()
+                    result=m.refresh_unresolved(lambda name:dict(point,source='/'+name),checkpoint=lambda:None,maximum_paths=10)
+                    self.assertEqual(result['resolved_versions'],0)
+                    self.assertEqual(m.db.execute('select name,state,row from members order by name').fetchall(),before)
+
+    def test_refresh_only_unresolved_keys_and_resume_past_still_unknown_names(self):
+        with CurrentMap.held(self.path,binding=self.binding,create=True) as m:
+            self.compile(m,qualified=lambda name:None)
+            first=m.refresh_unresolved(lambda name:None,checkpoint=lambda:None,maximum_paths=1)
+            self.assertTrue(first['more_names']);self.assertEqual(first['last_name'],'home/a')
+            newer=dict(self.version,source='/home/b')
+            seen=[]
+            def qualified(name):seen.append(name);return newer
+            final=m.refresh_unresolved(qualified,checkpoint=lambda:None,maximum_paths=10,after=first['last_name'])
+            self.assertEqual(seen,['home/b']);self.assertFalse(final['more_names'])
+            self.assertEqual(final['member_states'],{'file-needs-qualification':1,'verified-file':1})
+
+    def test_sealed_reader_refuses_unresolved_maps_and_reads_complete_typed_members_without_copy(self):
+        with CurrentMap.held(self.path,binding=self.binding,create=True) as m:
+            self.compile(m)
+        db=sqlite3.connect(self.path);self.addCleanup(db.close)
+        index=SealedMemberIndex(db,lambda:None,{'format':'vk-nightly-current-member-map-v1'})
+        self.assertEqual(index.entry('home/a'),self.version['row'])
+        with self.assertRaisesRegex(ValueError,'unresolved'):list(index.entries())
+
+    def test_SQL_sidecar_requires_exact_consistent_image_binding(self):
+        with CurrentMap.held(self.path,binding=self.binding,create=True) as m:
+            self.ns.execute('delete from namespace where name=?',('home/b',))
+            self.compile(m)
+            m.db.execute('insert into members values(?,?,?)',('home/a-wal','SQLite-sidecar',encode_member({'required_SQL_source':'/home/a'})))
+        db=sqlite3.connect(self.path);self.addCleanup(db.close)
+        with self.assertRaisesRegex(ValueError,'disposition'):SealedMemberIndex(db,lambda:None,{})
+        reference={'consistent_SQL_sidecars':{'home/a-wal':{'source':'/home/a','snapshot_sha256':self.version['row']['sha256']}}}
+        reader=SealedMemberIndex(db,lambda:None,reference)
+        self.assertEqual(list(reader.entries()),[('home/a',self.version['row'])])
+        with self.assertRaises(KeyError):reader.entry('home/a-wal')
+
+    def test_SQL_alias_cannot_hide_a_required_target_outside_the_current_map(self):
+        with CurrentMap.held(self.path,binding=self.binding,create=True) as m:
+            self.compile(m)
+            m.db.execute('insert into SQL_sources values(?)',('/home/live.sqlite',))
+            m.db.execute('insert into members values(?,?,?)',('home/live.sqlite','symlink',
+                encode_member(dict(member=dict(kind='symlink',target='/separate/live.sqlite')))))
+        db=sqlite3.connect(self.path);self.addCleanup(db.close)
+        with self.assertRaisesRegex(ValueError,'alias dependency'):SealedMemberIndex(db,lambda:None,{})
+        reference={'consistent_SQL_aliases':{'home/live.sqlite':dict(source='/separate/live.sqlite',snapshot_sha256='a'*64)}}
+        with self.assertRaisesRegex(ValueError,'actual captured target'):SealedMemberIndex(db,lambda:None,reference)
+
+
+if __name__=='__main__':unittest.main()

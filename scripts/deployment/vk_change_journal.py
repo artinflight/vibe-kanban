@@ -37,6 +37,7 @@ class Journal:
         self.roots = {str(Path(path).resolve()) for path in self.plan["sources"]}
         self.excluded = {str(Path(path).resolve()) for path in self.plan["excluded_rebuildable_directories"]}
         self.watches, self.changed, self.events, self.errors = {}, {}, {}, []
+        self.deleted_watches = set()
         self.seq, self.ready = 0, False
         self.lock = threading.RLock()
 
@@ -44,6 +45,17 @@ class Journal:
         return str(Path(path).resolve()) in self.excluded
 
     def tree(self, root):
+        # A release contract can name an immutable artifact or manifest as an
+        # exact file root. os.walk(file) yields nothing, so treating it as a
+        # ready tree would silently leave that required source unwatched.
+        if Path(root).is_file() and not Path(root).is_symlink():
+            with self.lock:
+                wd = self.lib.inotify_add_watch(self.fd, os.fsencode(root), MASK)
+                if wd < 0:
+                    self.errors.append({"watch_failed": str(root), "errno": ctypes.get_errno()})
+                else:
+                    self.watches[wd] = str(root)
+            return
         for directory, dirs, _ in os.walk(root, followlinks=False):
             dirs[:] = [name for name in dirs if not self.excluded_path(Path(directory) / name)]
             with self.lock:
@@ -61,6 +73,17 @@ class Journal:
             directory = self.watches.get(wd)
             if directory is None:
                 self.errors.append({"unknown_watch": wd, "mask": mask})
+                return
+            if mask & 0x400:
+                parent_covered = str(Path(directory).parent) in self.watches.values()
+                if directory not in self.roots and parent_covered:
+                    self.deleted_watches.add(wd)
+                else:
+                    self.errors.append({"protected_root_deleted": directory})
+            if mask & IGNORED and wd in self.deleted_watches:
+                self.deleted_watches.remove(wd)
+                self.watches.pop(wd, None)
+                # DELETE_SELF recorded the tombstone; the parent covers recreation.
                 return
             path = str(Path(directory) / name) if name else directory
             if self.excluded_path(path):
@@ -141,7 +164,7 @@ def main():
 
     threading.Thread(target=watch, daemon=True).start()
     for root in sorted(journal.roots):
-        if not Path(root).is_dir():
+        if not Path(root).is_dir() and not Path(root).is_file():
             journal.errors.append({"root_unavailable": root})
         else:
             journal.tree(root)

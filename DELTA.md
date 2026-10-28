@@ -2094,3 +2094,47 @@ producer; normal Disk allocation protection remains. Staging20copied-data SQL
 checks acknowledged, private runtime/receipt-safe rollback remains separate.
 Corrected predecessor b249/7a Python87run to86pass/1optional connector skip.
 No activation/host build/shared-target growth or live changes.
+
+## October26 — Nightly commissioning reconciliation
+
+Reconciled existing Nightly branch with Staging; preserved prior STATE/STREAM/
+HANDOFF/DELTA byte-for-byte in NIGHTLY_CONTINUITY_ARCHIVE_20261026.json. Actual
+current B STOP plus Staging-specific MM grant blocks Nightly payload/scheduling;
+no controller, security or data action. Reuse148SQL/41file v8i proofs without
+claiming its failed parent is accepted.
+
+Authenticated v8i metadata adoption preserves148SQL carriers (104old/44fresh in
+that run) and41file-component pairs/14,118,303,923rawB, zero payload copied.
+23new adoption/9scheduler cases pass. Current v11 readback has9new enrollment
+errors; old five-error and17SQL notes are historical. No current whole-backup
+or operational Nightly acceptance, schedule or backend action.
+
+- October26 Nightly: reconciled live MM E/Q/R-only scope/current7578195baa guard;
+  withdrew old copied-guard blanket blocker. Actual v2 absence proof covers9
+  ENOENT errors/3 temporary trees against3 authenticated maps and kernel watches.
+  Added/tested atomic durable journal controls and stable-file version handler.
+  Recovered exact3.17MB B partial; native+independent RAM hash/JSONL/Linux metadata
+  pass without recopy. No full baseline/schedule/backend acceptance claimed.
+
+- Nightly retained-member integration: authenticated8.01MB of records maps20,475
+  typed member recipes/14,441 file versions from41 already-verified components.
+  All14.118GB exactly matches old selected request metadata;0 archive/source
+  body rereads/copies. Remaining419,570 old file actions need current version
+  qualification; old106.65GB budget is not fresh transfer demand or acceptance.
+
+- 2026-10-26 Nightly: installed a pinned read-only durable tracking worker after
+  the old observer's natural timeout; current qualification resumes over retained
+  SQLite maps and accepted component bodies.206 older components and the accepted
+  base content catalog were adopted without payload copies. One507.75MB history
+  point independently restores using300.83MB old prefix+206.92MB new B tail;
+  its source JSONL diagnostic remains explicit.564 regression cases pass(one
+  skip). Whole current baseline/worker/calendar commissioning remains unfinished.
+
+- 2026-10-27 20:29EDT Nightly: corrected daily native SQL index namespace and
+  stale schedule renderers; current-map/cohort checked SQL contract discovery
+  added.254 focused tests pass/one opt-in skipped; ops/Rustformat pass, Prettier
+  unavailable. Same fileV8 advances; no schedule or whole-baseline acceptance.
+
+- 2026-10-27 Nightly: tested bounded native FULL transaction groups for verified
+  file points; default single-point packages unchanged.290tests pass/one opt-in
+  skipped; actual production upgrade requires checkpoint and both writer leases.

@@ -97,3 +97,6 @@ vibe-kanban-cloud/
 *.ts.net.key
 Caddyfile
 Caddyfile.dev
+
+# Prevent new deployment bytecode churn; existing tracked files remain intact.
+scripts/deployment/__pycache__/

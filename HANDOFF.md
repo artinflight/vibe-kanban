@@ -75,4 +75,5 @@ No code/fixture/partial component is whole-backup acceptance.
 
 Prior pickup survives byte-for-byte in
 [00:01history](HANDOFF_NIGHTLY_HISTORY_20261028_0001.md), plus earlier linked
-histories. See [overnight acceptance](VK_NIGHTLY_OVERNIGHT_ACCEPTANCE.md).
+histories and [original archive](HANDOFF_HISTORY_20261017.md).
+See [overnight acceptance](VK_NIGHTLY_OVERNIGHT_ACCEPTANCE.md).

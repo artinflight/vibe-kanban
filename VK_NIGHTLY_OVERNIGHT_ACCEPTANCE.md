@@ -485,3 +485,13 @@ The prepared exact entrypoint also ran against the actual installed80deafdcd
 package and correctly skipped the active legacy producer with `B_probed=false`.
 Actual production delivery, ordinary whole-cycle restore and enabled cron remain
 separate commissioning requirements.
+
+The installer also adopts the independently accepted ordinary run into the
+calendar's completed-night state while holding the actual calendar lease. This
+records zero cron attempts, the accepted cycle/baseline hashes and its real
+completion time. The first cron pulse therefore waits until the next Toronto
+night instead of starting another same-night SQL/file cycle. Out-of-window or
+unverified completion, or a differing incumbent calendar state, cannot manufacture
+this marker. An identical adoption retry after a failed cron update is safe.
+An actual RAM state-file/tick test proves no runner is called for that night and
+that the next eligible start is22:00Toronto; this is not production acceptance.

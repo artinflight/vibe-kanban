@@ -65,7 +65,7 @@ Digests are in PREPARATION.private.json.
 No frozen-input/existing-component replay. Actual timed ordinary run needs the
 accepted current baseline and old owners/leases released; preserve original04EDT.
 
-The new D/commissioner-journal-prepared-20261028 contains commissioner+journal
+The new D/commissioner-journal-day-adoption-20261028 contains commissioner+journal
 entrypoint plus exact legacy PID/birth list. PREPARATION.private.json binds all
 hashes and command. PYTHONPATH must name ordinary-incremental-80deafdcd-prepared
 so all unchanged worker80 source/config pins validate. Old f7 remains retained, superseded for adoption. No cron/observer change.
@@ -77,10 +77,10 @@ installed. New minute journal-only pulse shares one owned cron block and yields
 both controller/body lanes + exact old births; no source body/global scan.
 Unchanged cursor skips B/SMART. Last success64KiB; log64KiB; attempt55+5s,
 CPU5%/High128M/Max256M/Swap0/Tasks32. Existing admission/network classifier;
-other failures retain review and do not retry denial. New installer independently
-reopens actual journal report before adoption. See overnight guide.
-19 focused checks including actual RAM inotify/native FULL/reopen/ACK pass;
-actual production proof remains pending. Ops/diff/Rust format pass; full format
+other failures retain review and do not retry denial. Installer reopens B journal and adopts the actual completed ordinary night
+under its calendar lease, preventing a first-cron duplicate. See overnight guide.
+RAM inotify/native FULL/reopen/ACK and actual completed-night tick tests pass;
+production proof remains pending. Ops/diff/Rust format pass; full format
 still stops at missing Prettier. Live jobs unchanged.
 
 Next: collect SAME chain terminal receipts, resolve actual deferred points,

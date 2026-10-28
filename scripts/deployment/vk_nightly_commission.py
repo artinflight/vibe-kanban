@@ -13,7 +13,7 @@ import json
 import math
 from pathlib import Path
 
-from vk_nightly_calendar import settings,decision,load as calendar_state
+from vk_nightly_calendar import settings,decision,load as calendar_state,held as calendar_lease,checkpoint as calendar_checkpoint
 from vk_nightly_window import ZONE,bounds,night
 from vk_nightly_capture_adapter import mcp_lease
 from vk_nightly_cycle_state import CycleState,PHASES
@@ -125,6 +125,27 @@ def enabled_configuration(disabled):
     return value
 
 
+def adopt_completed_night(state,evidence,configuration_sha256):
+    """Carry actual ordinary acceptance into cron without a same-night rerun.
+
+    Called only after native qualification under controller/body/calendar leases.
+    This records zero cron attempts: the verified run was invoked directly.
+    A differing incumbent is retained for exact reconciliation, never cleared.
+    """
+    if evidence.get('actual_ordinary_incremental_and_normal_restore_verified') is not True:
+        raise ValueError('actual ordinary restore qualification required for calendar adoption')
+    day=datetime.fromisoformat(evidence['scheduled_night']).date()
+    if day.isoformat()!=evidence['scheduled_night']:raise ValueError('canonical accepted evening required')
+    start,end=bounds(day);finished=datetime.fromisoformat(evidence['completed_UTC'])
+    if not start<=finished<end:raise ValueError('late or out-of-window completion cannot suppress a backup')
+    value=dict(day=day.isoformat(),attempts=0,status='completed',finished_utc=finished.isoformat(),
+        configuration_sha256=configuration_sha256,adopted_ordinary_cycle_id=evidence['accepted_cycle_id'],
+        accepted_baseline_sha256=evidence['accepted_baseline_sha256'])
+    if state is not None and state!=value:
+        raise ValueError('existing calendar state differs from actual adoption; preserve it for reconciliation')
+    return value
+
+
 def next_launch(now,state,*,monotonic,boot_id):
     """First installed quarter-hour pulse that the Toronto gate can admit."""
     from datetime import timedelta
@@ -204,13 +225,19 @@ def main():
                     read_owned(args.journal_receipt),service_sha=reference['sha256'],
                     script_sha=args.journal_sha256,legacy_sha=args.legacy_sha256)
                 if fresh!=evidence:raise ValueError('accepted baseline changed during commissioning')
-            now=datetime.now(timezone.utc)
-            state=calendar_state(Path(disabled['staging'])/'calendar/state.private.json')
-            if state and state.get('configuration_sha256')!=enabled_sha:
-                raise ValueError('existing calendar state names another configuration; no cron update')
-            answer,next_run=next_launch(now,state,monotonic=time.monotonic(),
-                boot_id=Path('/proc/sys/kernel/random/boot_id').read_text().strip())
-            installed=apply(owned,ready,timezone=Path('/etc/timezone').read_text().strip())
+            folder=staging/'calendar';folder.mkdir(mode=0o700,exist_ok=True)
+            if folder.resolve()!=folder or folder.is_symlink():raise ValueError('canonical calendar state directory required')
+            with calendar_lease(folder/'lease'):
+                state=calendar_state(folder/'state.private.json')
+                state=adopt_completed_night(state,evidence,enabled_sha)
+                ready()
+                calendar_checkpoint(folder/'state.private.json',state)
+                # A failed cron update retains this truthful accepted-night
+                # checkpoint. Identical retry is safe and cannot recapture it.
+                now=datetime.now(timezone.utc)
+                answer,next_run=next_launch(now,state,monotonic=time.monotonic(),
+                    boot_id=Path('/proc/sys/kernel/random/boot_id').read_text().strip())
+                installed=apply(owned,ready,timezone=Path('/etc/timezone').read_text().strip())
             print(json.dumps(dict(evidence,installation=installed,enabled_configuration=str(target),
                 enabled_configuration_sha256=enabled_sha,calendar_decision=answer,
                 next_run_UTC=next_run.isoformat(),next_run_Toronto=next_run.astimezone(ZONE).isoformat(),schedule_enabled=True)))

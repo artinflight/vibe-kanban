@@ -68,11 +68,9 @@ accepted current baseline and old owners/leases released; preserve original04EDT
 The new D/commissioner-journal-prepared-20261028 contains commissioner+journal
 entrypoint plus exact legacy PID/birth list. PREPARATION.private.json binds all
 hashes and command. PYTHONPATH must name ordinary-incremental-80deafdcd-prepared
-so all unchanged worker80 source/config pins validate. The old f7 installer is
-superseded for adoption, not deleted. No new cron or observer restart occurred.
-The new entrypoint actually validated that package and skipped live FileV9 with
-B_probed=false. It must later deliver/reopen/ACK on actual B after the controller
-releases, before adoption. Actual current/ordinary composed restores remain open.
+so all unchanged worker80 source/config pins validate. Old f7 remains retained, superseded for adoption. No cron/observer change.
+Actual pinned entrypoint skips live FileV9 without B queries. Actual B delivery
+and current/ordinary composed restores still must pass before adoption.
 
 Real gap found: observer serves bounded local outbox; no between-run drainer was
 installed. New minute journal-only pulse shares one owned cron block and yields

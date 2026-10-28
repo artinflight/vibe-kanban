@@ -150,6 +150,36 @@ class ComposedProofTests(unittest.TestCase):
         self.db.execute('update file_acceptance_history set accepted_row=?',(b'changed',))
         with self.assertRaisesRegex(ValueError,'history missing or changed'):self.use()
 
+    def test_qualified_duplicate_name_reopens_indexed_exact_body_history(self):
+        from vk_nightly_current_map import encode_member
+        row=self.base_file();row['segments']*=2;row['bytes']*=2
+        old=dict(row,mode=0o640,mtime_ns=55)
+        proof=dict(independent_ordered_B_readback_sha256=row['sha256'],independent_ordered_B_readback_bytes=row['bytes'],
+            source_metadata={k:old[k] for k in ('mode','uid','gid','mtime_ns','xattrs')})
+        raw=encode_member(dict(member=old,independent_file_proof=proof));version=hashlib.sha256(raw).hexdigest()
+        self.db.execute('create table file_acceptance_history(name text,version_sha256 text,proof blob,accepted_row blob)')
+        self.db.execute('insert into file_acceptance_history values(?,?,?,?)',('old/name',version,encode_member(proof),raw))
+        self.db.execute('create table completed_file_carriers(sha256 text,bytes integer,row blob,history_name text,history_version text)')
+        self.db.execute('insert into completed_file_carriers values(?,?,?,?,?)',
+            (row['sha256'],row['bytes'],encode_member(old),'old/name',version))
+        value=dict(member=row,qualification=dict(state='qualified-retained-body',row=row,source='/home/note'))
+        self.db.execute('update members set row=?',(encode_member(value),))
+        self.assertEqual(self.use()['ordered_file_readback_proofs_reused'],1)
+        value['qualification']['source']='/unqualified-name'
+        self.db.execute('update members set row=?',(encode_member(value),))
+        with self.assertRaisesRegex(ValueError,'source/member binding'):self.use()
+        value['qualification']['source']='/home/note'
+        self.db.execute('update members set row=?',(encode_member(value),))
+        self.db.execute('update file_acceptance_history set accepted_row=?',(b'changed',))
+        with self.assertRaisesRegex(ValueError,'history missing or changed'):self.use()
+        self.db.execute('update file_acceptance_history set accepted_row=?',(raw,))
+        different=dict(old,segments=[dict(old['segments'][0],selector='other'),old['segments'][1]])
+        self.db.execute('update completed_file_carriers set row=?',(encode_member(different),))
+        with self.assertRaisesRegex(ValueError,'lacks full ordered'):self.use()
+        self.db.execute('update completed_file_carriers set row=?',(encode_member(old),))
+        self.db.execute('delete from file_acceptance_history')
+        with self.assertRaisesRegex(ValueError,'history missing or changed'):self.use()
+
     def test_named_ZIP_contract_actual_decode_and_fail_closed(self):
         import zipfile
         path=self.root/'component.zip';data=b'verified archived specimen'

@@ -41,8 +41,9 @@ def retained_ordered_proof(database,value,member,*,member_name=None):
 
     Earlier metadata handovers could retain the qualified recipe without the
     later explicit history hint. Resolve only that same member's immutable
-    history, matching the complete ordered recipe/hash/length. Never infer an
-    ordered proof from individual chunk hashes or current source availability.
+    history or its authenticated completed-body index, matching the complete
+    ordered recipe/hash/length. Current qualified name/metadata stay separate.
+    Never infer a proof from chunk hashes or current source availability.
     """
     from vk_nightly_control_format import key
     reference=value.get('retained_carrier_reuse',{}).get('completed_file_history')
@@ -87,6 +88,21 @@ def retained_ordered_proof(database,value,member,*,member_name=None):
             original_ordered_proof_sha256=hashlib.sha256(canonical(proof)).hexdigest(),
             original_body_metadata_preserved=True,current_qualified_metadata_not_relabelled=True,
             explicit_hint_present=reference is not None)
+    if reference is None and database.execute(
+            "select 1 from sqlite_master where type='table' and name='completed_file_carriers'").fetchone():
+        # A metadata handover may omit the old explicit hint for a duplicate
+        # name. This index is only a locator: reauthenticate the complete old
+        # row/proof below, never accept a hash-only chunk or infer old inclusion.
+        carrier=database.execute('select row,history_name,history_version from completed_file_carriers '
+            'where sha256=? and bytes=?',(member['sha256'],member['bytes'])).fetchone()
+        if carrier:
+            old=decode_member(carrier[0])
+            if any(old.get(k)!=member.get(k) for k in ('bytes','sha256','segments')):
+                return None
+            located=dict(value,retained_carrier_reuse=dict(completed_file_history=
+                dict(name=carrier[1],version_sha256=carrier[2])))
+            proof=retained_ordered_proof(database,located,member,member_name=member_name)
+            return dict(proof,explicit_hint_present=False,authenticated_completed_body_locator=True)
     return None
 
 

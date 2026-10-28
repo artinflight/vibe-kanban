@@ -275,3 +275,28 @@ MCP/native writer leases permit a pinned successor. All accepted data remain.
 290focused tests pass; one optional user-manager fixture is skipped. Actual
 post-handover throughput, full current restore and recurring commissioning remain
 required; none is inferred from these tests.
+
+
+## Actual group-commit production handover — October27,21:04EDT
+
+After a successful committed native checkpoint, only the two idle zero-payload
+waiters were closed. FileV8 received graceful SIGINT20:53:07; its STOP explicitly
+records KeyboardInterrupt and retained completed data. All original processes
+were terminal with empty cgroups before both real MCP/native writer leases were
+acquired and exercised. Native map quick_check passed with22753accepted file rows
+and22781version-history rows; the exact original journal input reopened unchanged.
+No original backup object, map, SQL point or source was retired or recopied.
+
+FileV9/SQL7/runtime6 actually load tested source7ddf7674f. File retains its original
+00:33:13EDT finite deadline; SQL/runtime native and unit bounds respect owner04:00.
+Their actual commands/config/source hashes, births and unchanged CPU/memory/swap
+limits are recorded in the private group-commit installation receipt. This is a
+serial continuation, not a new backup generation or recurring-service adoption.
+
+At21:03EDT, actual file telemetry reached1296new points. One156.22-second interval
+completed624files, read600762source bytes, sent266500encoded bytes and used39
+group-acceptance requests with6.964seconds cumulative wait. The active file unit
+had31.38MB current/32.40MB peak cgroup memory and zero OOM/limit events. These are
+real different-file observations, not a same-work speed comparison or supported
+completion ETA. SQL/runtime, current composed restore and overnight qualification
+remain unaccepted; scheduling is still OFF.

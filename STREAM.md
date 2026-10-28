@@ -37,12 +37,13 @@ retains old epochs/absences and explicitly enrolls the critical SQL target.
 The B-only namespace and V14 composition completed with independent reopen.
 After a native health-command timeout, fresh actual B health passed and the
 retained-map V6 later stopped on contended status metadata. Exact checkpoint and
-both writer leases were verified before optimized V8/SQL5/runtime4 handover.
+both writer leases were verified before optimized V8 handover. A later actual checkpoint/native-lease proof
+permitted the bounded-group V9/SQL7/runtime6 chain.
 They preserve completed versions, selected suffix and original deadlines. Read current handoff;
 whole-baseline/installed calendar acceptance remains open.
 Owner corrected recurring runs to22:00–04:00 Toronto with a hard stop. New source
 caps native health waits and the owned whole-cycle process at that deadline;
-active fileV8 and its completed data remain unchanged.
+completed file data remain preserved across verified handovers.
 Namespace completeness alone does not prove body/SQL/runtime recoverability.
 
 Live MM scope/pointer and current owner guard were reconciled October26. B needs

@@ -65,9 +65,27 @@ def release_verified_ram(path,expected_identity):
     path.unlink()
 
 
+def admit_working_memory(size,client,*,copies,memory_floor_bytes):
+    """Admit the next real RAM allocation, retaining the installed host floor.
+
+    Existing retained tmpfs data is already charged in MemAvailable and is not
+    reserved again. A fresh API point needs two images through independent B
+    restore; resuming an existing image/layout needs only one additional copy.
+    """
+    if memory_floor_bytes is None:return None
+    if type(memory_floor_bytes) is not int or memory_floor_bytes<0:
+        raise ValueError('actual nonnegative SQL memory floor required')
+    needed=copies*size+client.maximum+144*1024**2
+    values={r.split(':')[0]:int(r.split()[1])*1024 for r in Path('/proc/meminfo').read_text().splitlines()}
+    if values['MemAvailable']<needed+memory_floor_bytes:
+        raise BlockingIOError('actual SQL RAM working peak plus installed memory floor unavailable; preserve all points')
+    return dict(image_bytes=size,additional_images=copies,additional_peak_bytes=needed,
+        memory_floor_bytes=memory_floor_bytes,MemAvailable=values['MemAvailable'])
+
+
 def capture_SQL_point(source,client,*,allowed_sources,guard,retained_by_sha,ram_root,
                       maximum_image_bytes,chunk_bytes,timeout_seconds,on_prepared=lambda _:None,resume=None,
-                      resume_layout=None,cohort_id=None):
+                      resume_layout=None,cohort_id=None,memory_floor_bytes=None):
     """retained_by_sha returns only authenticated independent SQL image pairs.
 
     All image/chunk receipts remain distinct from final baseline/namespace
@@ -83,7 +101,8 @@ def capture_SQL_point(source,client,*,allowed_sources,guard,retained_by_sha,ram_
         raise ValueError('explicit finite SQLite API point admission required')
     if resume_layout is not None:
         return recover_SQL_layout(path,client,resume,resume_layout,root=root,guard=guard,
-            maximum_image_bytes=maximum_image_bytes,timeout_seconds=timeout_seconds,on_prepared=on_prepared,cohort_id=cohort_id)
+            maximum_image_bytes=maximum_image_bytes,timeout_seconds=timeout_seconds,on_prepared=on_prepared,cohort_id=cohort_id,
+            memory_floor_bytes=memory_floor_bytes)
     guard();before=path.lstat() if resume is None else None
     if before is not None and not stat.S_ISREG(before.st_mode):raise ValueError('regular API source required')
     source_meta=metadata(path) if resume is None else resume['source_metadata_before']
@@ -106,6 +125,7 @@ def capture_SQL_point(source,client,*,allowed_sources,guard,retained_by_sha,ram_
             if point_bytes>maximum_image_bytes:
                 return dict(source=str(path),status='larger_SQL_working_window_required',measured_image_bytes=point_bytes,
                             RAM_image_limit=maximum_image_bytes,new_B_payload_bytes=0,baseline_accepted=False)
+            memory_admission=admit_working_memory(point_bytes,client,copies=2,memory_floor_bytes=memory_floor_bytes)
             fs=os.statvfs(root)
             if fs.f_bavail*fs.f_frsize<2*point_bytes+client.maximum+16*1024**2:
                 raise OSError('actual RAM API+independent-restore scratch unavailable')
@@ -137,7 +157,7 @@ def capture_SQL_point(source,client,*,allowed_sources,guard,retained_by_sha,ram_
             if probe.returncode:raise ValueError('API working-image integrity failed: '+probe.stderr[-2048:])
             initial=json.loads(probe.stdout)
             captured=dict(source=str(path),working_RAM_path=str(working),working_identity=working_identity,
-                bytes=size,sha256=sha,API_capture_completed=True,initial_SQL_integrity=initial,
+                bytes=size,sha256=sha,API_capture_completed=True,initial_SQL_integrity=initial,memory_admission=memory_admission,
                 source_metadata_before=source_meta,source_metadata_after=metadata(path),
                 source_identity_before=fingerprint(before),source_changed_online=changed,
                 original_source_API_point_at=time.time())
@@ -161,6 +181,7 @@ def capture_SQL_point(source,client,*,allowed_sources,guard,retained_by_sha,ram_
                 if sha!=resume['sha256'] or fingerprint(os.fstat(image.fileno()))!=working_identity:
                     raise ValueError('retained API point bytes changed; preserve and reconcile')
             initial=resume['initial_SQL_integrity'];changed=resume['source_changed_online'];captured=resume
+            admit_working_memory(size,client,copies=1,memory_floor_bytes=memory_floor_bytes)
         legacy=retained_by_sha(sha,size)
         if legacy is not None:
             for part in (legacy['proof']['native'],legacy['proof']['Linux_reopen']):
@@ -229,7 +250,7 @@ def capture_SQL_point(source,client,*,allowed_sources,guard,retained_by_sha,ram_
 
 
 def recover_SQL_layout(source,client,captured,retained,*,root,guard,maximum_image_bytes,
-                       timeout_seconds,on_prepared,cohort_id=None):
+                       timeout_seconds,on_prepared,cohort_id=None,memory_floor_bytes=None):
     """Finish a durable uploaded API image after its volatile RAM file is lost.
 
     The original API bracket, manifest and accepted chunk identities must all
@@ -265,6 +286,7 @@ def recover_SQL_layout(source,client,captured,retained,*,root,guard,maximum_imag
         # retain every-block host guards and the same whole recovery deadline.
         if last_health is None or time.monotonic()-last_health>=5:
             client.health();last_health=time.monotonic();health_RPC_count+=1
+    memory_admission=admit_working_memory(size,client,copies=1,memory_floor_bytes=memory_floor_bytes)
     fs=os.statvfs(root)
     if fs.f_bavail*fs.f_frsize<size+client.maximum+16*1024**2:
         raise OSError('actual RAM independent SQL recovery scratch unavailable')
@@ -290,7 +312,7 @@ def recover_SQL_layout(source,client,captured,retained,*,root,guard,maximum_imag
         source_identity_before=captured['source_identity_before'],source_metadata_before=metadata,
         source_metadata_after=captured['source_metadata_after'],source_changed_online=captured['source_changed_online'],
         original_source_API_point_at=captured['original_source_API_point_at'],resumed_retained_SQL_point=True,
-        recovered_from_durable_B_layout=True,bytes=size,sha256=sha,member=row,independent=independent,
+        recovered_from_durable_B_layout=True,recovery_memory_admission=memory_admission,bytes=size,sha256=sha,member=row,independent=independent,
         dependency=None,prepared_manifest=retained['manifest'],new_B_encoded_payload_bytes=0,
         source_API_image_bytes=0,original_API_point_bytes=size,baseline_accepted=False,
         source_API_point_qualifies_later_epoch_not_original=True,

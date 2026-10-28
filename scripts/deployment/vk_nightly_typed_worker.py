@@ -268,7 +268,7 @@ def run_SQL(config,*,backend=None,at_component_boundary=lambda:None):
                     retained_by_sha=lambda sha,size:old.get((sha,size)),ram_root='/dev/shm',
                     maximum_image_bytes=config['maximum_SQL_image_bytes'],chunk_bytes=config['chunk_bytes'],
                     timeout_seconds=config['SQL_image_timeout_seconds'],on_prepared=prepared,resume=retained,
-                    resume_layout=layout,cohort_id=cohort)
+                    resume_layout=layout,cohort_id=cohort,memory_floor_bytes=config['memory_floor_bytes'])
                 if result['status']=='larger_SQL_working_window_required':state['deferred'][source]=result
                 else:
                     state['completed'][source]=result;state['partial'].pop(source,None);state['deferred'].pop(source,None)

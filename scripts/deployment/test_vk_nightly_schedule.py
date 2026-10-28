@@ -47,6 +47,17 @@ class Schedule(unittest.TestCase):
                 self.assertEqual(target.stat().st_size,65536)
                 self.assertTrue(target.read_bytes().endswith(ending.encode()))
 
+    def test_explicit_measured_memory_envelope_keeps_swap_and_task_bounds(self):
+        limits=dict(memory_high_bytes=7*1024**3,memory_max_bytes=8*1024**3)
+        value=block('/fixture/package','/fixture/config','a'*64,'/fixture/log',resource_limits=limits)
+        self.assertIn('--property=MemoryHigh=7516192768',value)
+        self.assertIn('--property=MemoryMax=8589934592',value)
+        self.assertIn('--property=MemorySwapMax=0 --property=TasksMax=64',value)
+        for bad in ({},dict(memory_high_bytes=True,memory_max_bytes=2),
+                    dict(memory_high_bytes=3,memory_max_bytes=2),dict(limits,extra=1)):
+            with self.subTest(bad=bad),self.assertRaises(ValueError):
+                block('/fixture/package','/fixture/config','a'*64,'/fixture/log',resource_limits=bad)
+
     def test_rollback_preserves_all_other_lines(self):
         updated=add_owned(self.original,self.owned,timezone='Etc/UTC')
         self.assertEqual(remove_owned(updated,self.owned),self.original)

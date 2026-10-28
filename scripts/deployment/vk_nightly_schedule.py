@@ -14,18 +14,27 @@ BEGIN = '# BEGIN VK_NORMAL_NIGHTLY_V1\n'
 END = '# END VK_NORMAL_NIGHTLY_V1\n'
 
 
-def block(package, config, config_sha256, log):
+def block(package, config, config_sha256, log,*,resource_limits=None):
     for path in (package, config, log):
         if not re.fullmatch('/[A-Za-z0-9_./-]+', str(path)) or '..' in str(path).split('/'):
             raise ValueError('fixed absolute package/config/log paths required')
     if not re.fullmatch('[0-9a-f]{64}', config_sha256):raise ValueError('configuration hash required')
+    memory='--property=MemoryHigh=2G --property=MemoryMax=3G '
+    if resource_limits is not None:
+        if (set(resource_limits)!={'memory_high_bytes','memory_max_bytes'}
+                or any(type(n) is not int or n<=0 for n in resource_limits.values())
+                or resource_limits['memory_high_bytes']>resource_limits['memory_max_bytes']):
+            raise ValueError('finite actual whole-cycle memory admission required')
+        memory=('--property=MemoryHigh='+str(resource_limits['memory_high_bytes'])
+                +' --property=MemoryMax='+str(resource_limits['memory_max_bytes'])+' ')
     uid = os.getuid()
     if uid == 0:raise ValueError('nightly schedule requires the existing unprivileged user')
     # Cron does not inherit the login session environment. Both systemd-run
     # and the supervised systemctl probes need this existing user's bus.
     command = ('/usr/bin/env XDG_RUNTIME_DIR=/run/user/' + str(uid)
                + ' /usr/bin/systemd-run --user --scope --quiet --collect '
-               '--property=CPUQuota=25\\% --property=MemoryHigh=2G --property=MemoryMax=3G '
+               '--property=CPUQuota=25\\% '+memory+
+               '--property=MemorySwapMax=0 --property=TasksMax=64 '
                '/usr/bin/nice -n 19 /usr/bin/ionice -c 3 /usr/bin/python3 -B -S '
                + str(package) + '/vk_nightly_calendar.py --config ' + str(config)
                + ' --config-sha256 ' + config_sha256

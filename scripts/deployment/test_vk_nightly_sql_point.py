@@ -34,6 +34,25 @@ class SQLPointTests(unittest.TestCase):
                   maximum_image_bytes=1024**2,chunk_bytes=4096,timeout_seconds=15)
         args.update(overrides);return capture_SQL_point(self.source,self.client,**args)
 
+    def test_memory_peak_denial_precedes_API_scratch_and_any_B_upload(self):
+        with patch('vk_nightly_sql_point.tempfile.mkstemp',side_effect=AssertionError('unadmitted scratch created')):
+            with self.assertRaisesRegex(BlockingIOError,'working peak plus installed memory floor'):
+                self.capture(memory_floor_bytes=10**18)
+        self.assertEqual(self.client.payload_bytes_sent,0)
+        self.assertEqual(list(self.root.glob('nightly-sql-*')),[])
+        with sqlite3.connect(self.source) as db:
+            self.assertEqual(db.execute('select value from retained').fetchall(),[('saved',)])
+
+    def test_retained_image_is_not_charged_twice_in_additional_recovery_peak(self):
+        from vk_nightly_sql_point import admit_working_memory
+        mib=1024**2
+        with patch('vk_nightly_sql_point.Path.read_text',return_value='MemAvailable: 524288 kB\n'):
+            with self.assertRaises(BlockingIOError):
+                admit_working_memory(128*mib,self.client,copies=2,memory_floor_bytes=128*mib)
+            value=admit_working_memory(128*mib,self.client,copies=1,memory_floor_bytes=128*mib)
+        self.assertEqual(value['additional_images'],1)
+        self.assertEqual(value['additional_peak_bytes'],128*mib+self.client.maximum+144*mib)
+
     def test_actual_SQL_API_chunked_B_restore_integrity_metadata_and_no_OS_staging(self):
         result=self.capture()
         self.assertEqual(result['status'],'consistent_SQL_point_verified')

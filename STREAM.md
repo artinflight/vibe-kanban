@@ -40,7 +40,11 @@ retained-map V6 later stopped on contended status metadata. Exact checkpoint and
 both writer leases were verified before optimized V8 handover. A later actual checkpoint/native-lease proof
 permitted the bounded-group V9/SQL7/runtime6 chain.
 They preserve completed versions, selected suffix and original deadlines. Read current handoff;
-whole-baseline/installed calendar acceptance remains open.
+whole-baseline/installed calendar acceptance remains open. A separate pinned
+composed finisher now waits for the same chain, then reopens real B receipts
+and ownership before final delta/native proof/normal composed restore. Its
+selected-carrier and actual runtime/SQL binding paths are tested; they do not
+turn component progress into current baseline acceptance.
 Owner corrected recurring runs to22:00–04:00 Toronto with a hard stop. New source
 caps native health waits and the owned whole-cycle process at that deadline;
 completed file data remain preserved across verified handovers.

@@ -31,6 +31,22 @@ class Schedule(unittest.TestCase):
         self.assertNotIn('DBUS_SESSION_BUS_ADDRESS=',command)
         with patch('vk_nightly_schedule.os.getuid',return_value=0):
             with self.assertRaises(ValueError):block('/fixture/package','/fixture/config','a'*64,'/fixture/log')
+    def test_actual_cron_output_tail_is_bounded_and_next_wakeup_replaces_only_own_log(self):
+        import tempfile,subprocess,sys,shlex
+        from pathlib import Path
+        with tempfile.TemporaryDirectory(dir='/dev/shm') as root:
+            target=Path(root)/'calendar.log'
+            command=block('/fixture/package','/fixture/config','a'*64,str(target)).splitlines()[1].split(' ',5)[5]
+            self.assertNotIn('>>',command)
+            suffix=command[command.index(' 2>&1 |'):]
+            for ending in ('FIRST-END','SECOND-END'):
+                program="import sys;sys.stdout.write('A'*200000);sys.stdout.flush();sys.stderr.write("+repr(ending)+")"
+                child=shlex.join([sys.executable,'-B','-S','-c',program])
+                result=subprocess.run(['/bin/sh','-c',child+suffix],capture_output=True,text=True,timeout=10)
+                self.assertEqual(result.returncode,0,result.stderr)
+                self.assertEqual(target.stat().st_size,65536)
+                self.assertTrue(target.read_bytes().endswith(ending.encode()))
+
     def test_rollback_preserves_all_other_lines(self):
         updated=add_owned(self.original,self.owned,timezone='Etc/UTC')
         self.assertEqual(remove_owned(updated,self.owned),self.original)

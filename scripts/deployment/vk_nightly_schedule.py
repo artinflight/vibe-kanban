@@ -28,7 +28,11 @@ def block(package, config, config_sha256, log):
                '--property=CPUQuota=25\\% --property=MemoryHigh=2G --property=MemoryMax=3G '
                '/usr/bin/nice -n 19 /usr/bin/ionice -c 3 /usr/bin/python3 -B -S '
                + str(package) + '/vk_nightly_calendar.py --config ' + str(config)
-               + ' --config-sha256 ' + config_sha256 + ' >> ' + str(log) + ' 2>&1')
+               + ' --config-sha256 ' + config_sha256
+               # Drain the child's output continuously but retain at most the
+               # last64KiB per wake-up. B receipts and fixed status mirrors,
+               # not this optional stdout tail, determine cycle acceptance.
+               + ' 2>&1 | /usr/bin/tail -c 65536 > ' + str(log))
     return BEGIN + '*/15 * * * * ' + command + '\n' + END
 
 

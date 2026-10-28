@@ -300,3 +300,43 @@ had31.38MB current/32.40MB peak cgroup memory and zero OOM/limit events. These a
 real different-file observations, not a same-work speed comparison or supported
 completion ETA. SQL/runtime, current composed restore and overnight qualification
 remain unaccepted; scheduling is still OFF.
+
+
+## Selected dependencies and actual finisher — October27,21:24EDT
+
+Sourcea37fda389 authenticates a pool of247 retained components, then retains only
+providers selected by complete sealed-map recipes. An unknown carrier still
+fails. The immutable checkpoint records the template-contract digest; the result
+and consumer packet bind the separately derived effective contract. Actual
+selected provider roots/leases must exist; unused candidates need no body read.
+Runtime binding independently reopens the adopted B records, checking exact
+finite paths/hashes/lengths and sealed component digest against installed source
+pins and actual runtime completion. Dynamic SQL scope remains independently
+bound to current namespace/cohort. Selected normal readbacks automatically include
+all pins/runtime files/always-API SQL; explicit byte/scratch ceilings still apply.
+
+The exact finisher configuration dbfc3e0992db816dee949fed2c1d862dff125f7fee2280736f84ee8e8ba495e0
+passed real preflight and is installed as PID3959283/start35819801 in
+vk-nightly-current-composed-finisher-a37fda389-20261028.service. It waits for the
+same three original components; at21:24EDT no new capture was started by it.
+It requires actual terminal identities, both body leases and independently
+reopened exact B phase receipts before final delta/proof/normal composed restore.
+Only the latter actual success can publish the accepted pointer. RuntimeMax and
+native/consumer deadlines end by04:00EDT including termination grace. Local stdout
+is disabled; authoritative B receipts and bounded health mirrors remain. This is
+an initial-backlog finisher, not an accepted timed ordinary incremental cycle.
+
+Same FileV9 reached4704 additional committed files/419401737source bytes and
+142539266encoded bytes in1598.65seconds. SQL/runtime still await it. All14 runtime
+identities matched previous finite observations; no body rehash was needed for
+this preparation. A guarded B metadata query found219SQL sources all pending/no
+legacy SQL dependencies, with source/body bytes0; actual native health passed
+before/final and final query took0.312seconds. Current baseline remains unaccepted.
+
+124focused integration checks pass/one optional user-manager fixture skipped.
+Fixtures include actual native selected-contract finalization followed by normal
+leased restore, omission/changed-pin/provider failures and mandatory SQL readback.
+A source-only cron change continuously drains output but retains at most64KiB per
+wake-up; real RAM shell fixtures verified200KB stdout/stderr drainage and repeated
+bounded replacement. No live cron change occurred. Ops/diff/Rustformat pass;
+full formatting still fails at missing Prettier. Recurring acceptance is pending.

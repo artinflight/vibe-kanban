@@ -46,6 +46,17 @@ class TypedWorkerTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError,'aware original'):
                 worker.host_guard(dict(whole_cycle_deadline_UTC='2020-01-01T00:00:00'),time.monotonic())
 
+    def test_configured_file_acceptance_group_is_bounded_and_old_packages_default_to_single(self):
+        with tempfile.TemporaryDirectory() as root:
+            p=Path(root)/'config.json';config=self.config();p.write_text(json.dumps(config));p.chmod(0o600)
+            self.assertNotIn('acceptance_batch_members',worker.configuration(p,worker.checksum(p)))
+            for size in (1,16,32):
+                config['acceptance_batch_members']=size;p.write_text(json.dumps(config))
+                self.assertEqual(worker.configuration(p,worker.checksum(p))['acceptance_batch_members'],size)
+            for size in (True,0,33,1.5):
+                config['acceptance_batch_members']=size;p.write_text(json.dumps(config))
+                with self.assertRaisesRegex(ValueError,'acceptance group'):worker.configuration(p,worker.checksum(p))
+
     def test_mismatched_MM_source_refuses_before_writer_or_SSH(self):
         with tempfile.TemporaryDirectory() as root:
             p=Path(root)/'guard.py';p.write_text('not the reviewed guard')

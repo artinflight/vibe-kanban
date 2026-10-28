@@ -83,6 +83,8 @@ def configuration(path,expected,*,folder=None):
     for name in ('maximum_map_bytes','maximum_members','maximum_source_bytes','chunk_bytes','timeout_seconds'):
         if type(value[name]) is not int or value[name]<1:raise ValueError('positive finite worker budget required: '+name)
     if value['chunk_bytes']>value['desktop']['maximum_object_bytes']:raise ValueError('chunk exceeds admitted object RAM')
+    batch=value.get('acceptance_batch_members',1)
+    if type(batch) is not int or not 1<=batch<=32:raise ValueError('bounded file acceptance group required')
     for name in ('ssd_floor_bytes','root_floor_bytes','control_margin_bytes','memory_floor_bytes','swap_floor_bytes'):
         if type(value[name]) is not int or value[name]<0:raise ValueError('actual nonnegative resource binding required')
     for name in (('status',) if value['format']=='vk-nightly-typed-worker-B-v1' else ('map','status')):
@@ -180,6 +182,7 @@ def run(config):
         with DesktopObjects(config['desktop'],guard=guard) as remote:
             result=capture_pending(current,remote.client,guard=guard,maximum_members=config['maximum_members'],
                 maximum_source_bytes=config['maximum_source_bytes'],chunk_bytes=config['chunk_bytes'],
+                acceptance_batch_members=config.get('acceptance_batch_members',1),
                 read_prefix=lambda prefix,sink:read_prefix(remote,prefix,sink),
                 on_progress=lambda value:report(dict(value,phase='qualified-file-capture-and-independent-readback')))
             result['native_admission']=remote.ready
@@ -377,6 +380,7 @@ def run_B(config,*,at_component_boundary=lambda:None,source_report=None):
                 report(dict(phase='capturing-qualified-file-points',completed_file_reuse=reuse),force=True)
                 result=capture_pending(current,remote.client,guard=guard,maximum_members=config['maximum_members'],
                     maximum_source_bytes=config['maximum_source_bytes'],chunk_bytes=config['chunk_bytes'],
+                    acceptance_batch_members=config.get('acceptance_batch_members',1),
                     read_prefix=lambda prefix,sink:read_prefix(remote,prefix,sink),on_progress=report)
                 result['completed_file_reuse']=reuse
                 if qualification is not None:

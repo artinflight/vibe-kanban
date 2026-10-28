@@ -14,7 +14,7 @@ from vk_nightly_current_map import decode_member
 from vk_nightly_objects import ChunkSink
 from vk_nightly_file_version import capture_qualified_version,PrefixMismatch,QualifiedVersionUnavailable
 from vk_nightly_checkpoints import digest
-from vk_nightly_b_controls import retry_native_busy
+from vk_nightly_b_controls import retry_native_busy,packed
 
 
 class HashSink:
@@ -25,10 +25,12 @@ class HashSink:
 
 
 def capture_pending(current_map,client,*,guard,maximum_members,maximum_source_bytes,
-                    chunk_bytes,on_progress=lambda _:None,read_prefix=None):
+                    chunk_bytes,on_progress=lambda _:None,read_prefix=None,acceptance_batch_members=1):
     if (type(maximum_members) is not int or maximum_members<1
             or type(maximum_source_bytes) is not int or maximum_source_bytes<1):
         raise ValueError('finite admitted file/byte capture batch required')
+    if type(acceptance_batch_members) is not int or not 1<=acceptance_batch_members<=32:
+        raise ValueError('bounded file acceptance group required')
     current_map.check();db=current_map.db
     if not db.execute('select complete from metadata').fetchone()[0]:
         raise ValueError('finish retained namespace composition before its capture batch')
@@ -36,6 +38,24 @@ def capture_pending(current_map,client,*,guard,maximum_members,maximum_source_by
     done=0;deferred=0;source_bytes=0;initial_upload=client.payload_bytes_sent
     reused_before=client.native_receipts_reused
     readbacks_before=client.independent_readback_objects;readback_bytes_before=client.independent_readback_bytes
+    waiting=[];waiting_bytes=0
+    def flush():
+        nonlocal done,waiting_bytes
+        if not waiting:return
+        guard()
+        def accept():
+            if len(waiting)==1:
+                r=waiting[0]
+                return [current_map.accept_file(r['member_name'],r['original_sha256'],r['accepted'],r['proof'],checkpoint=guard)]
+            return current_map.accept_files(waiting,checkpoint=guard)
+        results=retry_native_busy(accept,guard=guard)
+        if not isinstance(results,list) or len(results)!=len(waiting):
+            raise ValueError('atomic acceptance group acknowledgement differs')
+        done+=len(waiting);last=waiting[-1]['member_name'];waiting.clear();waiting_bytes=0
+        on_progress(dict(completed_members=done,last_name=last,source_bytes_read=source_bytes,
+            independent_object_readbacks=client.independent_readback_objects-readbacks_before,
+            independent_object_readback_bytes=client.independent_readback_bytes-readback_bytes_before,
+            encoded_payload_bytes_sent=client.payload_bytes_sent-initial_upload))
     for name,raw in current_map.pending_files(maximum_members):
         guard();current_map.source_phase_check()
         value=decode_member(raw);point=value['qualification'];row=value['member']
@@ -51,6 +71,7 @@ def capture_pending(current_map,client,*,guard,maximum_members,maximum_source_by
             if read_prefix is None:raise ValueError('accepted prefix requires its authenticated B reader; no full recopy fallback')
         worst_source_bytes=row['bytes']+(prefix['bytes'] if prefix else 0)
         if source_bytes+worst_source_bytes>maximum_source_bytes:
+            flush()
             return dict(completed_members=done,source_bytes_read=source_bytes,
                         encoded_payload_bytes_sent=client.payload_bytes_sent-initial_upload,
                         next_point_bytes=row['bytes'],more_pending=True,current_baseline_accepted=False)
@@ -74,6 +95,7 @@ def capture_pending(current_map,client,*,guard,maximum_members,maximum_source_by
                 prefix_retry_bytes=error.bytes_read;prefix=None
                 transfer=capture_qualified_version(point,sink,guard=guard)
         except QualifiedVersionUnavailable as error:
+            flush()
             current_map.defer_file(name,hashlib.sha256(raw).hexdigest(),str(error),checkpoint=guard)
             source_bytes+=error.bytes_read+prefix_retry_bytes;deferred+=1
             on_progress(dict(completed_members=done,deferred_source_points=deferred,last_name=name,
@@ -99,13 +121,14 @@ def capture_pending(current_map,client,*,guard,maximum_members,maximum_source_by
         # A concurrent bounded metadata reader can briefly hold a native
         # SQLite read lock. Retry only final idempotent acceptance, retaining
         # the completed upload/readback instead of recopying the point.
-        retry_native_busy(lambda:current_map.accept_file(name,hashlib.sha256(raw).hexdigest(),
-            accepted,proof,checkpoint=guard),guard=guard)
-        done+=1;source_bytes+=row['bytes']+prefix_retry_bytes
-        on_progress(dict(completed_members=done,last_name=name,source_bytes_read=source_bytes,
-                         independent_object_readbacks=client.independent_readback_objects-readbacks_before,
-                         independent_object_readback_bytes=client.independent_readback_bytes-readback_bytes_before,
-                         encoded_payload_bytes_sent=client.payload_bytes_sent-initial_upload))
+        record=dict(member_name=name,original_sha256=hashlib.sha256(raw).hexdigest(),accepted=accepted,proof=proof)
+        size=len(packed(record))
+        # Small proofs share a commit; a large individual proof uses the
+        # original single-point path. Never aggregate an unbounded RPC frame.
+        if waiting and waiting_bytes+size>512*1024:flush()
+        source_bytes+=row['bytes']+prefix_retry_bytes;waiting.append(record);waiting_bytes+=size
+        if len(waiting)>=acceptance_batch_members or waiting_bytes>=512*1024:flush()
+    flush()
     more=db.execute("select 1 from members where state='file-needs-capture' limit 1").fetchone() is not None
     deferred_table=db.execute("select 1 from sqlite_master where name='file_transfer_deferred'").fetchone()
     requalify=bool(deferred_table and db.execute("select 1 from members m join file_transfer_deferred d on m.name=d.name where m.state='current-namespace-replay-required' limit 1").fetchone())

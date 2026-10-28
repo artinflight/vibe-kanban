@@ -251,3 +251,27 @@ SQLite protocol processes. Ops and diff checks pass; Rust formatting passes and
 full format stops because Prettier is absent. These are source/integration results,
 not acceptance of tonight's production baseline or an installed recurring service.
 The original fileV8 remains active; SQL6/runtime5 remain waiting, all data retained.
+
+
+## Bounded file commit groups — October27
+
+An explicitly pinned `acceptance_batch_members=16` successor may commit up to16
+independently restored file points in one native SQLite FULL transaction. The
+original single-point default remains unchanged for existing packages. Groups
+are bounded to32 members and512KiB of pending proof metadata; larger individual
+proofs use the single-point path. Every original pending-row digest, full-file
+hash/length, Linux metadata and native body readback requirement remains. Guards
+run throughout the transaction and immediately before commit. No completed count
+or acknowledgement precedes commit. A failed group rolls back all its rows; a
+lost acknowledgement reopens identical accepted versions without duplicate data.
+
+Real RAM/native-protocol tests cover a bad second member rolling back the first,
+STOP during a group, lost commit replies, retained native objects and duplicate
+version history. A32-point native FULL-commit benchmark used32 requests versus2
+with16-member groups; three-trial medians were35.82ms versus17.47ms on RAM. This
+is measured protocol/transaction overhead, not a predicted Desktop speedup.
+The active fileV8 remains untouched until an exact checkpoint and actual released
+MCP/native writer leases permit a pinned successor. All accepted data remain.
+290focused tests pass; one optional user-manager fixture is skipped. Actual
+post-handover throughput, full current restore and recurring commissioning remain
+required; none is inferred from these tests.

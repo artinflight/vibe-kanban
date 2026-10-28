@@ -2134,3 +2134,7 @@ or operational Nightly acceptance, schedule or backend action.
   stale schedule renderers; current-map/cohort checked SQL contract discovery
   added.254 focused tests pass/one opt-in skipped; ops/Rustformat pass, Prettier
   unavailable. Same fileV8 advances; no schedule or whole-baseline acceptance.
+
+- 2026-10-27 Nightly: tested bounded native FULL transaction groups for verified
+  file points; default single-point packages unchanged.290tests pass/one opt-in
+  skipped; actual production upgrade requires checkpoint and both writer leases.

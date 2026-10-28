@@ -43,6 +43,61 @@ class TypedCaptureTests(unittest.TestCase):
         return capture_pending(m,self.client,guard=guard,maximum_members=1,
                                maximum_source_bytes=limits.get('maximum_source_bytes',16384),chunk_bytes=4096)
 
+    def prepare_group(self,m):
+        points={self.name:self.point}
+        journal=dict(ready=True,errors=[],instance='one',sequence=1,scope_sha256='a'*64,plan_sha256='b'*64)
+        for i in range(3):
+            p=self.source.with_name('source-'+str(i));p.write_bytes(bytes([i])*4096);name=str(p)[1:]
+            points[name]=qualify_file(p,maximum_bytes=16384,journal=journal,carriers=lambda sha,size:[],guard=lambda:None)
+            self.ns.execute('insert into namespace values(?,?)',(name,encode_observation(observe(p))))
+        m.compile(self.ns,points.__getitem__,SQL_sources=[],checkpoint=lambda:None,maximum_paths=10)
+
+    def grouped(self,m,guard=lambda:None,progress=lambda _:None):
+        return capture_pending(m,self.client,guard=guard,maximum_members=4,
+            maximum_source_bytes=65536,chunk_bytes=4096,acceptance_batch_members=4,on_progress=progress)
+
+    def test_grouped_independent_readbacks_commit_once_and_report_only_after_commit(self):
+        with CurrentMap.held(self.path,binding=self.binding,create=True) as m:
+            self.prepare_group(m);statements=[];m.db.set_trace_callback(statements.append);reports=[]
+            def report(v):
+                self.assertFalse(m.db.in_transaction)
+                self.assertEqual(m.db.execute("select count(*) from members where state='verified-file'").fetchone()[0],v['completed_members'])
+                reports.append(v)
+            value=self.grouped(m,progress=report)
+            self.assertEqual(value['completed_members'],4);self.assertFalse(value['more_pending'])
+            self.assertEqual(sum(s.lower()=='commit' for s in statements),1)
+            self.assertEqual([r['completed_members'] for r in reports],[4])
+            uploaded=self.client.payload_bytes_sent
+            self.assertEqual(self.grouped(m)['completed_members'],0)
+            self.assertEqual(self.client.payload_bytes_sent,uploaded)
+
+    def test_group_guard_failure_rolls_back_every_row_and_resume_reuses_native_objects(self):
+        with CurrentMap.held(self.path,binding=self.binding,create=True) as m:
+            self.prepare_group(m);reports=[]
+            def stop():
+                if m.db.in_transaction and m.db.execute("select 1 from members where state='verified-file' limit 1").fetchone():
+                    raise OSError('actual STOP during atomic group')
+            with self.assertRaisesRegex(OSError,'STOP during'):
+                self.grouped(m,guard=stop,progress=reports.append)
+            self.assertEqual(reports,[])
+            self.assertEqual(m.db.execute("select count(*) from members where state='file-needs-capture'").fetchone(),(4,))
+            self.assertEqual(m.db.execute('select count(*) from file_acceptance').fetchone(),(0,))
+            uploaded=self.client.payload_bytes_sent;self.assertEqual(self.grouped(m)['completed_members'],4)
+            self.assertEqual(self.client.payload_bytes_sent,uploaded)
+
+    def test_group_acknowledgement_loss_replays_identical_versions_without_duplicate_history(self):
+        with CurrentMap.held(self.path,binding=self.binding,create=True) as m:
+            self.prepare_group(m);accept=m.accept_files;retained=[]
+            def lost(records,**kw):
+                retained.extend(records);accept(records,**kw);raise TimeoutError('lost group reply after FULL commit')
+            m.accept_files=lost
+            with self.assertRaisesRegex(TimeoutError,'lost group reply'):self.grouped(m)
+            m.accept_files=accept;uploaded=self.client.payload_bytes_sent
+            self.assertEqual(self.grouped(m)['completed_members'],0)
+            self.assertEqual(self.client.payload_bytes_sent,uploaded)
+            self.assertEqual(accept(retained,checkpoint=lambda:None),[dict(already_accepted=True)]*4)
+            self.assertEqual(m.db.execute('select count(*) from file_acceptance_history').fetchone(),(4,))
+
     def test_actual_chunked_capture_ordered_readback_and_no_recopy_of_completed_file(self):
         with CurrentMap.held(self.path,binding=self.binding,create=True) as m:
             self.prepare(m);result=self.run_batch(m)

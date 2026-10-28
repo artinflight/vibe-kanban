@@ -1443,6 +1443,51 @@ class BControlTests(unittest.TestCase):
             self.assertEqual(body.payload_bytes_sent,uploaded)
         finally:p.stdin.close();p.wait(timeout=10);p.stdout.close();p.stderr.close()
 
+    def test_native_group_rollback_then_lost_reply_retains_all_completed_files_without_recopy(self):
+        import copy
+        from vk_nightly_current_map import CurrentMap
+        from vk_nightly_namespace import observe
+        from vk_nightly_qualification import qualify_file,encode_observation
+        from vk_nightly_typed_capture import capture_pending
+        from vk_nightly_b_controls import NativeControlError
+        namespace=sqlite3.connect(':memory:');self.addCleanup(namespace.close)
+        namespace.execute('create table namespace(name text primary key,row blob)');points={}
+        for i in range(2):
+            source=self.root/('group-source-'+str(i));source.write_bytes(bytes([i])*64)
+            points[str(source)[1:]]=qualify_file(source,maximum_bytes=1024,journal=dict(ready=True,
+                errors=[],instance='fixture',sequence=1,scope_sha256='a'*64,plan_sha256='b'*64),
+                carriers=lambda *_:[],guard=lambda:None)
+            namespace.execute('insert into namespace values(?,?)',(str(source)[1:],encode_observation(observe(source))))
+        path=self.root/'group-map.sqlite';binding={'fixture':'native grouped file points'}
+        with CurrentMap.held(path,binding=binding,create=True) as m:
+            m.compile(namespace,points.__getitem__,SQL_sources=[],checkpoint=lambda:None,maximum_paths=10)
+        digest=self.import_other(path)
+        code='import sys;sys.path.insert(0,'+repr(str(Path(__file__).parent))+');from vk_nightly_objects import receive;receive('+repr(str(self.objects))+',sys.stdin.buffer,sys.stdout.buffer,guard=lambda n:None,maximum_object_bytes=65536)'
+        p=subprocess.Popen([sys.executable,'-B','-u','-c',code],stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+        try:
+            body=ObjectClient(p.stdout,p.stdin,guard=lambda:None,ram_root=self.root,maximum_object_bytes=65536)
+            def capture(m):return capture_pending(m,body,guard=lambda:None,maximum_members=2,
+                maximum_source_bytes=1024,chunk_bytes=64,acceptance_batch_members=2)
+            with current_map(self.client,'group-points',digest,binding=binding) as m:
+                accept=m.accept_files
+                def invalid(records,**kw):
+                    wrong=copy.deepcopy(records);wrong[-1]['original_sha256']='0'*64
+                    return accept(wrong,**kw)
+                m.accept_files=invalid
+                with self.assertRaisesRegex(NativeControlError,'version changed'):capture(m)
+                self.assertEqual(m.db.execute("select count(*) from members where state='file-needs-capture'").fetchone(),(2,))
+                uploaded=body.payload_bytes_sent
+                def lost(records,**kw):accept(records,**kw);raise EOFError('lost grouped FULL-commit reply')
+                m.accept_files=lost
+                with self.assertRaisesRegex(EOFError,'grouped FULL-commit'):capture(m)
+                self.assertEqual(body.payload_bytes_sent,uploaded)
+            with current_map(self.client,'group-points',digest,binding=binding) as m:
+                self.assertEqual(capture(m)['completed_members'],0)
+                self.assertEqual(m.db.execute('select count(*) from file_acceptance_history').fetchone(),(2,))
+                self.assertEqual(body.payload_bytes_sent,uploaded)
+            self.assertEqual(self.client.metrics()['operations']['accept-file-points']['requests'],2)
+        finally:p.stdin.close();p.wait(timeout=10);p.stdout.close();p.stderr.close()
+
     def relocation(self):
         from vk_nightly_file_version import fingerprint
         result=dict(source=str(self.original),sha256=self.sha,bytes=len(self.raw),

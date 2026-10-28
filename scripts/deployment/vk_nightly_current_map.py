@@ -896,7 +896,36 @@ class CurrentMap:
         Bind their exact original pending row, full digest, length and metadata;
         a lost acknowledgement can replay only the identical accepted result.
         """
-        key(name);digest(original_sha256);self.check();db=self.db
+        return self.accept_files([dict(member_name=name,original_sha256=original_sha256,
+            accepted=accepted,proof=proof)],checkpoint=checkpoint)[0]
+
+    def accept_files(self,records,*,checkpoint):
+        """One FULL transaction for at most32 independently read-back points.
+
+        No acknowledgement or completed count precedes COMMIT. An exception
+        rolls back the entire group; a lost reply can replay identical rows.
+        Existing body objects and every prior accepted version remain retained.
+        """
+        if not isinstance(records,list) or not 1<=len(records)<=32:
+            raise ValueError('finite file acceptance batch required')
+        names=[key(r['member_name']) for r in records]
+        if len(names)!=len(set(names)):raise ValueError('duplicate file in acceptance batch')
+        self.check();checkpoint();db=self.db;db.execute('begin immediate')
+        try:
+            results=[]
+            for row in records:
+                checkpoint();self.check()
+                results.append(self._accept_file(row['member_name'],row['original_sha256'],
+                    row['accepted'],row['proof']))
+            self.check();checkpoint();db.execute('commit')
+            return results
+        except BaseException:
+            if db.in_transaction:db.execute('rollback')
+            raise
+
+    def _accept_file(self,name,original_sha256,accepted,proof):
+        # Called only inside accept_files' actual transaction and guards.
+        key(name);digest(original_sha256);db=self.db
         found=db.execute('select state,row from members where name=?',(name,)).fetchone()
         if found is None:raise ValueError('pending file disappeared from member map')
         encoded=encode_member(accepted)
@@ -912,21 +941,15 @@ class CurrentMap:
                 or proof.get('source_metadata')!={k:member[k] for k in ('mode','uid','gid','mtime_ns','xattrs')}):
             raise ValueError('file acceptance/readback differs from qualified point')
         classify(name,dict(member,identity=point['source_identity']),accepted['qualification'],SQL_sources=set())
-        checkpoint();db.execute('begin immediate')
-        try:
-            db.execute('create table if not exists file_acceptance_history(name text,version_sha256 text,proof blob,accepted_row blob,primary key(name,version_sha256)) without rowid')
-            old=db.execute('select proof from file_acceptance where name=?',(name,)).fetchone()
-            if old and db.execute('select 1 from file_acceptance_history where name=? and proof=? limit 1',(name,old[0])).fetchone() is None:
-                db.execute('insert or ignore into file_acceptance_history values(?,?,?,NULL)',(name,hashlib.sha256(b'legacy-proof\0'+old[0]).hexdigest(),old[0]))
-            encoded_proof=encode_member(proof)
-            db.execute('insert or ignore into file_acceptance_history values(?,?,?,?)',(name,hashlib.sha256(encoded).hexdigest(),encoded_proof,encoded))
-            db.execute('insert into file_acceptance values(?,?) on conflict(name) do update set proof=excluded.proof',(name,encoded_proof))
-            updated=db.execute("update members set state='verified-file',row=? where name=? and state='file-needs-capture'",(encoded,name))
-            if updated.rowcount!=1:raise ValueError('pending file ownership changed')
-            self.check();checkpoint();db.execute('commit')
-        except BaseException:
-            if db.in_transaction:db.execute('rollback')
-            raise
+        db.execute('create table if not exists file_acceptance_history(name text,version_sha256 text,proof blob,accepted_row blob,primary key(name,version_sha256)) without rowid')
+        old=db.execute('select proof from file_acceptance where name=?',(name,)).fetchone()
+        if old and db.execute('select 1 from file_acceptance_history where name=? and proof=? limit 1',(name,old[0])).fetchone() is None:
+            db.execute('insert or ignore into file_acceptance_history values(?,?,?,NULL)',(name,hashlib.sha256(b'legacy-proof\0'+old[0]).hexdigest(),old[0]))
+        encoded_proof=encode_member(proof)
+        db.execute('insert or ignore into file_acceptance_history values(?,?,?,?)',(name,hashlib.sha256(encoded).hexdigest(),encoded_proof,encoded))
+        db.execute('insert into file_acceptance values(?,?) on conflict(name) do update set proof=excluded.proof',(name,encoded_proof))
+        updated=db.execute("update members set state='verified-file',row=? where name=? and state='file-needs-capture'",(encoded,name))
+        if updated.rowcount!=1:raise ValueError('pending file ownership changed')
         return dict(already_accepted=False)
 
     def defer_file(self,name,original_sha256,reason,*,checkpoint):

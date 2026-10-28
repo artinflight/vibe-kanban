@@ -672,6 +672,10 @@ class Store:
             value=current.CurrentMap();value.db=db;value.path=path;value.inode=tuple(inode)
             return value.accept_file(q['member_name'],q['original_sha256'],q['accepted'],q['proof'],
                 checkpoint=lambda:self.guard(path.stat().st_size+LIMIT))
+        if op=='accept-file-points':
+            import vk_nightly_current_map as current
+            value=current.CurrentMap();value.db=db;value.path=path;value.inode=tuple(inode)
+            return dict(results=value.accept_files(q['records'],checkpoint=lambda:self.guard(path.stat().st_size+LIMIT)))
         if op=='defer-file-point':
             import vk_nightly_current_map as current
             value=current.CurrentMap();value.db=db;value.path=path;value.inode=tuple(inode)
@@ -921,6 +925,9 @@ def current_map(client,key,digest,*,binding):
             checkpoint()
             return self.db.request('accept-file-point',member_name=name,original_sha256=original_sha256,
                                    accepted=accepted,proof=proof)
+        def accept_files(self,records,*,checkpoint):
+            checkpoint()
+            return self.db.request('accept-file-points',records=records)['results']
         def defer_file(self,name,original_sha256,reason,*,checkpoint):
             checkpoint()
             return self.db.request('defer-file-point',member_name=name,original_sha256=original_sha256,reason=reason)

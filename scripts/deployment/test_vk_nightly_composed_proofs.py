@@ -45,6 +45,23 @@ class ComposedProofTests(unittest.TestCase):
         self.assertEqual(result['accepted_base_references'],1);self.assertFalse(result['current_baseline_accepted'])
         self.base.execute('update bodies set name=?',('another-original',))
         with self.assertRaisesRegex(ValueError,'absent from accepted restore'):self.use()
+    def test_deduplicated_base_alias_requires_full_original_name_proof(self):
+        self.base_file();self.base.execute("update bodies set name='original-other-name'")
+        original=sqlite3.connect(':memory:');self.addCleanup(original.close)
+        original.execute('create table current(name text primary key,old_sha256 text,old_bytes integer)')
+        from vk_nightly_current_map import decode_member
+        member=decode_member(self.db.execute('select row from members').fetchone()[0])['member'];part=member['segments'][0]
+        original.execute('insert into current values(?,?,?)',(part['selector'],part['sha256'],part['bytes']))
+        def run(sha='1'*64):
+            return audit(self.db,self.reference,base_catalog=self.base,recipe_catalogs=[self.catalog],
+                objects=objects,objects_root=self.root,guard=lambda:None,
+                base_names_catalog=original,base_names_catalog_sha256=sha)
+        self.assertEqual(run()['accepted_base_references'],1)
+        with self.assertRaisesRegex(ValueError,'provenance'):run('9'*64)
+        original.execute('delete from current')
+        with self.assertRaisesRegex(ValueError,'absent from accepted restore'):run()
+        with self.assertRaisesRegex(ValueError,'absent from accepted restore'):self.use()
+
     def test_unresolved_and_multisegment_without_ordered_proof_refused(self):
         row=self.base_file();row['segments']*=2;row['bytes']*=2
         self.db.execute('update members set row=?',(encode_member(dict(member=row)),))

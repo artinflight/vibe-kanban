@@ -76,9 +76,30 @@ def atomic_new(path,value):
         json.dump(value,f,sort_keys=True);f.write('\n');f.flush();os.fsync(f.fileno())
 
 
+class ImmutableImageChecks:
+    """Batch redundant identity opens of leased, immutable SQLite images.
+
+    Genuine drive/STOP/capacity/deadline admission still runs on EVERY call.
+    Image identities are bracketed at entry/forced completion, at most256
+    metadata steps apart and at most0.1s while callbacks are active. No accepted
+    result is returned before the final forced identity validation.
+    """
+    def __init__(self,images,objects,guard,*,label,clock=time.monotonic):
+        self.images=tuple(images);self.objects=objects;self.guard=guard
+        self.label=label;self.clock=clock;self.last=None;self.steps=0
+    def __call__(self,*,force=False):
+        self.guard();self.steps+=1;now=self.clock()
+        if force or self.last is None or self.steps>=256 or now-self.last>=0.1:
+            for path,identity in self.images:
+                if self.objects.file_identity(path)!=identity:
+                    raise ValueError('immutable '+self.label+' changed')
+            self.last=now;self.steps=0
+
+
 class Store:
-    def __init__(self,root,objects,*,guard,maximum_index_bytes=4*1024**3):
+    def __init__(self,root,objects,*,guard,maximum_index_bytes=4*1024**3,progress=None):
         self.root=Path(root);self.objects=objects;self.guard=guard;self.maximum=maximum_index_bytes
+        self.progress=progress or (lambda _:None)
         if self.root.resolve()!=self.root or not self.root.is_dir():raise ValueError('existing canonical B control directory required')
         self.handles={};self.writable=set();self.cursors={};self.next_cursor=0;self.readonly_identities={};self.pending_rows={};self.exhausted={}
         self.cache_bytes=128*1024**2;self.guard_reason=None;self.temporary_configured=False
@@ -428,11 +449,11 @@ class Store:
                         !=str(self.root).replace('\\','/').rstrip('/').casefold()):
                 raise ValueError('exact admitted immutable B control reference required')
             from vk_nightly_recovery_descriptor import build
-            def checked():
-                self.guard(0)
-                if self.objects.file_identity(path)!=self.readonly_identities[key]:
-                    raise ValueError('immutable descriptor image changed')
-            return build(db,reference,contract,checkpoint=checked)
+            checked=ImmutableImageChecks([(path,self.readonly_identities[key])],self.objects,
+                lambda:self.guard(0),label='descriptor image')
+            checked(force=True)
+            result=build(db,reference,contract,checkpoint=checked)
+            checked(force=True);return result
         if op=='audit-current-content':
             if key not in self.readonly_identities:
                 raise ValueError('independently accepted immutable current map required for content audit')
@@ -444,13 +465,14 @@ class Store:
             if (not isinstance(catalogs,list) or len(catalogs)>8 or len(catalogs)!=len(set(catalogs))
                     or not {base,*catalogs}<=self.readonly_identities.keys()):
                 raise ValueError('explicit independently accepted immutable proof catalogs required')
-            keys={key,base,*catalogs}
-            def checked():
-                self.guard(0)
-                for selected in keys:
-                    actual=self.handles[selected][1]
-                    if self.objects.file_identity(actual)!=self.readonly_identities[selected]:
-                        raise ValueError('immutable content-audit dependency changed')
+            base_names=q.get('base_names_index')
+            if base_names is not None:
+                base_names=name(base_names)
+                if base_names not in self.readonly_identities:raise ValueError('independently accepted original-name catalog required')
+            keys={key,base,*catalogs,*([base_names] if base_names else [])}
+            checked=ImmutableImageChecks([(self.handles[selected][1],self.readonly_identities[selected])
+                for selected in keys],self.objects,lambda:self.guard(0),label='content-audit dependency')
+            checked(force=True)
             from vk_nightly_composed_proofs import audit
             object_root=self.root.parent/'objects-v1'
             self.objects.regular(object_root/'OBJECT_STORE.lease')
@@ -459,13 +481,16 @@ class Store:
             with self.objects.store_lease(object_root):
                 result=audit(db,reference,base_catalog=self.handles[base][0],
                     recipe_catalogs=[self.handles[n][0] for n in catalogs],objects=self.objects,
-                    objects_root=object_root,guard=checked,named_components=q.get('named_components',{}))
+                    objects_root=object_root,guard=checked,named_components=q.get('named_components',{}),
+                    base_names_catalog=self.handles[base_names][0] if base_names else None,
+                    base_names_catalog_sha256=self.handles[base_names][1].stem if base_names else None,progress=self.progress)
                 def catalog_reference(selected):
                     value=self.handles[selected][1]
                     return dict(sha256=value.stem,selector=value.name,bytes=value.stat().st_size)
                 result['base_catalog_reference']=catalog_reference(base)
                 result['recipe_catalog_references']=[catalog_reference(selected) for selected in catalogs]
-                checked();return result
+                if base_names:result['base_names_catalog_reference']=catalog_reference(base_names)
+                checked(force=True);return result
         if op=='check':return dict(in_transaction=db.in_transaction,bytes=path.stat().st_size)
         if op=='storage-status':
             temporary=str(self.temporary_directory)
@@ -766,7 +791,8 @@ class Store:
 
 
 def serve(root,source,output,*,objects,guard,maximum_index_bytes=4*1024**3):
-    store=Store(root,objects,guard=guard,maximum_index_bytes=maximum_index_bytes)
+    store=Store(root,objects,guard=guard,maximum_index_bytes=maximum_index_bytes,
+                progress=lambda value:send(output,dict(progress=value)))
     try:
         while True:
             q=recv(source)
@@ -836,12 +862,19 @@ class Client:
             wait_seconds=sum(v['wait_seconds'] for v in self.operation_metrics.values()),
             operations={k:dict(v) for k,v in self.operation_metrics.items()},
             SQL_text_or_parameters_recorded=False)
-    def call(self,**query):
+    def call(self,*,on_progress=None,**query):
         self.guard();started=time.monotonic()
         operation=query.get('op','unknown')
         if operation not in self.operation_metrics and len(self.operation_metrics)>=64:operation='other'
         metric=self.operation_metrics.setdefault(operation,dict(requests=0,wait_seconds=0.0,maximum_wait_seconds=0.0))
-        try:send(self.output,query);value=recv(self.source)
+        try:
+            send(self.output,query)
+            while True:
+                value=recv(self.source)
+                if set(value)!={'progress'}:break
+                if not isinstance(value['progress'],dict):raise ValueError('bounded native progress record required')
+                self.guard()
+                if on_progress is not None:on_progress(value['progress'])
         finally:
             elapsed=time.monotonic()-started;metric['requests']+=1;metric['wait_seconds']+=elapsed
             metric['maximum_wait_seconds']=max(metric['maximum_wait_seconds'],elapsed)
@@ -925,8 +958,8 @@ class Client:
 
 class Connection:
     def __init__(self,client,key):self.client=client;self.key=key;self.in_transaction=False
-    def request(self,op,**query):
-        value=self.client.call(op=op,name=self.key,**query)
+    def request(self,op,*,on_progress=None,**query):
+        value=self.client.call(op=op,name=self.key,on_progress=on_progress,**query)
         self.in_transaction=value.get('in_transaction',self.in_transaction);return value
     def execute(self,sql,parameters=()):
         result=self.request('execute',sql=sql,parameters=parameters)

@@ -102,16 +102,19 @@ class LocalDependencies:
             raise ValueError('invalid or already-held dependency set')
         try:
             self.admission_check()
+            lease_fds={}
             for name, root in sorted(self.roots.items()):
                 before = root.lstat()
                 if not stat.S_ISDIR(before.st_mode) or root.resolve() != root:
                     raise ValueError('dependency root must be an exact directory')
                 self.root_ids[name] = before.st_dev, before.st_ino
-                fd = os.open(self.lease_paths[name], os.O_RDONLY | os.O_NOFOLLOW)
-                self.leases.append(fd)
-                if not stat.S_ISREG(os.fstat(fd).st_mode):
-                    raise ValueError('invalid dependency lease')
-                fcntl.flock(fd, fcntl.LOCK_SH | fcntl.LOCK_NB)
+                lease_path=Path(self.lease_paths[name])
+                if lease_path not in lease_fds:
+                    fd=os.open(lease_path,os.O_RDONLY|os.O_NOFOLLOW)
+                    self.leases.append(fd)
+                    if not stat.S_ISREG(os.fstat(fd).st_mode):raise ValueError('invalid dependency lease')
+                    fcntl.flock(fd,fcntl.LOCK_SH|fcntl.LOCK_NB);lease_fds[lease_path]=fd
+                fd=lease_fds[lease_path]
                 self.lease_ids[name] = os.fstat(fd).st_dev, os.fstat(fd).st_ino
             self.active = True
             self.check()
@@ -126,13 +129,18 @@ class LocalDependencies:
         if not self.active:
             raise ValueError('recovery dependency lease has ended')
         self.admission_check()
-        for name, root in self.roots.items():
-            st = root.lstat()
-            if (not stat.S_ISDIR(st.st_mode) or (st.st_dev, st.st_ino) != self.root_ids[name]
-                    or root.resolve() != root):
+        # Several logical versions may share one physical root/lease. Check
+        # every DISTINCT binding on every call; never repeat hundreds of equal
+        # filesystem queries merely because the same carrier has more layers.
+        roots={(root,self.root_ids[name]) for name,root in self.roots.items()}
+        leases={(Path(self.lease_paths[name]),self.lease_ids[name]) for name in self.roots}
+        for root,identity in roots:
+            st=root.lstat()
+            if (not stat.S_ISDIR(st.st_mode) or (st.st_dev,st.st_ino)!=identity or root.resolve()!=root):
                 raise ValueError('recovery dependency root replaced')
-            st = Path(self.lease_paths[name]).lstat()
-            if not stat.S_ISREG(st.st_mode) or (st.st_dev, st.st_ino) != self.lease_ids[name]:
+        for path,identity in leases:
+            st=path.lstat()
+            if not stat.S_ISREG(st.st_mode) or (st.st_dev,st.st_ino)!=identity:
                 raise ValueError('recovery dependency lease replaced')
 
     @contextmanager

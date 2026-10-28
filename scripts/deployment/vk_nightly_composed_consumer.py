@@ -78,15 +78,16 @@ def run(packet,expected_sha256,*,guard,report=lambda _:None,clock=time.monotonic
     deadline_epoch=deadline.timestamp();timeout=min(timeout,deadline_epoch-wall_clock())
     if timeout<=0:raise TimeoutError('original whole-cycle deadline already expired; no readback started')
     started=clock()
+    physical_roots={(path,tuple(bindings[name])) for name,path in roots.items()}
     def check():
         guard()
         if clock()-started>=timeout or wall_clock()>=deadline_epoch:
             raise TimeoutError('whole-cycle consumer time expired; preserve original set and failed readback')
-        for name,path in roots.items():
-            p=Path(path);info=p.lstat();expected=bindings[name]
+        for path,expected in physical_roots:
+            p=Path(path);info=p.lstat()
             if (not p.is_absolute() or p.resolve()!=p or not stat.S_ISDIR(info.st_mode)
-                    or [info.st_dev,info.st_ino]!=expected):
-                raise ValueError('independently admitted dependency placement changed: '+name)
+                    or (info.st_dev,info.st_ino)!=expected):
+                raise ValueError('independently admitted dependency placement changed: '+path)
     check()
     scratch_parent=ram_path(packet['scratch_parent']);fs=os.statvfs(scratch_parent)
     budget=packet['maximum_scratch_bytes']

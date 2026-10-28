@@ -45,6 +45,16 @@ class TypedRecoveryTests(unittest.TestCase):
         self.provider = LocalDependencies({'accepted-base': self.base, 'current': self.new},
                                           self.identities, admission_check=lambda: None)
 
+    def test_shared_physical_dependency_keeps_one_lease_and_detects_replacement(self):
+        roots={'accepted-base':self.base,'same-physical-carrier':self.base}
+        provider=LocalDependencies(roots,{name:{} for name in roots},admission_check=lambda:None)
+        with provider.held():
+            self.assertEqual(len(provider.leases),1)
+            with provider.open('same-physical-carrier','home/state/log') as f:self.assertEqual(f.read(),b'original\n')
+            lease=self.base/'RECOVERY_READ.lease';lease.rename(self.base/'original-lease-preserved')
+            lease.touch()
+            with self.assertRaisesRegex(ValueError,'lease replaced'):provider.check()
+
     def file(self, body, **extra):
         return dict(self.meta, kind='file', bytes=len(body), sha256=hashlib.sha256(body).hexdigest(), **extra)
 

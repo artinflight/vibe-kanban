@@ -14,6 +14,9 @@ import time
 
 from vk_nightly_desktop_objects import ssh_command
 from vk_nightly_transport_diagnostics import Diagnostics,finish
+# Static dependency discovery must pin the executable reader too; the wire
+# loader below still executes only the authenticated in-memory closure.
+import vk_nightly_composed_consumer
 from vk_nightly_typed_worker import source_closure
 from vk_typed_recovery import checksum
 

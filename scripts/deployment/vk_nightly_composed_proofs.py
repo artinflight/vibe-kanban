@@ -91,7 +91,7 @@ def retained_ordered_proof(database,value,member,*,member_name=None):
 
 
 def audit(database,reference,*,base_catalog,recipe_catalogs,objects,objects_root,
-          guard,native_carrier=None,named_components=None):
+          guard,native_carrier=None,named_components=None,base_names_catalog=None,base_names_catalog_sha256=None,progress=lambda _:None):
     """Stream one sealed map's proof closure using bounded metadata caches.
 
     Catalog connections are independently accepted immutable images selected by
@@ -107,6 +107,8 @@ def audit(database,reference,*,base_catalog,recipe_catalogs,objects,objects_root
     provenance=base_catalog.execute('select source_catalog_sha256,restore_proof_sha256 from provenance').fetchall()
     if len(provenance)!=1:raise ValueError('exact accepted-base catalog/restore provenance required')
     for value in provenance[0]:digest(value)
+    if base_names_catalog is not None and digest(base_names_catalog_sha256)!=provenance[0][0]:
+        raise ValueError('original accepted-base name catalog provenance differs')
     schemas=[]
     for catalog in recipe_catalogs:
         columns={r[1] for r in catalog.execute('pragma table_info(components)')}
@@ -205,11 +207,23 @@ def audit(database,reference,*,base_catalog,recipe_catalogs,objects,objects_root
             receipt=accepted(canonical(segment));object_refs+=1
             return dict(kind='accepted-native-object',receipt_sha256=hashlib.sha256(canonical(receipt)).hexdigest())
         if layer=='accepted-base':
-            if (segment.get('encoding','raw')!='raw' or not base_catalog.execute(
-                    'select 1 from bodies where sha256=? and bytes=? and name=?',
-                    (segment['sha256'],segment['bytes'],segment['selector'])).fetchone()):
-                raise ValueError('selected base segment is absent from accepted restore catalog')
-            base_refs+=1;return dict(kind='accepted-restored-base',restore_proof_sha256=provenance[0][1])
+            original_name=False
+            if segment.get('encoding','raw')!='raw':raise ValueError('accepted base raw segment required')
+            args=(segment['sha256'],segment['bytes'],segment['selector'])
+            if not base_catalog.execute('select 1 from bodies where sha256=? and bytes=? and name=?',args).fetchone():
+                # The content index deliberately deduplicates equal bytes. A
+                # different original name needs the authenticated FULL source
+                # catalog, not merely another matching hash/current file.
+                if (base_names_catalog is None or not base_catalog.execute(
+                        'select 1 from bodies where sha256=? and bytes=?',args[:2]).fetchone()
+                        or not base_names_catalog.execute(
+                            'select 1 from current where name=? and old_sha256=? and old_bytes=?',
+                            (segment['selector'],segment['sha256'],segment['bytes'])).fetchone()):
+                    raise ValueError('selected base segment is absent from accepted restore catalog: '+segment['selector'])
+                original_name=True
+            base_refs+=1
+            return dict(kind='accepted-restored-base',restore_proof_sha256=provenance[0][1],
+                original_name_catalog_sha256=base_names_catalog_sha256 if original_name else None)
         if layer.startswith('retained-SQL-'):
             raise ValueError('legacy SQL segment requires its decoded API acceptance dependency')
         component=(named(layer) if layer in (named_components or {}) else
@@ -266,6 +280,7 @@ def audit(database,reference,*,base_catalog,recipe_catalogs,objects,objects_root
         if actual!=expected:raise ValueError('decoded B SQL acceptance record differs from selected point')
         return seal['sha256']
 
+    progress(dict(phase='native-current-content-proof',verified_files=0,verified_raw_bytes=0))
     for name,state,raw in database.execute('select name,state,row from members order by name'):
         guard()
         if state not in ('verified-file','directory','symlink','SQLite-sidecar'):
@@ -310,6 +325,7 @@ def audit(database,reference,*,base_catalog,recipe_catalogs,objects,objects_root
             segment_chain.update(canonical(dict(name=name,part=number,segment=segment,proof=part))+b'\n');segments_count+=1
         file_chain.update(canonical(dict(name=name,member=member,proof=evidence))+b'\n')
         files+=1;raw_bytes+=member['bytes']
+        if files%4096==0:progress(dict(phase='native-current-content-proof',verified_files=files,verified_raw_bytes=raw_bytes))
     guard()
     return dict(format='vk-nightly-independent-composed-content-proof-v1',map_reference=reference,
         file_points=files,file_raw_bytes=raw_bytes,selected_segments=segments_count,

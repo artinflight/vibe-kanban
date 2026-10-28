@@ -93,7 +93,8 @@ def verify(handle,*,validation_arguments,content_proof,expected_content_proof_sh
             or content_proof.get('file_raw_bytes')!=metadata['regular_file_bytes']
             or content_proof.get('SQL_acceptance_records_independently_decoded')!=len(validation_arguments['required_SQL'])
             or content_proof.get('base_catalog_reference')!=expected_catalogs['base']
-            or content_proof.get('recipe_catalog_references')!=expected_catalogs['recipes']):
+            or content_proof.get('recipe_catalog_references')!=expected_catalogs['recipes']
+            or content_proof.get('base_names_catalog_reference')!=expected_catalogs.get('base_names')):
         raise ValueError('complete native proof/map/SQL/catalog closure differs')
     for field in ('file_proof_chain_sha256','segment_proof_chain_sha256'):digest(content_proof[field])
     if (not isinstance(readback_sources,list) or not 1<=len(readback_sources)<=256

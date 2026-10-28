@@ -23,6 +23,20 @@ class ServiceTests(unittest.TestCase):
         p=self.root/name;raw=json.dumps(value).encode();p.write_bytes(raw);p.chmod(0o600)
         return str(p),hashlib.sha256(raw).hexdigest()
 
+    def test_service_package_includes_actual_dynamic_normal_reader(self):
+        from vk_nightly_typed_worker import source_closure
+        from vk_nightly_remote_consumer import bundle
+        source=Path(__file__).parent
+        closure=source_closure(source,'vk_nightly_service')
+        self.assertTrue({'vk_nightly_composed_consumer.py','vk_nightly_composed_restore.py'}<=closure)
+        with tempfile.TemporaryDirectory(dir='/dev/shm') as folder:
+            for name in closure:(Path(folder)/name).write_bytes((source/name).read_bytes())
+            wire=bundle(dict(fixture='source-package-only'),folder=folder)
+            payload=json.loads(wire.splitlines()[0])
+            self.assertIn('vk_nightly_composed_consumer',payload['sources'])
+            self.assertIn('vk_nightly_composed_restore',payload['sources'])
+
+
     def test_only_exact_successful_terminal_invocation_can_be_adopted(self):
         def show(**changes):
             value=dict(MainPID='0',ActiveState='inactive',ExecMainStatus='0',ControlGroup='',

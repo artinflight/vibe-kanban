@@ -87,7 +87,7 @@ def bind_runtime_scope(client,current_map,contract,result,*,guard):
 
 
 def finalize(client,*,current_map,map_layer,contract,cycle_binding,base_catalog,recipe_catalogs,
-             SQL_phase=None,runtime_phase=None,guard,report=lambda _:None,existing_snapshot_only=False):
+             SQL_phase=None,runtime_phase=None,guard,report=lambda _:None,existing_snapshot_only=False,base_names_catalog=None):
     guard();contract=json.loads(json.dumps(contract))
     if contract.get('runtime_scope_authority') and runtime_phase is None:
         raise ValueError('independently reopened runtime phase required')
@@ -153,16 +153,21 @@ def finalize(client,*,current_map,map_layer,contract,cycle_binding,base_catalog,
             raise ValueError('sealed descriptor/effective consumer contract differs')
         base=opened('final-base-catalog',base_catalog['checkpoint_sha256'])
         catalogs=[opened('final-recipe-'+str(n),r['checkpoint_sha256']) for n,r in enumerate(recipe_catalogs)]
-        proof=current.request('audit-current-content',reference=reference,base_index=base.key,
+        base_names=opened('final-original-base-names',base_names_catalog['checkpoint_sha256']) if base_names_catalog else None
+        proof=current.request('audit-current-content',on_progress=report,reference=reference,base_index=base.key,
                               recipe_indexes=[d.key for d in catalogs],
                               named_components={name:value for name,value in contract['dependencies'].items()
-                                  if value.get('format')=='vk-nightly-named-ZIP-component-v1'})
+                                  if value.get('format')=='vk-nightly-named-ZIP-component-v1'},
+                              **(dict(base_names_index=base_names.key) if base_names else {}))
         guard()
     def catalog_ref(ref):
         return dict(sha256=ref['checkpoint_sha256'],selector=ref['checkpoint_sha256']+'.sqlite',bytes=ref['bytes'])
     expected=dict(base=catalog_ref(base_catalog),recipes=[catalog_ref(r) for r in recipe_catalogs])
+    if base_names_catalog:expected['base_names']=catalog_ref(base_names_catalog)
     if (proof['base_catalog_reference']!=expected['base'] or proof['recipe_catalog_references']!=expected['recipes']):
         raise ValueError('actual immutable proof catalogs differ from installed contract')
+    if proof.get('base_names_catalog_reference')!=expected.get('base_names'):
+        raise ValueError('actual original-name proof catalog differs')
     return dict(format='vk-nightly-finalized-current-candidate-v1',sealed_map=sealed,
         descriptor=descriptor,descriptor_sha256=checksum(descriptor),consumer_contract=contract,
         consumer_contract_sha256=checksum(contract),sealed_template_contract_sha256=contract_sha,

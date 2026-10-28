@@ -795,6 +795,24 @@ class BControlTests(unittest.TestCase):
         index=SealedMemberIndex(view,lambda:view.request('check'),dict(sha256=sealed['sha256']))
         self.assertEqual(list(index.entries()),[('home/note',member)]);view.close()
 
+    def test_immutable_image_batch_preserves_every_guard_and_forced_tamper_check(self):
+        from vk_nightly_b_controls import ImmutableImageChecks
+        import vk_nightly_objects as objects
+        from types import SimpleNamespace
+        path=self.root/'identity-only';path.write_bytes(b'original')
+        expected=objects.file_identity(path);counts=dict(guard=0,identity=0)
+        def identity(p):counts['identity']+=1;return objects.file_identity(p)
+        def guard():counts['guard']+=1
+        check=ImmutableImageChecks([(path,expected)],SimpleNamespace(file_identity=identity),guard,label='fixture',clock=lambda:0)
+        for _ in range(200):check()
+        self.assertEqual(counts,dict(guard=200,identity=1))
+        path.write_bytes(b'changed')
+        with self.assertRaisesRegex(ValueError,'immutable fixture changed'):check(force=True)
+        self.assertEqual(counts['guard'],201)
+        def denied():raise PermissionError('actual STOP/access guard')
+        check=ImmutableImageChecks([(path,expected)],SimpleNamespace(file_identity=identity),denied,label='fixture',clock=lambda:0)
+        with self.assertRaises(PermissionError):check()
+
     def test_recall_existing_snapshot_requires_previous_independent_acceptance(self):
         from vk_nightly_b_controls import NativeControlError
         db=self.client.connect('recall-only-map',self.sha);db.execute('insert into point values(1,?)',(b'original',))
@@ -818,7 +836,9 @@ class BControlTests(unittest.TestCase):
     def test_existing_only_composed_finalization_never_clones_or_streams(self):
         from vk_nightly_finalize_current import finalize
         settings,*_=self.finalization_fixture()
-        original=finalize(self.client,**dict(settings,guard=lambda:None))
+        events=[]
+        original=finalize(self.client,**dict(settings,guard=lambda:None,report=events.append))
+        self.assertTrue(any(e.get('phase')=='native-current-content-proof' for e in events))
         with patch.object(self.client,'seal_checkpoint',side_effect=AssertionError('new snapshot forbidden')):
             reused=finalize(self.client,**dict(settings,guard=lambda:None,existing_snapshot_only=True))
         self.assertEqual(reused['descriptor'],original['descriptor'])

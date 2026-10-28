@@ -626,6 +626,50 @@ class BControlTests(unittest.TestCase):
         self.assertEqual(wake()['status'],'already_completed');self.assertEqual(attempts[0],2)
         self.assertEqual(calls.count('files'),1)
 
+    def test_commission_gate_reopens_actual_ordinary_restore_not_initial_or_other_package(self):
+        from datetime import timedelta
+        from vk_nightly_cycle_state import run_cycle
+        from vk_nightly_commission import qualification
+        from vk_nightly_service import scheduled_cycle
+        from vk_nightly_window import night
+        store,binding,adapters,calls,now=self.cycle_fixture()
+        template=dict(cycle=dict(cycle_binding=dict(binding,cycle_kind='incremental',
+            SQL_cohort_tag='template',SQL_phase_index=dict(index_name='template-sql',checkpoint_sha256=self.sha)),
+            SQL=dict(SQL_phase_index=dict(index_name='template-sql',checkpoint_sha256=self.sha)),finalize={}))
+        store.initialize(binding)
+        with self.assertRaisesRegex(ValueError,'baseline is missing'):
+            qualification(store,template,'1'*64,guard=lambda:None)
+        run_cycle(store,binding,**adapters)
+        with self.assertRaisesRegex(ValueError,'not ordinary exact-package'):
+            qualification(store,template,'1'*64,guard=lambda:None)
+        frozen=store.scheduled_binding(scheduled_cycle(template,night(now[0]).isoformat(),'1'*64)['cycle']['cycle_binding'])
+        ordinary=dict(adapters)
+        real_restore=adapters['restore']
+        # The RAM fixture uses the actual normal consumer, with this explicit
+        # stand-in for its enclosing production B-placement/SSH wrapper only.
+        ordinary['restore']=lambda *a:dict(real_restore(*a),actual_existing_B_backed_consumer_route_verified=True)
+        now[0]+=timedelta(seconds=1)
+        accepted=run_cycle(store,frozen,**ordinary)
+        before={p.name:p.stat().st_ino for p in self.objects.iterdir()}
+        with patch.object(store,'initialize',side_effect=AssertionError('commission recaptured')),             patch.object(store,'record',side_effect=AssertionError('commission rewrote phase')),             patch.object(store,'publish',side_effect=AssertionError('commission republished')):
+            result=qualification(store,template,'1'*64,guard=lambda:None)
+        self.assertTrue(result['actual_ordinary_incremental_and_normal_restore_verified'])
+        self.assertEqual(result['restore_receipt_sha256'],accepted['restore_receipt_sha256'])
+        self.assertFalse(result['schedule_enabled'])
+        with self.assertRaisesRegex(ValueError,'other package'):
+            qualification(store,template,'2'*64,guard=lambda:None)
+        bad=dict(accepted,elapsed_seconds=accepted['elapsed_seconds']+1)
+        with patch.object(store,'accepted',return_value=bad):
+            with self.assertRaisesRegex(ValueError,'outside its overnight window'):
+                qualification(store,template,'1'*64,guard=lambda:None)
+        # A different actual native process independently reopens the same
+        # accepted proof; qualification does not need a body reader or copy.
+        send(self.client.output,dict(op='bye'));self.assertEqual(recv(self.client.source),{'closed':True})
+        self.assertEqual(self.children[-1].wait(timeout=10),0);self.client.output.close()
+        self.client=self.start();store.client=self.client
+        self.assertEqual(qualification(store,template,'1'*64,guard=lambda:None),result)
+        self.assertEqual({p.name:p.stat().st_ino for p in self.objects.iterdir()},before)
+
     def test_scheduled_binding_survives_retry_and_four_AM_stops_between_phases(self):
         from datetime import datetime,timedelta,timezone
         from vk_nightly_cycle_state import run_cycle

@@ -418,3 +418,26 @@ full format command still stops at the missing local Prettier executable. No
 whole current baseline, ordinary overnight acceptance or enabled schedule is
 claimed by these tests. Upgrade only a proven idle coordinator after exact
 source/config preflight and controller-lease release; preserve advancing bodies.
+
+
+## Exact-package commissioning entrypoint
+
+`vk_nightly_commission.py --calendar <disabled-config> --sha256 <digest>`
+reopens the accepted native B cycle without starting a capture. It refuses a
+commissioning-only baseline, another worker/config, incomplete component flags,
+an invalid phase chain, a late completion or a missing normal B-backed restore.
+It verifies the deterministic calendar cohort, prior accepted baseline and exact
+service template. The original-gap layer remains part of the accepted descriptor.
+The native fixture covers initial-baseline refusal, complete ordinary restore,
+independent process reopen, wrong-package refusal and timing inconsistency.
+
+After actual production qualification succeeds, the same command with `--install`
+creates a separate enabled configuration, retains both writer/metadata leases and
+fresh host/source/native controls, rechecks the accepted pointer and installs only
+the exact Nightly user-cron block. Existing unrelated cron entries are preserved
+and the installed text is read back. It reports the next eligible quarter-hour
+wake-up or22:00Toronto start and the unchanged hard04:00deadline. Configuration
+collisions and prior calendar state for another config require reconciliation;
+there is no automatic overwrite or retention deletion. The installer is finite
+and non-AI. This entrypoint and its RAM proof do not claim that production
+qualification or cron installation has already occurred.

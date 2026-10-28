@@ -103,6 +103,29 @@ class ComposedProofTests(unittest.TestCase):
         newer.execute('delete from components')
         with self.assertRaisesRegex(ValueError,'absent or ambiguous'):run()
 
+    def test_named_ZIP_contract_actual_decode_and_fail_closed(self):
+        import zipfile
+        path=self.root/'component.zip';data=b'verified archived specimen'
+        with zipfile.ZipFile(path,'w',compression=zipfile.ZIP_DEFLATED) as z:z.writestr('old/name',data)
+        sha=hashlib.sha256(data).hexdigest();encoded=path.read_bytes()
+        archive=dict(name=path.name,native_path=str(path),bytes=len(encoded),sha256=hashlib.sha256(encoded).hexdigest())
+        segment=dict(layer='named-fixture-v1',selector=path.name,member='old/name',encoding='zip-member',
+            bytes=len(data),sha256=sha,encoded_bytes=len(encoded),encoded_sha256=archive['sha256'])
+        self.put('home/current',dict(self.meta,kind='file',bytes=len(data),sha256=sha,segments=[segment]))
+        definition=dict(format='vk-nightly-named-ZIP-component-v1',encoding='zip-member',archive=archive,
+            independent_restore_proof_sha256='7'*64,members={'old/name':dict(self.meta,kind='file',bytes=len(data),sha256=sha)})
+        def run():
+            return audit(self.db,self.reference,base_catalog=self.base,recipe_catalogs=[self.catalog],
+                objects=objects,objects_root=self.root,guard=lambda:None,native_carrier=lambda _:None,
+                named_components={'named-fixture-v1':definition})
+        self.assertEqual(run()['retained_component_references'],1)
+        with self.assertRaisesRegex(ValueError,'undeclared'):self.use()
+        definition['members']['old/name']['sha256']='8'*64
+        with self.assertRaisesRegex(ValueError,'member full hash'):run()
+        definition['members']['old/name']['sha256']=sha
+        definition['archive']['sha256']='9'*64
+        with self.assertRaisesRegex(ValueError,'archive full hash'):run()
+
     def test_SQL_acceptance_must_decode_identical_record_not_trust_copied_flags(self):
         row=self.base_file();source='/home/note'
         point=dict(source=source,status='consistent_SQL_point_verified',method='SQLite-backup-API',member=row,

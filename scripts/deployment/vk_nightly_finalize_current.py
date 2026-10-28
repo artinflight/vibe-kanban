@@ -147,7 +147,9 @@ def finalize(client,*,current_map,map_layer,contract,cycle_binding,base_catalog,
         base=opened('final-base-catalog',base_catalog['checkpoint_sha256'])
         catalogs=[opened('final-recipe-'+str(n),r['checkpoint_sha256']) for n,r in enumerate(recipe_catalogs)]
         proof=current.request('audit-current-content',reference=reference,base_index=base.key,
-                              recipe_indexes=[d.key for d in catalogs])
+                              recipe_indexes=[d.key for d in catalogs],
+                              named_components={name:value for name,value in contract['dependencies'].items()
+                                  if value.get('format')=='vk-nightly-named-ZIP-component-v1'})
         guard()
     def catalog_ref(ref):
         return dict(sha256=ref['checkpoint_sha256'],selector=ref['checkpoint_sha256']+'.sqlite',bytes=ref['bytes'])

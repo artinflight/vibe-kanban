@@ -427,7 +427,7 @@ class Store:
             with self.objects.store_lease(object_root):
                 result=audit(db,reference,base_catalog=self.handles[base][0],
                     recipe_catalogs=[self.handles[n][0] for n in catalogs],objects=self.objects,
-                    objects_root=object_root,guard=checked)
+                    objects_root=object_root,guard=checked,named_components=q.get('named_components',{}))
                 def catalog_reference(selected):
                     value=self.handles[selected][1]
                     return dict(sha256=value.stem,selector=value.name,bytes=value.stat().st_size)

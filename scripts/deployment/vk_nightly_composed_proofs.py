@@ -37,7 +37,7 @@ def carrier_identity(objects,definition):
 
 
 def audit(database,reference,*,base_catalog,recipe_catalogs,objects,objects_root,
-          guard,native_carrier=None):
+          guard,native_carrier=None,named_components=None):
     """Stream one sealed map's proof closure using bounded metadata caches.
 
     Catalog connections are independently accepted immutable images selected by
@@ -99,6 +99,42 @@ def audit(database,reference,*,base_catalog,recipe_catalogs,objects,objects_root
         guard();native_carrier(archive)
         return dict(encoding='zip-member',archive=archive,records_sha=records_sha)
 
+    @lru_cache(maxsize=32)
+    def named(layer):
+        # Explicit installed contract, never a definition supplied by a member.
+        import zipfile
+        definition=(named_components or {}).get(layer)
+        if (not isinstance(definition,dict)
+                or definition.get('format')!='vk-nightly-named-ZIP-component-v1'
+                or definition.get('encoding')!='zip-member'):
+            raise ValueError('undeclared retained carrier layer')
+        digest(definition['independent_restore_proof_sha256'])
+        archive=definition['archive'];members=definition['members']
+        if not isinstance(members,dict) or not members:raise ValueError('complete named ZIP member proof required')
+        guard();native_carrier(archive)
+        path=Path(archive['native_path']);sha=hashlib.sha256();length=0
+        with path.open('rb') as stream:
+            for block in iter(lambda:stream.read(1024**2),b''):
+                guard();sha.update(block);length+=len(block)
+            if length!=archive['bytes'] or sha.hexdigest()!=archive['sha256']:
+                raise ValueError('named ZIP archive full hash differs')
+            stream.seek(0)
+            with zipfile.ZipFile(stream) as zipped:
+                names=zipped.namelist()
+                if len(names)!=len(set(names)) or set(names)!=set(members):
+                    raise ValueError('named ZIP exact member set differs')
+                for name,expected in members.items():
+                    guard();digest(expected['sha256']);h=hashlib.sha256();size=0
+                    if zipped.getinfo(name).file_size!=expected['bytes']:
+                        raise ValueError('named ZIP member length differs')
+                    with zipped.open(name) as body:
+                        for block in iter(lambda:body.read(1024**2),b''):
+                            guard();h.update(block);size+=len(block)
+                    if size!=expected['bytes'] or h.hexdigest()!=expected['sha256']:
+                        raise ValueError('named ZIP member full hash differs')
+        guard();native_carrier(archive)
+        return definition
+
     @lru_cache(maxsize=1024)
     def accepted(segment_raw):
         segment=json.loads(segment_raw);objects.object_segment(segment,32*1024**2);guard()
@@ -122,13 +158,21 @@ def audit(database,reference,*,base_catalog,recipe_catalogs,objects,objects_root
             base_refs+=1;return dict(kind='accepted-restored-base',restore_proof_sha256=provenance[0][1])
         if layer.startswith('retained-SQL-'):
             raise ValueError('legacy SQL segment requires its decoded API acceptance dependency')
-        component=v8i(layer,segment['encoded_sha256']) if layer.startswith('v8i-file-') else retained(layer)
+        component=(named(layer) if layer in (named_components or {}) else
+                   v8i(layer,segment['encoded_sha256']) if layer.startswith('v8i-file-') else retained(layer))
         archive=component['archive']
         if (segment.get('encoding')!='zip-member' or segment.get('selector')!=archive['name']
                 or segment.get('encoded_bytes')!=archive['bytes'] or segment.get('encoded_sha256')!=archive['sha256']):
             raise ValueError('selected retained segment/archive binding differs')
         # The immutable catalog authenticates the exact per-member record,
         # not just the archive's existence or the source's current Git object.
+        if layer in (named_components or {}):
+            original=component['members'].get(segment.get('member'),{})
+            if any(original.get(k)!=segment[k] for k in ('bytes','sha256')):
+                raise ValueError('named ZIP member differs from independently restored contract')
+            retained_refs+=1
+            return dict(kind='named-independent-ZIP-component',archive_sha256=archive['sha256'],
+                        independent_restore_proof_sha256=component['independent_restore_proof_sha256'])
         matched=False
         for catalog in recipe_catalogs:
             for raw, in catalog.execute('select row from versions where layer=? and json_extract(row,\'$.sha256\')=? '

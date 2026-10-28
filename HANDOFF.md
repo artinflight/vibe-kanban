@@ -1,12 +1,9 @@
 # Nightly pickup — October27,21:49EDT
 
-Workspace604d/PR263 owns the sole direct-to-Desktop-B Nightly package/schedule.
-Goal: complete/independently restore tonight's current set, then accepted22–04
-America/Toronto automation with hard04stop. NO backend restart. ScheduleOFF,
-nextNONE; current baseline, ordinary whole-cycle acceptance and commissioning
-remain incomplete. Preserve accepted162.70GB/137DB and all later valid layers,
-original gaps/epochs, partials, and unsealed RAM image inode33476/2968010752B.
-MCP SSD holds bounded code/control only; no backup/index payload belongs there.
+Workspace604d/PR263: direct-B current backup/restore, then22–04Toronto/hard04
+automation. No backend restart. Baseline/whole-cycle/commissioning incomplete;
+scheduleOFF/nextNONE. Preserve162.70GB/137DB/later layers/original gaps/partials
+and unsealed RAM inode33476/2968010752B. SSD code/control only, no backup payload.
 
 D=/mnt/vk-storage/vk-nightly-efficiency-20261017/commissioning-20261026
 C=D/b-controls-v1. D/LATEST_STATUS.private.json is the current actual snapshot.
@@ -20,8 +17,7 @@ CPU25%/High1536MiB/Max2GiB/Swap0/Tasks64. Original finite file deadline
 00:33:13EDT October28/369669.93monotonic is unchanged. Do not kill/restart it.
 At21:48:56 it had12384NEW committed files,1341937270source bytes read and
 368301700encoded bytes sent in3086.24s. Own peak761720832B/events0; PSI0,
-root17.61GB/SSD22.74GB/tmpfs9.16GB available. These are actual observations,
-not an ETA or whole-backup acceptance. C/LARGE_SQL_ACTUAL_CHAIN_20261028T0150.private.json
+root17.61GB/SSD22.74GB/tmpfs9.16GB available. No ETA/whole-backup acceptance is inferred. C/LARGE_SQL_ACTUAL_CHAIN_20261028T0150.private.json
 SHA241cc604957ff0fe3c7e6b4f11db119010d18584a823f8fda46b0f4812a2ca54.
 
 SourceV11 PID3849155/start32997998, epoch31ab8db49caf4f9699c7c0bd75c363a2
@@ -48,9 +44,8 @@ peak before allocation, or one additional image for retained-layout recovery.
   PID4176947/start35965218, D/current-SQL-cycle-inodes-v8-large-admitted.
   Source2a284d4ae, same current SQL cohort/index. Exact config/command digests
   are in that folder's INSTALLATION.private.json.
-  Image ceiling3489660928B; CPU25%/High7GiB/Max8GiB/Swap0/Tasks64. This is a
-  future finite peak, not current/exclusive usage; fresh real guards still
-  apply. Same FileV9/original absolute predecessor wait bound remains.
+  Image ceiling3489660928B; CPU25%/High7GiB/Max8GiB/Swap0/Tasks64. Future peak only; fresh guards and same
+  FileV9/original absolute wait bound remain.
 - Runtime7: vk-nightly-B-runtime-component-cycle-v7-20261027.service,
   PID4176951/start35965221, D/runtime-component-cycle-v7-large-SQL.
   Source2a284d4ae, same2prepared paths3200B/runtime index/component; Max2GiB.
@@ -78,8 +73,7 @@ calendar.disabled SHA01656cfe1f39ac57db8e8c15f9b34cdb62abf7e8a751dd17c9adf6af36a
 Service/calendar preflight and crontab -n - syntax passed. It removes frozen-input
 replay/adoption, consumes fresh journal deltas, uses measured SQL admission and
 High7GiB/Max8GiB/Swap0/Tasks64, bounded64KiB cron tail and22–04calendar. No cron
-was installed. Native filename truncation needed supported stdin dry-run; partial
-metadata and PREPARER are retained.
+was installed. Native filename truncation needed supported stdin dry-run; PREPARER is retained.
 
 ## Next work
 

@@ -9,7 +9,7 @@ The independent composed consumer must still accept the returned packet.
 from contextlib import ExitStack
 import json
 
-from vk_nightly_current_map import FORMAT,READY
+from vk_nightly_current_map import FORMAT,READY,decode_member,runtime_components
 from vk_typed_recovery import checksum
 
 
@@ -49,9 +49,49 @@ def bind_SQL_scope(client,current_map,contract,request,*,guard):
     guard()
 
 
+def bind_runtime_scope(client,current_map,contract,result,*,guard):
+    """Freeze finite runtime references from a separately reopened main map.
+
+    The installed template supplies exact source hashes/lengths and the phase
+    supplies its sealed component digest. Neither can widen the required set.
+    Actual point/proof references are decoded from the adopted B records.
+    """
+    authority=contract.get('runtime_scope_authority')
+    if authority not in (None,'authenticated-runtime-component-v1'):
+        raise ValueError('unsupported runtime binding authority')
+    if authority is None:
+        if result.get('always_runtime_files')!=contract.get('always_runtime_files',{}):
+            raise ValueError('actual adopted runtime component differs from external consumer contract')
+        return
+    if contract.get('always_runtime_files') is not None:
+        raise ValueError('late-bound runtime contract must not override concrete references')
+    expected=contract['required_runtime_points'];reference=result['component_reference']
+    if not expected or len(expected)>16 or result.get('actual_independent_B_runtime_component_reopen_verified') is not True:
+        raise ValueError('finite independently reopened runtime component required')
+    guard();db=client.connect(current_map['index_name'],current_map['checkpoint_sha256'],readonly=True,working=True)
+    try:
+        def lookup(name):
+            row=db.execute('select state,row from members where name=?',(name,)).fetchone()
+            if not row or row[0]!='verified-file':raise ValueError('adopted runtime member missing')
+            return decode_member(row[1])['member']
+        actual=runtime_components(db,lookup)
+        if set(actual)!=set(expected) or actual!=result['always_runtime_files']:
+            raise ValueError('independent runtime membership/references differ')
+        for path,point in actual.items():
+            if (any(point[k]!=expected[path][k] for k in ('kind','bytes','sha256'))
+                    or point['component_index_sha256']!=reference['sha256']):
+                raise ValueError('runtime point differs from installed source pins/sealed component')
+        contract['always_runtime_files']=actual
+    finally:db.close()
+    guard()
+
+
 def finalize(client,*,current_map,map_layer,contract,cycle_binding,base_catalog,recipe_catalogs,
-             SQL_phase=None,guard,report=lambda _:None):
+             SQL_phase=None,runtime_phase=None,guard,report=lambda _:None):
     guard();contract=json.loads(json.dumps(contract))
+    if contract.get('runtime_scope_authority') and runtime_phase is None:
+        raise ValueError('independently reopened runtime phase required')
+    if runtime_phase is not None:bind_runtime_scope(client,current_map,contract,runtime_phase,guard=guard)
     if len(recipe_catalogs)>8:raise ValueError('finite explicit proof catalogs required')
     if (contract.get('required_SQL') or contract.get('SQL_scope_authority')) and SQL_phase is None:
         raise ValueError('independently reopened current SQL request required')
@@ -96,6 +136,14 @@ def finalize(client,*,current_map,map_layer,contract,cycle_binding,base_catalog,
             db=client.connect(name,sha,readonly=True);stack.callback(db.close);return db
         current=opened('final-current-map',sealed['sha256'])
         descriptor=current.request('build-current-descriptor',reference=reference,consumer_contract=contract)
+        if contract.get('dependency_selection_authority')=='sealed-map-recipes-v1':
+            selected=descriptor['dependencies']
+            if any(name not in contract['dependencies'] or value!=contract['dependencies'][name]
+                   for name,value in selected.items()):
+                raise ValueError('descriptor selected an unauthenticated provider')
+            contract['dependencies']=selected
+        if descriptor['installed_consumer_contract_sha256']!=checksum(contract):
+            raise ValueError('sealed descriptor/effective consumer contract differs')
         base=opened('final-base-catalog',base_catalog['checkpoint_sha256'])
         catalogs=[opened('final-recipe-'+str(n),r['checkpoint_sha256']) for n,r in enumerate(recipe_catalogs)]
         proof=current.request('audit-current-content',reference=reference,base_index=base.key,
@@ -108,7 +156,8 @@ def finalize(client,*,current_map,map_layer,contract,cycle_binding,base_catalog,
         raise ValueError('actual immutable proof catalogs differ from installed contract')
     return dict(format='vk-nightly-finalized-current-candidate-v1',sealed_map=sealed,
         descriptor=descriptor,descriptor_sha256=checksum(descriptor),consumer_contract=contract,
-        consumer_contract_sha256=contract_sha,content_proof=proof,content_proof_sha256=checksum(proof),
+        consumer_contract_sha256=checksum(contract),sealed_template_contract_sha256=contract_sha,
+        content_proof=proof,content_proof_sha256=checksum(proof),
         expected_catalogs=expected,cycle_binding=cycle_binding,
         whole_baseline_accepted=False,independent_consumer_still_required=True,schedule_enabled=False,
         source_payload_bytes_read=0,OS_SSD_payload_or_index_bytes=0)
@@ -116,10 +165,25 @@ def finalize(client,*,current_map,map_layer,contract,cycle_binding,base_catalog,
 
 def consumer_packet(candidate,*,provider_placement,readback_sources,scratch_parent,
                     maximum_scratch_bytes,maximum_readback_bytes,remaining_seconds,
-                    whole_cycle_deadline_UTC,Linux_resource_admission):
+                    whole_cycle_deadline_UTC,Linux_resource_admission,readback_scope_authority=None):
     if candidate.get('format')!='vk-nightly-finalized-current-candidate-v1':raise ValueError('actual finalized current candidate required')
     fields=('descriptor','descriptor_sha256','consumer_contract','consumer_contract_sha256',
             'content_proof','content_proof_sha256','expected_catalogs')
+    if candidate['consumer_contract'].get('dependency_selection_authority')=='sealed-map-recipes-v1':
+        selected=set(candidate['consumer_contract']['dependencies'])
+        provider_placement=json.loads(json.dumps(provider_placement))
+        for field in ('roots','root_bindings','lease_paths'):
+            if not selected<=set(provider_placement[field]):
+                raise ValueError('selected provider lacks independently admitted placement/lease')
+            provider_placement[field]={k:v for k,v in provider_placement[field].items() if k in selected}
+    if readback_scope_authority is not None:
+        if readback_scope_authority!='effective-contract-mandatory-v1':
+            raise ValueError('unsupported composed readback selection authority')
+        if not isinstance(readback_sources,list):raise ValueError('explicit supplemental readback list required')
+        contract=candidate['consumer_contract']
+        readback_sources=sorted(set(readback_sources)|set(contract['required_pins'])
+            |set(contract.get('always_runtime_files',{}))|set(candidate['descriptor']['always_SQL_API_sources']))
+        if len(readback_sources)>256:raise ValueError('finite mandatory composed readback scope exceeded')
     return dict({k:candidate[k] for k in fields},format='vk-nightly-composed-consumer-packet-v1',
         provider_placement=provider_placement,readback_sources=readback_sources,scratch_parent=scratch_parent,
         maximum_scratch_bytes=maximum_scratch_bytes,maximum_readback_bytes=maximum_readback_bytes,

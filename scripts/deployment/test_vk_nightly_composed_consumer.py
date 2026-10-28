@@ -49,6 +49,19 @@ class ConsumerTests(unittest.TestCase):
             Linux_resource_admission=dict(memory_floor_bytes=0,swap_floor_bytes=0))
         self.body=body;self.controls=controls
 
+    def test_bound_readback_scope_includes_current_SQL_alias_and_all_pins(self):
+        from vk_nightly_finalize_current import consumer_packet
+        c={k:v for k,v in self.packet.items() if k in ('descriptor','descriptor_sha256','consumer_contract',
+            'consumer_contract_sha256','content_proof','content_proof_sha256','expected_catalogs')}
+        c['format']='vk-nightly-finalized-current-candidate-v1'
+        args={k:self.packet[k] for k in ('provider_placement','scratch_parent','maximum_scratch_bytes',
+            'maximum_readback_bytes','remaining_seconds','whole_cycle_deadline_UTC','Linux_resource_admission')}
+        packet=consumer_packet(c,readback_sources=[],readback_scope_authority='effective-contract-mandatory-v1',**args)
+        self.assertEqual(packet['readback_sources'],['/home/state/note','/home/state/state.sqlite'])
+        self.assertTrue(run(packet,checksum(packet),guard=lambda:None)['independent_composed_restore_verified'])
+        with self.assertRaisesRegex(ValueError,'unsupported composed readback'):
+            consumer_packet(c,readback_sources=[],readback_scope_authority='ignore-required-SQL',**args)
+
     def test_real_entrypoint_returns_independent_SQL_metadata_and_timing(self):
         result=run(self.packet,checksum(self.packet),guard=lambda:None)
         self.assertTrue(result['independent_composed_restore_verified'])

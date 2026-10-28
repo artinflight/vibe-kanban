@@ -69,9 +69,7 @@ def run(config,workers,store,*,consumer,guard,report=lambda _:None,now=lambda:da
                        source_report=lambda:owner.report(remote.client))
             if tail['more_pending']:raise ValueError('bounded recorded final delta remains incomplete; retain all points')
             settings=dict(config['finalize'],guard=owner.guard,report=report)
-            required=settings['contract'].get('always_runtime_files',{})
-            if results['runtime'].get('always_runtime_files')!=required:
-                raise ValueError('actual adopted runtime component differs from external consumer contract')
+            settings['runtime_phase']=results['runtime']
             value=finalize(remote.client,**settings)
         left=(datetime.fromisoformat(end)-now()).total_seconds()
         packet=consumer_packet(value,**dict(config['consumer'],remaining_seconds=left,whole_cycle_deadline_UTC=end))

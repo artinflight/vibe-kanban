@@ -429,6 +429,70 @@ class BControlTests(unittest.TestCase):
         self.assertEqual(accepted['actual_selected_restore_bytes'],rows['home/state/note']['bytes'])
         self.assertFalse(accepted['original_epoch_complete']);self.assertFalse(accepted['schedule_enabled'])
 
+    def test_selected_provider_pool_finalizes_and_restores_only_actual_dependencies(self):
+        from datetime import datetime,timedelta,timezone
+        from vk_nightly_finalize_current import finalize,consumer_packet
+        from vk_nightly_composed_consumer import run
+        from vk_typed_recovery import checksum
+        import copy
+        settings,body,_=self.finalization_fixture()
+        contract=settings['contract'];contract['dependency_selection_authority']='sealed-map-recipes-v1'
+        contract['dependencies']['unused-older-archive']={'accepted_proof_sha256':'e'*64}
+        before=copy.deepcopy(contract)
+        result=finalize(self.client,**settings)
+        self.assertEqual(contract,before) # The installed template remains immutable.
+        self.assertNotIn('unused-older-archive',result['consumer_contract']['dependencies'])
+        self.assertEqual(result['consumer_contract_sha256'],checksum(result['consumer_contract']))
+        self.assertNotEqual(result['sealed_template_contract_sha256'],result['consumer_contract_sha256'])
+        (self.controls/'RECOVERY_READ.lease').touch()
+        roots={'accepted-base':str(body),'nightly-controls-v1':str(self.controls),'unused-older-archive':'/not-admitted-or-read'}
+        placement=dict(roots=roots,expected_uid=os.getuid(),expected_gid=os.getgid(),
+            root_bindings={k:[Path(v).stat().st_dev,Path(v).stat().st_ino] for k,v in roots.items() if k!='unused-older-archive'},
+            lease_paths={k:str(Path(v)/'RECOVERY_READ.lease') for k,v in roots.items() if k!='unused-older-archive'})
+        packet=consumer_packet(result,provider_placement=placement,readback_sources=['/home/state/note'],
+            scratch_parent=str(self.root),maximum_scratch_bytes=17*1024**2,maximum_readback_bytes=1024**2,
+            remaining_seconds=30,whole_cycle_deadline_UTC=(datetime.now(timezone.utc)+timedelta(seconds=30)).isoformat(),
+            Linux_resource_admission=dict(memory_floor_bytes=0,swap_floor_bytes=0))
+        self.assertNotIn('unused-older-archive',packet['provider_placement']['roots'])
+        self.assertIn('unused-older-archive',placement['roots'])
+        self.assertTrue(run(packet,checksum(packet),guard=lambda:None)['independent_composed_restore_verified'])
+        del placement['lease_paths']['accepted-base']
+        with self.assertRaisesRegex(ValueError,'selected provider lacks'):
+            consumer_packet(result,provider_placement=placement,readback_sources=[],scratch_parent=str(self.root),
+                maximum_scratch_bytes=1,maximum_readback_bytes=1,remaining_seconds=30,
+                whole_cycle_deadline_UTC='2026-10-28T08:00:00+00:00',Linux_resource_admission={})
+
+    def test_runtime_late_binding_reopens_actual_B_points_and_rejects_changed_scope_or_pin(self):
+        import copy
+        from test_vk_nightly_recovery_descriptor import runtime_fixture
+        from vk_nightly_finalize_current import bind_runtime_scope
+        settings,body,_=self.finalization_fixture()
+        root=self.root/'runtime-binding';(root/'controls').mkdir(parents=True)
+        component,path,expected,source,_=runtime_fixture(root,body)
+        component.close();sha=self.import_other(path)
+        reference=dict(format='vk-nightly-current-member-map-v1',layer='nightly-controls-v1',
+            selector=sha+'.sqlite',sha256=sha,bytes=path.stat().st_size)
+        view=self.client.connect('actual-runtime-component',sha,readonly=True)
+        main=self.client.connect(settings['current_map']['index_name'],settings['current_map']['checkpoint_sha256'])
+        try:
+            result=main.request('adopt-runtime-component',component_index=view.key,component_reference=reference,expected_files=expected)
+        finally:main.close();view.close()
+        result.update(component_reference=reference,actual_independent_B_runtime_component_reopen_verified=True)
+        template=dict(runtime_scope_authority='authenticated-runtime-component-v1',always_runtime_files=None,
+            required_runtime_points=expected)
+        contract=copy.deepcopy(template)
+        bind_runtime_scope(self.client,settings['current_map'],contract,result,guard=lambda:None)
+        self.assertEqual(contract['always_runtime_files'],result['always_runtime_files'])
+        for mutation in ('pin','scope','component','proof','result'):
+            c=copy.deepcopy(template);r=copy.deepcopy(result)
+            if mutation=='pin':c['required_runtime_points'][str(source)]['sha256']='a'*64
+            if mutation=='scope':c['required_runtime_points']['/another']={}
+            if mutation=='component':r['component_reference']['sha256']='b'*64
+            if mutation=='proof':r['actual_independent_B_runtime_component_reopen_verified']=False
+            if mutation=='result':r['always_runtime_files'][str(source)]['independent_proof_sha256']='c'*64
+            with self.subTest(mutation=mutation),self.assertRaises(ValueError):
+                bind_runtime_scope(self.client,settings['current_map'],c,r,guard=lambda:None)
+
     def test_finalizer_refuses_unresolved_points_before_seal_and_requires_SQL_request(self):
         from vk_nightly_finalize_current import finalize
         settings,_,_=self.finalization_fixture()

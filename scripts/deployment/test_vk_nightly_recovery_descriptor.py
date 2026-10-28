@@ -142,6 +142,19 @@ class RecoveryDescriptorTests(unittest.TestCase):
         run=subprocess.run([sys.executable,'-B','-c',code],capture_output=True,text=True,timeout=10)
         self.assertEqual(run.returncode,0,run.stderr);self.assertEqual(run.stdout.strip(),'portable metadata imported')
 
+    def test_selected_dependency_pool_never_authorizes_an_unknown_recipe_or_changes_template(self):
+        db,path,c,_,_,_=self.use()
+        c['dependency_selection_authority']='sealed-map-recipes-v1'
+        c['dependencies']['unused']={'accepted_proof_sha256':'e'*64}
+        original=copy.deepcopy(c)
+        d=build(db,reference(path),c,checkpoint=lambda:None)
+        self.assertEqual(c,original);self.assertNotIn('unused',d['dependencies'])
+        effective=copy.deepcopy(c);del effective['dependencies']['unused']
+        self.assertEqual(d['installed_consumer_contract_sha256'],checksum(effective))
+        del c['dependencies']['accepted-base']
+        with self.assertRaisesRegex(ValueError,'authenticated carrier dependency missing'):
+            build(db,reference(path),c,checkpoint=lambda:None)
+
     def test_complete_descriptor_normal_independent_reader_and_actual_bodies(self):
         db,path,contract,rows,body,controls=self.use(SQL=True)
         d=build(db,reference(path),contract,checkpoint=lambda:None)

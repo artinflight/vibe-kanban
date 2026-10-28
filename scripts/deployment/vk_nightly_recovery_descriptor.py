@@ -185,6 +185,13 @@ def build(database,reference,contract,*,checkpoint):
         if count%1024==0:checkpoint()
     if roots!=set(required):raise ValueError('complete current required root coverage missing')
     if not layers<=set(contract['dependencies']):raise ValueError('authenticated carrier dependency missing')
+    authority=contract.get('dependency_selection_authority')
+    if authority is not None:
+        if authority!='sealed-map-recipes-v1':raise ValueError('unsupported dependency selection authority')
+        # The installed template authenticates a provider pool. Only recipes
+        # in this complete sealed map select required providers; an omitted or
+        # unknown layer above still fails. Do not demand every old candidate.
+        contract=dict(contract,dependencies={name:contract['dependencies'][name] for name in sorted(layers)})
     for path,pin in pins.items():
         source_path(path);row=index.entry(path[1:])
         if row.get('kind') not in ('file','hardlink') or any(row.get(k)!=pin[k] for k in ('bytes','sha256')):

@@ -206,7 +206,8 @@ def ssh_command(config,remote_command):
     native volume/MM/STOP/health admission still runs on the selected endpoint.
     """
     command=['ssh','-T','-o','BatchMode=yes','-o','StrictHostKeyChecking=yes',
-        '-o','UpdateHostKeys=no','-o','ConnectTimeout=15','-o','ControlMaster=no','-o','ControlPath=none']
+        '-o','UpdateHostKeys=no','-o','ConnectTimeout=15','-o','ControlMaster=no','-o','ControlPath=none',
+        '-o','ServerAliveInterval=15','-o','ServerAliveCountMax=3']
     route=config.get('verified_SSH_route')
     if route is not None:
         if (not isinstance(route,dict) or set(route)!={'format','hostname','host_key_alias','identity_probe_sha256'}

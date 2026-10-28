@@ -16,6 +16,55 @@ from vk_nightly_runtime_cycle import capture_component
 from vk_nightly_finalize_current import finalize,consumer_packet
 from vk_nightly_desktop_controls import DesktopControls
 from vk_nightly_typed_worker import host_guard,run_B
+from vk_typed_recovery import checksum
+
+
+
+def recorded_file_tail(worker,owner,*,report):
+    """One bounded recorded delta; deliver newer events without selecting them."""
+    owner.check();last_delivery=time.monotonic()
+    def boundary():
+        nonlocal last_delivery
+        owner.check()
+        if time.monotonic()-last_delivery>=120:
+            owner.deliver();last_delivery=time.monotonic()
+    selected=dict(worker,qualification=dict(worker['qualification'],attach_base_prefixes=False))
+    with DesktopControls(worker['B_controls'],guard=owner.guard) as remote:
+        return run_B(selected,at_component_boundary=boundary,
+            source_report=lambda:owner.report(remote.client),status_sink=report)
+
+
+def close_deferred_files(original,worker,owner,*,report):
+    """Close only unresolved recorded names, without a new namespace suffix.
+
+    The predecessor receipt remains byte-for-byte readable on B. A crash before
+    the whole-cycle phase commit reuses accepted bodies from the same map; a
+    crash after that commit skips this callback through the reopened ledger.
+    Original deferred epoch truth is retained inside the composed receipt.
+    """
+    if original.get('more_pending') is False:return original
+    if (original.get('actual_independent_B_file_cycle_receipt_reopen_verified') is not True
+            or original.get('requires_source_requalification') is not True):
+        raise ValueError('only independently reopened deferred file points can enter bounded closure')
+    tail=recorded_file_tail(worker,owner,report=report)
+    if tail.get('more_pending') is not False:
+        raise ValueError('recorded file points still changing or incomplete; preserve all versions')
+    # A different normal native connection observes committed member states;
+    # a caller's Boolean is insufficient to close a source replacement race.
+    with DesktopControls(worker['B_controls'],guard=owner.guard) as remote:
+        db=remote.client.connect(worker['B_index_name'],worker['B_checkpoint_sha256'],readonly=True,working=True)
+        try:
+            if db.execute("select 1 from members where state in ('file-needs-qualification',"
+                          "'current-namespace-replay-required','file-needs-capture') limit 1").fetchone():
+                raise ValueError('independent B map still has unresolved file points')
+            db.request('check')
+        finally:db.close()
+    owner.check()
+    return dict(phase='finite-current-file-cycle-complete',more_pending=False,
+        original_component_receipt=original,original_component_receipt_sha256=checksum(original),
+        recorded_file_delta=tail,normal_B_file_closure_reopen_verified=True,
+        actual_independent_B_file_cycle_receipt_reopen_verified=True,
+        final_B_delivery=original['final_B_delivery'],baseline_accepted=False,schedule_enabled=False)
 
 
 def run(config,workers,store,*,consumer,guard,report=lambda _:None,now=lambda:datetime.now(timezone.utc),
@@ -49,7 +98,11 @@ def run(config,workers,store,*,consumer,guard,report=lambda _:None,now=lambda:da
         raise ValueError('existing components cannot masquerade as a timed ordinary incremental cycle')
     def files(_,end,check):
         check()
-        return completed_components['files'] if completed_components else file_cycle(config['files'],actual['files'],report=report)
+        value=completed_components['files'] if completed_components else file_cycle(config['files'],actual['files'],report=report)
+        if value.get('more_pending') is False:return value
+        started=time.monotonic()
+        owner=Source(source_ref,main['B_controls'],guard=lambda:(check(),host_guard(main,started)))
+        return close_deferred_files(value,main,owner,report=report)
     def SQL(_,end,check):
         check()
         return completed_components['SQL'] if completed_components else SQL_cycle(config['SQL'],actual['SQL'],report=report)
@@ -64,10 +117,9 @@ def run(config,workers,store,*,consumer,guard,report=lambda _:None,now=lambda:da
         # again and invalidating already captured SQL or chasing live history.
         started=time.monotonic()
         owner=Source(source_ref,main['B_controls'],guard=lambda:(check(),host_guard(main,started)))
+        tail=recorded_file_tail(main,owner,report=report)
+        if tail['more_pending']:raise ValueError('bounded recorded final delta remains incomplete; retain all points')
         with DesktopControls(main['B_controls'],guard=owner.guard) as remote:
-            tail=run_B(main,at_component_boundary=owner.check,
-                       source_report=lambda:owner.report(remote.client))
-            if tail['more_pending']:raise ValueError('bounded recorded final delta remains incomplete; retain all points')
             settings=dict(config['finalize'],guard=owner.guard,report=report)
             settings['runtime_phase']=results['runtime']
             value=finalize(remote.client,**settings)

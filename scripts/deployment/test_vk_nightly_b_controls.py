@@ -589,6 +589,43 @@ class BControlTests(unittest.TestCase):
         self.assertTrue(again['reused_completed_publication']);self.assertEqual(again['revision'],1)
         self.assertEqual(calls,['files','SQL','runtime','candidate','restore'])
 
+    def test_actual_native_cycle_Desktop_off_calendar_retry_reopens_prefix_and_restores_once(self):
+        from datetime import datetime,timedelta,timezone
+        from vk_nightly_cycle_state import run_cycle
+        from vk_nightly_calendar import tick,load as calendar_state
+        from vk_nightly_service import failure_exit_code
+        from vk_nightly_transport_diagnostics import finish
+        store,binding,adapters,calls,now=self.cycle_fixture()
+        now[0]=datetime(2099,1,3,3,tzinfo=timezone.utc)
+        binding.update(started_UTC=now[0].isoformat(),deadline_UTC=(now[0]+timedelta(hours=2)).isoformat())
+        state=self.root/'calendar-retry.json';mono=[0];attempts=[0]
+        def offline(*_):
+            process=SimpleNamespace(args=['ssh','desktop','fixed-existing-command'],stdin=io.BytesIO(),stdout=io.BytesIO(),
+                stderr=io.BytesIO(b'ssh: connect to host 10.0.0.109 port 22: Connection refused\n'),wait=lambda **_:255)
+            error=EOFError('normal B readiness stream ended');finish(process,original=error);raise error
+        def runner(deadline,day):
+            attempts[0]+=1
+            try:run_cycle(store,binding,**(dict(adapters,SQL=offline) if attempts[0]==1 else adapters))
+            except Exception as error:return failure_exit_code(error)
+            return 0
+        def wake():return tick(state,'a'*64,runner,lambda:True,lambda _:None,
+            now=lambda:now[0],monotonic=lambda:mono[0],boot_id='same-fixture-boot')
+        first=wake();self.assertEqual(first['status'],'resource_deferred');self.assertEqual(first['child_exit'],75)
+        self.assertIsNone(store.accepted());self.assertEqual(calls,['files'])
+        self.assertEqual(calendar_state(state)['attempts'],1)
+        self.assertEqual(wake()['status'],'retry_wait');self.assertEqual(attempts[0],1)
+        # Independently reopen the SAME native B fixture, not in-memory caller state.
+        send(self.client.output,dict(op='bye'));self.assertEqual(recv(self.client.source),{'closed':True})
+        self.assertEqual(self.children[-1].wait(timeout=10),0);self.client.output.close()
+        self.client=self.start();store.client=self.client
+        now[0]+=timedelta(seconds=1801);mono[0]+=1801
+        self.assertEqual(wake()['status'],'completed')
+        self.assertTrue(store.accepted()['current_recoverable_set_accepted'])
+        self.assertEqual(store.accepted()['revision'],1)
+        self.assertEqual(calls,['files','SQL','runtime','candidate','restore'])
+        self.assertEqual(wake()['status'],'already_completed');self.assertEqual(attempts[0],2)
+        self.assertEqual(calls.count('files'),1)
+
     def test_scheduled_binding_survives_retry_and_four_AM_stops_between_phases(self):
         from datetime import datetime,timedelta,timezone
         from vk_nightly_cycle_state import run_cycle
@@ -1303,6 +1340,110 @@ class BControlTests(unittest.TestCase):
                 result=worker.run_B(config,source_report=lambda:report)
                 self.assertEqual(result['completed_members'],0)
                 self.assertEqual({p.name:p.stat().st_ino for p in self.objects.iterdir()},before)
+        finally:
+            body.stdin.close();self.assertEqual(body.wait(timeout=10),0);body.stdout.close();body.stderr.close()
+
+    def test_deferred_file_closure_preserves_original_B_receipt_and_reuses_completed_bodies(self):
+        from vk_nightly_current_map import CurrentMap
+        from vk_nightly_namespace import observe
+        from vk_nightly_qualification import encode_observation,qualify_file
+        import vk_nightly_typed_worker as worker
+        files=self.root/'selected';files.mkdir()
+        unchanged=files/'unchanged';unchanged.write_bytes(b'accepted earlier body')
+        changed=files/'changed';changed.write_bytes(b'new body after the accepted baseline')
+        ns=sqlite3.connect(':memory:');self.addCleanup(ns.close)
+        ns.execute('create table namespace(name text primary key,row blob)')
+        ns.execute('create table namespace_errors(name text primary key,error blob)')
+        for path in (unchanged,changed):
+            ns.execute('insert into namespace values(?,?)',(str(path)[1:],encode_observation(observe(path))))
+        epoch=dict(instance='live-inode-source',scope_sha256='a'*64,plan_sha256='b'*64,start_sequence=17,
+            required_root_bindings={str(files):dict(resolved=str(files),literal=None)},original_epoch_repaired=False)
+        ns.execute('create table gap_meta(id integer primary key,binding text,complete integer)')
+        ns.execute('insert into gap_meta values(1,?,1)',(json.dumps(epoch),))
+        path=self.root/'selected-map.sqlite';binding={'test':'native selected worker'}
+        with CurrentMap.held(path,binding=binding,create=True) as current:
+            current.compile(ns,lambda _:None,SQL_sources=[],checkpoint=lambda:None,maximum_paths=10)
+            current.reconcile_namespace(ns,lambda _:None,checkpoint=lambda:None,maximum_paths=10)
+        map_sha=self.import_other(path)
+        path=self.root/'selected-carriers.sqlite'
+        with sqlite3.connect(path) as base:
+            base.execute('create table provenance(source_catalog_sha256 text,restore_proof_sha256 text)')
+            base.execute('insert into provenance values(?,?)',('c'*64,'d'*64))
+            base.execute('create table bodies(sha256 text,bytes integer,name text)')
+            base.execute('insert into bodies values(?,?,?)',(hashlib.sha256(unchanged.read_bytes()).hexdigest(),unchanged.stat().st_size,str(unchanged)[1:]))
+        base.close();base_sha=self.import_other(path)
+        self.client.connect('selected-carriers',base_sha).close()
+        config=dict(format='vk-nightly-typed-worker-B-v1',B_controls={'maximum_index_bytes':8*1024**2},B_index_name='selected-map',B_checkpoint_sha256=map_sha,
+            map_binding=binding,status=str(self.root/'selected-status'),desktop={},maximum_members=10,
+            maximum_source_bytes=1024,chunk_bytes=4096,
+            qualification=dict(maximum_paths=10,maximum_source_bytes=1024,
+                base=dict(index_name='selected-carriers',checkpoint_sha256=base_sha),recipes=[],attach_base_prefixes=True))
+        report=dict(epoch,since=17,sequence=25,ready=True,errors=[],terminal=None,coverage_model='all-selected-inodes-v1',
+            barrier=dict(instance=epoch['instance'],durable_sequence=25,kernel_drain_completed=True))
+        @contextmanager
+        def controls(*_,**__):yield SimpleNamespace(client=self.client)
+        folder=str(Path(__file__).parent)
+        code='import sys;sys.path.insert(0,'+repr(folder)+');from vk_nightly_objects import receive;receive('+repr(str(self.objects))+',sys.stdin.buffer,sys.stdout.buffer,guard=lambda n:None,maximum_object_bytes=65536)'
+        body=subprocess.Popen([sys.executable,'-B','-u','-c',code],stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+        objects=ObjectClient(body.stdout,body.stdin,guard=lambda:None,ram_root=self.root,maximum_object_bytes=65536)
+        @contextmanager
+        def remote(*_,**__):yield SimpleNamespace(client=objects,ready={'test':'normal native protocol'})
+        def fault():raise RuntimeError('injected after committed qualification')
+        try:
+            with patch.object(worker,'host_guard',lambda *_:None),patch.object(worker,'DesktopControls',controls),patch.object(worker,'DesktopObjects',remote):
+                with patch('vk_nightly_qualification_worker.qualify_file',wraps=qualify_file) as hashed:
+                    with self.assertRaisesRegex(RuntimeError,'committed qualification'):
+                        worker.run_B(config,source_report=lambda:report,at_component_boundary=fault)
+                    self.assertEqual(hashed.call_count,2)
+                self.assertEqual(objects.payload_bytes_sent,0,'qualification must not transfer source bodies')
+                changed.write_bytes(b'newer stable point after original qualification')
+                import vk_nightly_file_cycle as cycle
+                import vk_nightly_current_cycle as composed
+                events=[]
+                source=SimpleNamespace(guard=lambda:None,check=lambda:None,deliver=lambda:(events.append('delivery') or {'verified':True}),
+                    config={'B_delivery_target':{'index_name':'fixture-journal','checkpoint_sha256':map_sha}},plan={},
+                    report=lambda _:report)
+                with patch('vk_nightly_qualification_worker.qualify_file',side_effect=AssertionError('accepted hash repeated')),\
+                     patch.object(cycle,'Source',return_value=source),patch.object(cycle,'DesktopControls',controls),\
+                     patch.object(cycle,'advance_suffix',side_effect=lambda *a,**k:(events.append('bounded-delta') or {'retained':True})),\
+                     patch.object(cycle,'host_guard',lambda *_:None):
+                    result=cycle.run({'source_observer':{},'maximum_delta_paths':10},config,report=lambda _:None)
+                self.assertEqual(events,['delivery','bounded-delta','delivery'])
+                self.assertTrue(result['actual_independent_B_file_cycle_receipt_reopen_verified'])
+                self.assertFalse(result['baseline_accepted']);self.assertTrue(result['remaining_SQL_runtime_composed_restore_required'])
+                self.assertEqual(result['selected_qualification']['processed'],0)
+                self.assertEqual(result['completed_members'],0)
+                self.assertTrue(result['more_pending']);self.assertTrue(result['requires_source_requalification'])
+                db=self.client.connect('selected-map',map_sha,readonly=True,working=True)
+                original_native=db.execute('select row from tracking_health where id=1').fetchone()[0];db.close()
+                saved=json.dumps(result,sort_keys=True);progress=[]
+                with patch.object(composed,'DesktopControls',controls):
+                    # A forged caller success cannot close the still-unresolved
+                    # member. The new independent native reopen rejects it.
+                    with patch.object(composed,'run_B',return_value={'more_pending':False}):
+                        with self.assertRaisesRegex(ValueError,'still has unresolved'):
+                            composed.close_deferred_files(result,config,source,report=progress.append)
+                    closed=composed.close_deferred_files(result,config,source,report=progress.append)
+                    self.assertTrue(closed['normal_B_file_closure_reopen_verified'])
+                    self.assertFalse(closed['more_pending'])
+                    self.assertEqual(closed['original_component_receipt'],result)
+                    self.assertEqual(json.dumps(result,sort_keys=True),saved)
+                    self.assertEqual(closed['recorded_file_delta']['completed_members'],1)
+                    self.assertEqual(closed['recorded_file_delta']['selected_qualification']['processed'],1)
+                    before={p.name:p.stat().st_ino for p in self.objects.iterdir()}
+                    uploaded=objects.payload_bytes_sent
+                    # Interruption before the cycle-ledger commit: reopen the
+                    # original unchanged receipt, skip accepted points and do
+                    # not rehash or recopy the now-completed replacement.
+                    with patch('vk_nightly_qualification_worker.qualify_file',side_effect=AssertionError('completed hash repeated')):
+                        again=composed.close_deferred_files(result,config,source,report=progress.append)
+                    self.assertFalse(again['more_pending'])
+                    self.assertEqual(again['recorded_file_delta']['completed_members'],0)
+                    self.assertEqual(objects.payload_bytes_sent,uploaded)
+                    self.assertEqual({p.name:p.stat().st_ino for p in self.objects.iterdir()},before)
+                db=self.client.connect('selected-map',map_sha,readonly=True,working=True)
+                self.assertEqual(db.execute('select row from tracking_health where id=1').fetchone()[0],original_native)
+                self.assertEqual(db.execute("select count(*) from members where state='verified-file'").fetchone(),(2,));db.close()
         finally:
             body.stdin.close();self.assertEqual(body.wait(timeout=10),0);body.stdout.close();body.stderr.close()
 

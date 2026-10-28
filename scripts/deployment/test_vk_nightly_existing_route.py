@@ -12,6 +12,7 @@ class ExistingRouteTests(unittest.TestCase):
         command=ssh_command({},'fixed command')
         self.assertEqual(command[-2:],['desktop','fixed command'])
         self.assertIn('StrictHostKeyChecking=yes',command);self.assertIn('UpdateHostKeys=no',command)
+        self.assertIn('ServerAliveInterval=15',command);self.assertIn('ServerAliveCountMax=3',command)
         self.assertFalse(any(c.startswith('Hostname=') for c in command))
 
     def test_explicit_verified_LAN_reuses_same_Desktop_alias_identity_and_command(self):

@@ -216,6 +216,13 @@ def execute(value,workers,*,report):
                        completed_components=completed)
 
 
+def failure_exit_code(error):
+    """Finite calendar retry only for positive temporary-admission evidence."""
+    return (75 if isinstance(error,(ResourceDeferred,BlockingIOError))
+        or (getattr(error,'nightly_Desktop_transport_unavailable',False) is True
+            and getattr(error,'nightly_transport_exit_code',None)==255) else 1)
+
+
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--config',type=Path,required=True);parser.add_argument('--config-sha256',required=True)
@@ -256,11 +263,14 @@ def main():
         result=execute(value,workers,report=report);report(result,'RESULT.private.json');return 0
     except BaseException as error:
         report(dict(phase='whole-cycle-stopped',type=type(error).__name__,reason=str(error),
-            all_components_and_failed_outputs_preserved=True,baseline_accepted=False,schedule_enabled=False),
+            all_components_and_failed_outputs_preserved=True,baseline_accepted=False,schedule_enabled=False,
+            retryable_Desktop_transport_unavailable=getattr(error,'nightly_Desktop_transport_unavailable',False) is True),
             'STOP.private.json')
         raise
 
 
 if __name__=='__main__':
     try:raise SystemExit(main())
-    except (ResourceDeferred,BlockingIOError):raise SystemExit(75)
+    except Exception as error:
+        if failure_exit_code(error)==75:raise SystemExit(75)
+        raise

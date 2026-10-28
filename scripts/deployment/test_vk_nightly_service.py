@@ -50,6 +50,23 @@ class ServiceTests(unittest.TestCase):
         self.assertNotEqual(result.returncode,0);self.assertIn('binding differs',result.stderr)
         self.assertEqual(set(self.root.iterdir()),before)
 
+    def test_main_preserves_first_error_and_records_retryable_transport_without_acceptance(self):
+        import io
+        from vk_nightly_transport_diagnostics import finish
+        process=SimpleNamespace(args=['ssh','desktop'],stdin=io.BytesIO(),stdout=io.BytesIO(),
+            stderr=io.BytesIO(b'ssh: connect to host 10.0.0.109 port 22: Connection refused\n'),wait=lambda **_:255)
+        error=EOFError('actual readiness EOF');finish(process,original=error)
+        value=dict(status=str(self.root/'STATUS.private.json'))
+        argv=['vk_nightly_service','--config',str(self.root/'unused'), '--config-sha256','a'*64]
+        with patch.object(service.sys,'argv',argv),patch.object(service,'load',return_value=(value,{})), \
+             patch.object(service,'execute',side_effect=error):
+            with self.assertRaises(EOFError) as caught:service.main()
+        self.assertIs(caught.exception,error);self.assertEqual(service.failure_exit_code(error),75)
+        stopped=json.loads((self.root/'STOP.private.json').read_text())
+        self.assertTrue(stopped['retryable_Desktop_transport_unavailable'])
+        self.assertFalse(stopped['baseline_accepted']);self.assertFalse(stopped['schedule_enabled'])
+        self.assertEqual(stopped['reason'],'actual readiness EOF')
+
     def test_scheduled_cohort_is_deterministic_per_evening_with_new_next_day_and_DST_end(self):
         template=dict(cycle=dict(cycle_binding=dict(cycle_kind='incremental'),
             SQL=dict(SQL_phase_index=dict(index_name='template',checkpoint_sha256='3'*64)),finalize={}))

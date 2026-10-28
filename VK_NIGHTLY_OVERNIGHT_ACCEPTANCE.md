@@ -380,3 +380,41 @@ validated the exact command without installing or reading the live crontab.
 118focused tests and a separate actual2.311sowned user-manager hard-stop fixture
 passed. Full production restore/timing and service-level Desktop-off retry
 classification remain required, not inferred from component fixtures.
+
+
+## Deferred-file closure and Desktop-off retry — October 27, 22:40 EDT
+
+A qualified file can change before its body is captured. The old commissioning
+coordinator rejected that deferred file before reaching its planned final delta.
+The coordinator now requalifies only unresolved recorded names before recording
+the completed file phase. It does not enroll another namespace suffix, alter the
+old receipt, or relabel its epoch as complete. The original receipt and digest
+remain in the composed phase. A different normal native B connection must find
+no unresolved file points before the whole-cycle ledger records completion.
+Interrupted closure reuses already accepted bodies; the original B completion
+status remains readable for authenticated predecessor adoption. Tail progress
+uses the bounded controller mirror, and the cycle ledger stores its final proof.
+Later events can still drain to durable B without selecting a new suffix.
+
+An actual isolated native-protocol fixture changes a qualified source version,
+records the deferred original phase, refuses a forged success Boolean against
+the unresolved B map, qualifies/captures/readbacks the replacement and independently
+reopens it. Repeating after an interrupted coordinator performs no completed
+source hash or body transfer and leaves the original native receipt unchanged.
+This is integration rehearsal, not production current-set acceptance.
+
+Owned SSH exit255 with exact positive network-unavailable diagnostics now maps
+to the calendar's finite deferred retry. Keepalives bound a dead owned transport;
+the pinned route, host keys and normal admission are unchanged. Missing/unknown
+observations, access denial, host-key failure, STOP and reported native faults
+remain blocking. First errors retain their identity and cleanup diagnostics.
+A RAM native-ledger/calendar rehearsal independently reopens a completed file
+phase after simulated Desktop loss and completes the normal restore once,
+without repeating that phase. It does not prove actual overnight runtime.
+
+166 focused transport/calendar/native-control/capture/SQL/runtime/normal-consumer
+checks pass. Ops and diff checks pass; Rust formatting passes, while the required
+full format command still stops at the missing local Prettier executable. No
+whole current baseline, ordinary overnight acceptance or enabled schedule is
+claimed by these tests. Upgrade only a proven idle coordinator after exact
+source/config preflight and controller-lease release; preserve advancing bodies.

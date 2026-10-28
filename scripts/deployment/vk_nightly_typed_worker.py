@@ -318,13 +318,15 @@ def qualify_B(current,client,qualification,*,journal,guard,on_progress):
         for catalog in reversed(catalogs):catalog.close()
 
 
-def run_B(config,*,at_component_boundary=lambda:None,source_report=None):
+def run_B(config,*,at_component_boundary=lambda:None,source_report=None,status_sink=None):
     """Authoritative prepared phase on B, with only a bounded health mirror."""
     started=time.monotonic();guard=lambda:host_guard(config,started)
     if config.get('SQL_sources_from_current_map'):
         raise ValueError('resolved current SQL cohort request required before B work')
     if 'qualification' in config and not callable(source_report):
         raise ValueError('selected qualification requires the authenticated current source controller')
+    if status_sink is not None and (not callable(status_sink) or config.get('phase_kind')=='SQL-points'):
+        raise ValueError('fixed file-tail progress callback required')
     guard()
     with DesktopControls(config['B_controls'],guard=guard) as controls:
         if config.get('phase_kind')=='SQL-points':
@@ -360,10 +362,15 @@ def run_B(config,*,at_component_boundary=lambda:None,source_report=None):
             last_status=[0]
             def report(value,*,force=False):
                 if not force and time.monotonic()-last_status[0]<5:return
-                write_health(current.db,Path(config['status']),dict(value,worker_PID=os.getpid(),
+                status=dict(value,worker_PID=os.getpid(),
                     control_roundtrips=controls.client.metrics(),
                     control_storage='native-Desktop-B',baseline_accepted=False,schedule_enabled=False,
-                    OS_SSD_payload_bytes=0,OS_SSD_index_journal_bytes=0,elapsed_seconds=time.monotonic()-started))
+                    OS_SSD_payload_bytes=0,OS_SSD_index_journal_bytes=0,elapsed_seconds=time.monotonic()-started)
+                # A composed tail must not overwrite the independently verified
+                # predecessor receipt needed after a controller interruption.
+                # Its final result is durably recorded by the whole-cycle ledger.
+                if status_sink is None:write_health(current.db,Path(config['status']),status)
+                else:status_sink(status)
                 last_status[0]=time.monotonic()
                 # Called after a completed protocol operation, never while a
                 # body upload/readback is streaming. Journal delivery can use

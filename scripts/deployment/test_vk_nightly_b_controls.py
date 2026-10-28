@@ -105,7 +105,7 @@ class BControlTests(unittest.TestCase):
                 if time.monotonic()>end:self.fail('tiny observer failed to enroll')
                 time.sleep(.01)
             config=dict(source_health=str(status),endpoint=str(endpoint),B_delivery_target=target,
-                        controls={'B_root':target['B_root']},maximum_B_index_bytes=8*1024**2)
+                        controls={'B_root':target['B_root'],'maximum_index_bytes':8*1024**2},maximum_B_index_bytes=8*1024**2)
             # Real empty fixture namespace is the accepted starting point;
             # this never labels the production backup as accepted.
             initial=request(endpoint,json.loads(status.read_text())['instance'],0,barrier=True)
@@ -129,6 +129,22 @@ class BControlTests(unittest.TestCase):
             consumer_config.chmod(0o600)
             consumer=Source(dict(config=str(consumer_config),sha256=hashlib.sha256(consumer_config.read_bytes()).hexdigest(),
                 instance=instance),config['controls'],guard=lambda:None)
+            # Exercise the actual new between-run wrapper over real inotify,
+            # native FULL transactions, independent reopen and source ACK.
+            from vk_nightly_journal_delivery import deliver
+            from vk_nightly_commission import journal_qualification
+            binding=dict(service_sha256='a'*64,entrypoint_sha256='b'*64,
+                source_observer=consumer.reference,B_delivery_target=target,legacy_owners_sha256='c'*64)
+            (source/'changed-again').write_bytes(b'second bounded fixture generation')
+            with patch('vk_nightly_outbox_collector.DesktopControls',remote):
+                delivery=deliver(consumer,binding=binding,guard=lambda:None)
+            proof=journal_qualification(self.client,consumer,delivery,
+                service_sha='a'*64,script_sha='b'*64,legacy_sha='c'*64)
+            self.assertTrue(proof['actual_B_journal_reopen_verified'])
+            wrong=dict(delivery,binding=dict(binding,service_sha256='d'*64))
+            with self.assertRaises(ValueError):journal_qualification(self.client,consumer,wrong,
+                service_sha='a'*64,script_sha='b'*64,legacy_sha='c'*64)
+            result=delivery['delivery']
             self.assertTrue(consumer.report(self.client)['barrier']['kernel_drain_completed'])
             self.assertTrue(result['actual_native_B_reopen_verified']);self.assertFalse(result['whole_baseline_accepted'])
             self.assertTrue(result['local_changes_pruned']);self.assertEqual(result['local_changes_pruned_through'],result['sequence'])

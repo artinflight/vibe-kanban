@@ -441,3 +441,47 @@ collisions and prior calendar state for another config require reconciliation;
 there is no automatic overwrite or retention deletion. The installer is finite
 and non-AI. This entrypoint and its RAM proof do not claim that production
 qualification or cron installation has already occurred.
+
+## Between-run bounded journal delivery
+
+`vk_nightly_journal_delivery.py` is a separate finite metadata operation, not a
+backup producer. The observer must drain to B between nightly body runs so its
+fixed local outbox can remain small. Its minute pulse belongs inside the same
+owned Nightly cron block; body capture still starts only in the Toronto window
+and stops at04:00. Nothing in this addition extends that body window.
+
+The entrypoint authenticates the installed ordinary service, all of its existing
+source/config pins, the observer epoch/root bindings and its own full hash. It
+skips without contacting B when the shared controller/body lane or any exact
+legacy producer birth remains live. The source check and an unchanged successful
+cursor also skip all B/SMART polling. Successful delivery uses the existing FULL
+B transaction, closes its writer, reopens through the normal reader and then
+ACKs precisely the delivered generation. No body or global census is performed.
+The last successful receipt remains at most64KiB; stdout retains only a64KiB tail.
+There is no growing local delivery database or payload fallback.
+
+The cron command bounds one attempt to55seconds plus5seconds cleanup, CPU5%,
+MemoryHigh128MiB/Max256MiB/Swap0/Tasks32. Genuine native identity/capacity/health,
+STOP/access and host headroom checks remain. The existing service classifier
+permits later observation after positively identified temporary admission or
+Desktop network loss. Other failures retain a bounded review record and do not
+minute-retry a denied or integrity-failed operation. An unavailable or slow query
+is not labeled a drive failure. Outbox overflow, observer loss and disconnected
+intervals still require honest gap reconciliation; this is not an unlimited
+Desktop-off journal or permission to declare missing coverage complete.
+
+Commissioning now additionally requires `--journal-script`, `--journal-sha256`,
+`--journal-receipt`, `--legacy-owners` and `--legacy-sha256`. Immediately before
+adoption it independently reopens the actual last delivery on B and matches its
+report hash, epoch, scope and source plan. A local success Boolean is insufficient.
+The installer appends the journal pulse within its one existing owned block,
+leaving unrelated cron and worker resource/window bindings unchanged.
+
+Nineteen focused tests pass, including actual RAM inotify -> native control
+protocol FULL commit -> independent reopen -> ACK, the new commissioning reader,
+real shared-lock exclusion, immutable completed proof on failure and cron shell
+syntax. This fixture substitutes a RAM-native transport, not production B.
+The prepared exact entrypoint also ran against the actual installed80deafdcd
+package and correctly skipped the active legacy producer with `B_probed=false`.
+Actual production delivery, ordinary whole-cycle restore and enabled cron remain
+separate commissioning requirements.

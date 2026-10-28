@@ -1,4 +1,4 @@
-# Nightly pickup — October27,23:14EDT
+# Nightly pickup — October28,00:01EDT
 
 Goal: tonight's current backup/independent composed restore, then22–04Toronto
 nightly automation with hard04:00stop. Separate worker; no backend restart.
@@ -33,9 +33,9 @@ shared pressure copy NIGHTLY_CURRENT_CHAIN_AND_PENDING_20261028.private.json.
 - ObserverV11 PID3849155/start32997998, epoch31ab8db49caf4f9699c7c0bd75c363a2,
   fixed outbox/durableB unchanged. No new namespace census.
 
-Exact map/input/cohort digests are in the full pickup/private receipt.
-Pending-keyset23:06:12981names/6.11GBlogical, not transfer demand.
-149names need reconciliation at23:06, including the CU JSON point.
+Indexed counts00:01:5007file points pending,210names need reconciliation,
+219SQL sources await image qualification. No source body/global scan.
+C/CURRENT_PENDING_COUNTS_20261028T0404.private.json preserves this observation.
 
 ## Coordinator fixed and actually handed over, bodies untouched
 
@@ -46,7 +46,7 @@ New single unit vk-nightly-current-composed-finisher-80deafdcd-20261028.service,
 PID484248/start36301637, D/current-whole-cycle-80deafdcd-deferred-closure.
 Source80deafdcdd36d0807ede4927c3ffd1841f252b4d; serviceSHA
 b7baa6d9fe7197c592259ae17f5fea8871d173d8e30528746f50fdb986373377.
-Actual startup preflight/command/status verify new code, waiting only on same
+Actual preflight verifies new code, waiting only on same
 file/SQL/runtime. CPU25%/High1536M/Max2G/Swap0/Tasks64; original cycle start
 01:46:44.229164UTC and hard08:00UTC/04EDT preserved. No duplicate finisher.
 
@@ -61,27 +61,29 @@ identity/access/STOP/health guards remain.
 ## Ordinary package and final adoption are prepared, not accepted
 
 D/ordinary-incremental-80deafdcd-prepared remains DISABLED/not a job.
-Exact service/calendar digests are in PREPARATION.private.json and full pickup.
-Service/calendar preflight and actual crontab-stdin syntax pass. No existing-
-component/frozen-input replay; fresh bounded deltas, High7G/Max8G/Swap0/Tasks64,
-64KiB cron tail. No cron installed. Its actual timed run still needs baseline
-acceptance and prior controller/body owners actually released. Run using
---scheduled-night 2026-10-27 and --hard-deadline-utc 2026-10-28T08:00:00+00:00
-with separate correct CLI arguments and original hard04 bounds (see full pickup).
+Digests are in PREPARATION.private.json.
+No frozen-input/existing-component replay. Actual timed ordinary run needs the
+accepted current baseline and old owners/leases released; preserve original04EDT.
 
-Installerf7cef9f0d618b7a7d160aae8a00270257246b2bd is separately prepared:
-D/commissioner-f7cef9f0d/vk_nightly_commission.py,
-Use PYTHONPATH=D/ordinary-incremental-80deafdcd-prepared, python3 -B -S,
---calendar <exact disabled config> --sha256 <315316...>; PREPARATION binds both.
-Default only qualifies actual native B evidence; authorized --install follows
-ordinary exact-template/phase-chain/normal-restore/window proof, under actual
-leases/guards. Versioned enabled config/own cron readback/next run; no deletion.
-It has NOT executed. Worker80 and installerf7 are distinct pinned sources.
+The new D/commissioner-journal-prepared-20261028 contains commissioner+journal
+entrypoint plus exact legacy PID/birth list. PREPARATION.private.json binds all
+hashes and command. PYTHONPATH must name ordinary-incremental-80deafdcd-prepared
+so all unchanged worker80 source/config pins validate. The old f7 installer is
+superseded for adoption, not deleted. No new cron or observer restart occurred.
+The new entrypoint actually validated that package and skipped live FileV9 with
+B_probed=false. It must later deliver/reopen/ACK on actual B after the controller
+releases, before adoption. Actual current/ordinary composed restores remain open.
 
-169 focused tests plus3 post-storage-guard checks pass. Native RAM tests cover
-changed-file closure/receipt preservation/no-recopy and finite positive SSH255
-network retries; access/STOP/host-key/reported faults stay blocking. Ops/diff/Rustformat pass; full format stops at missing local Prettier.
-PR263 mergeable; collect newer exact-head CI.
+Real gap found: observer serves bounded local outbox; no between-run drainer was
+installed. New minute journal-only pulse shares one owned cron block and yields
+both controller/body lanes + exact old births; no source body/global scan.
+Unchanged cursor skips B/SMART. Last success64KiB; log64KiB; attempt55+5s,
+CPU5%/High128M/Max256M/Swap0/Tasks32. Existing admission/network classifier;
+other failures retain review and do not retry denial. New installer independently
+reopens actual journal report before adoption. See overnight guide.
+19 focused checks including actual RAM inotify/native FULL/reopen/ACK pass;
+actual production proof remains pending. Ops/diff/Rust format pass; full format
+still stops at missing Prettier. Live jobs unchanged.
 
 Next: collect SAME chain terminal receipts, resolve actual deferred points,
 accept current composed restore, execute/time actual ordinary cycle and normal

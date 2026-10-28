@@ -20,7 +20,9 @@ from vk_nightly_cycle_state import CycleState,PHASES
 from vk_nightly_desktop_controls import DesktopControls
 from vk_nightly_desktop_objects import DesktopObjects
 from vk_nightly_file_cycle import Source,read_owned
-from vk_nightly_schedule import block,apply
+from vk_nightly_schedule import block,apply,END
+from vk_nightly_journal_delivery import cron_line
+from vk_nightly_outbox_export import verify_delivery
 from vk_nightly_service import load as load_service,scheduled_cycle
 from vk_nightly_typed_worker import host_guard
 from vk_typed_recovery import checksum
@@ -91,6 +93,28 @@ def qualification(store,value,service_sha256,*,guard):
         actual_ordinary_incremental_and_normal_restore_verified=True,schedule_enabled=False)
 
 
+def journal_qualification(client,source,receipt,*,service_sha,script_sha,legacy_sha):
+    """Reopen the actual last journal commit, never trust a local success flag."""
+    health=source.check();binding=dict(service_sha256=service_sha,entrypoint_sha256=script_sha,
+        source_observer=source.reference,B_delivery_target=source.config['B_delivery_target'],
+        legacy_owners_sha256=legacy_sha)
+    if (receipt.get('format')!='vk-nightly-between-run-journal-delivery-v1'
+            or receipt.get('binding')!=binding or receipt.get('phase')!='journal-delivery-verified'):
+        raise ValueError('exact installed journal collector proof required')
+    proof=receipt['delivery']
+    if (proof.get('instance')!=health['instance'] or proof.get('actual_native_B_reopen_verified') is not True
+            or proof.get('local_acknowledged')!=proof['sequence'] or proof.get('local_changes_pruned') is not True):
+        raise ValueError('actual journal ACK and source epoch proof required')
+    target=source.config['B_delivery_target']
+    db=client.connect(target['index_name'],target['checkpoint_sha256'],readonly=True,working=True)
+    try:actual=verify_delivery(db,proof)
+    finally:db.close()
+    if any(actual[k]!=health[k] for k in ('instance','scope_sha256','plan_sha256')):
+        raise ValueError('actual B journal/source coverage differs')
+    return dict(sequence=proof['sequence'],instance=proof['instance'],
+        report_sha256=proof['report_sha256'],actual_B_journal_reopen_verified=True)
+
+
 def enabled_configuration(disabled):
     settings(disabled)
     if (disabled['schedule'].get('enabled') is not False or disabled.get('adoption_authorized') is not False
@@ -118,7 +142,18 @@ def main():
     import os,time
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--calendar',type=Path,required=True);parser.add_argument('--sha256',required=True)
+    parser.add_argument('--journal-script',type=Path,required=True)
+    parser.add_argument('--journal-sha256',required=True)
+    parser.add_argument('--journal-receipt',type=Path,required=True)
+    parser.add_argument('--legacy-owners',type=Path,required=True);parser.add_argument('--legacy-sha256',required=True)
     parser.add_argument('--install',action='store_true');args=parser.parse_args()
+    if hashlib.sha256(args.journal_script.read_bytes()).hexdigest()!=args.journal_sha256:
+        raise ValueError('installed journal script differs')
+    if args.journal_script.resolve()!=Path(__file__).with_name('vk_nightly_journal_delivery.py').resolve():
+        raise ValueError('same versioned commissioning/journal implementation required')
+    read_owned(args.legacy_owners,args.legacy_sha256)
+    if args.journal_receipt.with_suffix('.review.private.json').exists():
+        raise ValueError('retained journal failure needs owner reconciliation before adoption')
     disabled=read_owned(args.calendar,args.sha256);enabled=enabled_configuration(disabled)
     package=args.calendar.parent;staging=Path(disabled['staging'])
     if storage(package)!=package or storage(staging)!=staging or staging.is_symlink():
@@ -139,6 +174,9 @@ def main():
         with DesktopObjects(worker['desktop'],guard=guard),DesktopControls(worker['B_controls'],guard=guard) as remote:
             store=CycleState(remote.client,value['ledger'],guard=guard)
             evidence=qualification(store,value,reference['sha256'],guard=owner.check)
+            journal=journal_qualification(remote.client,owner,read_owned(args.journal_receipt),
+                service_sha=reference['sha256'],script_sha=args.journal_sha256,legacy_sha=args.legacy_sha256)
+            evidence['between_run_journal_delivery']=journal
             if not args.install:print(json.dumps(evidence));return 0
             target=package/'calendar.enabled.private.json'
             raw=(json.dumps(enabled,sort_keys=True,separators=(',',':'))+'\n').encode()
@@ -156,9 +194,15 @@ def main():
             enabled_sha=hashlib.sha256(raw).hexdigest();read_owned(target,enabled_sha)
             owned=block(package,target,enabled_sha,Path(disabled['staging'])/'calendar.log',
                         resource_limits=enabled['worker_resource_limits'])
+            owned=owned[:-len(END)]+cron_line(args.journal_script,args.journal_sha256,package,
+                Path(reference['config']),reference['sha256'],args.journal_receipt,args.legacy_owners,
+                args.legacy_sha256,staging/'journal-delivery.log')+END
             def ready():
                 owner.check()
                 fresh=qualification(store,value,reference['sha256'],guard=owner.check)
+                fresh['between_run_journal_delivery']=journal_qualification(remote.client,owner,
+                    read_owned(args.journal_receipt),service_sha=reference['sha256'],
+                    script_sha=args.journal_sha256,legacy_sha=args.legacy_sha256)
                 if fresh!=evidence:raise ValueError('accepted baseline changed during commissioning')
             now=datetime.now(timezone.utc)
             state=calendar_state(Path(disabled['staging'])/'calendar/state.private.json')

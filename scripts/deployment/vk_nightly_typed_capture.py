@@ -25,7 +25,7 @@ class HashSink:
 
 
 def capture_pending(current_map,client,*,guard,maximum_members,maximum_source_bytes,
-                    chunk_bytes,on_progress=lambda _:None,read_prefix=None,acceptance_batch_members=1):
+                    chunk_bytes,on_progress=lambda _:None,read_prefix=None,acceptance_batch_members=1,qualified_snapshots=None):
     if (type(maximum_members) is not int or maximum_members<1
             or type(maximum_source_bytes) is not int or maximum_source_bytes<1):
         raise ValueError('finite admitted file/byte capture batch required')
@@ -38,6 +38,7 @@ def capture_pending(current_map,client,*,guard,maximum_members,maximum_source_by
     done=0;deferred=0;source_bytes=0;initial_upload=client.payload_bytes_sent
     reused_before=client.native_receipts_reused
     readbacks_before=client.independent_readback_objects;readback_bytes_before=client.independent_readback_bytes
+    RAM_bytes=0
     waiting=[];waiting_bytes=0
     def flush():
         nonlocal done,waiting_bytes
@@ -89,7 +90,24 @@ def capture_pending(current_map,client,*,guard,maximum_members,maximum_source_by
         sink=ChunkSink(client,chunk_bytes=chunk_bytes,readback_sink=OrderedReadback())
         prefix_retry_bytes=0
         try:
-            try:transfer=capture_qualified_version(point,sink,guard=guard,prefix=prefix)
+            try:
+                cached=(qualified_snapshots or {}).get(name)
+                if cached is not None:
+                    from vk_typed_recovery import checksum
+                    expected,body=cached
+                    if (prefix is not None or expected!=checksum(point) or len(body)>65536
+                            or len(body)!=row['bytes'] or hashlib.sha256(body).hexdigest()!=row['sha256']):
+                        raise ValueError('authenticated bounded RAM qualification differs')
+                    view=memoryview(body)
+                    while view:
+                        guard();written=sink.write(view)
+                        if type(written) is not int or not 0<written<=len(view):raise OSError('bounded RAM point short write')
+                        view=view[written:]
+                    transfer=dict(format='vk-nightly-qualified-small-RAM-point-transfer-v1',source=point['source'],
+                        qualified_member_bytes=row['bytes'],qualified_member_sha256=row['sha256'],copied_bytes=row['bytes'],
+                        copied_sha256=row['sha256'],accepted_prefix=None,source_payload_bytes_reread=0,
+                        source_bytes_after_observation_not_claimed_backed_up=True,writer_fence_verified=False)
+                else:transfer=capture_qualified_version(point,sink,guard=guard,prefix=prefix)
             except PrefixMismatch as error:
                 if sink.raw_bytes or sink.segments or sink.buffer:raise ValueError('prefix mismatch emitted unexpected bytes')
                 prefix_retry_bytes=error.bytes_read;prefix=None
@@ -126,13 +144,15 @@ def capture_pending(current_map,client,*,guard,maximum_members,maximum_source_by
         # Small proofs share a commit; a large individual proof uses the
         # original single-point path. Never aggregate an unbounded RPC frame.
         if waiting and waiting_bytes+size>512*1024:flush()
-        source_bytes+=row['bytes']+prefix_retry_bytes;waiting.append(record);waiting_bytes+=size
+        source_bytes+=(0 if cached is not None else row['bytes'])+prefix_retry_bytes
+        RAM_bytes+=row['bytes'] if cached is not None else 0
+        waiting.append(record);waiting_bytes+=size
         if len(waiting)>=acceptance_batch_members or waiting_bytes>=512*1024:flush()
     flush()
     more=db.execute("select 1 from members where state='file-needs-capture' limit 1").fetchone() is not None
     deferred_table=db.execute("select 1 from sqlite_master where name='file_transfer_deferred'").fetchone()
     requalify=bool(deferred_table and db.execute("select 1 from members m join file_transfer_deferred d on m.name=d.name where m.state='current-namespace-replay-required' limit 1").fetchone())
-    return dict(completed_members=done,source_bytes_read=source_bytes,
+    return dict(completed_members=done,source_bytes_read=source_bytes,qualified_RAM_bytes_transferred=RAM_bytes,
                 encoded_payload_bytes_sent=client.payload_bytes_sent-initial_upload,
                 native_receipts_reused=client.native_receipts_reused-reused_before,
                 independent_object_readbacks=client.independent_readback_objects-readbacks_before,

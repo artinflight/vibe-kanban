@@ -1962,3 +1962,14 @@ another suffix or relabels old accepted SQL images. The additional receipt and
 current SQL contract are bound into the composed candidate before normal restore.
 All of these remain subject to actual production acceptance and the same04:00
 parent deadline; fixture success alone does not commission the service.
+
+Small atomically replaced state files use at most16 private64KiB RAM snapshots
+(1MiB total) only after an actual lost-version/deferred observation. The stable
+open/fstat/path/metadata bracket hashes the exact snapshot; native adoption and
+B transfer independently validate its point digest and bytes. Later source
+replacement cannot substitute content. No raw snapshot is staged on OS/SSD.
+One serial bounded small-state closure can follow a lost-point result inside
+the same admitted worker; source/drive/access/STOP failures are not retried.
+Completed bodies and earlier failures remain, and late writes remain later
+journal work. This closes the qualification-to-transfer race without requiring
+a quiet live monitor or weakening version/readback integrity.

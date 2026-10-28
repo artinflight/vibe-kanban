@@ -6,6 +6,7 @@ or hashed again. A resumed controller supplies its committed exact-name cursor;
 a failed batch may retry only its still-unadopted points.
 """
 import hashlib
+import io
 from pathlib import Path
 
 from vk_nightly_current_map import decode_member
@@ -14,7 +15,7 @@ from vk_nightly_qualification import qualify_file
 
 
 def qualify_selected(current,*,journal,adopt,guard,maximum_paths,maximum_source_bytes,
-                     after='',checkpoint_cursor=lambda _:None,on_progress=lambda _:None):
+                     after='',checkpoint_cursor=lambda _:None,on_progress=lambda _:None,qualified_snapshots=None):
     if (type(maximum_paths) is not int or maximum_paths<1
             or type(maximum_source_bytes) is not int or maximum_source_bytes<1):
         raise ValueError('finite qualification path/read admission required')
@@ -42,7 +43,18 @@ def qualify_selected(current,*,journal,adopt,guard,maximum_paths,maximum_source_
             if read_ceiling+read_bound>maximum_source_bytes:budget_stop=True;break
             read_ceiling+=read_bound
             try:
-                point=qualify_file(path,maximum_bytes=max(1,size),journal=report,carriers=lambda *_:[],guard=guard)
+                prior=decode_member(raw)
+                cached=(qualified_snapshots is not None and size<=65536 and len(qualified_snapshots)<16
+                    and (prior.get('transfer_deferred') or prior.get('qualification',{}).get('state')=='current-version-deferred'))
+                snapshot=io.BytesIO() if cached else None
+                point=qualify_file(path,maximum_bytes=max(1,size),journal=report,carriers=lambda *_:[],guard=guard,
+                    **({'payload_sink':snapshot} if cached else {}))
+                if snapshot is not None:
+                    from vk_typed_recovery import checksum
+                    body=snapshot.getvalue()
+                    if len(body)!=point['row']['bytes'] or hashlib.sha256(body).hexdigest()!=point['row']['sha256']:
+                        raise ValueError('bounded stable RAM point differs from qualification')
+                    qualified_snapshots[name]=(checksum(point),body)
             except (ValueError,FileNotFoundError) as error:
                 namespace=decode_member(raw).get('namespace',{})
                 if isinstance(error,FileNotFoundError) and namespace.get('kind')=='file' and namespace.get('bytes')==0:

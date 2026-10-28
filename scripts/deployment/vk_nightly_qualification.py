@@ -136,7 +136,7 @@ def still_covered(version,report,*,coverage=None):
                    for changed in report['changed'])
 
 
-def qualify_file(path,*,maximum_bytes,journal,carriers,guard,coverage=None):
+def qualify_file(path,*,maximum_bytes,journal,carriers,guard,coverage=None,payload_sink=None):
     """carriers(sha,size) returns only externally authenticated typed recipes."""
     scoped=None
     if journal.get('terminal') or type(journal.get('sequence')) is not int:
@@ -145,7 +145,9 @@ def qualify_file(path,*,maximum_bytes,journal,carriers,guard,coverage=None):
         from vk_nightly_scoped_coverage import ScopedCoverage
         if not isinstance(coverage,ScopedCoverage):raise ValueError('current source qualification needs live continuous tracking')
         scoped=coverage.check(journal,[str(path)])
-    if Path(path).suffix=='.jsonl':
+    if payload_sink is not None:
+        observed=capture_version(path,payload_sink,maximum_bytes=maximum_bytes,guard=guard)
+    elif Path(path).suffix=='.jsonl':
         try:observed=qualify_jsonl_point(path,maximum_bytes=maximum_bytes,guard=guard)
         except ValueError as error:
             if str(error)!='JSONL point lacks a complete final record boundary':raise

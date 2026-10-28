@@ -1410,7 +1410,7 @@ class BControlTests(unittest.TestCase):
         import vk_nightly_typed_worker as worker
         files=self.root/'selected';files.mkdir()
         unchanged=files/'unchanged';unchanged.write_bytes(b'accepted earlier body')
-        changed=files/'changed';changed.write_bytes(b'new body after the accepted baseline')
+        changed=files/'changed';changed.write_bytes(b'new body after the accepted baseline'*2048) # above bounded small-state closure
         ns=sqlite3.connect(':memory:');self.addCleanup(ns.close)
         ns.execute('create table namespace(name text primary key,row blob)')
         ns.execute('create table namespace_errors(name text primary key,error blob)')
@@ -1435,8 +1435,8 @@ class BControlTests(unittest.TestCase):
         self.client.connect('selected-carriers',base_sha).close()
         config=dict(format='vk-nightly-typed-worker-B-v1',B_controls={'maximum_index_bytes':8*1024**2},B_index_name='selected-map',B_checkpoint_sha256=map_sha,
             map_binding=binding,status=str(self.root/'selected-status'),desktop={},maximum_members=10,
-            maximum_source_bytes=1024,chunk_bytes=4096,
-            qualification=dict(maximum_paths=10,maximum_source_bytes=1024,
+            maximum_source_bytes=262144,chunk_bytes=4096,
+            qualification=dict(maximum_paths=10,maximum_source_bytes=262144,
                 base=dict(index_name='selected-carriers',checkpoint_sha256=base_sha),recipes=[],attach_base_prefixes=True))
         report=dict(epoch,since=17,sequence=25,ready=True,errors=[],terminal=None,coverage_model='all-selected-inodes-v1',
             barrier=dict(instance=epoch['instance'],durable_sequence=25,kernel_drain_completed=True))
@@ -1456,7 +1456,7 @@ class BControlTests(unittest.TestCase):
                         worker.run_B(config,source_report=lambda:report,at_component_boundary=fault)
                     self.assertEqual(hashed.call_count,2)
                 self.assertEqual(objects.payload_bytes_sent,0,'qualification must not transfer source bodies')
-                changed.write_bytes(b'newer stable point after original qualification')
+                changed.write_bytes(b'newer stable point after original qualification'*2048)
                 import vk_nightly_file_cycle as cycle
                 import vk_nightly_current_cycle as composed
                 events=[]
@@ -1702,6 +1702,40 @@ class BControlTests(unittest.TestCase):
             self.assertEqual(second['completed_members'],0);self.assertFalse(second['more_pending'])
             self.assertEqual(second['completed_file_reuse']['completed_file_points_reused'],1)
             self.assertEqual(second['completed_file_reuse']['backup_payload_bytes_copied'],0)
+
+    def test_small_RAM_point_survives_actual_atomic_source_replacement_and_native_readback(self):
+        import io
+        from vk_nightly_current_map import CurrentMap
+        from vk_nightly_namespace import observe
+        from vk_nightly_qualification import qualify_file,encode_observation
+        from vk_nightly_typed_capture import capture_pending
+        from vk_typed_recovery import checksum
+        source=self.root/'atomic-state.json';source.write_bytes(b'{"version":1}\n');buffer=io.BytesIO()
+        point=qualify_file(source,maximum_bytes=1024,journal=dict(ready=True,errors=[],instance='fixture',sequence=1,
+            scope_sha256='a'*64,plan_sha256='b'*64),carriers=lambda *_:[],guard=lambda:None,payload_sink=buffer)
+        namespace=sqlite3.connect(':memory:');self.addCleanup(namespace.close)
+        namespace.execute('create table namespace(name text primary key,row blob)')
+        namespace.execute('insert into namespace values(?,?)',(str(source)[1:],encode_observation(observe(source))))
+        path=self.root/'atomic-map.sqlite';binding={'fixture':'atomic state point'}
+        with CurrentMap.held(path,binding=binding,create=True) as m:
+            m.compile(namespace,lambda _:point,SQL_sources=[],checkpoint=lambda:None,maximum_paths=10)
+        digest=self.import_other(path);new=self.root/'new';new.write_bytes(b'{"version":2}\n');new.replace(source)
+        code='import sys;sys.path.insert(0,'+repr(str(Path(__file__).parent))+');from vk_nightly_objects import receive;receive('+repr(str(self.objects))+',sys.stdin.buffer,sys.stdout.buffer,guard=lambda n:None,maximum_object_bytes=65536)'
+        p=subprocess.Popen([sys.executable,'-B','-u','-c',code],stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+        try:
+            client=ObjectClient(p.stdout,p.stdin,guard=lambda:None,ram_root=self.root,maximum_object_bytes=65536)
+            with current_map(self.client,'atomic-map',digest,binding=binding) as m:
+                cache={str(source)[1:]:(checksum(point),b'tampered')}
+                with self.assertRaisesRegex(ValueError,'RAM qualification differs'):
+                    capture_pending(m,client,guard=lambda:None,maximum_members=2,maximum_source_bytes=1024,chunk_bytes=64,qualified_snapshots=cache)
+                self.assertEqual(client.payload_bytes_sent,0)
+                cache[str(source)[1:]]=(checksum(point),buffer.getvalue())
+                result=capture_pending(m,client,guard=lambda:None,maximum_members=2,maximum_source_bytes=1024,chunk_bytes=64,qualified_snapshots=cache)
+                self.assertFalse(result['more_pending']);self.assertEqual(result['source_bytes_read'],0)
+                self.assertEqual(result['qualified_RAM_bytes_transferred'],len(buffer.getvalue()))
+                self.assertEqual(result['independent_object_readback_bytes'],len(buffer.getvalue()))
+                self.assertEqual(source.read_bytes(),b'{"version":2}\n')
+        finally:p.stdin.close();p.wait(timeout=10);p.stdout.close();p.stderr.close()
 
     def test_native_file_acceptance_lost_reply_reopens_without_duplicate_completed_copy(self):
         from vk_nightly_current_map import CurrentMap

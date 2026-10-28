@@ -282,7 +282,7 @@ def run_SQL(config,*,backend=None,at_component_boundary=lambda:None):
         if fd is not None:os.close(fd)
 
 
-def qualify_B(current,client,qualification,*,journal,guard,on_progress):
+def qualify_B(current,client,qualification,*,journal,guard,on_progress,qualified_snapshots=None):
     """Adopt unresolved source points on B; the controller authenticates journal.
 
     Accepted rows and interrupted adoptions are reused by the normal map
@@ -302,7 +302,7 @@ def qualify_B(current,client,qualification,*,journal,guard,on_progress):
                 recipe_indexes=[r['index_name'] for r in qualification['recipes']],records=records),guard=guard)
         result=qualify_selected(current,journal=actual_report,adopt=adopt,guard=guard,
             maximum_paths=qualification['maximum_paths'],maximum_source_bytes=qualification['maximum_source_bytes'],
-            on_progress=on_progress)
+            on_progress=on_progress,qualified_snapshots=qualified_snapshots)
         if qualification.get('attach_base_prefixes'):
             after='';count=raw_bytes=0
             while True:
@@ -377,19 +377,42 @@ def run_B(config,*,at_component_boundary=lambda:None,source_report=None,status_s
                 # body upload/readback is streaming. Journal delivery can use
                 # this serial boundary without another native health poller.
                 at_component_boundary()
-            qualification=None
+            qualification=None;qualified_snapshots={} # <=16 stable64KiB points, never SSD payload
             if 'qualification' in config:
                 qualification=qualify_B(current,controls.client,config['qualification'],journal=source_report,
-                    guard=guard,on_progress=lambda v:report(dict(v,phase=v.get('phase','qualifying-only-unresolved-current-names'))))
+                    guard=guard,on_progress=lambda v:report(dict(v,phase=v.get('phase','qualifying-only-unresolved-current-names'))),
+                    qualified_snapshots=qualified_snapshots)
                 report(dict(qualification,phase='selected-current-qualification-complete'),force=True)
             with DesktopObjects(config['desktop'],guard=guard) as remote:
                 reuse=controls.client.recover_completed_files(config['B_index_name'],
                     on_progress=lambda value:report(value,force=True))
                 report(dict(phase='capturing-qualified-file-points',completed_file_reuse=reuse),force=True)
-                result=capture_pending(current,remote.client,guard=guard,maximum_members=config['maximum_members'],
-                    maximum_source_bytes=config['maximum_source_bytes'],chunk_bytes=config['chunk_bytes'],
-                    acceptance_batch_members=config.get('acceptance_batch_members',1),
-                    read_prefix=lambda prefix,sink:read_prefix(remote,prefix,sink),on_progress=report)
+                def capture():
+                    return capture_pending(current,remote.client,guard=guard,maximum_members=config['maximum_members'],
+                        maximum_source_bytes=config['maximum_source_bytes'],chunk_bytes=config['chunk_bytes'],
+                        acceptance_batch_members=config.get('acceptance_batch_members',1),
+                        read_prefix=lambda prefix,sink:read_prefix(remote,prefix,sink),on_progress=report,
+                        qualified_snapshots=qualified_snapshots)
+                result=capture()
+                if qualification is not None and (result.get('requires_source_requalification') or qualification.get('deferred_points')):
+                    # One finite, serial closure of at most1MiB of observed
+                    # atomic-replacement metadata. Never chase a namespace,
+                    # discard partials or retry a drive/access/guard failure.
+                    unresolved=current.db.execute("select row from members where state in ('file-needs-qualification','current-namespace-replay-required') limit 17").fetchall()
+                    from vk_nightly_current_map import decode_member
+                    points=[decode_member(row[0]) for row in unresolved]
+                    if points and len(points)<=16 and all(0<=p.get('namespace',{}).get('bytes',65537)<=65536
+                            and (p.get('transfer_deferred') or p.get('qualification',{}).get('state')=='current-version-deferred') for p in points):
+                        qualified_snapshots.clear();previous=result;prior_qualification=qualification
+                        qualification=qualify_B(current,controls.client,dict(config['qualification'],attach_base_prefixes=False),
+                            journal=source_report,guard=guard,on_progress=lambda v:report(dict(v,phase='closing-small-atomic-state-points')),
+                            qualified_snapshots=qualified_snapshots)
+                        result=capture()
+                        for field in ('completed_members','source_bytes_read','encoded_payload_bytes_sent','native_receipts_reused',
+                                      'independent_object_readbacks','independent_object_readback_bytes','qualified_RAM_bytes_transferred'):
+                            result[field]=result.get(field,0)+previous.get(field,0)
+                        result['small_atomic_state_closure']=dict(previous_attempt=previous,previous_qualification=prior_qualification,
+                            maximum_RAM_snapshot_bytes=1048576,new_namespace_replays=0)
                 result['completed_file_reuse']=reuse
                 if qualification is not None:
                     result['selected_qualification']=qualification

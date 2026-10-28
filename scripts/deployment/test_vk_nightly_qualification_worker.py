@@ -87,6 +87,22 @@ class SelectedQualificationTests(unittest.TestCase):
             self.assertTrue(point['current_path_absent']);self.assertEqual(point['source_identity'],observation['identity'])
             self.assertFalse(point['original_epoch_repaired'])
 
+    def test_small_atomic_replacement_point_has_bounded_authenticated_RAM_snapshot(self):
+        snapshots={}
+        with CurrentMap.held(self.path,binding=self.binding) as m:
+            old=m.db.execute('select row from members').fetchone()[0];value=decode_member(old)
+            value['transfer_deferred']={'requires_fresh_source_observation':True}
+            m.db.execute('update members set row=?',(encode_member(value),))
+            result=qualify_selected(m,journal=lambda:self.report,
+                adopt=lambda records:m.adopt_qualifications(records,lambda *_:[],checkpoint=lambda:None),
+                guard=lambda:None,maximum_paths=10,maximum_source_bytes=1024,qualified_snapshots=snapshots)
+            self.assertEqual(result['qualified_pending_bodies'],1)
+            from vk_typed_recovery import checksum
+            row=decode_member(m.db.execute('select row from members').fetchone()[0])
+            self.assertEqual(snapshots[self.name],(checksum(row['qualification']),b'current bytes'))
+            replacement=self.root/'new';replacement.write_bytes(b'later data');replacement.replace(self.source)
+            self.assertEqual(snapshots[self.name][1],b'current bytes')
+
     def test_actual_resource_or_access_failure_propagates_without_adoption(self):
         with CurrentMap.held(self.path,binding=self.binding) as m:
             with patch('vk_nightly_qualification_worker.qualify_file',side_effect=PermissionError('source access denied')):

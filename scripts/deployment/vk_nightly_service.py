@@ -79,13 +79,24 @@ def load(path,expected,*,folder=None):
     return value,workers
 
 
-def terminal(reference,*,inspect=subprocess.check_output):
+def original_process_present(reference):
+    try:raw=Path('/proc/'+str(reference['owner_pid'])+'/stat').read_text()
+    except FileNotFoundError:return False
+    return int(raw.rsplit(')',1)[1].split()[19])==reference['owner_start_ticks']
+
+
+def terminal(reference,*,inspect=subprocess.check_output,process_check=original_process_present):
     unit=reference['unit']
     if not re.fullmatch('vk-nightly-[A-Za-z0-9-]+[.]service',unit):raise ValueError('fixed Nightly unit required')
     output=inspect(['systemctl','--user','show',unit,'-p','MainPID','-p','ActiveState',
                     '-p','ExecMainStatus','-p','ControlGroup','-p','ExecMainPID',
-                    '-p','ExecMainStartTimestampMonotonic'],text=True,timeout=15)
+                    '-p','ExecMainStartTimestampMonotonic','-p','LoadState'],text=True,timeout=15)
     state=dict(line.split('=',1) for line in output.splitlines())
+    if state.get('LoadState')=='not-found':
+        # systemd may collect a successful transient unit. This is NOT proof
+        # of success. The caller must still reopen its exact independently
+        # verified terminal result on B under actual writer/object leases.
+        return not process_check(reference)
     if state.get('MainPID')!='0':
         if state.get('MainPID')!=str(reference['owner_pid']):raise ValueError('existing unit process identity changed')
         return False
@@ -175,10 +186,14 @@ def execute(value,workers,*,report):
                 cycle['finalize']['cycle_binding']=dict(binding)
             cycle_id=store.initialize(binding)
             retained={p['phase']:p['result'] for p in store.phases(cycle_id)}
-            completed=({name:(retained[name] if name in retained else
-                             reopen_component(remote.client,ref,name,owner,guard=guard))
+            completed=None
+            if value.get('existing_components'):
+                # Absence of a former PID/unit cannot exclude a surviving
+                # native child. Acquire BOTH real body lanes before adoption.
+                with DesktopObjects(admitted['desktop'],guard=guard):
+                    completed={name:(retained[name] if name in retained else
+                        reopen_component(remote.client,ref,name,owner,guard=guard))
                         for name,ref in value['existing_components'].items()}
-                       if value.get('existing_components') else None)
             def admitted_consumer(packet,*,guard,report):
                 # Hold the actual capture lane and native object lease during
                 # normal readback. Complete fresh native final health BEFORE

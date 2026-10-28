@@ -1,4 +1,4 @@
-# Nightly pickup — October27, 19:45EDT
+# Nightly pickup — October27, 19:59EDT
 
 Workspace604d/PR263 remains sole Nightly owner. Separate worker/config/calendar;
 no Vibe backend restart or Staging prompt/controller/cutover. All backup bodies,
@@ -21,19 +21,27 @@ D/file-points-worker-B-inodes-v8-optimized-resume. Started18:42:02EDT, original
 absolute file deadline369669.93monotonic (~00:33EDT October28) retained. No loaded
 package/config was edited. Exact retained suffix7b2ddad48873884a4e5dbb32513591f6e445b4b953bc31a802e29e1def8ea054,
 sourceV11/through5446784; no duplicate census/capture or changed observer epoch.
-At19:40:55:2625new completions/127526315sourceB/21975108encodedB;
-3515.1s body phase. Mixed small points and prior carrier reuse are not an ETA.
+At19:59:09:4039new completions/739807195sourceB/192973803encodedB;
+4610.8s body phase. Mixed small points and prior carrier reuse are not an ETA.
 Handover had54084pendingfiles/219SQL-needed/22replay names; these old counts are
 not exact current remaining states or transfer-byte demand. Reopen after terminal.
 
-SQL5 PID2494867/start34859850 and runtime4 PID2494873/start34859856 still await
-that same chain without payload/API work at this checkpoint. Their old later
-phase limits must be clamped to04:00 before future capture. Replace only proven
-idle owned waiters, preserve exact cohort/index/runtime component; do not blindly
-stop the active file producer. Actual installation receipts supersede this note.
-SQLcohort initial-current-inodes-v11-SQL-20261027-v1/index
-consistent-sql-inodes-v11-current-v1/seed295adaa7a96156ecb42cb882734ab52b98cf03494919718a365d86181fe56660.
-Runtime prepared2files/3200B/indexruntime-dependencies-20261027-v1/sameseed.
+SQL5/runtime4 were independently proven idle/zero-payload/no children, then
+stopped19:49:30. FileV8 was never signalled. Their replacements load tested
+sourceb732a1ec63d9638f1da32eb35955da6d1aebbbc3, same cohort/preparedcomponent:
+SQL6 vk-nightly-B-current-SQL-cycle-inodes-v6-hard-stop-20261027.service,
+PID3124775/start35277868, D/current-SQL-cycle-inodes-v6-hard-stop,
+controllerSHAfa4452d99dd94a7b646521debc7076b2932687aa9548e00ff6247cb099977967;
+runtime5 vk-nightly-B-runtime-component-cycle-v5-hard-stop-20261027.service,
+PID3124787/start35277968, D/runtime-component-cycle-v5-hard-stop,
+controllerSHA55daf3b71c5b74789d2af9653e501fc5ee57f19c95fbc6782702e9175bbfabda.
+Both remain waiting with zero body/API work. Same SQLcohort
+initial-current-inodes-v11-SQL-20261027-v1/indexconsistent-sql-inodes-v11-current-v1,
+seed295adaa7a96156ecb42cb882734ab52b98cf03494919718a365d86181fe56660;
+runtime2files/3200B/indexruntime-dependencies-20261027-v1/sameseed.
+Actual top/native deadlines04:00EDT/08:00UTC, systemd termination grace is inside
+that bound, same resource limits. C/HARD_STOP_PHASE_INSTALLATION_20261027.private.json
+SHAb909094dc12c637576760e7eb1c82a72d4f2d076cfca76d86bfbe3cbe4e10b3e.
 
 SourceV11 observer PID3849155/start32997998, epoch31ab8db49caf4f9699c7c0bd75c363a2,
 configSHAe4bb83f02c2e71f8aebc768cb35d6feda255a181bf1cd24aa85d7dbe2c2641ed;
@@ -58,10 +66,13 @@ keeps parent failure/source epochs explicit. C/RECIPE_CATALOG_41_* records actua
 schema. C/COMPOSED_RETAINED_PROVIDER_CANDIDATES_V2_20261027.private.json authenticates
 206older+41newer definitions against immutable B indexes; SHA136e184e0002079349c1c012787e15e6d2a34aee7847bfd8a9fc3ffb4a436e32.
 Only descriptor-selected layers become dependencies, not all candidate archives.
-Actual normal UID1000 B-backed guest confirms12expected provider roots exist;
-default RECOVERY_READ leases are absent. Install/bind actual owned reader leases
-at a safe writer boundary, never invent them in the consumer packet. No archive
-payload was copied/read for this metadata preparation.
+Actual UID1000 B-backed guest confirms12provider roots. Missing default leases
+were replaced by explicit new owner gates under Bcontrols, with actual kernel
+exclusion tests; accepted restore tree unchanged. Bind those exact paths/inodes
+from C/COMPOSED_ACTUAL_READER_GATE_PREPARATION_20261027.private.json
+SHA511d064d17a37b6e10582677cdae715ec8933b139186ddcc960fe1e0a537043a.
+Native body/object exclusion still mandatory during real restore. No archive
+payload was read/copied for preparation.
 
 B raw counters at19:17 showed queued IO with almost no completions; no matching
 recent storage events. Health query totals later improved from12.7–17.8s/two
@@ -77,8 +88,8 @@ Revalidate14runtimepins/3aliases, independent current SQL request and complete
 content closure and actual normal leased B-backed composed consumer. Then prove
 ordinary changed/unchanged/interrupted/Desktop-off/low-space whole cycles fit
 22:00–04:00 before exact worker/calendar adoption and next-run verification.
-Production proof and required consumer/provider binding remain, not generic
-permission blockers. No .pyc tracking, cleanup, migration or extra spend.
+250focused tests pass; full format lacks Prettier after Rustformat passed.
+Production proof and final consumer binding remain, not generic permission blockers. No .pyc tracking, cleanup, migration or extra spend.
 
 Read [overnight acceptance](VK_NIGHTLY_OVERNIGHT_ACCEPTANCE.md),
 [previous exact pickup](HANDOFF_NIGHTLY_HISTORY_20261027_1945.md),

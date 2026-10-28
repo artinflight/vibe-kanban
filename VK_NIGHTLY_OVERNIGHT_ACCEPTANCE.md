@@ -206,3 +206,20 @@ reusable. No catalog conversion or archive recopy is needed.
 
 Scheduling remains OFF. Exact installed complete service/config, current full
 restore and an actual ordinary overnight cycle remain commissioning gates.
+
+
+The current waiting SQL5/runtime4 controllers were proven zero-payload and
+childless, closed normally19:49:30, and replaced serially with SQL6/runtime5 from
+tested source`b732a1ec6`. The active fileV8 PID2494862 was never signalled. The
+replacement units' original cohort/component bindings and caps were rechecked;
+top/native08:00UTC (04:00EDT) guards and actual systemd termination budgets agree.
+This is the current commissioning chain, not proof of a recurring nightly cycle.
+
+The existing normal B-backed guest verified all12candidate provider roots under
+UID/GID1000. Twelve new explicit reader gates now live outside the accepted tree
+under Bcontrols, with actual kernel exclusive/shared-lock refusal checks. The
+162.70GB restored tree and all archive bytes were unchanged. Those gates coordinate
+readers; they never substitute for the real MCP/native body lanes. Successful
+transient-unit collection is handled by former-process identity plus actual
+native leases and independently reopened B terminal receipts, not invented unit
+success. The current file/SQL/runtime results and composed restore remain needed.

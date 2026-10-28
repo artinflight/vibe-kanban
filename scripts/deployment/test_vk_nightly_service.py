@@ -36,6 +36,11 @@ class ServiceTests(unittest.TestCase):
             with self.assertRaises(ValueError):service.terminal(self.ref,inspect=lambda *a,**k:show(**changes))
         with self.assertRaises(subprocess.TimeoutExpired):
             service.terminal(self.ref,inspect=lambda *a,**k:(_ for _ in ()).throw(subprocess.TimeoutExpired('same unit',15)))
+        collected=lambda *a,**k:show(LoadState='not-found',ExecMainPID='0',ExecMainStartTimestampMonotonic='0')
+        self.assertFalse(service.terminal(self.ref,inspect=collected,process_check=lambda _:True))
+        # This only establishes former process absence. Native result/leases
+        # remain independently mandatory in execute/reopen_component.
+        self.assertTrue(service.terminal(self.ref,inspect=collected,process_check=lambda _:False))
 
     def test_CLI_wrong_digest_refuses_without_source_or_B_work(self):
         path,_=self.saved('wrong-config',{'format':'vk-nightly-current-service-v1'})

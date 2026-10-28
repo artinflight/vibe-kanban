@@ -1,4 +1,4 @@
-# Nightly pickup — October27,22:57EDT
+# Nightly pickup — October27,23:14EDT
 
 Goal: tonight's current backup/independent composed restore, then22–04Toronto
 nightly automation with hard04:00stop. Separate worker; no backend restart.
@@ -9,9 +9,9 @@ including unsealed RAM inode33476/2968010752B. Bodies/indexes B only.
 
 D=/mnt/vk-storage/vk-nightly-efficiency-20261017/commissioning-20261026
 C=D/b-controls-v1. D/LATEST_STATUS.private.json is the current actual snapshot.
-C/DEFERRED_FILE_AND_COMMISSIONER_20261028T0255.private.json SHA
- ea0b24482cc04c8633bc2e956e7281d7ec0488dfb52e1dffa7eacd07e6540a8d;
-shared pressure copy NIGHTLY_DEFERRED_FILE_AND_COMMISSIONER_20261028.private.json.
+C/CURRENT_CHAIN_AND_PENDING_20261028T0310.private.json SHA
+ 7e8cdccbd034fac552f347a25ea95b90eb6c3b27fa7c8950f651262052e7df70;
+shared pressure copy NIGHTLY_CURRENT_CHAIN_AND_PENDING_20261028.private.json.
 
 ## Same live components — do not duplicate or interrupt
 
@@ -19,9 +19,9 @@ shared pressure copy NIGHTLY_DEFERRED_FILE_AND_COMMISSIONER_20261028.private.jso
   PID3735301/start35669970, D/file-points-worker-B-inodes-v9-group-commit.
   Source7ddf7674fdcf53b1d2bf907f45cd84c19bb0fd57; groups16, CPU25%/High1536M/
   Max2G/Swap0/Tasks64. Original deadline00:33:13.838796EDT October28,
-  monotonic369669.93 unchanged. At22:57:26415NEW committedfiles,
-  6374780433sourceB/1919800535encodedB/7180.78s, still streaming, no stop/result.
-  Own events0/hostPSI0; full host snapshot is private. No ETA claimed.
+  monotonic369669.93 unchanged. At23:14:28911NEW committedfiles,
+  8636454815sourceB/2669141620encodedB/8211.35s, still streaming, no stop/result.
+  Memory.high297; max/OOM0, hostPSI0; full snapshot private. No ETA claimed.
 - SQL8: vk-nightly-B-current-SQL-cycle-inodes-v8-20261027.service,
   PID4176947/start35965218, D/current-SQL-cycle-inodes-v8-large-admitted,
   source2a284d4ae. Waits SAME FileV9, same cohort/index, no SQL body yet.
@@ -33,8 +33,9 @@ shared pressure copy NIGHTLY_DEFERRED_FILE_AND_COMMISSIONER_20261028.private.jso
 - ObserverV11 PID3849155/start32997998, epoch31ab8db49caf4f9699c7c0bd75c363a2,
   fixed outbox/durableB unchanged. No new namespace census.
 
-Exact map/input/cohort digests are in the full pickup/private receipt. Do not treat old logical byte counts as transfer
-demand. One CU monitor/state.json point29980B requires scoped requalification.
+Exact map/input/cohort digests are in the full pickup/private receipt.
+Pending-keyset23:06:12981names/6.11GBlogical, not transfer demand.
+149names need reconciliation at23:06, including the CU JSON point.
 
 ## Coordinator fixed and actually handed over, bodies untouched
 

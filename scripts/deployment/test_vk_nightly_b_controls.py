@@ -522,7 +522,7 @@ class BControlTests(unittest.TestCase):
         settings['contract']['required_SQL']=['/home/state/needed.sqlite']
         with self.assertRaisesRegex(ValueError,'current SQL request required'):finalize(self.client,**settings)
 
-    def cycle_fixture(self):
+    def cycle_fixture(self,at=None):
         from datetime import datetime,timedelta,timezone
         from vk_nightly_cycle_state import CycleState
         from vk_nightly_finalize_current import finalize,consumer_packet
@@ -534,7 +534,7 @@ class BControlTests(unittest.TestCase):
         placement=dict(roots=roots,expected_uid=os.getuid(),expected_gid=os.getgid(),
             root_bindings={k:[Path(p).stat().st_dev,Path(p).stat().st_ino] for k,p in roots.items()},
             lease_paths={k:str(Path(p)/'RECOVERY_READ.lease') for k,p in roots.items()})
-        now=[datetime.now(timezone.utc)]
+        now=[at or datetime.now(timezone.utc)]
         binding=dict(started_UTC=now[0].isoformat(),deadline_UTC=(now[0]+timedelta(seconds=120)).isoformat(),
             previous_accepted_sha256=None,source_instance='actual-RAM-native-fixture',config_sha256='1'*64)
         store=CycleState(self.client,dict(index_name='cycle-ledger',checkpoint_sha256=self.sha),guard=lambda:None)
@@ -551,7 +551,7 @@ class BControlTests(unittest.TestCase):
             return dict(candidate=value,packet=packet)
         def restore(results,deadline,guard):
             calls.append('restore');packet=results['candidate']['packet']
-            return run(packet,checksum(packet),guard=guard)
+            return run(packet,checksum(packet),guard=guard,wall_clock=lambda:now[0].timestamp())
         adapters=dict(files=phase('files','actual_independent_B_file_cycle_receipt_reopen_verified'),
             SQL=phase('SQL','actual_independent_B_SQL_cycle_receipt_reopen_verified'),
             runtime=phase('runtime','actual_independent_B_runtime_component_reopen_verified'),
@@ -646,12 +646,12 @@ class BControlTests(unittest.TestCase):
         self.assertEqual(calls.count('files'),1)
 
     def test_commission_gate_reopens_actual_ordinary_restore_not_initial_or_other_package(self):
-        from datetime import timedelta
+        from datetime import datetime,timedelta
         from vk_nightly_cycle_state import run_cycle
         from vk_nightly_commission import qualification
         from vk_nightly_service import scheduled_cycle
         from vk_nightly_window import night
-        store,binding,adapters,calls,now=self.cycle_fixture()
+        store,binding,adapters,calls,now=self.cycle_fixture(at=datetime.fromisoformat('2026-10-28T02:01:00+00:00'))
         template=dict(cycle=dict(cycle_binding=dict(binding,cycle_kind='incremental',
             SQL_cohort_tag='template',SQL_phase_index=dict(index_name='template-sql',checkpoint_sha256=self.sha)),
             SQL=dict(SQL_phase_index=dict(index_name='template-sql',checkpoint_sha256=self.sha)),finalize={}))
@@ -794,6 +794,36 @@ class BControlTests(unittest.TestCase):
         other=self.start();view=other.connect('ordinary-recovery',sealed['sha256'],readonly=True)
         index=SealedMemberIndex(view,lambda:view.request('check'),dict(sha256=sealed['sha256']))
         self.assertEqual(list(index.entries()),[('home/note',member)]);view.close()
+
+    def test_recall_existing_snapshot_requires_previous_independent_acceptance(self):
+        from vk_nightly_b_controls import NativeControlError
+        db=self.client.connect('recall-only-map',self.sha);db.execute('insert into point values(1,?)',(b'original',))
+        binding=dict(epoch='closed-point')
+        raw=db.request('seal-working',**self.seal_request('recall-only-map',binding))
+        with self.assertRaises(NativeControlError):self.client.accepted_snapshot('recall-only-map',binding)
+        first=self.client.seal_checkpoint('recall-only-map',binding);db.close()
+        before={p.name:p.stat().st_ino for p in self.controls.iterdir()}
+        with patch.object(self.client,'readback',side_effect=AssertionError('verified image streamed again')):
+            reused=self.client.accepted_snapshot('recall-only-map',binding)
+        self.assertEqual(reused['sha256'],first['sha256'])
+        self.assertTrue(reused['previous_independent_stream_readback_reused'])
+        self.assertEqual(reused['new_snapshot_bytes'],0)
+        self.assertEqual(before,{p.name:p.stat().st_ino for p in self.controls.iterdir()})
+        with self.assertRaises(NativeControlError):self.client.accepted_snapshot('recall-only-map',dict(epoch='different'))
+        image=self.controls/(first['sha256']+'.sqlite')
+        with image.open('r+b') as f:f.seek(100);f.write(b'X')
+        with self.assertRaisesRegex(NativeControlError,'snapshot/proof changed'):
+            self.client.accepted_snapshot('recall-only-map',binding)
+
+    def test_existing_only_composed_finalization_never_clones_or_streams(self):
+        from vk_nightly_finalize_current import finalize
+        settings,*_=self.finalization_fixture()
+        original=finalize(self.client,**dict(settings,guard=lambda:None))
+        with patch.object(self.client,'seal_checkpoint',side_effect=AssertionError('new snapshot forbidden')):
+            reused=finalize(self.client,**dict(settings,guard=lambda:None,existing_snapshot_only=True))
+        self.assertEqual(reused['descriptor'],original['descriptor'])
+        self.assertTrue(reused['sealed_map']['previous_independent_stream_readback_reused'])
+        self.assertFalse(reused['whole_baseline_accepted'])
 
     def test_native_seal_rejects_uncommitted_reader_bad_binding_and_tampered_image(self):
         from vk_nightly_b_controls import NativeControlError

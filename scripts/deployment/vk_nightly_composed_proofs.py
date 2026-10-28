@@ -36,31 +36,58 @@ def carrier_identity(objects,definition):
     return actual
 
 
-def retained_ordered_proof(database,value,member):
-    """Reopen the exact accepted body version named by a later qualified point.
+def retained_ordered_proof(database,value,member,*,member_name=None):
+    """Reopen an exact old ordered-body proof; preserve its original epoch.
 
-    Content/hash/ordered recipe proof belongs to the old body epoch. Current
-    metadata remains the later qualifier's point; never relabel the old proof.
+    Earlier metadata handovers could retain the qualified recipe without the
+    later explicit history hint. Resolve only that same member's immutable
+    history, matching the complete ordered recipe/hash/length. Never infer an
+    ordered proof from individual chunk hashes or current source availability.
     """
-    reference=value.get('retained_carrier_reuse',{}).get('completed_file_history')
-    if not reference:return None
     from vk_nightly_control_format import key
-    key(reference['name']);digest(reference['version_sha256'])
-    row=database.execute('select accepted_row,proof from file_acceptance_history where name=? and version_sha256=?',
-                         (reference['name'],reference['version_sha256'])).fetchone()
-    if not row or row[0] is None or hashlib.sha256(row[0]).hexdigest()!=reference['version_sha256']:
-        raise ValueError('retained ordered body history missing or changed')
-    accepted=decode_member(row[0]);original=accepted['member'];proof=decode_member(row[1])
-    if (accepted.get('independent_file_proof')!=proof or original.get('kind')!='file'
-            or any(original.get(k)!=member.get(k) for k in ('bytes','sha256','segments'))
-            or proof.get('independent_ordered_B_readback_sha256')!=member['sha256']
-            or proof.get('independent_ordered_B_readback_bytes')!=member['bytes']
-            or proof.get('source_metadata')!={k:original[k] for k in ('mode','uid','gid','mtime_ns','xattrs')}
-            or value.get('qualification',{}).get('state')!='qualified-retained-body'
+    reference=value.get('retained_carrier_reuse',{}).get('completed_file_history')
+    if (value.get('qualification',{}).get('state')!='qualified-retained-body'
             or value['qualification'].get('row')!=member):
-        raise ValueError('retained ordered body proof or current qualified point differs')
-    return dict(history_reference=reference,original_ordered_proof_sha256=hashlib.sha256(canonical(proof)).hexdigest(),
-                original_body_metadata_preserved=True,current_qualified_metadata_not_relabelled=True)
+        if reference:raise ValueError('retained ordered body current qualified point differs')
+        return None
+    if reference:
+        key(reference['name']);digest(reference['version_sha256'])
+        rows=database.execute('select version_sha256,accepted_row,proof from file_acceptance_history '
+            'where name=? and version_sha256=?',(reference['name'],reference['version_sha256'])).fetchall()
+        if not rows:raise ValueError('retained ordered body history missing or changed')
+        history_name=reference['name']
+    else:
+        if member_name is None:return None
+        key(member_name)
+        if value['qualification'].get('source')!='/'+member_name:
+            raise ValueError('retained body source/member binding differs')
+        if not database.execute("select 1 from sqlite_master where type='table' and name='file_acceptance_history'").fetchone():
+            return None
+        history_name=member_name
+        rows=database.execute('select version_sha256,accepted_row,proof from file_acceptance_history '
+            'where name=? order by version_sha256 limit 129',(member_name,)).fetchall()
+        if len(rows)>128:raise ValueError('retained ordered body history exceeds finite reconciliation bound')
+    for version,raw,encoded_proof in rows:
+        if raw is None:
+            if reference:raise ValueError('retained ordered body history missing or changed')
+            continue  # Legacy proof without its exact recipe cannot qualify.
+        digest(version)
+        if hashlib.sha256(raw).hexdigest()!=version:
+            raise ValueError('retained ordered body history missing or changed')
+        accepted=decode_member(raw);original=accepted['member'];proof=decode_member(encoded_proof)
+        matches=(original.get('kind')=='file' and
+                 all(original.get(k)==member.get(k) for k in ('bytes','sha256','segments')))
+        if not matches and not reference:continue
+        if (not matches or accepted.get('independent_file_proof')!=proof
+                or proof.get('independent_ordered_B_readback_sha256')!=member['sha256']
+                or proof.get('independent_ordered_B_readback_bytes')!=member['bytes']
+                or proof.get('source_metadata')!={k:original[k] for k in ('mode','uid','gid','mtime_ns','xattrs')}):
+            raise ValueError('retained ordered body proof or current qualified point differs')
+        return dict(history_reference=dict(name=history_name,version_sha256=version),
+            original_ordered_proof_sha256=hashlib.sha256(canonical(proof)).hexdigest(),
+            original_body_metadata_preserved=True,current_qualified_metadata_not_relabelled=True,
+            explicit_hint_present=reference is not None)
+    return None
 
 
 def audit(database,reference,*,base_catalog,recipe_catalogs,objects,objects_root,
@@ -264,7 +291,7 @@ def audit(database,reference,*,base_catalog,recipe_catalogs,objects,objects_root
                 raise ValueError('ordered file readback/hash/Linux metadata proof differs')
             evidence['ordered_file_proof_sha256']=hashlib.sha256(canonical(proof)).hexdigest();ordered+=1
         if len(recipe)>1 and not (proof or SQL):
-            retained_proof=retained_ordered_proof(database,value,member)
+            retained_proof=retained_ordered_proof(database,value,member,member_name=name)
             if retained_proof is None:raise ValueError('multi-segment file lacks full ordered readback proof: '+name)
             evidence['retained_ordered_file_proof']=retained_proof;ordered+=1
         if len(recipe)==1 and any(recipe[0][k]!=member[k] for k in ('bytes','sha256')):

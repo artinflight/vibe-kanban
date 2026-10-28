@@ -116,6 +116,18 @@ class ComposedProofTests(unittest.TestCase):
             retained_carrier_reuse=dict(completed_file_history=dict(name='old/name',version_sha256=version)))
         self.db.execute('update members set row=?',(encode_member(value),))
         self.assertEqual(self.use()['ordered_file_readback_proofs_reused'],1)
+        value.pop('retained_carrier_reuse');value['qualification']['source']='/home/note'
+        self.db.execute("update file_acceptance_history set name='home/note'")
+        self.db.execute('update members set row=?',(encode_member(value),))
+        self.assertEqual(self.use()['ordered_file_readback_proofs_reused'],1)
+        reversed_member=dict(row,segments=list(reversed(row['segments'])))
+        # Add a distinct segment so reversal is a material recipe difference.
+        reversed_member['segments']=[dict(row['segments'][0],selector='wrong-order'),row['segments'][1]]
+        value['member']=reversed_member;value['qualification']['row']=reversed_member
+        self.db.execute('update members set row=?',(encode_member(value),))
+        with self.assertRaisesRegex(ValueError,'lacks full ordered'):self.use()
+        value['member']=row;value['qualification']['row']=row
+        self.db.execute('update members set row=?',(encode_member(value),))
         self.db.execute('update file_acceptance_history set proof=?',(encode_member(dict(proof,independent_ordered_B_readback_bytes=0)),))
         with self.assertRaisesRegex(ValueError,'retained ordered body proof'):self.use()
         self.db.execute('update file_acceptance_history set accepted_row=?',(b'changed',))

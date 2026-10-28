@@ -87,7 +87,7 @@ def bind_runtime_scope(client,current_map,contract,result,*,guard):
 
 
 def finalize(client,*,current_map,map_layer,contract,cycle_binding,base_catalog,recipe_catalogs,
-             SQL_phase=None,runtime_phase=None,guard,report=lambda _:None):
+             SQL_phase=None,runtime_phase=None,guard,report=lambda _:None,existing_snapshot_only=False):
     guard();contract=json.loads(json.dumps(contract))
     if contract.get('runtime_scope_authority') and runtime_phase is None:
         raise ValueError('independently reopened runtime phase required')
@@ -117,7 +117,8 @@ def finalize(client,*,current_map,map_layer,contract,cycle_binding,base_catalog,
             contract['always_SQL_API_sources']=actual['always_SQL_API_sources']
         finally:view.close()
     contract_sha=checksum(contract)
-    db=client.connect(current_map['index_name'],current_map['checkpoint_sha256'])
+    db=client.connect(current_map['index_name'],current_map['checkpoint_sha256'],
+                      **(dict(readonly=True,working=True) if existing_snapshot_only else {}))
     try:
         if db.execute('select format,complete from metadata').fetchall()!=[(FORMAT,1)]:
             raise ValueError('complete retained map required before sealing')
@@ -126,8 +127,14 @@ def finalize(client,*,current_map,map_layer,contract,cycle_binding,base_catalog,
         states=dict(db.execute('select state,count(*) from members group by state'))
         unresolved={k:n for k,n in states.items() if k not in (*READY,'SQLite-sidecar')}
         if unresolved:raise ValueError('unresolved required map points; no new checkpoint: '+json.dumps(unresolved,sort_keys=True))
-        sealed=client.seal_checkpoint(db.key,dict(cycle=cycle_binding,consumer_contract_sha256=contract_sha),
-            on_progress=lambda n:report(dict(phase='immutable-current-map-independent-readback',bytes_read=n)))
+        snapshot_binding=dict(cycle=cycle_binding,consumer_contract_sha256=contract_sha)
+        if existing_snapshot_only:
+            sealed=client.accepted_snapshot(db.key,snapshot_binding)
+            report(dict(phase='reused-previously-accepted-immutable-current-map',bytes=sealed['bytes'],
+                        new_snapshot_bytes=0,new_independent_stream_bytes_read=0))
+        else:
+            sealed=client.seal_checkpoint(db.key,snapshot_binding,
+                on_progress=lambda n:report(dict(phase='immutable-current-map-independent-readback',bytes_read=n)))
     finally:db.close()
     reference=dict(format=FORMAT,layer=map_layer,selector=sealed['sha256']+'.sqlite',
         sha256=sealed['sha256'],bytes=sealed['bytes'])

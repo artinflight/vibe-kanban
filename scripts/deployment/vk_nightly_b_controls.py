@@ -245,6 +245,37 @@ class Store:
             native_integrity='ok',status='needs_independent_readback',reused_completed_snapshot=False)
         self.guard(0);atomic_new(manifest,result);return result
 
+    def accepted_snapshot(self,q):
+        """Recall only an already independently accepted immutable image.
+
+        Verify its complete native hash now, and reopen its original import
+        receipt under the existing import lease. Never snapshot the working
+        descendant or fabricate a new independent-readback observation.
+        """
+        request=dict(format='vk-nightly-B-working-checkpoint-v1',index=name(q['index']),binding=q['binding'])
+        raw=json.dumps(request,sort_keys=True,separators=(',',':'),allow_nan=False).encode()
+        if len(raw)>65536 or hashlib.sha256(raw).hexdigest()!=sha(q['request_sha256']):
+            raise ValueError('exact accepted-snapshot request required')
+        manifest=self.root/('snapshot-'+q['request_sha256']+'.json');self.checked(manifest)
+        if manifest.stat().st_size>131072:raise ValueError('bounded immutable snapshot receipt required')
+        result=json.loads(manifest.read_text());image=self.checkpoint(result['sha256'])
+        directory=self.root/(result['sha256']+'-import-lease');self.checked(directory/'OBJECT_STORE.lease')
+        with self.objects.store_lease(directory):
+            proof=image.with_suffix('.import.json');self.checked(proof)
+            if proof.stat().st_size>131072:raise ValueError('bounded immutable acceptance required')
+            accepted=json.loads(proof.read_text());actual=self.objects.file_identity(image)
+            if (result['request']!=request or result['request_sha256']!=q['request_sha256']
+                    or actual!=result['image_identity'] or accepted.get('identity')!=actual
+                    or accepted.get('sha256')!=result['sha256'] or accepted.get('bytes')!=actual[2]
+                    or result['bytes']!=actual[2] or accepted.get('Linux_metadata')!=result['Linux_metadata']
+                    or accepted.get('native_integrity')!='ok' or accepted.get('independent_readback') is not True
+                    or self.hash(image)!=result['sha256'] or self.objects.file_identity(image)!=actual):
+                raise ValueError('accepted immutable snapshot/proof changed; preserve originals')
+            self.guard(0)
+            return dict(result,acceptance=accepted,reused_completed_snapshot=True,
+                independent_stream_readback_verified=True,previous_independent_stream_readback_reused=True,
+                new_independent_stream_bytes_read=0,new_snapshot_bytes=0,whole_baseline_accepted=False)
+
     def authorizer(self,action,a,b,db,trigger):
         if action in (sqlite3.SQLITE_ATTACH,sqlite3.SQLITE_DETACH,sqlite3.SQLITE_CREATE_VTABLE,sqlite3.SQLITE_DROP_VTABLE):
             return sqlite3.SQLITE_DENY
@@ -347,6 +378,7 @@ class Store:
             elif allocated is not None:allocated*=512
             return dict(working_bytes=identity[2],allocated_bytes=allocated,identity=identity,
                         metadata_only=True,content_or_SQL_acceptance=False)
+        if op=='accepted-snapshot':return self.accepted_snapshot(q)
         if op=='seed':
             # New control state only: no live/source database is copied. The
             # caller independently reads this tiny B-native seed before use.
@@ -857,6 +889,18 @@ class Client:
             raise ValueError('ordinary immutable checkpoint acceptance differs')
         return dict(result,acceptance=accepted,independent_stream_readback_verified=True,
                     whole_baseline_accepted=False)
+
+    def accepted_snapshot(self,key,binding):
+        request=dict(format='vk-nightly-B-working-checkpoint-v1',index=name(key),binding=binding)
+        digest=hashlib.sha256(json.dumps(request,sort_keys=True,separators=(',',':'),allow_nan=False).encode()).hexdigest()
+        result=self.call(op='accepted-snapshot',index=key,binding=binding,request_sha256=digest)
+        if (result['request']!=request or result['request_sha256']!=digest
+                or result.get('previous_independent_stream_readback_reused') is not True
+                or result['acceptance'].get('independent_readback') is not True
+                or result['acceptance'].get('identity')!=result['image_identity']
+                or result['acceptance'].get('sha256')!=result['sha256']):
+            raise ValueError('existing independently accepted snapshot binding differs')
+        return result
 
     def readback(self,digest,*,sink=None,on_progress=lambda _:None):
         self.guard();send(self.output,dict(op='readback',sha256=digest));header=recv(self.source)

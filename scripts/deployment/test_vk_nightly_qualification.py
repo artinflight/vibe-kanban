@@ -35,6 +35,33 @@ class QualificationTests(unittest.TestCase):
         value=self.qualify(lambda sha,size:[])
         self.assertEqual(value['state'],'qualified-pending-body');self.assertNotIn('segments',value['row'])
 
+    def test_JSONL_append_point_is_double_hashed_and_transferred_as_exact_recorded_prefix(self):
+        from vk_nightly_file_version import capture_qualified_version
+        import io
+        self.path=self.path.with_suffix('.jsonl');body=b'{"event":1}\n';self.path.write_bytes(body)
+        calls=[0]
+        def append():
+            calls[0]+=1
+            if calls[0]==2:
+                with self.path.open('ab') as f:f.write(b'{"later":2}\n')
+        value=self.qualify(lambda *_:[],guard=append)
+        self.assertEqual(value['row']['bytes'],len(body))
+        self.assertEqual(value['JSONL_point_qualification']['source_actual_read_bytes'],2*len(body))
+        sink=io.BytesIO();proof=capture_qualified_version(value,sink,guard=lambda:None)
+        self.assertEqual(sink.getvalue(),body);self.assertTrue(proof['source_bytes_after_observation_not_claimed_backed_up'])
+
+    def test_JSONL_rewrite_metadata_change_incomplete_record_and_SQLite_refuse(self):
+        self.path=self.path.with_suffix('.jsonl');self.path.write_bytes(b'{"event":1}\n')
+        calls=[0]
+        def rewrite():
+            calls[0]+=1
+            if calls[0]==3:self.path.write_bytes(b'{"event":2}\n')
+        with self.assertRaisesRegex(ValueError,'hashes differ'):self.qualify(lambda *_:[],guard=rewrite)
+        self.path.write_bytes(b'{"incomplete":')
+        self.assertNotIn('JSONL_point_qualification',self.qualify(lambda *_:[]))
+        self.path.write_bytes(b'SQLite format 3\x00\n')
+        with self.assertRaisesRegex(ValueError,'snapshot API'):self.qualify(lambda *_:[])
+
     def test_mismatched_carrier_cannot_resolve_request(self):
         self.carrier['sha256']='f'*64
         with self.assertRaises(ValueError):self.qualify()

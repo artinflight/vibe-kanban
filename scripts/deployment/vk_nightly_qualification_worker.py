@@ -38,15 +38,30 @@ def qualify_selected(current,*,journal,adopt,guard,maximum_paths,maximum_source_
             except FileNotFoundError:size=0
             # This ceiling counts an unsuccessful full hash attempt too. The
             # separately reported successful-hash bytes are not called total IO.
-            if read_ceiling+size>maximum_source_bytes:budget_stop=True;break
-            read_ceiling+=size
+            read_bound=size*(2 if path.suffix=='.jsonl' else 1)
+            if read_ceiling+read_bound>maximum_source_bytes:budget_stop=True;break
+            read_ceiling+=read_bound
             try:
                 point=qualify_file(path,maximum_bytes=max(1,size),journal=report,carriers=lambda *_:[],guard=guard)
             except (ValueError,FileNotFoundError) as error:
-                point=dict(source=str(path),state='current-version-deferred',reason=str(error),
-                    journal={k:report[k] for k in ('instance','sequence','scope_sha256','plan_sha256')},original_epoch_repaired=False)
+                namespace=decode_member(raw).get('namespace',{})
+                if isinstance(error,FileNotFoundError) and namespace.get('kind')=='file' and namespace.get('bytes')==0:
+                    # The authenticated recorded namespace completely determines
+                    # zero content. Native adoption independently checks this
+                    # observation AND requires a verified retained empty carrier;
+                    # this never claims that the vanished pathname exists now.
+                    row={k:namespace[k] for k in ('mode','uid','gid','mtime_ns','xattrs')}
+                    row.update(kind='file',bytes=0,sha256=hashlib.sha256(b'').hexdigest())
+                    point=dict(source=str(path),state='qualified-pending-body',row=row,
+                        source_identity=namespace['identity'],recorded_empty_namespace=namespace,
+                        source_observed_at='authenticated-recorded-namespace',source_payload_bytes_hashed=0,
+                        current_path_absent=True,original_epoch_repaired=False,
+                        journal={k:report[k] for k in ('instance','sequence','scope_sha256','plan_sha256')})
+                else:
+                    point=dict(source=str(path),state='current-version-deferred',reason=str(error),
+                        journal={k:report[k] for k in ('instance','sequence','scope_sha256','plan_sha256')},original_epoch_repaired=False)
             else:hashed+=point['source_payload_bytes_hashed']
-            records.append(dict(name=name,original_sha256=hashlib.sha256(raw).hexdigest(),version=point,source_read_upper_bound=size))
+            records.append(dict(name=name,original_sha256=hashlib.sha256(raw).hexdigest(),version=point,source_read_upper_bound=read_bound))
         if records:
             accepted=adopt(records);processed+=len(records);last=records[-1]['name']
             retained+=accepted['retained_body_matches'];pending+=accepted['qualified_pending_bodies']

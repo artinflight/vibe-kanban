@@ -1577,7 +1577,7 @@ class BControlTests(unittest.TestCase):
         with patch.object(worker,'DesktopControls',controls),patch.object(worker,'DesktopObjects',body),\
              patch.object(worker,'host_guard',lambda *_:None),patch.object(cycle,'host_guard',lambda *_:None),\
              patch.object(cycle,'DesktopControls',controls),patch.object(cycle,'Source',return_value=source):
-            with patch.object(cycle,'advance_suffix',return_value={'actual_retained_delta':'fixture'}),\
+            with patch.object(cycle,'advance_suffix',return_value={'actual_retained_delta':'fixture','through':1}),\
                  patch.object(worker,'capture_SQL_point',wraps=worker.capture_SQL_point) as current_API:
                 result=cycle.run(settings,prepared,report=lambda _:None)
                 self.assertEqual(current_API.call_count,1)
@@ -1598,12 +1598,42 @@ class BControlTests(unittest.TestCase):
             self.assertEqual(reused['unchanged_SQL_points_reused'],1)
             self.assertTrue(reused['actual_independent_B_SQL_cycle_receipt_reopen_verified'])
             self.assertFalse(reused['baseline_accepted'])
+            # A copied DB header is discovered in an already-recorded namespace.
+            # Close its consistent API point without invalidating/re-capturing
+            # the earlier accepted source or replaying a fresh namespace.
+            copied=self.root/'copied-seed.db';c=sqlite3.connect(copied)
+            c.execute('create table copy_fixture(id integer)');c.execute('insert into copy_fixture values(7)');c.commit();c.close()
+            from vk_nightly_current_map import classify,encode_member
+            observed=observe(copied)
+            state,row=classify(str(copied)[1:],observed,dict(source=str(copied),state='current-version-deferred',reason='SQLite requires its consistent snapshot API'),SQL_sources=set())
+            db=self.client.connect('current-sql-main',map_sha)
+            db.execute('insert into members values(?,?,?)',(str(copied)[1:],state,encode_member(row)))
+            db.execute('insert into SQL_sources values(?)',(str(copied),));db.close()
+            closure=dict(settings,cohort_tag='recorded-header-closure',recorded_SQL_scope_from=settings['SQL_phase_index'],
+                SQL_phase_index=dict(index_name='current-sql-recorded',checkpoint_sha256=self.sha))
+            with patch.object(cycle,'advance_suffix',side_effect=AssertionError('recorded namespace advanced')),\
+                 patch.object(worker,'capture_SQL_point',wraps=worker.capture_SQL_point) as api:
+                closed=cycle.run(closure,prepared,report=lambda _:None)
+                self.assertEqual(api.call_count,1);self.assertEqual(api.call_args.args[0],str(copied))
+            self.assertEqual(closed['complete_SQL_scope_sources'],2);self.assertEqual(closed['unchanged_SQL_points_reused'],1)
+            self.assertTrue(closed['actual_independent_B_SQL_cycle_receipt_reopen_verified'])
+            with patch.object(cycle,'advance_suffix',side_effect=AssertionError('closure replayed')),\
+                 patch.object(worker,'capture_SQL_point',side_effect=AssertionError('completed closure recaptured')):
+                self.assertEqual(cycle.run(closure,prepared,report=lambda _:None)['cohort_id'],closed['cohort_id'])
+            db=self.client.connect('current-sql-main',map_sha)
+            old_epoch=db.execute('select binding from namespace_reconciliation where id=1').fetchone()[0]
+            changed=json.loads(old_epoch);changed['start_sequence']=2
+            db.execute('update namespace_reconciliation set binding=?',(json.dumps(changed),));db.close()
+            with self.assertRaisesRegex(ValueError,'fixed namespace'):
+                cycle.recorded_namespace(self.client,settings['SQL_phase_index'],prepared,guard=lambda:None)
+            db=self.client.connect('current-sql-main',map_sha)
+            db.execute('update namespace_reconciliation set binding=?',(old_epoch,));db.close()
         db=self.client.connect('current-sql-main',map_sha,readonly=True,working=True)
         state,raw=db.execute('select state,row from members where name=?',(str(self.original)[1:],)).fetchone()
         row=decode_member(raw)
         self.assertEqual(row['SQL_point']['SQL_cohort_id'],result['cohort_id'])
         self.assertEqual(row['SQL_point']['new_B_encoded_payload_bytes'],0)
-        self.assertEqual(db.execute('select count(*) from SQL_acceptance_history').fetchone(),(1,));db.close()
+        self.assertEqual(db.execute('select count(*) from SQL_acceptance_history').fetchone(),(2,));db.close()
         file_root={str(self.original):dict(resolved=str(self.original),literal=None,identity=[1,2,stat.S_IFREG])}
         all_sources,pending,always,unchanged=cycle.selected_SQL([(str(self.original),state,raw)],file_root,{})
         self.assertEqual(pending,[str(self.original)]);self.assertEqual(always,pending);self.assertEqual(unchanged,0)
@@ -1623,8 +1653,8 @@ class BControlTests(unittest.TestCase):
         try:
             proof=current.request('audit-current-content',reference=dict(format='vk-nightly-current-member-map-v1',
                 sha256=sealed['sha256'],selector=sealed['sha256']+'.sqlite',bytes=sealed['bytes']),base_index=base.key,recipe_indexes=[])
-            self.assertEqual(proof['SQL_acceptance_records_independently_decoded'],1)
-            self.assertEqual(proof['file_points'],1);self.assertEqual(proof['new_backup_payload_bytes'],0)
+            self.assertEqual(proof['SQL_acceptance_records_independently_decoded'],2)
+            self.assertEqual(proof['file_points'],2);self.assertEqual(proof['new_backup_payload_bytes'],0)
             self.assertGreater(proof['SQL_control_bytes_read'],0)
         finally:current.close();base.close()
 

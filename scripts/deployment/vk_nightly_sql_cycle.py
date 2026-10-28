@@ -63,6 +63,44 @@ def selected_SQL(rows,roots,aliases,excluded=()):
     return scope_sources,selected,sorted(always),unchanged
 
 
+def recorded_namespace(client,old_reference,worker,*,guard):
+    """Reuse an actual completed cohort's fixed namespace, never chase live IO.
+
+    Later header discoveries may extend typed SQL membership without another
+    namespace replay. Unchanged independently accepted images keep their epochs;
+    newly discovered databases and mandatory alias targets still use the API.
+    """
+    guard();old=client.connect(old_reference['index_name'],old_reference['checkpoint_sha256'],readonly=True,working=True)
+    try:
+        request_row=old.execute('select row from SQL_cycle_request where id=1').fetchone()
+        result_row=old.execute('select row from tracking_health where id=1').fetchone()
+        if not request_row or not result_row:raise ValueError('actual completed predecessor SQL scope required')
+        previous=json.loads(request_row[0]);result=json.loads(result_row[0])
+        if (identity({k:v for k,v in previous.items() if k!='cohort_id'})!=previous['cohort_id']
+                or result.get('cohort_id')!=previous['cohort_id'] or result.get('more_pending') is not False
+                or result.get('deferred_SQL') or result.get('completed_current_SQL_points')!=len(previous['sources'])
+                or result.get('phase')!='current-SQL-cohort-points-integrated'):
+            raise ValueError('predecessor SQL scope has not completed')
+    finally:old.close()
+    current=client.connect(worker['B_index_name'],worker['B_checkpoint_sha256'],readonly=True,working=True)
+    try:
+        from vk_nightly_metadata_replay import replay_cursor
+        namespace=json.loads(current.execute('select binding from namespace_reconciliation where id=1').fetchone()[0])
+        if (current.execute('select complete,suffix_complete from namespace_reconciliation where id=1').fetchone()!=(1,1)
+                or replay_cursor(current,namespace['instance'],namespace['start_sequence'])!=previous['metadata_delta']['through']
+                or previous['binding']['map_index']!=worker['B_index_name']
+                or previous['binding']['map_checkpoint_sha256']!=worker['B_checkpoint_sha256']
+                or any(previous['binding'][k]!=namespace[k] for k in ('plan_sha256','scope_sha256'))):
+            raise ValueError('recorded SQL closure cannot advance or change the fixed namespace')
+        actual={p for p, in current.execute("select s.path from SQL_sources s join members m on s.path='/'||m.name where m.state!='symlink'")}
+        if not set(previous['SQL_scope_sources'])<=actual:raise ValueError('recorded SQL closure dropped earlier SQL scope')
+    finally:current.close()
+    guard()
+    return dict(previous['metadata_delta'],recorded_SQL_predecessor=dict(old_reference),
+        predecessor_cohort_id=previous['cohort_id'],predecessor_request_sha256=identity(previous),
+        new_namespace_replay_started=False)
+
+
 def request(config,worker,source,client,*,guard,report):
     """Reuse or durably create one explicit, immutable source-cohort request."""
     if not isinstance(config.get('cohort_tag'),str) or not re.fullmatch('[A-Za-z0-9._-]{1,128}',config['cohort_tag']):
@@ -79,6 +117,8 @@ def request(config,worker,source,client,*,guard,report):
         source_root_bindings=source.check()['required_root_bindings'],
         map_index=worker['B_index_name'],map_checkpoint_sha256=worker['B_checkpoint_sha256'],
         catalog_sha256=worker['SQL_catalog_sha256'],B_root=worker['desktop']['B_root'])
+    if config.get('recorded_SQL_scope_from'):
+        binding['recorded_SQL_scope_from']=config['recorded_SQL_scope_from']
     if row:
         value=json.loads(row[0])
         if value['binding']!=binding:raise ValueError('retained current SQL request binding changed')
@@ -86,10 +126,12 @@ def request(config,worker,source,client,*,guard,report):
             raise ValueError('retained current SQL request digest differs')
         return value
     target=source.config['B_delivery_target']
-    delta=advance_suffix(client,index_name=worker['B_index_name'],checkpoint_sha256=worker['B_checkpoint_sha256'],
-        journal_name=target['index_name'],journal_checkpoint_sha256=target['checkpoint_sha256'],
-        plan=source.plan,maximum_paths=config['maximum_delta_paths'],
-        maximum_journal_bytes=worker['B_controls']['maximum_index_bytes'],guard=guard,on_progress=report)
+    delta=(recorded_namespace(client,config['recorded_SQL_scope_from'],worker,guard=guard)
+        if config.get('recorded_SQL_scope_from') else
+        advance_suffix(client,index_name=worker['B_index_name'],checkpoint_sha256=worker['B_checkpoint_sha256'],
+            journal_name=target['index_name'],journal_checkpoint_sha256=target['checkpoint_sha256'],
+            plan=source.plan,maximum_paths=config['maximum_delta_paths'],
+            maximum_journal_bytes=worker['B_controls']['maximum_index_bytes'],guard=guard,on_progress=report))
     current=client.connect(worker['B_index_name'],worker['B_checkpoint_sha256'],readonly=True,working=True)
     try:
         raw=current.execute('select binding,complete,suffix_complete from namespace_reconciliation where id=1').fetchone()

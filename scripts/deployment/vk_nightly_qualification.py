@@ -10,7 +10,7 @@ import hashlib
 import json
 import zlib
 
-from vk_nightly_file_version import capture_version
+from vk_nightly_file_version import capture_version,qualify_jsonl_point
 from vk_nightly_checkpoints import digest,source_path
 
 
@@ -145,7 +145,14 @@ def qualify_file(path,*,maximum_bytes,journal,carriers,guard,coverage=None):
         from vk_nightly_scoped_coverage import ScopedCoverage
         if not isinstance(coverage,ScopedCoverage):raise ValueError('current source qualification needs live continuous tracking')
         scoped=coverage.check(journal,[str(path)])
-    observed=capture_version(path,HashOnly(),maximum_bytes=maximum_bytes,guard=guard)
+    if Path(path).suffix=='.jsonl':
+        try:observed=qualify_jsonl_point(path,maximum_bytes=maximum_bytes,guard=guard)
+        except ValueError as error:
+            if str(error)!='JSONL point lacks a complete final record boundary':raise
+            # A stable raw file need not be syntactically complete JSONL. Only
+            # append-tolerant prefix qualification requires a record boundary.
+            observed=capture_version(path,HashOnly(),maximum_bytes=maximum_bytes,guard=guard)
+    else:observed=capture_version(path,HashOnly(),maximum_bytes=maximum_bytes,guard=guard)
     row=dict(kind='file',bytes=observed['bytes'],sha256=observed['sha256'],
              **{k:observed['metadata'][k] for k in ('mode','uid','gid','mtime_ns','xattrs')})
     carrier=next(iter(carriers(row['sha256'],row['bytes'])),None)
@@ -160,5 +167,6 @@ def qualify_file(path,*,maximum_bytes,journal,carriers,guard,coverage=None):
                 state='qualified-retained-body' if carrier is not None else 'qualified-pending-body',
                 source_payload_bytes_hashed=observed['bytes'],backup_payload_bytes_copied=0,
                 carrier_epoch_preserved=True,original_epoch_repaired=False,
+                **({'JSONL_point_qualification':observed} if observed.get('independent_source_hashes') else {}),
                 namespace_or_whole_baseline_accepted=False,
                 **({'scoped_qualification_coverage':scoped} if scoped is not None else {}))

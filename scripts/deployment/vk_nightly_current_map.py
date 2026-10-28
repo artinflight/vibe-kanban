@@ -662,9 +662,18 @@ class CurrentMap:
                     raise ValueError('new successful stable full hash bracket required')
                 # Validate the complete point before asking the authenticated
                 # carrier provider; its metadata must never substitute for it.
+                recorded_empty=version.get('recorded_empty_namespace')
+                if recorded_empty is not None:
+                    if (recorded_empty!=observation or observation.get('kind')!='file' or observation.get('bytes')!=0
+                            or row['bytes']!=0 or row['sha256']!=hashlib.sha256(b'').hexdigest()
+                            or identity!=observation['identity']
+                            or any(row[k]!=observation[k] for k in ('mode','uid','gid','mtime_ns','xattrs'))):
+                        raise ValueError('recorded empty namespace differs from actual B observation')
                 observation=dict(row,identity=identity)
                 classify(name,observation,version,SQL_sources=set())
                 candidate=next(iter(carriers(row['sha256'],row['bytes'])),None)
+                if recorded_empty is not None and candidate is None:
+                    raise ValueError('vanished empty point requires an independently verified retained empty carrier')
                 if candidate is not None:
                     if candidate.get('kind')!='file' or (candidate.get('sha256'),candidate.get('bytes'))!=(row['sha256'],row['bytes']):
                         raise ValueError('accepted carrier/full point differs')

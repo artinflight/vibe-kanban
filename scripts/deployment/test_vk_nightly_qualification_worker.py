@@ -6,7 +6,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from vk_nightly_current_map import CurrentMap
+from vk_nightly_current_map import CurrentMap,encode_member,decode_member
 from vk_nightly_namespace import observe
 from vk_nightly_qualification import encode_observation
 from vk_nightly_qualification_worker import qualify_selected
@@ -65,6 +65,27 @@ class SelectedQualificationTests(unittest.TestCase):
             result=self.run_phase(m)
             self.assertEqual(result['deferred_points'],1)
             self.assertEqual(m.db.execute('select state from members').fetchone(),('current-namespace-replay-required',))
+
+    def test_vanished_recorded_empty_file_requires_exact_namespace_and_verified_empty_carrier(self):
+        self.source.write_bytes(b'');observation=observe(self.source);self.source.unlink()
+        with CurrentMap.held(self.path,binding=self.binding) as m:
+            m.db.execute('update members set row=?',(encode_member(dict(namespace=observation,source=str(self.source))),))
+            captured=[]
+            def collect(records):captured.extend(records);return dict(retained_body_matches=0,qualified_pending_bodies=0,deferred_points=0,SQL_API_sources_discovered=0)
+            qualify_selected(m,journal=lambda:self.report,adopt=collect,guard=lambda:None,maximum_paths=10,maximum_source_bytes=1024)
+            with self.assertRaisesRegex(ValueError,'retained empty carrier'):
+                m.adopt_qualifications(captured,lambda *_:[],checkpoint=lambda:None)
+            import copy
+            bad=copy.deepcopy(captured);bad[0]['version']['recorded_empty_namespace']['mode']=0o600
+            with self.assertRaisesRegex(ValueError,'namespace differs'):
+                m.adopt_qualifications(bad,lambda *_:[],checkpoint=lambda:None)
+            row=captured[0]['version']['row'];carrier=dict(row,segments=[dict(layer='accepted-base',selector='old-empty',bytes=0,sha256=row['sha256'])])
+            result=m.adopt_qualifications(captured,lambda *_:[carrier],checkpoint=lambda:None)
+            self.assertEqual(result['retained_body_matches'],1)
+            state,raw=m.db.execute('select state,row from members').fetchone()
+            self.assertEqual(state,'verified-file');point=decode_member(raw)['qualification']
+            self.assertTrue(point['current_path_absent']);self.assertEqual(point['source_identity'],observation['identity'])
+            self.assertFalse(point['original_epoch_repaired'])
 
     def test_actual_resource_or_access_failure_propagates_without_adoption(self):
         with CurrentMap.held(self.path,binding=self.binding) as m:

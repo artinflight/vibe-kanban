@@ -119,13 +119,29 @@ def run(config,workers,store,*,consumer,guard,report=lambda _:None,now=lambda:da
         owner=Source(source_ref,main['B_controls'],guard=lambda:(check(),host_guard(main,started)))
         tail=recorded_file_tail(main,owner,report=report)
         if tail['more_pending']:raise ValueError('bounded recorded final delta remains incomplete; retain all points')
+        # Header qualification can discover a copied SQLite file after the
+        # earlier cohort froze. Close only that fixed namespace's SQL demand;
+        # never replay another suffix and invalidate completed current images.
         with DesktopControls(main['B_controls'],guard=owner.guard) as remote:
-            settings=dict(config['finalize'],guard=owner.guard,report=report)
+            db=remote.client.connect(main['B_index_name'],main['B_checkpoint_sha256'],readonly=True,working=True)
+            try:missing_SQL=db.execute("select 1 from members where state='SQLite-needs-image' limit 1").fetchone() is not None
+            finally:db.close()
+        SQL_closure=None;SQL_phase=config['finalize']['SQL_phase']
+        if missing_SQL:
+            from vk_nightly_b_controls import name as index_name
+            SQL_phase=dict(SQL_phase,index_name=index_name(SQL_phase['index_name']+'-recorded'))
+            closure=dict(config['SQL'],SQL_phase_index=SQL_phase,
+                cohort_tag=config['SQL']['cohort_tag']+'-recorded',recorded_SQL_scope_from=config['SQL']['SQL_phase_index'])
+            SQL_closure=SQL_cycle(closure,actual['SQL'],report=report)
+            if SQL_closure.get('more_pending') or SQL_closure.get('deferred_SQL'):
+                raise ValueError('recorded SQL closure remains incomplete; preserve all images')
+        with DesktopControls(main['B_controls'],guard=owner.guard) as remote:
+            settings=dict(config['finalize'],guard=owner.guard,report=report,SQL_phase=SQL_phase)
             settings['runtime_phase']=results['runtime']
             value=finalize(remote.client,**settings)
         left=(datetime.fromisoformat(end)-now()).total_seconds()
         packet=consumer_packet(value,**dict(config['consumer'],remaining_seconds=left,whole_cycle_deadline_UTC=end))
-        return dict(candidate=value,packet=packet,final_delta=tail)
+        return dict(candidate=value,packet=packet,final_delta=tail,recorded_SQL_closure=SQL_closure)
     def restore(results,end,check):
         # The independently pinned normal consumer must enforce actual B
         # admission while it holds provider/metadata leases through readback.

@@ -89,6 +89,54 @@ def capture_version(path, sink, *, maximum_bytes, guard, clock=None):
             'live_writer_fenced': False, 'current_set_accepted': False}
 
 
+def qualify_jsonl_point(path, *, maximum_bytes, guard):
+    """Authenticate one complete recorded-length JSONL point during appends.
+
+    Both independent source reads must hash the same finite, newline-terminated
+    prefix. No later bytes, writer fence or atomic global snapshot is claimed.
+    The usual direct-B qualified transfer and independent readback are still
+    required. Other file types retain the strictly stable whole-file bracket.
+    """
+    path=Path(path)
+    if not path.is_absolute() or path.resolve()!=path or path.suffix!='.jsonl':
+        raise ValueError('canonical JSONL source point required')
+    if type(maximum_bytes) is not int or maximum_bytes<=0:raise ValueError('finite JSONL point admission required')
+    guard();before=path.lstat();attrs=attributes(path)
+    if not stat.S_ISREG(before.st_mode) or before.st_size>maximum_bytes:
+        raise ValueError('source is not an admitted regular JSONL file')
+    started=datetime.datetime.now(datetime.timezone.utc).isoformat()
+    def same_object(info):
+        return (info.st_dev,info.st_ino,info.st_mode,info.st_uid,info.st_gid,info.st_nlink)==(
+            before.st_dev,before.st_ino,before.st_mode,before.st_uid,before.st_gid,before.st_nlink) and info.st_size>=before.st_size
+    fd=os.open(path,os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK|os.O_CLOEXEC)
+    with os.fdopen(fd,'rb',buffering=0) as stream:
+        if not same_object(os.fstat(stream.fileno())):raise ValueError('JSONL point inode/metadata changed before open')
+        hashes=[]
+        for _ in range(2):
+            stream.seek(0);h=hashlib.sha256();remaining=before.st_size;last=b'';first=True
+            while remaining:
+                guard();block=stream.read(min(65536,remaining))
+                if not block:raise ValueError('JSONL point truncated during independent source read')
+                if first and block.startswith(b'SQLite format 3\x00'):
+                    raise ValueError('SQLite requires its consistent snapshot API')
+                first=False;remaining-=len(block);h.update(block);last=block[-1:]
+            if before.st_size and last!=b'\n':raise ValueError('JSONL point lacks a complete final record boundary')
+            if not same_object(os.fstat(stream.fileno())):raise ValueError('JSONL point inode/metadata changed during read')
+            hashes.append(h.hexdigest())
+        if hashes[0]!=hashes[1]:raise ValueError('independent JSONL prefix hashes differ; preserve unresolved point')
+    if not same_object(path.lstat()) or attributes(path)!=attrs:
+        raise ValueError('JSONL pathname/metadata changed during qualification')
+    guard()
+    return dict(format='vk-nightly-double-read-JSONL-point-v1',source=str(path),
+        source_identity=fingerprint(before),bytes=before.st_size,sha256=hashes[0],
+        metadata=dict(mode=stat.S_IMODE(before.st_mode),uid=before.st_uid,gid=before.st_gid,
+                      mtime_ns=before.st_mtime_ns,atime_ns_before_read=before.st_atime_ns,xattrs=attrs),
+        started_at=started,completed_at=datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        source_actual_read_bytes=2*before.st_size,independent_source_hashes=hashes,
+        consistency='two equal complete-record prefix reads of the recorded inode/length',
+        later_source_bytes_not_claimed=True,live_writer_fenced=False,original_failed_epoch_repaired=False)
+
+
 def capture_qualified_version(observation, sink, *, guard, prefix=None):
     """Recover an already hashed point version, even if its file later appends.
 

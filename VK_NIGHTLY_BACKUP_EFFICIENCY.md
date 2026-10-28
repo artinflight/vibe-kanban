@@ -1940,3 +1940,25 @@ validation. Expired live transport and malformed/changed artifacts still fail.
 October28's first finisher failure at01:03EDT preserved all completed file,219SQL
 and2runtime points; their successful receipts are inputs to recovery, not a
 whole-backup acceptance claim.
+
+### Recorded-point closure during concurrent activity
+
+JSONL qualification can authenticate a complete newline-terminated point using
+two equal bounded source-prefix hashes, preserving the actual recorded inode,
+length and Linux metadata. Appended bytes remain later journal work. Qualified
+transfer must still match that digest and independently read back B; stable
+unterminated raw files retain the strict whole-file route. Rewrites, inode or
+owner/mode/xattr changes and SQL headers fail the prefix route.
+A vanished zero-byte member is recoverable only from its authenticated recorded
+namespace plus an independently verified retained empty-content recipe. Native
+adoption checks every recorded field; this is not a claim of current presence,
+new source read or repair of an original gap. Nonempty missing files remain
+unresolved.
+Header discovery after a completed SQL cohort can add a fixed-namespace SQL
+closure. It independently reopens the predecessor request/result, verifies the
+unchanged namespace cursor and preserved old SQL scope, then invokes the normal
+consistent API only for new dirty points and mandatory aliases. It never replays
+another suffix or relabels old accepted SQL images. The additional receipt and
+current SQL contract are bound into the composed candidate before normal restore.
+All of these remain subject to actual production acceptance and the same04:00
+parent deadline; fixture success alone does not commission the service.

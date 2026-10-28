@@ -1,94 +1,92 @@
-# Nightly pickup — October27,21:49EDT
+# Nightly pickup — October27,22:57EDT
 
-Workspace604d/PR263: direct-B current backup/restore, then22–04Toronto/hard04
-automation. No backend restart. Baseline/whole-cycle/commissioning incomplete;
-scheduleOFF/nextNONE. Preserve162.70GB/137DB/later layers/original gaps/partials
-and unsealed RAM inode33476/2968010752B. SSD code/control only, no backup payload.
+Goal: tonight's current backup/independent composed restore, then22–04Toronto
+nightly automation with hard04:00stop. Separate worker; no backend restart.
+Tonight's baseline/ordinary-cycle/commissioning remain incomplete. Actual
+22:51crontab has ZERO Nightly commands/owned blocks: OFF, nextNONE. Preserve
+162704613801B cold restore/137DB/later components/original gaps/all partials,
+including unsealed RAM inode33476/2968010752B. Bodies/indexes B only.
 
 D=/mnt/vk-storage/vk-nightly-efficiency-20261017/commissioning-20261026
 C=D/b-controls-v1. D/LATEST_STATUS.private.json is the current actual snapshot.
+C/DEFERRED_FILE_AND_COMMISSIONER_20261028T0255.private.json SHA
+ ea0b24482cc04c8633bc2e956e7281d7ec0488dfb52e1dffa7eacd07e6540a8d;
+shared pressure copy NIGHTLY_DEFERRED_FILE_AND_COMMISSIONER_20261028.private.json.
 
-## Actual chain — advancing file producer unchanged
+## Same live components — do not duplicate or interrupt
 
-FileV9: vk-nightly-B-current-file-cycle-inodes-v9-20261027.service,
-PID3735301/start35669970; D/file-points-worker-B-inodes-v9-group-commit.
-Still loads immutable7ddf7674fdcf53b1d2bf907f45cd84c19bb0fd57 with groups16,
-CPU25%/High1536MiB/Max2GiB/Swap0/Tasks64. Original finite file deadline
-00:33:13EDT October28/369669.93monotonic is unchanged. Do not kill/restart it.
-At21:48:56 it had12384NEW committed files,1341937270source bytes read and
-368301700encoded bytes sent in3086.24s. Own peak761720832B/events0; PSI0,
-root17.61GB/SSD22.74GB/tmpfs9.16GB available. No ETA/whole-backup acceptance is inferred. C/LARGE_SQL_ACTUAL_CHAIN_20261028T0150.private.json
-SHA241cc604957ff0fe3c7e6b4f11db119010d18584a823f8fda46b0f4812a2ca54.
-
-SourceV11 PID3849155/start32997998, epoch31ab8db49caf4f9699c7c0bd75c363a2
-is unchanged. Frozen input/current-map/source config digests remain exactly as
-in the previous pickup and current actual private receipts; none was rebound.
-
-Retained21:32 metadata:33879pendingfiles/13.94GBlogical,219SQL/6.34GBlogical;
-not transfer demand. One deferred CU monitor/state.json point29980B changed inode;
-requalify through the SQL suffix/final delta. See C/EXACT_DEFERRED_AND_SQL_ADMISSION_20261028.private.json.
-
-## Actual idle-waiter handover closes measured SQL limitation
-
-Only proven idle SQL7/runtime6/finishera37f were stopped: zero body, no children
-or component result. Actual terminal absence/controller release are in
-C/LARGE_SQL_IDLE_HANDOVER_PREFLIGHT and RELEASED_20261028.private.json. These
-stops/defaults are NOT backup success. FileV9/tracker/B bodies were untouched.
-
-The live SQL metadata API measured3049046016B for thread_history_1.sqlite; old
-512MiB admission guaranteed deferral. Three samples admitted two-image
-peak7147094016B with4GiBfree/1GiBswap floors/9.16GBtmpfs. New code checks actual
-peak before allocation, or one additional image for retained-layout recovery.
-
+- FileV9: vk-nightly-B-current-file-cycle-inodes-v9-20261027.service,
+  PID3735301/start35669970, D/file-points-worker-B-inodes-v9-group-commit.
+  Source7ddf7674fdcf53b1d2bf907f45cd84c19bb0fd57; groups16, CPU25%/High1536M/
+  Max2G/Swap0/Tasks64. Original deadline00:33:13.838796EDT October28,
+  monotonic369669.93 unchanged. At22:57:26415NEW committedfiles,
+  6374780433sourceB/1919800535encodedB/7180.78s, still streaming, no stop/result.
+  Own events0/hostPSI0; full host snapshot is private. No ETA claimed.
 - SQL8: vk-nightly-B-current-SQL-cycle-inodes-v8-20261027.service,
-  PID4176947/start35965218, D/current-SQL-cycle-inodes-v8-large-admitted.
-  Source2a284d4ae, same current SQL cohort/index. Exact config/command digests
-  are in that folder's INSTALLATION.private.json.
-  Image ceiling3489660928B; CPU25%/High7GiB/Max8GiB/Swap0/Tasks64. Future peak only; fresh guards and same
-  FileV9/original absolute wait bound remain.
+  PID4176947/start35965218, D/current-SQL-cycle-inodes-v8-large-admitted,
+  source2a284d4ae. Waits SAME FileV9, same cohort/index, no SQL body yet.
+  API image3.049GB measured; max3.25GiB, actual peak freshly checked at allocation.
+  CPU25%/High7G/Max8G/Swap0/Tasks64; retained layout needs one extra image.
 - Runtime7: vk-nightly-B-runtime-component-cycle-v7-20261027.service,
-  PID4176951/start35965221, D/runtime-component-cycle-v7-large-SQL.
-  Source2a284d4ae, same2prepared paths3200B/runtime index/component; Max2GiB.
-  It waits exact SQL8. Both new actual preflights passed, no capture started yet.
+  PID4176951/start35965221, D/runtime-component-cycle-v7-large-SQL,
+  source2a284d4ae; waits SAME SQL8, same2paths3200B/Max2G, no body yet.
+- ObserverV11 PID3849155/start32997998, epoch31ab8db49caf4f9699c7c0bd75c363a2,
+  fixed outbox/durableB unchanged. No new namespace census.
 
-## Single composed finisher and disabled ordinary successor
+Exact map/input/cohort digests are in the full pickup/private receipt. Do not treat old logical byte counts as transfer
+demand. One CU monitor/state.json point29980B requires scoped requalification.
 
-Live finisher: vk-nightly-current-composed-finisher-c88d76ce8-20261028.service,
-PID4185660/start35971110, D/current-whole-cycle-c88d76ce8-large-SQL.
-Sourcec88d76ce882a50ff6d7d26bbe9c4cfb25c3394db; service.private.json SHA
-204722a2a9629f2999a0c591d061c38a5bccdcb23c79b866ff6da82c2ddc8497.
-Actual preflight/controller release passed. It awaits exact terminal file/SQL8/
-runtime7 B receipts under BOTH body leases, then final delta/ready sealed map/
-native proofs/normal B-backed restore. Only actual success publishes the B ledger
-nightly-current-whole-cycle-v1. No duplicate finisher. All bounds end by04:00EDT.
+## Coordinator fixed and actually handed over, bodies untouched
 
-Normal readbacks select all pins/runtime/always-API SQL, one tmpfs image at a time.
-Selected-peak+4GiB memory admission precedes materialization; scratch ceiling
-3.25GiB+16MiB/total8GiB. Unknown carriers, changed pins/aliases, missing SQL/roots/
-leases or insufficient resources fail closed; prior finite14pins/gap truth stays.
+Old c88 finisher PID4185660/start35971110 was proven idle/zero-body/nochildren,
+then ONLY that coordinator stopped. Actual absence/empty cgroup/controller-lease
+release are C/DEFERRED_FILE_IDLE_FINISHER_PREFLIGHT and RELEASED_20261028.private.json.
+New single unit vk-nightly-current-composed-finisher-80deafdcd-20261028.service,
+PID484248/start36301637, D/current-whole-cycle-80deafdcd-deferred-closure.
+Source80deafdcdd36d0807ede4927c3ffd1841f252b4d; serviceSHA
+b7baa6d9fe7197c592259ae17f5fea8871d173d8e30528746f50fdb986373377.
+Actual startup preflight/command/status verify new code, waiting only on same
+file/SQL/runtime. CPU25%/High1536M/Max2G/Swap0/Tasks64; original cycle start
+01:46:44.229164UTC and hard08:00UTC/04EDT preserved. No duplicate finisher.
 
-D/ordinary-incremental-c88d76ce8-prepared is a DISABLED future package, not a job.
-ServiceSHA38b6ac609291aa150a99d95e876bee5202b84a06e5e465e0e306baba9dce3318;
-calendar.disabled SHA01656cfe1f39ac57db8e8c15f9b34cdb62abf7e8a751dd17c9adf6af36a6e862.
-Service/calendar preflight and crontab -n - syntax passed. It removes frozen-input
-replay/adoption, consumes fresh journal deltas, uses measured SQL admission and
-High7GiB/Max8GiB/Swap0/Tasks64, bounded64KiB cron tail and22–04calendar. No cron
-was installed. Native filename truncation needed supported stdin dry-run; PREPARER is retained.
+It reopens exact terminal B receipts under both body leases, then closes recorded
+unresolved files BEFORE acceptance. Old code rejected the changing CU point too
+early. Original receipt/epoch/status survive; a new native reader proves closure. No new suffix or
+repeat accepted bodies. Next: final delta/seal/native proof/normal leased restore.
+Selected pins/runtime/API SQL restore sequentially with3.25GiB+16MiB scratch/
+8GiB total and fresh actual-peak+4GiB memory admission. Integrity/lease/root/
+identity/access/STOP/health guards remain.
 
-## Next work
+## Ordinary package and final adoption are prepared, not accepted
 
-Collect SAME live chain results/deferred points and actual composed restore.
-Then qualify the prepared ordinary full cycle with real timing/health/bytes,
-Desktop-off/low-space/interruption/resume before exact schedule/next-run adoption.
-Inspect service-level Desktop-off classification: transport EOF/SSH255 currently
-may exit1/block calendar rather than75/resource retry. Preserve actual denied
-access/STOP/fault failure behavior; diagnose/prove this gap before commissioning.
-Do not mistake bounded-spool Desktop-off tests for whole-service retry acceptance.
+D/ordinary-incremental-80deafdcd-prepared remains DISABLED/not a job.
+Exact service/calendar digests are in PREPARATION.private.json and full pickup.
+Service/calendar preflight and actual crontab-stdin syntax pass. No existing-
+component/frozen-input replay; fresh bounded deltas, High7G/Max8G/Swap0/Tasks64,
+64KiB cron tail. No cron installed. Its actual timed run still needs baseline
+acceptance and prior controller/body owners actually released. Run using
+--scheduled-night 2026-10-27 and --hard-deadline-utc 2026-10-28T08:00:00+00:00
+with separate correct CLI arguments and original hard04 bounds (see full pickup).
 
-118focused SQL/native/restore/worker/schedule tests passed; actual opt-in owned
-user-manager timeout fixture passed(2.311s,1sstart+1sgrace,SIGKILL only its sleeper).
-Ops/diff/Rustformat pass; full format still fails at missing Prettier. No actual
-SQL8 image, current composed restore or ordinary recurring acceptance is claimed.
-See [prior pickup](HANDOFF_NIGHTLY_HISTORY_20261027_2124.md),
-[full historical archive](HANDOFF_HISTORY_20261017.md), and
-[acceptance](VK_NIGHTLY_OVERNIGHT_ACCEPTANCE.md).
+Installerf7cef9f0d618b7a7d160aae8a00270257246b2bd is separately prepared:
+D/commissioner-f7cef9f0d/vk_nightly_commission.py,
+Use PYTHONPATH=D/ordinary-incremental-80deafdcd-prepared, python3 -B -S,
+--calendar <exact disabled config> --sha256 <315316...>; PREPARATION binds both.
+Default only qualifies actual native B evidence; authorized --install follows
+ordinary exact-template/phase-chain/normal-restore/window proof, under actual
+leases/guards. Versioned enabled config/own cron readback/next run; no deletion.
+It has NOT executed. Worker80 and installerf7 are distinct pinned sources.
+
+169 focused tests plus3 post-storage-guard checks pass. Native RAM tests cover
+changed-file closure/receipt preservation/no-recopy and finite positive SSH255
+network retries; access/STOP/host-key/reported faults stay blocking. Ops/diff/Rustformat pass; full format stops at missing local Prettier.
+PR263 mergeable; collect newer exact-head CI.
+
+Next: collect SAME chain terminal receipts, resolve actual deferred points,
+accept current composed restore, execute/time actual ordinary cycle and normal
+restore, then commissioning gate/enable/next-run. Do not claim RAM fixtures or
+historical cold proof as tonight's whole acceptance.
+[Full current pickup](HANDOFF_NIGHTLY_HISTORY_20261027_2257.md),
+[previous pickup](HANDOFF_NIGHTLY_HISTORY_20261027_2149.md),
+[original history](HANDOFF_HISTORY_20261017.md),
+[overnight acceptance](VK_NIGHTLY_OVERNIGHT_ACCEPTANCE.md).

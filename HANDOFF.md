@@ -1,93 +1,78 @@
-# Nightly pickup — October28,00:01EDT
+# Nightly pickup — October28,01:34EDT
 
-Goal: tonight's current backup/independent composed restore, then22–04Toronto
-nightly automation with hard04:00stop. Separate worker; no backend restart.
-Tonight's baseline/ordinary-cycle/commissioning remain incomplete. Actual
-22:51crontab has ZERO Nightly commands/owned blocks: OFF, nextNONE. Preserve
-162704613801B cold restore/137DB/later components/original gaps/all partials,
-including unsealed RAM inode33476/2968010752B. Bodies/indexes B only.
+Goal: accept tonight's current composed restore, then commission22–04Toronto
+with hard04:00stop. No backend restart. Schedule OFF/nextNONE. Preserve accepted
+162704613801B restore, all137/later DBs, components, original gaps and partials,
+including unsealed RAM inode33476/2968010752B. All bodies/indexes stay Desktop B.
 
 D=/mnt/vk-storage/vk-nightly-efficiency-20261017/commissioning-20261026
-C=D/b-controls-v1. D/LATEST_STATUS.private.json is the current actual snapshot.
-C/CURRENT_CHAIN_AND_PENDING_20261028T0310.private.json SHA
- 7e8cdccbd034fac552f347a25ea95b90eb6c3b27fa7c8950f651262052e7df70;
-shared pressure copy NIGHTLY_CURRENT_CHAIN_AND_PENDING_20261028.private.json.
+C=D/b-controls-v1. Read D/LATEST_STATUS.private.json first for actual identities.
+C/CURRENT_COMPONENTS_CLOSURE_PREPARED_20261028T0534.private.json SHA
+98904888198d1f5b41108838b1b2df71d523fe31fc5a5e7b12ff4f7bee1c1e59
+preserves this observation and exact component result hashes.
 
-## Same live components — do not duplicate or interrupt
+## Completed components — reuse, never restart
 
-- FileV9: vk-nightly-B-current-file-cycle-inodes-v9-20261027.service,
-  PID3735301/start35669970, D/file-points-worker-B-inodes-v9-group-commit.
-  Source7ddf7674fdcf53b1d2bf907f45cd84c19bb0fd57; groups16, CPU25%/High1536M/
-  Max2G/Swap0/Tasks64. Original deadline00:33:13.838796EDT October28,
-  monotonic369669.93 unchanged. At23:14:28911NEW committedfiles,
-  8636454815sourceB/2669141620encodedB/8211.35s, still streaming, no stop/result.
-  Memory.high297; max/OOM0, hostPSI0; full snapshot private. No ETA claimed.
-- SQL8: vk-nightly-B-current-SQL-cycle-inodes-v8-20261027.service,
-  PID4176947/start35965218, D/current-SQL-cycle-inodes-v8-large-admitted,
-  source2a284d4ae. Waits SAME FileV9, same cohort/index, no SQL body yet.
-  API image3.049GB measured; max3.25GiB, actual peak freshly checked at allocation.
-  CPU25%/High7G/Max8G/Swap0/Tasks64; retained layout needs one extra image.
-- Runtime7: vk-nightly-B-runtime-component-cycle-v7-20261027.service,
-  PID4176951/start35965221, D/runtime-component-cycle-v7-large-SQL,
-  source2a284d4ae; waits SAME SQL8, same2paths3200B/Max2G, no body yet.
-- ObserverV11 PID3849155/start32997998, epoch31ab8db49caf4f9699c7c0bd75c363a2,
-  fixed outbox/durableB unchanged. No new namespace census.
+FileV9 completed00:30:49:39894new members,13.55GB source/5.59GB encoded;
+5774earlier points reused without source reads/copies. SQL8 completed01:02:27:
+219/219images,6.384GB API bytes/597611433new encoded bytes,no deferred SQL.
+Largest3.053GB image passed independent full hash/SQLite integrity/schema/Linux
+metadata. Runtime7 completed01:03:23:both files,3200raw/1444encoded bytes.
+Exact results/old PID births remain in their original folders and LATEST.
+ObserverV11 PID3849155/start32997998/epoch31ab8db49caf4f9699c7c0bd75c363a2
+continues fixed local outbox/durableB; no new enrollment or global census.
 
-Indexed counts00:01:5007file points pending,210names need reconciliation,
-219SQL sources await image qualification. No source body/global scan.
-C/CURRENT_PENDING_COUNTS_20261028T0404.private.json preserves this observation.
+## One current finisher — preserve active progress
 
-## Coordinator fixed and actually handed over, bodies untouched
+The80deafdcd finisher stopped01:03:59 by wrongly applying expired FileV9 phase
+deadline to immutable artifact authentication. f1d0c8128 fixes this while live
+parent/native transport guards still enforce owner04:00. Terminal invocation,
+controller and MCP body lease release were proven before its successor.
+Current unit vk-nightly-current-composed-finisher-f1d0c8128-20261028.service,
+PID1812287/start37194422; D/current-whole-cycle-f1d0c8128-artifact-authentication;
+serviceSHA4d9c897cdcd6c77e7025efe896fca214728bb28149eb36f3448f3f72ce199da4.
+CPU25%/High1536M/Max2G/Swap0/Tasks64, original binding/start and hard08UTC remain.
+It successfully reopened the component receipts and is capturing only recorded
+tail points, retaining every completed group. At01:32:1019additional commits,
+3.023GB independent readback/882968688encoded bytes. Read newer STATUS; no ETA.
 
-Old c88 finisher PID4185660/start35971110 was proven idle/zero-body/nochildren,
-then ONLY that coordinator stopped. Actual absence/empty cgroup/controller-lease
-release are C/DEFERRED_FILE_IDLE_FINISHER_PREFLIGHT and RELEASED_20261028.private.json.
-New single unit vk-nightly-current-composed-finisher-80deafdcd-20261028.service,
-PID484248/start36301637, D/current-whole-cycle-80deafdcd-deferred-closure.
-Source80deafdcdd36d0807ede4927c3ffd1841f252b4d; serviceSHA
-b7baa6d9fe7197c592259ae17f5fea8871d173d8e30528746f50fdb986373377.
-Actual preflight verifies new code, waiting only on same
-file/SQL/runtime. CPU25%/High1536M/Max2G/Swap0/Tasks64; original cycle start
-01:46:44.229164UTC and hard08:00UTC/04EDT preserved. No duplicate finisher.
+Exact recorded gaps are in that folder/RECORDED_GAPS_DIAGNOSIS.private.json:
+two growing JSONL files, one vanished recorded zero-byte lock, two copied seed
+SQLite files discovered after219-point cohort freeze. No omission accepted.
+Source d718ef75c adds double-read complete-record JSONL qualification, strict
+raw fallback, native authenticated empty-namespace+verified-carrier reuse, and
+fixed-namespace SQL closure without redoing accepted images/new suffix.
+162focused tests pass(one skip); additional exact-source-epoch native API/reopen/
+reuse test passes. Local legacy lifecycle fixtures under RAM fail their existing
+SSD-placement rule; not production guard bypass. Ops/diff/Rust format pass;
+full formatting still stops at missing Prettier. Source pushed to solePR263.
 
-It reopens exact terminal B receipts under both body leases, then closes recorded
-unresolved files BEFORE acceptance. Old code rejected the changing CU point too
-early. Original receipt/epoch/status survive; a new native reader proves closure. No new suffix or
-repeat accepted bodies. Next: final delta/seal/native proof/normal leased restore.
-Selected pins/runtime/API SQL restore sequentially with3.25GiB+16MiB scratch/
-8GiB total and fresh actual-peak+4GiB memory admission. Integrity/lease/root/
-identity/access/STOP/health guards remain.
+D/current-whole-cycle-d718ef75c-artifact-authentication is PREPARED, NOT STARTED;
+serviceSHA6cd7c4e0a2d75e75926016a9d37b0883e1f83dbd4071472f9e1baac34dd7f4e1.
+Do not duplicate active f1. Collect its actual terminal first; prove original
+PID/cgroup and both MCP lanes released. New native lease acquisition remains
+mandatory. Reuse the exact original cycle binding and all terminal components.
+Do not reset the04:00clock. Finish recorded points/native seal/content proof and
+actual normal B-backed UID1000 composed restore with actual-peak RAM admission.
 
-## Ordinary package and final adoption are prepared, not accepted
+## Ordinary service and adoption remain unaccepted
 
-D/ordinary-incremental-80deafdcd-prepared remains DISABLED/not a job.
-Digests are in PREPARATION.private.json.
-No frozen-input/existing-component replay. Actual timed ordinary run needs the
-accepted current baseline and old owners/leases released; preserve original04EDT.
+D/ordinary-incremental-d718ef75c-prepared is DISABLED; config/calendars passed
+preflight and real crontab-stdin syntax checks, no scheduler installation.
+ServiceSHAf33356019b8321cabc3441df7486b1480073a369324b6753f8c72b18f5a67f1f.
+Run actual ordinary cycle only after initial current acceptance/lease release;
+keep original evening/04:00bound. Older ordinary packages remain preserved.
 
-The new D/commissioner-journal-day-adoption-20261028 contains commissioner+journal
-entrypoint plus exact legacy PID/birth list. PREPARATION.private.json binds all
-hashes and command. PYTHONPATH must name ordinary-incremental-80deafdcd-prepared
-so all unchanged worker80 source/config pins validate. Old f7 remains retained, superseded for adoption. No cron/observer change.
-Actual pinned entrypoint skips live FileV9 without B queries. Actual B delivery
-and current/ordinary composed restores still must pass before adoption.
+Commissioner+journal source in D/commissioner-journal-day-adoption-20261028
+must be rebound to the FINAL ordinary package/config. The existing older
+preparations bind80/f1packages and must not be installed blindly. Journal helper
+uses fixed50s metadata-only delivery under controller/body/legacy birth leases;
+unchanged cursor skips B/SMART. Require an actual normal B reopen/ACK receipt.
+The installer independently checks actual ordinary full-cycle/restore/journal
+proof, adopts that completed night to prevent duplicate first pulse, then enables
+one cron block and reads back exact worker/config/next22Toronto run.
+No code/fixture/partial component is whole-backup acceptance.
 
-Real gap found: observer serves bounded local outbox; no between-run drainer was
-installed. New minute journal-only pulse shares one owned cron block and yields
-both controller/body lanes + exact old births; no source body/global scan.
-Unchanged cursor skips B/SMART. Last success64KiB; log64KiB; attempt55+5s,
-CPU5%/High128M/Max256M/Swap0/Tasks32. Existing admission/network classifier;
-other failures retain review and do not retry denial. Installer reopens B journal and adopts the actual completed ordinary night
-under its calendar lease, preventing a first-cron duplicate. See overnight guide.
-RAM inotify/native FULL/reopen/ACK and actual completed-night tick tests pass;
-production proof remains pending. Ops/diff/Rust format pass; full format
-still stops at missing Prettier. Live jobs unchanged.
-
-Next: collect SAME chain terminal receipts, resolve actual deferred points,
-accept current composed restore, execute/time actual ordinary cycle and normal
-restore, then commissioning gate/enable/next-run. Do not claim RAM fixtures or
-historical cold proof as tonight's whole acceptance.
-[Full current pickup](HANDOFF_NIGHTLY_HISTORY_20261027_2257.md),
-[previous pickup](HANDOFF_NIGHTLY_HISTORY_20261027_2149.md),
-[original history](HANDOFF_HISTORY_20261017.md),
-[overnight acceptance](VK_NIGHTLY_OVERNIGHT_ACCEPTANCE.md).
+Prior pickup survives byte-for-byte in
+[00:01history](HANDOFF_NIGHTLY_HISTORY_20261028_0001.md), plus earlier linked
+histories. See [overnight acceptance](VK_NIGHTLY_OVERNIGHT_ACCEPTANCE.md).

@@ -354,6 +354,9 @@ class BControlTests(unittest.TestCase):
         reference=dict(format='vk-nightly-current-member-map-v1',layer='nightly-controls-v1',selector=digest+'.sqlite',
             bytes=path.stat().st_size,sha256=digest)
         view=self.client.connect('descriptor-read',digest,readonly=True)
+        misplaced=json.loads(json.dumps(contract));misplaced['dependencies']['nightly-controls-v1']['native_root']='/mnt/b/not-the-native-admitted-root'
+        with self.assertRaisesRegex(NativeControlError,'exact admitted immutable B control reference'):
+            view.request('build-current-descriptor',reference=reference,consumer_contract=misplaced)
         result=view.request('build-current-descriptor',reference=reference,consumer_contract=contract)
         self.assertEqual(result['member_count'],len(rows));self.assertFalse(result['independent_current_restore_accepted'])
         self.assertEqual(result['journal']['end'],20)

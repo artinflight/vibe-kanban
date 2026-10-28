@@ -61,6 +61,29 @@ class ServiceTests(unittest.TestCase):
                 service.reopen_component(client,reference,'files',source,
                     guard=lambda:(_ for _ in ()).throw(TimeoutError('parent deadline')))
 
+    def test_SQL_membership_queries_preserve_rows_and_search_the_member_primary_key(self):
+        import ast,sqlite3
+        db=sqlite3.connect(':memory:');self.addCleanup(db.close)
+        db.execute('create table members(name text primary key,state text,row blob) without rowid')
+        db.execute('create table SQL_sources(path text primary key) without rowid')
+        db.executemany('insert into members values(?,?,?)',(('sample/'+str(i),'verified-file',b'point') for i in range(2048)))
+        db.executemany('insert into SQL_sources values(?)',(('/sample/'+str(i*100),) for i in range(20)))
+        db.execute("insert into SQL_sources values('/missing')")
+        db.execute("insert into SQL_sources values('invalid-prefix')")
+        checked=0
+        for filename in ('vk_nightly_sql_cycle.py','vk_nightly_finalize_current.py','vk_nightly_recovery_descriptor.py','vk_nightly_current_cycle.py'):
+            tree=ast.parse(Path(service.__file__).with_name(filename).read_text())
+            for node in ast.walk(tree):
+                if not isinstance(node,ast.Constant) or not isinstance(node.value,str):continue
+                sql=node.value
+                if 'SQL_sources s' not in sql or 'members m on' not in sql:continue
+                original=sql.replace('m.name=substr(s.path,2) and ','')
+                self.assertEqual(set(db.execute(sql).fetchall()),set(db.execute(original).fetchall()))
+                plan=db.execute('explain query plan '+sql).fetchall()
+                self.assertTrue(any('SEARCH m USING PRIMARY KEY' in row[3] for row in plan),(filename,plan))
+                checked+=1
+        self.assertEqual(checked,5)
+
     def test_CLI_wrong_digest_refuses_without_source_or_B_work(self):
         path,_=self.saved('wrong-config',{'format':'vk-nightly-current-service-v1'})
         before=set(self.root.iterdir())

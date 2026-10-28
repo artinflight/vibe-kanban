@@ -37,7 +37,7 @@ def bind_SQL_scope(client,current_map,contract,request,*,guard):
                 or any(binding.get(k)!=contract[k] or namespace.get(k)!=contract[k]
                        for k in ('plan_sha256','scope_sha256'))):
             raise ValueError('independent SQL scope/namespace/installed root contract differs')
-        rows=db.execute("select s.path,m.state from SQL_sources s left join members m on s.path='/'||m.name order by s.path").fetchall()
+        rows=db.execute("select s.path,m.state from SQL_sources s left join members m on m.name=substr(s.path,2) and s.path='/'||m.name order by s.path").fetchall()
         if not rows or len(rows)>1024 or any(state is None for _,state in rows):
             raise ValueError('finite complete independently reopened SQL source membership required')
         required=[path for path,state in rows if state!='symlink']

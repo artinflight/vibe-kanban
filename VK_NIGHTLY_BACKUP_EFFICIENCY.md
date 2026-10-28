@@ -1973,3 +1973,14 @@ the same admitted worker; source/drive/access/STOP failures are not retried.
 Completed bodies and earlier failures remain, and late writes remain later
 journal work. This closes the qualification-to-transfer race without requiring
 a quiet live monitor or weakening version/readback integrity.
+
+SQL membership lookup now searches each recorded SQL path through the member
+primary key, retaining the original path equality and scope checks. A20,000
+member/100SQL RAM measurement returned identical rows in0.000263s versus0.244437s
+for the old left-join scan; this is a query specimen, not whole-backup timing.
+Native descriptor identity uses the exact B:/... control root; normal Linux
+provider placement remains separately bound to /mnt/b/... and its real inode/
+lease. Correcting that representation does not relax destination validation.
+A resumed candidate also reopens an already-completed recorded SQL extension
+when its scope exceeds the predecessor cohort, even if all images are ready.
+It must not fall back to the smaller old cohort or repeat completed API copies.

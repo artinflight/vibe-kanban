@@ -132,7 +132,7 @@ def build(database,reference,contract,*,checkpoint):
         qualification=dict(format='vk-nightly-current-SQL-qualification-v1',cohort_id=wanted,
             selected_sources=sorted(selected),unchanged_sources=sorted(set(all_sources)-set(selected)),
             always_SQL_API_sources=sorted(always),source_instance=binding['instance'])
-    for name,raw in database.execute("select m.name,m.row from members m join SQL_sources s on s.path='/'||m.name where m.state!='symlink' order by m.name"):
+    for name,raw in database.execute("select m.name,m.row from SQL_sources s cross join members m on m.name=substr(s.path,2) and s.path='/'||m.name where m.state!='symlink' order by m.name"):
         checkpoint();value=decode_member(raw);point=value.get('SQL_point');source='/'+name
         if not point or source not in SQL:raise ValueError('current SQL point missing or outside exact consumer cohort: '+source)
         member=value.get('member',{});proof=point.get('independent',{});epoch=point.get('original_source_API_point_at')

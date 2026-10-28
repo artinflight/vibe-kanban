@@ -124,10 +124,12 @@ def run(config,workers,store,*,consumer,guard,report=lambda _:None,now=lambda:da
         # never replay another suffix and invalidate completed current images.
         with DesktopControls(main['B_controls'],guard=owner.guard) as remote:
             db=remote.client.connect(main['B_index_name'],main['B_checkpoint_sha256'],readonly=True,working=True)
-            try:missing_SQL=db.execute("select 1 from members where state='SQLite-needs-image' limit 1").fetchone() is not None
+            try:
+                missing_SQL=db.execute("select 1 from members where state='SQLite-needs-image' limit 1").fetchone() is not None
+                SQL_count=db.execute("select count(*) from SQL_sources s cross join members m on m.name=substr(s.path,2) and s.path='/'||m.name where m.state!='symlink'").fetchone()[0]
             finally:db.close()
         SQL_closure=None;SQL_phase=config['finalize']['SQL_phase']
-        if missing_SQL:
+        if missing_SQL or SQL_count!=results['SQL']['complete_SQL_scope_sources']:
             from vk_nightly_b_controls import name as index_name
             SQL_phase=dict(SQL_phase,index_name=index_name(SQL_phase['index_name']+'-recorded'))
             closure=dict(config['SQL'],SQL_phase_index=SQL_phase,

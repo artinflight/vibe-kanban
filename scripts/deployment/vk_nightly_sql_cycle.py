@@ -96,7 +96,7 @@ def recorded_namespace(client,old_reference,worker,*,guard):
                 or previous['binding']['B_root']!=worker['desktop']['B_root']
                 or any(previous['binding'][k]!=namespace[k] for k in ('plan_sha256','scope_sha256'))):
             raise ValueError('recorded SQL closure cannot advance or change the fixed namespace')
-        actual={p for p, in current.execute("select s.path from SQL_sources s join members m on s.path='/'||m.name where m.state!='symlink'")}
+        actual={p for p, in current.execute("select s.path from SQL_sources s cross join members m on m.name=substr(s.path,2) and s.path='/'||m.name where m.state!='symlink'")}
         if not set(previous['SQL_scope_sources'])<=actual:raise ValueError('recorded SQL closure dropped earlier SQL scope')
     finally:current.close()
     guard()
@@ -144,7 +144,7 @@ def request(config,worker,source,client,*,guard,report):
                 or any(epoch.get(k)!=binding[k] for k in ('plan_sha256','scope_sha256'))
                 or epoch.get('required_root_bindings')!=source.check()['required_root_bindings']):
             raise ValueError('actual completed current SQL namespace/source binding required')
-        rows=current.execute("select s.path,m.state,m.row from SQL_sources s join members m on s.path='/'||m.name where m.state!='symlink' order by s.path").fetchall()
+        rows=current.execute("select s.path,m.state,m.row from SQL_sources s cross join members m on m.name=substr(s.path,2) and s.path='/'||m.name where m.state!='symlink' order by s.path").fetchall()
         if not rows or len(rows)>1024:raise ValueError('finite actual current SQL scope required')
         all_sources,sources,always,unchanged=selected_SQL(rows,epoch['required_root_bindings'],SQL_aliases(current),
             source.plan.get('excluded_rebuildable_directories',[]))

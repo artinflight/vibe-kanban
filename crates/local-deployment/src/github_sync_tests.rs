@@ -947,7 +947,7 @@ async fn legacy_observation_gate_survives_restart_disable_and_policy_rollback_fo
         .unwrap();
         let error = fixture
             .container
-            .start_execution_inner(&ctx.workspace, &ctx.execution_process, &action)
+            .execution_git_readiness(&ctx.workspace, &ctx.execution_process, json!({}))
             .await
             .unwrap_err();
         assert!(error.to_string().contains("observation is unproven"));
@@ -1228,7 +1228,7 @@ async fn missing_publication_policy_callback_retains_b_across_reset_restart_and_
 
 #[cfg(target_os = "linux")]
 #[tokio::test]
-async fn paid_start_rejects_missing_policy_or_retained_observation_before_profile_or_spawn() {
+async fn checkpoint_readiness_retains_missing_policy_and_observation_blocks() {
     use executors::{
         actions::coding_agent_initial::CodingAgentInitialRequest, executors::BaseCodingAgent,
     };
@@ -1400,7 +1400,7 @@ async fn readiness_rejects_changed_native_owner_head_checkpoint_and_inventory() 
 
 #[cfg(target_os = "linux")]
 #[tokio::test]
-async fn known_git_blocker_rejects_before_routing_or_creating_execution() {
+async fn active_owner_rejects_before_routing_or_creating_execution() {
     use executors::{
         actions::coding_agent_initial::CodingAgentInitialRequest,
         executors::BaseCodingAgent,
@@ -1439,13 +1439,66 @@ async fn known_git_blocker_rejects_before_routing_or_creating_execution() {
         )
         .await;
     let Err(ContainerError::ReadinessBlocked(report)) = result else {
-        panic!("known observation must reject before routing");
+        panic!("active owner must reject before routing");
     };
-    assert_eq!(report["code"], "observation_unproven");
+    assert_eq!(report["code"], "owner_busy");
     assert_eq!(report["provider_started"], false);
     let after: i64 = sqlx::query_scalar("SELECT count(*) FROM execution_processes")
         .fetch_one(&fixture.container.db.pool)
         .await
         .unwrap();
     assert_eq!(before, after);
+}
+
+#[cfg(target_os = "linux")]
+#[tokio::test]
+async fn interactive_admission_retains_historical_uncertainty_without_publication_grant() {
+    for retained in [false, true] {
+        let fixture = ObservationFixture::with_publication_policy(retained, false).await;
+        ExecutionProcess::update_completion(
+            &fixture.container.db.pool,
+            fixture.execution,
+            ExecutionProcessStatus::Completed,
+            Some(0),
+        )
+        .await
+        .unwrap();
+        let ctx = ExecutionProcess::load_context(&fixture.container.db.pool, fixture.execution)
+            .await
+            .unwrap();
+        let action = ctx.execution_process.executor_action().unwrap();
+        let ledger = fixture
+            ._root
+            .path()
+            .join("private-state")
+            .join(fixture.workspace.to_string())
+            .join(format!("{}.json", fixture.execution));
+        let before = std::fs::read(&ledger).unwrap();
+        let policy = std::fs::read(&fixture.policy).unwrap();
+        let jobs_before: Vec<(String, String, Option<String>)> = sqlx::query_as(
+            "SELECT state, observation_state, observation_report FROM turn_github_sync ORDER BY execution_process_id")
+            .fetch_all(&fixture.container.db.pool).await.unwrap();
+        fixture
+            .container
+            .pre_route_git_readiness(&ctx.workspace, &ctx.session, Uuid::new_v4(), action)
+            .await
+            .unwrap();
+        assert_eq!(std::fs::read(&ledger).unwrap(), before);
+        assert_eq!(std::fs::read(&fixture.policy).unwrap(), policy);
+        let jobs_after: Vec<(String, String, Option<String>)> = sqlx::query_as(
+            "SELECT state, observation_state, observation_report FROM turn_github_sync ORDER BY execution_process_id")
+            .fetch_all(&fixture.container.db.pool).await.unwrap();
+        assert_eq!(jobs_before, jobs_after);
+        assert!(fixture.container.child_store.read().await.is_empty());
+        let mut changed = ctx.workspace.clone();
+        changed.branch = "different-owner".into();
+        let Err(ContainerError::ReadinessBlocked(report)) = fixture
+            .container
+            .pre_route_git_readiness(&changed, &ctx.session, Uuid::new_v4(), action)
+            .await
+        else {
+            panic!("interactive sends must still reject changed ownership");
+        };
+        assert_eq!(report["code"], "ownership_changed");
+    }
 }

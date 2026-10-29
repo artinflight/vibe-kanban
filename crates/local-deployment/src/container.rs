@@ -723,6 +723,32 @@ impl LocalContainerService {
         }
     }
 
+    /// Interactive work retains the existing observation lifecycle. Missing
+    /// publication approval is not a prohibition on responding to the user.
+    /// Automated/checkpointed launches still require full Git readiness.
+    fn observed_interactive_start(
+        &self,
+        workspace: Uuid,
+        session: Uuid,
+        action: &ExecutorAction,
+    ) -> Result<bool, ContainerError> {
+        let interactive = match action.typ() {
+            ExecutorActionType::CodingAgentInitialRequest(_) => true,
+            ExecutorActionType::CodingAgentFollowUpRequest(r) => r.capacity.is_none(),
+            _ => false,
+        };
+        Ok(self.automatic_sync_enabled()
+            && interactive
+            && !services::services::provider_admission::in_dispatch()
+            && !services::services::original_worker::in_dispatch()
+            && !services::services::fixed_baseline::in_request()
+            && services::services::storage_admission::candidate_execution_id().is_none()
+            && services::services::provider_failover::reserved_execution(
+                workspace, session, action,
+            )?
+            .is_none())
+    }
+
     fn automatic_sync_enabled(&self) -> bool {
         #[cfg(test)]
         if let Some(enabled) = self.automatic_sync_override {
@@ -2422,6 +2448,7 @@ impl ContainerService for LocalContainerService {
         workspace: &Workspace,
         session: &Session,
         proposed_execution: Uuid,
+        executor_action: &ExecutorAction,
     ) -> Result<(), ContainerError> {
         let blocked = |code: &str, action: &str| {
             ContainerError::ReadinessBlocked(json!({
@@ -2441,6 +2468,20 @@ impl ContainerService for LocalContainerService {
                 "refresh_exact_owner_checkpoint",
             ));
         }
+        if ExecutionProcess::has_other_running_workspace_owner(
+            &self.db.pool,
+            workspace.id,
+            proposed_execution,
+        )
+        .await?
+        {
+            return Err(blocked("owner_busy", "wait_for_safe_idle_checkpoint"));
+        }
+        if self.observed_interactive_start(workspace.id, session.id, executor_action)? {
+            // This admits an ordinary turn, not historical coverage, publication,
+            // reset/cleanup, or provider continuation. Those gates stay unchanged.
+            return Ok(());
+        }
         if !services::services::fixed_baseline::history_exception(workspace.id, proposed_execution)
             && self
                 .workspace_observation_gate(workspace.id, proposed_execution)
@@ -2454,15 +2495,6 @@ impl ContainerService for LocalContainerService {
         }
         if !self.requires_git_admission_fence() {
             return Ok(());
-        }
-        if ExecutionProcess::has_other_running_workspace_owner(
-            &self.db.pool,
-            workspace.id,
-            proposed_execution,
-        )
-        .await?
-        {
-            return Err(blocked("owner_busy", "wait_for_safe_idle_checkpoint"));
         }
         if services::services::fixed_baseline::history_exception(workspace.id, proposed_execution) {
             return Ok(()); // Already captured native state under the same admission lock; no publication grant.
@@ -2838,8 +2870,42 @@ impl ContainerService for LocalContainerService {
                 "action":"refresh_exact_owner_checkpoint", "provider_started":false,"coverage_verified":false
             })));
         }
+        let observed_interactive = paid_owner
+            && self.observed_interactive_start(
+                workspace.id,
+                execution_process.session_id,
+                executor_action,
+            )?;
+        if observed_interactive {
+            let session = Session::find_by_id(&self.db.pool, execution_process.session_id)
+                .await?
+                .ok_or_else(|| {
+                    ContainerError::Other(anyhow!("Session disappeared before launch"))
+                })?;
+            self.pre_route_git_readiness(
+                workspace,
+                &session,
+                execution_process.id,
+                executor_action,
+            )
+            .await?;
+            // Capture the new original obligation even when an older observation
+            // or publication policy is unresolved. Neither is marked verified.
+            let request = Self::preservation_request(workspace, execution_process, &repos, false);
+            TurnGithubSync::enqueue(
+                &self.db.pool,
+                execution_process.id,
+                workspace.id,
+                &request.to_string(),
+            )
+            .await?;
+            let report = self.invoke_preservation_helper("begin", request).await;
+            self.emit_preservation_message(execution_process.id, &report)
+                .await;
+        }
         // Retained observations remain authoritative after disabling policy/scheduling.
         if paid_owner
+            && !observed_interactive
             && !services::services::fixed_baseline::history_exception(
                 workspace.id,
                 execution_process.id,
@@ -2856,6 +2922,7 @@ impl ContainerService for LocalContainerService {
         }
         let mut admitted_request = None;
         if paid_owner
+            && !observed_interactive
             && !services::services::fixed_baseline::history_exception(
                 workspace.id,
                 execution_process.id,

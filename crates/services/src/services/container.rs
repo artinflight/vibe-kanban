@@ -230,6 +230,7 @@ pub trait ContainerService: Send + Sync {
         workspace: &Workspace,
         _session: &Session,
         proposed_execution: Uuid,
+        _executor_action: &ExecutorAction,
     ) -> Result<(), ContainerError> {
         if self.requires_git_admission_fence() {
             return Err(ContainerError::ReadinessBlocked(serde_json::json!({
@@ -1746,7 +1747,7 @@ pub trait ContainerService: Send + Sync {
         ])?;
         let proposed_execution = reserved_execution.unwrap_or_else(Uuid::new_v4);
         if executor_action.base_executor().is_some() && !super::fixed_baseline::in_request() {
-            self.pre_route_git_readiness(workspace, session, proposed_execution)
+            self.pre_route_git_readiness(workspace, session, proposed_execution, executor_action)
                 .await?;
         }
 
@@ -1811,7 +1812,7 @@ pub trait ContainerService: Send + Sync {
             reconcile_execution_bindings(&[fixed_execution, reserved_execution])?
                 .unwrap_or(proposed_execution);
         if fixed_execution.is_some() {
-            self.pre_route_git_readiness(workspace, session, proposed_execution)
+            self.pre_route_git_readiness(workspace, session, proposed_execution, executor_action)
                 .await?;
         }
 

@@ -947,7 +947,7 @@ async fn legacy_observation_gate_survives_restart_disable_and_policy_rollback_fo
         .unwrap();
         let error = fixture
             .container
-            .execution_git_readiness(&ctx.workspace, &ctx.execution_process, json!({}))
+            .start_execution_inner(&ctx.workspace, &ctx.execution_process, &action)
             .await
             .unwrap_err();
         assert!(error.to_string().contains("observation is unproven"));
@@ -1268,7 +1268,7 @@ async fn checkpoint_readiness_retains_missing_policy_and_observation_blocks() {
         let before = std::fs::read(&ledger).unwrap();
         let result = fixture
             .container
-            .start_execution_inner(&ctx.workspace, &ctx.execution_process, &action)
+            .execution_git_readiness(&ctx.workspace, &ctx.execution_process, json!({}))
             .await;
         let Err(ContainerError::ReadinessBlocked(report)) = result else {
             panic!("known Git prerequisite must reject before provider/profile resolution")
@@ -1454,7 +1454,8 @@ async fn active_owner_rejects_before_routing_or_creating_execution() {
 #[tokio::test]
 async fn interactive_admission_retains_historical_uncertainty_without_publication_grant() {
     for retained in [false, true] {
-        let fixture = ObservationFixture::with_publication_policy(retained, false).await;
+        let mut fixture = ObservationFixture::with_publication_policy(retained, false).await;
+        fixture.container.automatic_sync_override = Some(true);
         ExecutionProcess::update_completion(
             &fixture.container.db.pool,
             fixture.execution,

@@ -43,6 +43,8 @@ checks stable service identity/executable, backend/public health and capabilitie
 JS/CSS byte parity, selected frontend and current DB target/inode/migrations.
 It does not read conversation contents or mutate the system. Post-activation
 receipt `LIVE_READBACK_POST_ACTIVATION.safe.json` passed at 03:20:10 UTC.
+`LIVE_READBACK_PRE_PR284_MERGE.safe.json` independently passed at 09:20:33 UTC
+with `mutation=false`, confirming the same deployed executable/frontend and DB.
 Separately check `/api/agents/check-availability?executor=ANTIGRAVITY` and
 `/api/agents/preset-options?executor=ANTIGRAVITY`; expected installation found,
 model `gemini-3.8-flash-low`, permission `SUPERVISED`. This is not authentication
@@ -53,7 +55,9 @@ proof by itself; real account acceptance is recorded independently.
 The clean branch starts at fork/staging `2bf2676d2d3841c252fa7f2a9b4e7993128bb093`.
 `fork` is artinflight/vibe-kanban; `origin` is upstream BloopAI in this checkout.
 Confirm remote URLs before syncing. Preserve the dirty canonical checkout and
-unrelated work. Draft PR #284 targets staging; no staging/main merge is claimed.
+unrelated work. [PR #284](https://github.com/artinflight/vibe-kanban/pull/284)
+targets staging using the operator-requested rebase method; the merge event is the
+authoritative integration record. Main promotion remains separate.
 
 - `scripts/deployment/releases/20261029-source.json` retains 134 historical deployed
   source hashes and reconciled public hashes. Never overwrite its old deployed
@@ -113,11 +117,39 @@ private JSON is a separate exact input. Byte-identical public rebuild is not cla
    byte-identical. Preserve exact private input and verify all protected histories.
    Use the fresh-package recipe linked above for rehearsal, backup and activation.
 
-Full Test and seven companion workflows passed on `aaacd278b` (same deployed
-Rust/frontend inputs). Updated recovery CI passed on `1d48c6f39`; final docs-head
-CI is reported separately. Hosted private remote checks skip without the deploy
-key; do not describe them as tested. Local format, governance, focused native and
-recovery/source tests passed. Top-level live MemoryHigh/MemoryMax remain unlimited;
+## Hosted validation and source integration
+
+All eight hosted workflows passed on reconciliation commit
+`a4213813210ea15affb1d91a306883cb27f452e3`, including the final recovery and mirror
+tooling. These are commit-specific results; any later documentation commit must
+pass its own required PR checks before merge.
+
+| Workflow | Successful run |
+| --- | --- |
+| Test | [40997851611](https://github.com/artinflight/vibe-kanban/actions/runs/40997851611) |
+| Deployment recovery contracts | [40997851621](https://github.com/artinflight/vibe-kanban/actions/runs/40997851621) |
+| Deployment frontend artifact | [40997851518](https://github.com/artinflight/vibe-kanban/actions/runs/40997851518) |
+| Dot steering acceptance artifact | [40997851669](https://github.com/artinflight/vibe-kanban/actions/runs/40997851669) |
+| Bounded native final repair | [40997851763](https://github.com/artinflight/vibe-kanban/actions/runs/40997851763) |
+| Historical response recovery | [40997851506](https://github.com/artinflight/vibe-kanban/actions/runs/40997851506) |
+| Scheduled goal acceptance artifacts | [40997851493](https://github.com/artinflight/vibe-kanban/actions/runs/40997851493) |
+| Native reviewer compatibility | [40997851531](https://github.com/artinflight/vibe-kanban/actions/runs/40997851531) |
+
+Hosted private remote checks skip without the deploy key; the combined capture
+consent acceptance job was also skipped. Neither is certified by a green workflow.
+Local format, governance, focused native and recovery/source tests passed.
+
+[PR #284](https://github.com/artinflight/vibe-kanban/pull/284) is the durable record
+of final-head checks, review and rebase integration into staging. Rebase assigns
+new staging commit IDs. Preserve the original reconciliation branch, immutable
+build source `9a4179e8b`, frontend artifact source and release/catalog receipts;
+do not rewrite deployed provenance to the new staging HEAD. A Git merge does not
+deploy a binary or change data. Main promotion and any future deployment require
+their own validation. Refresh the clean reference worktrees under
+`/mnt/vk-storage/vk-reference/{main,staging}` after merge, preserving the unrelated
+dirty canonical checkout.
+
+Top-level live MemoryHigh/MemoryMax remain unlimited;
 per-executor 1500M/3000M and native capacity admission are separate safeguards.
 Whole-host OOM resilience is not certified by this task.
 
@@ -164,9 +196,15 @@ by independently verified B bodies; unchanged large-image reuse explicitly carri
 its old API epoch plus fresh native custody proof. Backups use
 `desktop:B:/vk-backups/vk-nightly-efficiency-20261026/objects-v1`; exact descriptors
 and hashes, not a directory name, establish recovery evidence.
+`RELEASE_B.private.json` verifies 45 sealed release items (201,792,843 bytes).
+`TERMINAL_B.private.json` verifies 62 terminal/reconstruction items (7,944,662
+bytes), including 53 fallback-only assets. `FRONTEND_RECOVERY.safe.json` records
+reconstruction from the verified frontend archive plus those retained assets;
+keep each release's original index. Both mirrors completed without disk payload
+staging.
 
-Remaining limits: private host/history dependencies, final documentation-head CI,
-no staging/main merge, no extra production-workspace inference, unlimited top-level
+Remaining limits: private host/history dependencies, separate main promotion,
+no extra production-workspace inference, unlimited top-level
 service memory, disabled automatic failover/external-effect continuation and
 unsupported Antigravity reset/fork/non-supervised modes. Preserve Recommend and
 all existing approval/billing controls. No more operator sign-in is needed.

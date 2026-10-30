@@ -35,9 +35,13 @@ Automatic provider failover remains disabled. Top-level service memory limits
 remain unlimited; executor limits/capacity guards remain separate safeguards.
 
 The recovery/deployment tooling and docs are reconciled in the isolated
-`fix/deployment-reconciliation-20261030` branch, draft PR #284. Required deployed
-Rust/frontend checks passed in CI; updated recovery CI passed. No staging/main
-merge is claimed. Preserve unrelated canonical-checkout edits. Read
+`fix/deployment-reconciliation-20261030` branch and
+[PR #284](https://github.com/artinflight/vibe-kanban/pull/284), targeting staging
+with the operator-requested rebase method. All eight hosted workflows passed on
+`a4213813210ea15affb1d91a306883cb27f452e3`; fresh read-only live verification passed
+at 09:20:33 UTC. The PR merge event records integration status and rebased IDs;
+main promotion is separate. Preserve original build receipts and unrelated
+canonical-checkout edits. Read
 [backend handoff](BACKEND_DEPLOYMENT_HANDOFF.md) before another deployment.
 
 Builds use the owned SSD target with bounded resources and no duplicate large

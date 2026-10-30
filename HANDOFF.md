@@ -25,9 +25,13 @@ Antigravity execution. Never restore a stale snapshot or rerun a consumed contro
 
 Public Git lacks private retained-history bindings; bind the exact retained input
 for production. Canonical checkout is dirty and untouched. Source/docs/tooling sync
-is tracked in draft PR #284; no staging/main merge. Full deployed-code CI and updated
-recovery CI passed; final documentation-head CI may still be running. Automatic
-provider failover, AG reset/fork/non-supervised modes remain unqualified/disabled.
+is tracked in [PR #284](https://github.com/artinflight/vibe-kanban/pull/284), targeting
+staging via the requested rebase merge. Its merge event records final integration
+status/IDs; main promotion is separate. All eight workflows passed on `a421381321`;
+see [exact validation runs](BACKEND_DEPLOYMENT_HANDOFF.md#hosted-validation-and-source-integration).
+Read-only live verification passed at 09:20:33 UTC. Retain the original branch and
+build receipts because rebase changes commit IDs without changing the live release.
+Automatic provider failover, AG reset/fork/non-supervised modes remain unqualified/disabled.
 
 Prior pickup: [previous record](deployment-history/20261030-before-reconciliation/HANDOFF.md)
 and [HANDOFF history](HANDOFF_HISTORY_20261017.md).

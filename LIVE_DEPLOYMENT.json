@@ -1,6 +1,6 @@
 {
   "schema": 2,
-  "generated_at_utc": "2026-10-30T03:20:09.706863+00:00",
+  "generated_at_utc": "2026-10-30T09:20:33.936466+00:00",
   "canonical_repo": "/home/mcp/_vibe_kanban_repo",
   "canonical_repo_dirty": true,
   "canonical_branch": "vk/land-live-fixes-20260422",
@@ -99,19 +99,36 @@
     "public_source_catalog": "scripts/deployment/releases/20261029-source.json",
     "private_input_required": "crates/server/src/routes/execution_processes/historical_response/additional-reviewed-requests.json",
     "pull_request": "https://github.com/artinflight/vibe-kanban/pull/284",
-    "synced_source_head": "1d48c6f396d3261aa992e6cf0a6edbf41d1a694b",
-    "full_test_ci_passed_source": "1d48c6f396d3261aa992e6cf0a6edbf41d1a694b",
-    "full_test_ci_run": "https://github.com/artinflight/vibe-kanban/actions/runs/40995913274",
-    "recovery_ci_passed_source": "1d48c6f396d3261aa992e6cf0a6edbf41d1a694b",
-    "recovery_ci_run": "https://github.com/artinflight/vibe-kanban/actions/runs/40995913315",
-    "staging_or_main_merge_performed": false
+    "full_test_ci_passed_source": "a4213813210ea15affb1d91a306883cb27f452e3",
+    "full_test_ci_run": "https://github.com/artinflight/vibe-kanban/actions/runs/40997851611",
+    "recovery_ci_passed_source": "a4213813210ea15affb1d91a306883cb27f452e3",
+    "recovery_ci_run": "https://github.com/artinflight/vibe-kanban/actions/runs/40997851621",
+    "validated_source_head": "a4213813210ea15affb1d91a306883cb27f452e3",
+    "successful_workflow_runs": [
+      40997851611,
+      40997851621,
+      40997851518,
+      40997851669,
+      40997851763,
+      40997851506,
+      40997851493,
+      40997851531
+    ],
+    "integration": {
+      "target_branch": "staging",
+      "requested_merge_method": "rebase",
+      "status_source": "https://github.com/artinflight/vibe-kanban/pull/284",
+      "main_promotion_performed": false,
+      "preserve_original_source_branch": true,
+      "provenance_note": "Use the PR merge event for rebased staging IDs. Original deployed source and release hashes remain immutable; merging Git does not redeploy."
+    }
   },
   "evidence_root": "/mnt/vk-storage/vk-deployment-reconcile-20261030/activation-release-2",
   "current_investigation_root": "/mnt/vk-storage/vk-deployment-reconcile-20261030",
   "desktop_backup_root": "desktop:B:/vk-backups/vk-nightly-efficiency-20261026/objects-v1",
   "previous_record": "deployment-history/20261030-before-reconciliation/LIVE_DEPLOYMENT.json",
   "unresolved": [
-    "Final documentation-head hosted CI is separate from passed deployed-code and recovery checks; no staging/main merge performed.",
+    "Main promotion is separate; final integration status and documentation-successor checks are recorded on PR #284.",
     "Private retained-history bindings and retained host/Nightly controls remain required and deliberately absent from public Git.",
     "No additional production-workspace Antigravity prompt was sent after the four-turn native acceptance budget.",
     "Service-level MemoryHigh/MemoryMax remain unlimited; executor limits and capacity guard are separate.",
@@ -143,5 +160,11 @@
     "corrected_attempt": "activation-release-2",
     "offline_tests_passed": 130,
     "private_optional_tests_skipped": 22
+  },
+  "last_readonly_verification": {
+    "at_utc": "2026-10-30T09:20:33.936466+00:00",
+    "receipt": "/mnt/vk-storage/vk-deployment-reconcile-20261030/LIVE_READBACK_PRE_PR284_MERGE.safe.json",
+    "passed": true,
+    "mutation": false
   }
 }

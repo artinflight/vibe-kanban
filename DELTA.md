@@ -2098,3 +2098,15 @@ No activation/host build/shared-target growth or live changes.
 ## 2026-10-30 — recovered deployment source custody
 
 Reconciled the October29 deployed build and ordinary-send repair with current staging, recovered deployment/recovery and connector source/tests, and replaced stale live-runtime records with verified identities. Antigravity initializes but requires authentication; gate remains disabled. See BACKEND_DEPLOYMENT_HANDOFF.md and DEPLOYMENT_CHECKLIST_20261030.md. No production change during reconciliation.
+
+## 2026-10-30 — Antigravity activation and integration handoff
+
+The later activation supersedes the initial authentication-blocked entry above.
+The authenticated native Vibe adapter passed approval, denial, native resume and
+cancellation within four model turns. Release 9a4179e8b / 137d6cd7b647… was accepted
+03:18:14 UTC; read-only public verification passed again at 09:20:33 UTC. Current
+history and latest-data cutback were preserved; actual pre-switch failure recovery
+and the strict empty-reader-WAL correction are documented. All eight hosted
+workflows passed at a421381321. PR #284 records requested rebase integration into
+staging; original build IDs/branch remain retained and main promotion is separate.
+See BACKEND_DEPLOYMENT_HANDOFF.md for exact runs, recovery mirrors and remaining limits.

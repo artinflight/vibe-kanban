@@ -1,64 +1,81 @@
 # Reproducing and managing the recovered Vibe deployment
 
-Checked October 30, 2026. The repaired October 29 new release is serving the public
-site. Source reconciliation does not constitute a new deployment. Read
-[LIVE_DEPLOYMENT.json](LIVE_DEPLOYMENT.json) for exact hashes, paths, selected
-environment, fallback identity and unresolved items; verify them before acting.
+The Antigravity-enabled release is live, accepted October 30 at 03:18:14 UTC.
+[LIVE_DEPLOYMENT.json](LIVE_DEPLOYMENT.json) records exact identity and limitations;
+[the checklist](DEPLOYMENT_CHECKLIST_20261030.md) records validation scope.
+[Activation/recovery evidence](ACTIVATION_RECOVERY_20261030.md) supplies the fresh-
+package procedure, actual failed-boundary recovery and corrected successful run.
 
-## Serving components and data
+## Serving components and preserved data
 
-Public `https://vibe.local` → gateway 4720. The gateway serves the current paired
-frontend (`index-BBpTkgZU.js`, `index-CUBB2mA2.css`) and routes API through retained
-history proxy 5640 → backend 5621, service `vibe-kanban-native-review-20261015.service`.
-Backend/history-proxy root pages still serve legacy assets (`index-Djfpggqs.js`);
-they are not public frontend acceptance endpoints. Preserve gateway routing.
+Public `https://vibe.local` → gateway 4720 → history proxy 5640 → backend 5621,
+service `vibe-kanban-native-review-20261015.service`. Backend source is
+`9a4179e8bdf38e93d1a81faca6c665cadd6fddc7`; binary SHA256
+`137d6cd7b6475f47f9b92455a879b5fd23d3b3a5374743c77d0c694f3f1257d2`.
+Last observed PID 645213. These observations do not authorize a future stop/kill.
+Version 0.1.42 alone cannot identify the build. Public and backend frontend roots
+now match: JS `index-DNMY17oB.js`, CSS `index-CUBB2mA2.css`. Both paired frontend
+roots retain 403 old/new hashed assets; open-tab old assets were checked over HTTPS.
 
-The live backend source is `ddaaf64a5870124842c385e490a0b40e1174db86`; binary SHA256
-`a63eb3a68173d90b894bd933b6676d989ec8325d7ba31135ea52b214bd06c336`.
-The 0.1.42 label is shared with the fallback and cannot identify the build.
-At last check PID 2100850/invocation `b2a146863e794d86acb393f19decc4c9` was unchanged
-from promotion. These are observations, never authority for a future stop/kill.
+The same green database resolves to
+`/mnt/vk-storage/vk-original-access-recovery-20261025T1748/working90.sqlite`, with
+99 migrations. Preserve its latest writes/sidecars, original native Codex home,
+rollout paths, attachments, attention/review state, queues and saved settings.
+The protected `vk-chat-history-readonly-20261010.service` remains untouched.
+Blue remains retired. Do not create a second writer or re-enable cleanup from
+obsolete instructions. Seventeen uncertain inputs were retained without replay.
 
-The existing green DB path resolves to
-`/mnt/vk-storage/vk-original-access-recovery-20261025T1748/working90.sqlite`.
-It contains 99 applied migrations. Preserve its latest writes, SQLite sidecars,
-native Codex home, original rollout paths, attachments, review/attention state,
-queues and settings. Preserve `vk-chat-history-readonly-20261010.service` and the
-reader/proxy dependencies. Never launch a second writer against this database.
-Blue remains retired. Status-triggered cleanup is currently disabled by live
-configuration; do not re-enable it based on old documentation.
+Antigravity is available with tested `gemini-3.8-flash-low`, supervised permissions
+and the existing personal account. Service-scoped executable/model defaults leave
+saved profiles unchanged. Actual approval/denial/resume/cancel passed in the Vibe
+adapter; post-deployment API checks sent no inference. The four-turn native test
+budget is spent. No new production workspace conversation was created for QA.
+[Antigravity guide](VK_ANTIGRAVITY_ACP.md) contains runtime/harness hashes and limits.
 
-## Source and incident custody
+## Repeat the read-only live verification
 
-The clean reconciliation branch starts at fork/staging`2bf2676d2d3841c252fa7f2a9b4e7993128bb093`.
-`fork` is artinflight/vibe-kanban; `origin` is upstream BloopAI here. Resolve the
-remote URL before syncing. The canonical checkout contains unrelated dirty work
-and was preserved. Reference main/staging checkouts were refreshed separately.
+```sh
+python3 -B scripts/deployment/read_live.py --manifest LIVE_DEPLOYMENT.json --ca VERIFIED_CA_FILE --output NEW_SSD_RECEIPT.json
+```
 
-- `scripts/deployment/releases/20261029-source.json`:134 deployed source changes,
-  generated types/schema included from the actual generation output. Each has
-  deployed/public hashes. Ordinary-send repair was carried as exact commits.
-- Public `additional-reviewed-requests.json` is empty. The private deployment has
-  sixteen exact retained-history bindings, and its test asserts that cardinality.
-  That private input and test-only assertion are the two semantic/test source
-  differences; one frontend file also has formatting-only Prettier reflow. Do not replace the retained reader with an ordinary public build.
-  Recover the exact input from the retained private source or verified B package,
-  compare its catalog hash, and repeat all protected-history acceptance.
-- `scripts/deployment/`: recovered queue/writer/ingress fences, history acceptance,
-  proven orphan reconciliation, SQL/native-B update/reuse/tracking helpers,
-  independent no-progress supervision and bounded recovery-control records.
-  Some adapters still require the exact retained host/Nightly profile; imports
-  are inert. They are not a generic one-command installer.
-- `scripts/deployment/incidents/20261029/`:27 inert source templates covering
-  recovery, stale-child repair,409 cutback, latest-data roundtrip, bounded build,
-  native fenced backup, promotion, CU fence, verification and B mirroring.
-  Old PIDs/leases/manifests are consumed. Do not execute an archived controller.
-- `scripts/dot-connector/deployed-20261029/`:50 hash-bound source/test files for
-  deployed adapter and paired sidechat. One private usage-workspace binding is
-  omitted. Existing authenticated tunnel, approval-event bridge, Node24, MCP
-  binary, subscriptions and receipt stores remain separate dependencies.
+Use the installed trusted origin CA, never disabled TLS validation. The tool
+checks stable service identity/executable, backend/public health and capabilities,
+JS/CSS byte parity, selected frontend and current DB target/inode/migrations.
+It does not read conversation contents or mutate the system. Post-activation
+receipt `LIVE_READBACK_POST_ACTIVATION.safe.json` passed at 03:20:10 UTC.
+Separately check `/api/agents/check-availability?executor=ANTIGRAVITY` and
+`/api/agents/preset-options?executor=ANTIGRAVITY`; expected installation found,
+model `gemini-3.8-flash-low`, permission `SUPERVISED`. This is not authentication
+proof by itself; real account acceptance is recorded independently.
 
-Verify published bytes without touching production:
+## Source custody and required private inputs
+
+The clean branch starts at fork/staging `2bf2676d2d3841c252fa7f2a9b4e7993128bb093`.
+`fork` is artinflight/vibe-kanban; `origin` is upstream BloopAI in this checkout.
+Confirm remote URLs before syncing. Preserve the dirty canonical checkout and
+unrelated work. Draft PR #284 targets staging; no staging/main merge is claimed.
+
+- `scripts/deployment/releases/20261029-source.json` retains 134 historical deployed
+  source hashes and reconciled public hashes. Never overwrite its old deployed
+  hashes to make them match a newer release. October 30 provenance is separate.
+- Public `crates/server/src/routes/execution_processes/historical_response/additional-reviewed-requests.json`
+  intentionally contains `{}`. Production needs the exact private sixteen-entry
+  input from `/mnt/vk-storage/vk-new-build-repair-20261029/source/` at that relative
+  path, authenticated against the historical catalog's deployed hash. Do not
+  publish its bindings or substitute a public build for the retained reader.
+- The private-input omission and adjusted public test cardinality are intentional;
+  Clippy/format fixes and the explicit supervised new/load handshake are recorded
+  source changes. Actual source is pinned by the build receipt, not current HEAD.
+- `scripts/deployment/` contains queue/writer/ingress fences, history acceptance,
+  proven orphan repair, native-B/SQL update and reuse, independent supervision,
+  owned activation, current-data rehearsal, bounded RAM backup, asset retention,
+  live readback and release mirroring. Host adapters still depend on the exact
+  retained Nightly controls/profile; this is not a generic installer.
+- `scripts/deployment/incidents/20261029/` holds 27 inert source templates. Dated
+  PIDs, leases, manifests and controllers are consumed historical evidence.
+- `scripts/dot-connector/deployed-20261029/` holds 50 hash-bound source/test files.
+  One private usage-workspace binding is omitted. Tunnel, approval-event bridge,
+  Node/MCP runtime, subscriptions and receipt stores are retained dependencies.
 
 ```sh
 python3 -B scripts/deployment/source_custody.py --root . --catalog scripts/deployment/releases/20261029-source.json
@@ -66,103 +83,90 @@ python3 -B scripts/deployment/source_custody.py --root scripts/deployment/incide
 python3 -B scripts/deployment/source_custody.py --root scripts/dot-connector/deployed-20261029 --catalog scripts/dot-connector/deployed-20261029/sources.json
 ```
 
-Private token maps are retained under
-`/mnt/vk-storage/vk-deployment-reconcile-20261030/{INCIDENT_TEMPLATE_BINDINGS,CONNECTOR_BINDINGS}.private.json`.
-`source_custody.py --bindings PRIVATE_MAP` verifies exact original hashes without
-writing them. Optional`--output NEW_SSD_DIRECTORY` reconstructs only after every
-hash passes, with restrictive modes and inert suffixes. It never executes or
-installs. Backend private JSON is a separate exact input, not a token map.
-The source and binary provenance is established; byte-identical rebuild of the
-new public checkout is not claimed.
+Private incident/connector token maps remain under the investigation root as
+`INCIDENT_TEMPLATE_BINDINGS.private.json` and `CONNECTOR_BINDINGS.private.json`.
+`source_custody.py --bindings PRIVATE_MAP` verifies original hashes without writing;
+optional `--output NEW_SSD_DIRECTORY` reconstructs only after all hashes pass, with
+restrictive modes and inert suffixes. It never executes or installs. Backend
+private JSON is a separate exact input. Byte-identical public rebuild is not claimed.
 
 ## Rebuild procedure
 
-1. Start a clean worktree on mounted SSD from the intended reviewed branch.
-   Reconcile current staging before promotion; do not force-reset canonical work.
-   Check every intended feature and private runtime dependency against the catalog.
-2. Recover exact private history input and preserve generated types from matching
-   source. Run type generation when changing schemas; never hand-edit them.
-3. Reuse the proven network-isolated build recipe archived as
-   `promotion/build-command.json.txt`, with `guest.py.txt`, `build-v3.py.txt` and
-   `prepare.py.txt`. Inventory/pin every referenced tool/config/mount before use.
-   It used nightly2025-12-04, the existing recovered offline Cargo registry,
-   SQLX_OFFLINE, one job, profile `acceptance`, incremental off, and the existing
-   shared target under the combined-ag-custody preparation. Do not copy/run its
-   stale source paths or live PID guard; prepare a fresh command/manifest.
-4. Hold the existing owned-build lock and shared target lease; verify no competing
-   compiler, mounted SSD, >3 GiB free SSD and >3 GiB MemAvailable continuously.
-   Use a bounded user service: MemoryHigh 4G, MemoryMax 5G, MemorySwapMax 0,
-   CPUQuota 100%, Nice 15, TasksMax 160. Build/test with no production DB or account
-   material writable inside the sandbox. Do not create another large target.
-5. Run scoped native/source tests and required branch CI. Copy the successful
-   immutable artifact once, fsync/hash it, record source/tool/config identity.
-   Do not deploy mutable shared-target output directly. Match the frontend and
-   connector contract; verify public JS/CSS bytes, not only a version label.
+1. Create a clean SSD worktree at the intended source. Reconcile intended features,
+   private dependencies, live repairs and generated schema. Do not reset canonical work.
+2. Use the archived bounded offline recipe (`promotion/build-command.json.txt`,
+   `guest.py.txt`, `build-v3.py.txt`, `prepare.py.txt`) with fresh source/tool/config
+   bindings and live owner observations. Do not execute stale controllers. The
+   October 30 `activation-build-1` guard/command/result files record the actual
+   invocation. Rust nightly 2025-12-04, recovered offline registry, SQLX_OFFLINE,
+   one job, profile `acceptance`, incremental off and the already-owned SSD target
+   were used. No production DB/account state is writable in the build sandbox.
+3. Hold the existing owned-build lock/shared-target lease. Continuously require
+   mounted SSD, >3 GiB free SSD and >3 GiB MemAvailable. User-service build limits:
+   MemoryHigh 4G, MemoryMax 5G, MemorySwapMax 0, CPUQuota 100%, Nice 15, TasksMax 160.
+   Never duplicate a large target or install bulk dependencies on the system disk.
+4. Run focused tests and generated-type checks; require branch CI. Seal the final
+   binary by copy/fsync/hash; never deploy mutable target output. Hosted workflow
+   `deployment-frontend-artifact.yml` produces the matching frontend with a file
+   manifest and artifact-viewer verification. Verify archive and every file hash.
+5. Prepare both frontend roots with `pair_frontend_assets.py`; collisions must be
+   byte-identical. Preserve exact private input and verify all protected histories.
+   Use the fresh-package recipe linked above for rehearsal, backup and activation.
 
-The current live service itself has unlimited systemd MemoryHigh/MemoryMax.
-Per-executor1500M/3000M and native capacity admission are separate safeguards.
-This task did not change that configuration or certify whole-host OOM resilience.
+Full Test and seven companion workflows passed on `aaacd278b` (same deployed
+Rust/frontend inputs). Updated recovery CI passed on `1d48c6f39`; final docs-head
+CI is reported separately. Hosted private remote checks skip without the deploy
+key; do not describe them as tested. Local format, governance, focused native and
+recovery/source tests passed. Top-level live MemoryHigh/MemoryMax remain unlimited;
+per-executor 1500M/3000M and native capacity admission are separate safeguards.
+Whole-host OOM resilience is not certified by this task.
 
-## Fresh cutover and failure recovery
+## Failure recovery and safe cutback
 
-Follow [VK_BACKEND_RESTART_PROTOCOL.md](VK_BACKEND_RESTART_PROTOCOL.md) and the
-operator's current authorization. Finish slow preparation online. Immediately
-before interruption, prove exact owner identity, drained turns/queues/native
-jobs, capacity custody and actual physical writer fencing. Preserve the live
-service when any assumption changes. Never infer idle from a stale DB row alone.
+Follow the backend restart protocol and current operator authorization. Complete
+slow work online, then recheck exact owners, drained work/queues, ingress/capacity
+custody and physical writer fences. Preserve new or unknown owners. The actual
+first attempt refused before installing a binary; recovery restored public service
+and owned consumers on the original PID, without restoring any database. The
+strict empty-WAL fix and fresh rehearsal preceded the successful second package.
 
-The October 29 transaction froze only owned/drained consumers, preserved the
-original CU monitor process while freezing it for stable native capture, fenced
-ingress, took a current SQLite snapshot plus six native SQLite backups/eight
-changed rollouts, and independently reopened the native B store. Source-stability
-checks remain mandatory; an earlier unfenced capture was rejected and not reused.
-Receipt `native-recovery-fenced/RECEIPT.private.json` is the accepted one.
+The 50-minute total cutoff remains removed. A separate supervisor terminates only
+its worker group after 600 seconds without verified progress and invokes recovery
+with a 300-second limit. Progress means completed work/data, not a heartbeat. Tests
+cover stalls, continuing progress, worker failure and changed owners. A cleanup
+fix ensures the original CU monitor resumes even after accepted-release cleanup
+fails. Preserve failure receipts and never blindly rerun a consumed package.
 
-The 50-minute overall cutoff was removed. Completion-driven plans carry no total
-data/operation deadline; a separate supervisor still terminates its owned worker
-group after 600 seconds without verified progress and invokes separate recovery
-with a 300-second limit. Progress must mean completed work/data, never a heartbeat.
-The reusable legacy `final_deadlines` helper still supports older finite plans;
-it is not the policy used by the successful October 29 promoter. Tests prove real
-stalls terminate, real progress may exceed the idle budget, child failures surface,
-and changed CU owners are never thawed. Recovery failure must remain visible;
-do not clear its receipt or blindly retry a consumed operation.
+Immediate fallback is source `ddaaf64a5870124842c385e490a0b40e1174db86`, binary
+`a63eb3a68173d90b894bd933b6676d989ec8325d7ba31135ea52b214bd06c336`, with the saved
+working drop-in and paired frontend. Fresh current-copy candidate→fallback→candidate
+preserved all 60 tables including a later-write probe, 99 migrations, 18 protected
+and four recent histories. The older `d154fe9d`/`95312f4f…` T63 bundle remains retained,
+but is not the immediate fallback qualified for this activation. After new work
+or schema changes, drain/recheck compatibility and take a fresh backup. Cut back
+software against latest data; never restore stale data over new writes. Antigravity
+execution becomes disabled on the immediate fallback; records remain recognizable.
 
-Fallback source `d154fe9d83c136acb83012914e1b544898ba4c84`, binary SHA256
-`95312f4f3be43cdc109159acc680dc6be73daed0f162e3a220eb5ac6a936cddc`,
-paired with the T63 frontend, remains retained in
-`/mnt/vk-storage/vk-cutback-ready-20261029/bundle`.
-The isolated latest-data new→fallback→new rehearsal preserved all 59 application
-tables, migrations, protected replies and a sentinel written after the snapshot.
-For future cutback, first recheck schema/data compatibility on a fresh copy and
-take a fresh backup. Switch the binary/frontend pair on the current database.
-Never replace current data with the pre-cutover snapshot to roll back executable
-code. The retained `cutback_preflight.py` is read-only readiness, not authorization
-or proof of a fresh writer boundary.
+## Evidence and handoff
 
-Post-switch, verify exact running executable, public assets/routes, capability
-contracts, ordinary send in an isolated fixture, protected/recent native histories,
-review flags/settings/queues, consumer resumption and no uncertain-input replay.
-Retain failures and original metadata; only proven orphan child runs may become
-failed/interrupted. Never invent completed results to remove an active badge.
+October 29 recovery: `/mnt/vk-storage/vk-new-build-repair-20261029`.
+October 30 investigation: `/mnt/vk-storage/vk-deployment-reconcile-20261030`.
+Successful package: `activation-release-2`; rejected/recovered package:
+`activation-release-1`. Keep both and all prior fallback artifacts.
 
-## Evidence locations and remaining work
+Key successful receipts: `RESULT.private.json`, `ACCEPTED.private.json`,
+`ANTIGRAVITY_LIVE.safe.json`, `PUBLIC_ANTIGRAVITY.safe.json`,
+`BROWSER_CANDIDATE.private.json`, `roundtrip/RESULT.private.json`,
+`CURRENT_BACKUP.private.json`, `CURRENT_BACKUP_DESCRIPTOR.private.json`,
+`native-recovery-fenced/RECEIPT.private.json` and release mirror receipt.
+Six native DBs plus nine changed rollouts total 3,607,837,269 bytes. All were backed
+by independently verified B bodies; unchanged large-image reuse explicitly carries
+its old API epoch plus fresh native custody proof. Backups use
+`desktop:B:/vk-backups/vk-nightly-efficiency-20261026/objects-v1`; exact descriptors
+and hashes, not a directory name, establish recovery evidence.
 
-Private deployment evidence: `/mnt/vk-storage/vk-new-build-repair-20261029`.
-Accepted records include `RESULT.private.json`, `ACCEPTED.private.json`,
-`LIVE_VERIFIED.private.json`, `LATEST_PRINT_HISTORIES.private.json`,
-`roundtrip/RESULT.private.json`, `CURRENT_BACKUP.private.json`,
-`native-recovery-fenced/RECEIPT.private.json`, `RELEASE_B.private.json` and
-`TERMINAL_B.private.json`. B objects are under
-`desktop:B:/vk-backups/vk-nightly-efficiency-20261026/objects-v1`; use the receipts'
-exact object hashes and independent readback, never a directory name as proof.
-The170,962,944-byte current DB snapshot hash is
-`2dd65fbb75de1c529a68dde08f6de1b2705fdbe4cf15e20237780389d50ecfb5`.
-Consult the receipt if this copied reference disagrees; hash the actual object.
-
-Current investigation evidence lives in `/mnt/vk-storage/vk-deployment-reconcile-20261030`.
-Antigravity sign-in and supervised model/mode/resume acceptance remain unresolved;
-see [its guide](VK_ANTIGRAVITY_ACP.md). Automatic provider failover and external-
-effect continuation remain disabled/unqualified. Hosted full-workspace checks,
-private release acceptance and staging/main promotion are separate from this
-repository sync. Do not infer that every 0.1.42 feature has real paid-provider QA.
+Remaining limits: private host/history dependencies, final documentation-head CI,
+no staging/main merge, no extra production-workspace inference, unlimited top-level
+service memory, disabled automatic failover/external-effect continuation and
+unsupported Antigravity reset/fork/non-supervised modes. Preserve Recommend and
+all existing approval/billing controls. No more operator sign-in is needed.

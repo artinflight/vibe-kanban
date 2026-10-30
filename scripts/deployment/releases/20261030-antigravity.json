@@ -1,0 +1,40 @@
+{
+  "schema": 1,
+  "accepted_utc": "2026-10-30T03:18:14Z",
+  "backend": {
+    "path": "/mnt/vk-storage/vk-deployment-reconcile-20261030/activation-build-1/candidate-server",
+    "sha256": "137d6cd7b6475f47f9b92455a879b5fd23d3b3a5374743c77d0c694f3f1257d2",
+    "bytes": 94406640,
+    "source_commit": "9a4179e8bdf38e93d1a81faca6c665cadd6fddc7"
+  },
+  "frontend": {
+    "source_commit": "aaacd278b30021814d04c9d2a9c616ccdae960d7",
+    "workflow_run": 40990973645,
+    "artifact_id": 12949546000,
+    "archive_sha256": "e613e117f139648afdfab58f1997668525604ae947ce67686dab3c87e662b8f0",
+    "verified_manifest_files": 417,
+    "retained_both_version_assets": 403
+  },
+  "frontend_entry_assets": [
+    "/assets/index-CUBB2mA2.css",
+    "/assets/index-DNMY17oB.js"
+  ],
+  "fallback": {
+    "path": "/mnt/vk-storage/vk-new-build-repair-20261029/evidence/candidate-server",
+    "sha256": "a63eb3a68173d90b894bd933b6676d989ec8325d7ba31135ea52b214bd06c336",
+    "bytes": 94400752,
+    "source_commit": "ddaaf64a5870124842c385e490a0b40e1174db86",
+    "frontend": "/mnt/vk-storage/vk-deployment-reconcile-20261030/activation-release-1/paired-frontend/fallback",
+    "release_package": "/mnt/vk-storage/vk-deployment-reconcile-20261030/activation-release-2",
+    "policy": "Drain current work and recheck compatibility; use paired executable/frontend against the latest data. Never overwrite new writes with an old snapshot.",
+    "roundtrip": "Fresh current-data candidate/fallback/candidate preserved 60 tables including later-write probe, 99 migrations, 18 protected and four recent histories.",
+    "antigravity_execution": "Disabled by fallback; existing Antigravity records remain recognizable; recheck after future writes/schema changes."
+  },
+  "private_history_input": {
+    "path": "crates/server/src/routes/execution_processes/historical_response/additional-reviewed-requests.json",
+    "required_entries": 16,
+    "sha256": "f4bbbb8a9a7c869d2872e3d8de03f708a885be051f5c31017ddbf77205562c93"
+  },
+  "evidence_package": "/mnt/vk-storage/vk-deployment-reconcile-20261030/activation-release-2",
+  "new_migrations": 0
+}

@@ -1,5 +1,17 @@
 # Current production and protections — 2026-10-30
 
+WakeWatch now uses [shared assigned-owner activity](scripts/watcher-events/OWNER_ACTIVITY.md):
+busy alerts remain pending until idle, unrelated protected Chrome/process churn
+does not poison native turn status, and the real timer delivery was independently
+verified. This client correction did not restart Vibe or enable native v2.
+
+WakeWatch automatic disk waking is now enabled through the existing printer-style
+connector without a restart. Its single approved verification turn completed at
+12:00:07 UTC with the exact expected acknowledgement. The refreshed client now
+exposes all 46 Vibe tools, including both TurnSteer tools, and a real receipt read
+through the refreshed tool succeeded. See [current scope](scripts/watcher-events/CONNECTOR_TRANSPORT.md)
+and [TurnSteer access](TURNSTEER_ACCESS.md).
+
 The Antigravity-enabled release is live at `https://vibe.local`. It was accepted
 at 03:18:14 UTC: backend source `9a4179e8bdf38e93d1a81faca6c665cadd6fddc7`,
 executable SHA256 `137d6cd7b6475f47f9b92455a879b5fd23d3b3a5374743c77d0c694f3f1257d2`.

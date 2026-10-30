@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """T26 runner for the existing PR215 client; shares resource-guard's timer.
 
-No cleanup, ordinary follow-up, steering, server restart or credential access.
-Production dispatch stays gated until native admission is actually released.
+No cleanup, steering, server restart or credential acquisition.
+Dispatch requires an explicitly enabled native or existing-connector transport.
 """
 import argparse
 import contextlib
@@ -52,69 +52,78 @@ def local_get(path):
         conn.close()
 
 
-def owner_status(config):
-    """Read coding/script turns, independent Codex jobs, queues and OS processes.
+def process_identity(proc):
+    """Metadata only; never return command lines, environments or open files."""
+    before = (proc / 'stat').read_text().rpartition(') ')[2].split()[19]
+    value = {'pid': int(proc.name), 'start_ticks': before,
+             'boot_id': Path('/proc/sys/kernel/random/boot_id').read_text().strip(),
+             'name': (proc / 'comm').read_text().strip(),
+             'cgroup': (proc / 'cgroup').read_text().strip()}
+    if (proc / 'stat').read_text().rpartition(') ')[2].split()[19] != before:
+        raise ValueError('process_identity_changed')
+    return value
 
-    Never turn an unreadable inventory into idle. Only IDs/counts cross into state.
-    Native atomic admission is still required after this advisory preflight.
-    """
-    result = {'coding_or_script_turns': [], 'independent_jobs': [], 'queued': [],
-              'process_ids': [], 'inventory_unknown': False}
-    workspace, session = configured_owner(config)
-    path = Path(config['vibe_db']).resolve(strict=True)
-    with sqlite3.connect(path.as_uri() + '?mode=ro', uri=True, timeout=0.2) as db:
-        db.execute('PRAGMA query_only=ON')
-        deadline = time.monotonic() + 2
-        db.set_progress_handler(lambda: int(time.monotonic() > deadline), 10000)
-        rows = db.execute('SELECT id FROM sessions WHERE workspace_id=? LIMIT 17',
-                          (uuid.UUID(workspace).bytes,)).fetchall()
-        if not rows or len(rows) > 16 or uuid.UUID(session).bytes not in [r[0] for r in rows]:
-            raise ValueError('owner_binding_unavailable')
-        result['coding_or_script_turns'] = [str(uuid.UUID(bytes=r[0])) for r in db.execute(
-            "SELECT e.id FROM execution_processes e JOIN sessions s ON s.id=e.session_id "
-            "WHERE s.workspace_id=? AND e.status='running' AND e.run_reason != 'devserver' LIMIT 128", (uuid.UUID(workspace).bytes,))]
-    for row in rows:
-        sid = str(uuid.UUID(bytes=row[0]))
-        jobs = local_get('/api/execution-processes/subagents/session?session_id=' + sid)
-        if not isinstance(jobs, list) or len(jobs) > 128:
-            raise ValueError('job_inventory_unavailable')
-        for job in jobs:
-            if job.get('status') == 'running':
-                result['independent_jobs'].append(str(job['id']))
-            elif job.get('status') not in ('completed', 'failed'):
-                result['inventory_unknown'] = True
-        queue = local_get('/api/sessions/' + sid + '/queue')
-        if not isinstance(queue, dict) or queue.get('status') not in ('empty', 'queued'):
-            raise ValueError('queue_inventory_unavailable')
-        if queue['status'] != 'empty':
-            result['queued'].append(sid)
-    roots = [str(Path(p).resolve(strict=True)) for p in config['owner_roots']]
-    for proc in Path('/proc').iterdir():
-        if not proc.name.isdecimal() or int(proc.name) == os.getpid():
-            continue
-        try:
-            if proc.stat().st_uid != os.getuid():
-                continue
-            cwd = os.readlink(proc / 'cwd')
-            # Inspect only for exact owned path references; never retain arguments.
-            with (proc / 'cmdline').open('rb') as stream:
-                args = stream.read(65536)
-            if any(cwd == r or cwd.startswith(r + '/') or r.encode() in args for r in roots):
-                result['process_ids'].append(int(proc.name))
-        except (FileNotFoundError, ProcessLookupError):
-            pass
-        except PermissionError:
-            result['inventory_unknown'] = True
-    return result
+
+def ssh_broker_metadata(proc):
+    value = process_identity(proc)
+    status = dict(line.split(':', 1) for line in (proc / 'status').read_text().splitlines() if ':' in line)
+    value.update(uids=[int(n) for n in status['Uid'].split()], parent=int(status['PPid'].strip()))
+    return value
+
+
+def protected_ssh_broker(proc):
+    # A root-owned sshd vouches only for its transport broker and direct SFTP
+    # subsystem. Shells, Python, agents and all other descendants remain scanned.
+    # No sudo, new privilege or generic same-UID/name exclusion is introduced.
+    try:
+        child = ssh_broker_metadata(proc)
+        if child['uids'] != [os.getuid()] * 4 or child['name'] not in {'sshd', 'sftp-server'}:
+            return False
+        if not child['cgroup'].startswith('0::/user.slice/user-' + str(os.getuid()) + '.slice/session-') or not child['cgroup'].endswith('.scope'):
+            return False
+        parent = ssh_broker_metadata(Path('/proc') / str(child['parent']))
+        if child['name'] == 'sftp-server':
+            if parent['name'] != 'sshd' or parent['uids'] != child['uids'] or parent['cgroup'] != child['cgroup']:
+                return False
+            parent = ssh_broker_metadata(Path('/proc') / str(parent['parent']))
+        if parent['name'] != 'sshd' or parent['uids'] != [0] * 4:
+            return False
+        return ssh_broker_metadata(proc) == child
+    except (OSError, ValueError, IndexError, KeyError):
+        return False
+
+
+def reviewed_infrastructure(proc, config):
+    # Legacy compatibility helper; the shared owner reader does not use these
+    # PID exceptions. Exact reviewed infrastructure identities only, never an
+    # unreadable process, a name, or a service cgroup. PID reuse/restart invalidates
+    # the exception; any new unreadable process still holds delivery.
+    if protected_ssh_broker(proc):
+        return True
+    rows = config.get('reviewed_infrastructure_processes', [])
+    if not isinstance(rows, list) or len(rows) > 128:
+        return False
+    expected = next((r for r in rows if isinstance(r, dict) and r.get('pid') == int(proc.name)), None)
+    if expected is None or not isinstance(expected.get('reason'), str) or not expected['reason']:
+        return False
+    try:
+        return process_identity(proc) == {k: v for k, v in expected.items() if k != 'reason'}
+    except (OSError, ValueError, IndexError):
+        return False
+
+
+def owner_status(config):
+    import owner_activity
+    return owner_activity.inspect(config, api_get=local_get)
 
 
 def busy(owner):
-    return owner.get('inventory_unknown', True) or any(owner.get(k) for k in
-        ('coding_or_script_turns', 'independent_jobs', 'queued', 'process_ids'))
+    import owner_activity
+    return owner_activity.busy(owner)
 
 
 def active(owner):
-    # Positive activity suppresses this episode; unknown alone never proves active.
+    # Activity is informative; callers retain pending delivery while busy.
     return any(owner.get(k) for k in ('coding_or_script_turns', 'independent_jobs', 'process_ids'))
 
 
@@ -199,6 +208,57 @@ def ntfy_wake_samples(store, config, samples, now, receipt_reader=root_notificat
     return result
 
 
+def rearm_completed(store, config, samples, owner, now):
+    """New reassessment, never a resend of an accepted/uncertain delivery.
+
+    Opt in only for the existing disk response owner. A model turn completing is
+    not physical recovery. Keep the old receipt and require independently
+    reconciled completion, fresh continued pressure, idle custody and the full
+    existing cooldown before making the incident pending again. Admission and
+    per-action cleanup approvals remain downstream, unchanged.
+    """
+    if config.get('rearm_completed_incidents') is not True:
+        return None
+    if store.db.execute("SELECT 1 FROM batches WHERE status IN ('dispatching','accepted','unknown')").fetchone():
+        return None
+    rows = store.db.execute("SELECT i.id,i.volume,i.identity,i.batch FROM incidents i "
+                            "JOIN batches b ON b.id=i.batch WHERE i.recovered IS NULL "
+                            "AND b.status='completed'").fetchall()
+    waiting = None
+    for row in rows:
+        sample = samples.get(row['volume'])
+        if (not sample or sample['identity'] != row['identity']
+                or not -5 <= now - sample['at'] <= 30
+                or not sample.get('pressure', {}).get('eligible')):
+            continue
+        if busy(owner):
+            waiting = 'unresolved_incident_owner_busy'
+            continue
+        # The batch's original `updated` value is acceptance, not completion.
+        # Use the existing independent-execution reconciliation audit instead.
+        completed = []
+        for receipt in store.db.execute("SELECT at,detail FROM audit WHERE kind='execution_completed'"):
+            try:
+                if json.loads(receipt['detail']).get('batch') == row['batch']:
+                    completed.append(receipt['at'])
+            except (ValueError, TypeError, AttributeError):
+                continue
+        if not completed or max(completed) > now:
+            waiting = 'unresolved_incident_completion_unverified'
+            continue
+        if now - max(completed) < COOLDOWN:
+            waiting = 'unresolved_incident_cooldown'
+            continue
+        with store.db:
+            changed = store.db.execute("UPDATE incidents SET batch=NULL,delivery='pending' "
+                                       "WHERE id=? AND batch=? AND recovered IS NULL",
+                                       (row['id'], row['batch'])).rowcount
+            if changed:
+                store.audit('completed_pressure_rearmed', {'incident': row['id'],
+                            'previous_batch': row['batch'], 'completion_at': max(completed)})
+    return waiting
+
+
 def cycle(store, config, samples, errors, owner, meta, now, bridge_factory=monitor.Bridge,
           publisher_factory=monitor.publisher, root_receipt_reader=root_notification_receipt):
     store.observations(samples, errors, now)
@@ -217,6 +277,12 @@ def cycle(store, config, samples, errors, owner, meta, now, bridge_factory=monit
             notifications[key] = 'configuration_unavailable'
             with store.db:
                 store.audit('phone_config_unavailable', {'volume': key})
+    # Upgrade old host-inventory-only waits once, only when no delivery was ever
+    # attempted. Never shorten a real receipt/attempt's durable retry delay.
+    if meta.get('owner_wait_policy') != 1:
+        if not store.db.execute('SELECT 1 FROM attempts LIMIT 1').fetchone() and not store.db.execute('SELECT 1 FROM batches LIMIT 1').fetchone():
+            meta.update(next_attempt=0, failures=0)
+        meta['owner_wait_policy'] = 1
     # Bound waits across wall-clock regressions; never create a new incident to retry.
     meta['next_attempt'] = min(meta.get('next_attempt', 0), now + 3600)
     if 'last_accepted' in meta:
@@ -227,25 +293,23 @@ def cycle(store, config, samples, errors, owner, meta, now, bridge_factory=monit
         history.append({'at': now, 'volumes': {k: {p: v[p] for p in ('available', 'identity')}
                                               for k, v in samples.items()}})
     meta.update(history=history, last_read_at=now)
+    unresolved = rearm_completed(store, config, samples, owner, now)
     pending = store.pending(samples)
-    covered = bool(pending and active(owner))
-    if covered:
-        store.cover_active_owner(pending)
-        pending = store.pending(samples)
     wake_samples = ntfy_wake_samples(store, config, samples, now, root_receipt_reader)
     ready_to_wake = store.pending(wake_samples)
     unsettled = store.db.execute("SELECT 1 FROM batches WHERE status IN ('dispatching','unknown','accepted')").fetchone()
-    status = ('suppressed_active_owner' if covered else
-              'observation_unknown' if errors else 'healthy_or_episode_already_reported')
+    status = ('observation_unknown' if errors else unresolved
+              or 'healthy_or_episode_already_reported')
     if pending or unsettled:
-        if now < meta.get('next_attempt', 0):
+        if busy(owner):
+            status = 'pending_owner_busy_or_inventory_unknown'
+        elif now < meta.get('next_attempt', 0):
             status = 'backoff'
         elif not ready_to_wake and not unsettled:
             status = 'pending_ntfy_receipt'
-        elif busy(owner):
-            status = 'pending_owner_busy_or_inventory_unknown'
-        elif config.get('native_transport', {}).get('enabled') is not True:
-            status = 'pending_native_release_and_binding'
+        elif not monitor.transport_enabled(config):
+            status = ('pending_connector_activation' if config.get('dispatch_transport') == 'connector-follow-up-v1'
+                      else 'pending_native_release_and_binding')
         elif not unsettled and now - meta.get('last_accepted', -COOLDOWN) < COOLDOWN:
             status = 'episode_cooldown'
         else:
@@ -254,13 +318,15 @@ def cycle(store, config, samples, errors, owner, meta, now, bridge_factory=monit
             status = store.dispatch(wake_samples, bridge, Path(config['state_file']))
         if status == 'accepted':
             meta.update(last_accepted=now, failures=0, next_attempt=now + COOLDOWN)
-        elif status != 'backoff':
+        elif status not in ('backoff', 'pending_owner_busy_or_inventory_unknown'):
             failures = min(meta.get('failures', 0) + 1, 7)
             meta.update(failures=failures, next_attempt=now + min(3600, 60 * 2 ** (failures - 1)))
     else:
         meta.update(failures=0, next_attempt=0)
-    return meta, {'at': now, 'status': status, 'pending_incidents': len(pending),
+    return meta, {'at': now, 'status': status, 'pending_incidents': len(store.pending(samples)),
                   'native_transport_enabled': config.get('native_transport', {}).get('enabled') is True,
+                  'dispatch_transport': config.get('dispatch_transport', 'storage-admission-v2'),
+                  'wake_dispatch_enabled': monitor.transport_enabled(config),
                   'owner': owner, 'errors': errors, 'ntfy': notifications, 'report': text}
 
 
@@ -296,6 +362,13 @@ def main():
             store.db.execute('CREATE TABLE IF NOT EXISTS runtime (id INTEGER PRIMARY KEY CHECK(id=1), body TEXT)')
             saved = store.db.execute('SELECT body FROM runtime WHERE id=1').fetchone()
             meta = json.loads(saved[0]) if saved else {}
+            if config.get('dispatch_transport') == 'connector-follow-up-v1':
+                try:
+                    import connector_adapter
+                    connector_adapter.process_probe(config)
+                except Exception:
+                    # A probe error never disables ordinary observation/alerts.
+                    pass
             samples, errors = {}, {}
             for key, volume in config['volumes'].items():
                 try:

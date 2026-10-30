@@ -351,9 +351,6 @@ def drain(store, registry, target_name, now, owner_reader=t26_watch.owner_status
         owner = owner_reader(target)
     except Exception:
         owner = {'inventory_unknown': True}
-    if rows and t26_watch.active(owner):
-        store.cover_active_owner(rows)
-        return 'covered_active_owner'
     next_attempt = min(store.meta('next_attempt', 0), now + 3600)
     # Recover cooldown from the durable receipt even if a process died after
     # admission and before writing scheduler metadata. Normalize clocks once.

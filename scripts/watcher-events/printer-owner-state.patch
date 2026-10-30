@@ -1,0 +1,27 @@
+--- a/tasks/prusa-calibration/printer-alert-watcher.py
++++ b/tasks/prusa-calibration/printer-alert-watcher.py
+@@ -140,12 +140,12 @@
+-    session = local_get('/api/sessions/' + SESSION)
+-    if session.get('workspace_id') != WORKSPACE or session.get('executor') != 'CODEX':
+-        raise ValueError('Session ownership mismatch')
+-    p = subprocess.run(['/home/mcp/.nvm/versions/node/v24.13.1/bin/node',
+-                        str(CONNECTOR / 'session-config.mjs'), SESSION],
+-                       capture_output=True, text=True, timeout=12)
+-    if p.returncode or len(p.stdout) > 2000000:
+-        raise ValueError('Session status unavailable')
+-    rows = json.loads(p.stdout)
+-    if any(row.get('session_id') != SESSION for row in rows):
+-        raise ValueError('Session snapshot mismatch')
+-    return any(row.get('status') == 'running' for row in rows)
++    # Fresh shared reader per decision: future policy fixes load without a
++    # Vibe or printer-observer restart. Only the assigned existing owner counts.
++    helper = Path('/home/mcp/.local/lib/storage-alert-response/owner_activity.py')
++    p = subprocess.run(['/usr/bin/python3', '-B', str(helper), '--config', str(ROOT / 'owner.json')],
++                       capture_output=True, text=True, timeout=30)
++    if p.returncode or len(p.stdout) > 65536:
++        raise ValueError('Assigned owner state unavailable')
++    owner = json.loads(p.stdout)
++    if (owner.get('protocol') != 'watcher-owner-state-v1'
++            or owner.get('workspace_id') != WORKSPACE or owner.get('session_id') != SESSION):
++        raise ValueError('Assigned owner binding mismatch')
++    return owner.get('state') != 'idle'

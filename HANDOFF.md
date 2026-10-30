@@ -1,3 +1,42 @@
+# Shared assigned-owner wake correction — October 30
+
+Read [OWNER_ACTIVITY](scripts/watcher-events/OWNER_ACTIVITY.md). Disk and the
+existing printer consumer now share exact target turn/job/queue/lifetime reads;
+protected unrelated Chrome churn stays diagnostic. Busy alerts remain pending,
+then admit once at idle. Local211 watcher and20 printer tests passed; live timer
+receipt/execution was independently verified. Vibe was not restarted. The printer
+observer alone reloaded its shared-helper caller; active print and uncertain
+historical events survived. Retain private preimages/current ledger and never
+replay accepted/unknown receipts. Native v2 remains separately disabled.
+
+# WakeWatch and TurnSteer pickup — 2026-10-30
+
+WakeWatch is active via the existing timer/connector, with no service restart.
+Read [the connector recipe](scripts/watcher-events/CONNECTOR_TRANSPORT.md) and
+[TurnSteer access](TURNSTEER_ACCESS.md). No further activation approval is needed.
+The single approved no-cleanup acknowledgement test completed at 12:00:07 UTC.
+Execution `02f6a6f4-46d5-4939-9fdb-b86107522752` returned exactly
+`WAKEWATCH_READY_4f2df84a`. Use `wakewatch status`; never submit a replacement.
+
+The operator's refresh succeeded: this client now exposes all 46 Vibe tools and
+a real steering-receipt lookup through the refreshed plugin succeeded. Use
+`steer_session_prompt` only for an explicit user correction to the exact running
+CODEX execution. The local CLI needs an authorized shell with loopback access;
+Dot's separate read-only/network-disabled host tool cannot make API calls.
+
+Evidence/rollback: `/mnt/vk-storage/wakewatch-connector-20261030` on mounted SSD.
+Installed private client variants are retained there; generic source/tests are in
+this branch. 185 watcher and 14 steering tests pass, with live readiness/receipt/
+target/health checks. No new model-level TurnSteer correction is claimed.
+The original backend, printer and connector PIDs/invocation IDs remain unchanged.
+Rollback archive is independently verified on Desktop
+`B:/vk-backups/wakewatch-connector-20261030/wakewatch-activation-rollback.zip`.
+Its hash and delivery/catalog evidence are recorded in the connector recipe and
+private safe receipts. Preserve current database/ledger; this archive contains no
+live database and does not authorize replay.
+
+Prior backend handoff, retained below, still applies to the unchanged deployment.
+
 # Backend owner pickup — 2026-10-30
 
 Start with [STATE](STATE.md), [live manifest](LIVE_DEPLOYMENT.json),

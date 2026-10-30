@@ -92,8 +92,10 @@ class Runner(unittest.TestCase):
                 self.store = monitor.Store(self.path)
                 owner = dict(self.owner, **{key: value})
                 _, out = self.tick(1000, owner=owner, config={'state_file':str(self.path), 'native_transport':{'enabled':True}})
-                expected = 'suppressed_active_owner' if key in ('coding_or_script_turns','independent_jobs','process_ids') else 'pending_owner_busy_or_inventory_unknown'
+                expected = 'pending_owner_busy_or_inventory_unknown'
                 self.assertEqual(out['status'], expected)
+                self.assertEqual(out['pending_incidents'], 1)
+                self.assertEqual(self.store.db.execute('SELECT delivery FROM incidents').fetchone()[0], 'pending')
 
     def test_report_exact_identities_growth_and_missing_baseline(self):
         first = sample('ssd', 7_000_000_000, 1000)
@@ -117,7 +119,7 @@ class Runner(unittest.TestCase):
         self.assertEqual(out['status'], 'episode_cooldown')
 
     def test_clock_regression_bounds_wait_without_redispatch(self):
-        meta, out = self.tick(1000, meta={'next_attempt':100000000, 'last_accepted':100000000})
+        meta, out = self.tick(1000, meta={'next_attempt':100000000, 'last_accepted':100000000, 'owner_wait_policy':1})
         self.assertLessEqual(meta['next_attempt'] - 1000, 3600)
         self.assertLessEqual(meta['last_accepted'], 1000)
         self.assertEqual(out['status'], 'backoff')

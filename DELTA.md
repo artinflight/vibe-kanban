@@ -2110,3 +2110,29 @@ and the strict empty-reader-WAL correction are documented. All eight hosted
 workflows passed at a421381321. PR #284 records requested rebase integration into
 staging; original build IDs/branch remain retained and main promotion is separate.
 See BACKEND_DEPLOYMENT_HANDOFF.md for exact runs, recovery mirrors and remaining limits.
+
+## 2026-10-30 — WakeWatch connector preparation
+
+Prepared an explicit disk transport using the proven printer connector, existing
+timer/ledger and durable no-resend reconciliation. Native startup setting remains
+absent. Automatic approval review blocked production installation/activation and
+one idle-only test pending explicit approval. Backend and printer remain unchanged.
+
+## 2026-10-30 — Approved restart-free activation and access
+
+Operator approval received; WakeWatch installed/enabled with exact infrastructure
+identity handling and original rollback bytes retained. One approved test queued
+for capacity; reply pending. TurnSteer server tools already live; operator refreshed
+client catalog and a same-connector shell entrypoint is installed. 185 watcher and
+14 steering tests pass. No service restarted; no uncertain request replayed.
+
+## 2026-10-30 — Live acknowledgement and refreshed tool closure
+
+The single WakeWatch test completed at 12:00:07 UTC and independently returned
+the exact expected assistant marker. No resend, capacity increase or restart.
+Operator refresh now exposes all 46 Vibe tools in this client, including steering,
+issue workflows and handoff; the actual steering receipt tool read succeeded.
+Corrected earlier CLI guidance: Dot's separate read-only/network-disabled host
+tool cannot make local API calls; use the now-exposed Vibe tools. Desktop B
+rollback archive is independently hash-verified. Native v2, unqualified automatic
+provider failover and recovery cleanup/PR-monitor holds remain explicitly separate.

@@ -110,6 +110,13 @@ class Store:
                 self.db.execute('ALTER TABLE batches ADD COLUMN ' + name + ' ' + typ)
         self.db.commit()
         self.db.row_factory = sqlite3.Row
+        with self.db:
+            rows = self.db.execute("SELECT id FROM incidents WHERE recovered IS NULL AND delivery='covered_active_owner' AND (batch IS NULL OR batch IN (SELECT id FROM batches WHERE status='deferred'))").fetchall()
+            for row in rows:
+                self.db.execute("UPDATE incidents SET delivery='pending' WHERE id=?", (row['id'],))
+                self.audit('restored_busy_pending', {'incident': row['id']})
+            self.db.execute('DELETE FROM audit WHERE id NOT IN (SELECT id FROM audit ORDER BY id DESC LIMIT 1000)')
+
 
     def audit(self, kind, detail):
         self.db.execute('INSERT INTO audit(at,kind,detail) VALUES (?,?,?)',
@@ -169,14 +176,6 @@ class Store:
                 result.append(dict(row))
         return result
 
-    def cover_active_owner(self, rows):
-        # Only unsubmitted or positively deferred incidents enter pending().
-        # Never cancel/rewrite an accepted or uncertain request.
-        with self.db:
-            for row in rows:
-                self.db.execute("UPDATE incidents SET delivery='covered_active_owner' WHERE id=?", (row['id'],))
-                self.audit('covered_active_owner', {'incident': row['id'], 'volume': row['volume']})
-
     def close(self):
         self.db.close()
 
@@ -216,13 +215,7 @@ class Store:
             self.db.execute('UPDATE batches SET status=?,execution=?,reason=?,receipt=?,updated=? WHERE id=?',
                             (result['kind'], result.get('execution_id'), result['reason'],
                              result.get('receipt_id'), time.time(), bid))
-            # A positive native busy receipt closes the preflight/admission
-            # race: the existing owner covers this episode. Never retry it when
-            # that owner later becomes idle. Unknown inventory/queues keep it pending.
-            delivery = ('covered_active_owner' if result['kind'] == 'deferred'
-                        and result['reason'] in ('owner_busy', 'owner_independent_jobs_active')
-                        else result['kind'])
-            self.db.execute('UPDATE incidents SET delivery=? WHERE batch=?', (delivery, bid))
+            self.db.execute('UPDATE incidents SET delivery=? WHERE batch=?', (result['kind'], bid))
             self.audit(result['kind'], {'batch': bid, 'reason': result['reason']})
 
     def retire_deferred(self, samples):
@@ -392,7 +385,7 @@ class Store:
         return result
 
 
-class Bridge(native.NativeAdapter):
+class NativeBridge(native.NativeAdapter):
     """Prepared fixed-gateway wiring, disabled until explicit configuration approval.
 
     The gateway uses existing host/process access, not direct-request authentication.
@@ -443,6 +436,23 @@ class Bridge(native.NativeAdapter):
         # An old configuration's accepted/uncertain receipt still needs GET
         # reconciliation after settings drift. Never POST that old intent.
         return super().lookup(batch_id, fingerprint, document)
+
+
+def transport_enabled(config):
+    selected = config.get('dispatch_transport', 'storage-admission-v2')
+    if selected == 'connector-follow-up-v1':
+        return config.get('activation_approved') is True and config.get('connector_transport', {}).get('enabled') is True
+    return selected == 'storage-admission-v2' and config.get('native_transport', {}).get('enabled') is True
+
+
+def Bridge(config):
+    selected = config.get('dispatch_transport', 'storage-admission-v2')
+    if selected == 'connector-follow-up-v1':
+        from connector_adapter import ConnectorBridge
+        return ConnectorBridge(config)
+    if selected != 'storage-admission-v2':
+        raise ValueError('unknown_dispatch_transport')
+    return NativeBridge(config)
 
 
 def publisher(config):

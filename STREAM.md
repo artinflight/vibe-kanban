@@ -1,46 +1,41 @@
-# Deployment reconciliation and Antigravity activation
+# Shared watcher owner state — October 30
 
-Branch `fix/deployment-reconciliation-20261030`, based on fork/staging
-`2bf2676d2d3841c252fa7f2a9b4e7993128bb093`.
-[PR #284](https://github.com/artinflight/vibe-kanban/pull/284) reconciles the actual
-October 29 recovery/409/history work and the October 30 Antigravity activation.
-The operator requested a rebase merge into staging; the PR merge event is the
-authoritative integration record. Main promotion is separate. Original deployed
-commit IDs and the dirty canonical checkout remain preserved.
+The current scoped correction reuses the existing WakeWatch/connector source and
+PR285. See [owner-state contract](scripts/watcher-events/OWNER_ACTIVITY.md).
+One shared reader drives disk, generic registry and printer decisions: preserve
+pending alerts while busy, inspect exact native turns/jobs/queues/custody, and
+scope uncertain process evidence to its owner. Client-only hot application and
+ordinary-timer delivery were verified without a Vibe restart. Existing receipt,
+job, printer and activation custody remains intact. No native API activation,
+backend deployment or additional watcher is included.
 
-The matched activation release is live: backend source `9a4179e8b`, binary
-`137d6cd7b647…`, accepted 03:18:14 UTC. Public/frontend and backend root use the
-new bundle; old/new hashed chunks remain reachable. Exact identity, backup,
-fallback and limitations are in [the manifest](LIVE_DEPLOYMENT.json).
+# WakeWatch activation and TurnSteer access without restarts
 
-Existing-account auth and actual native Vibe adapter acceptance passed: approved
-write, denied writes, exact-token native resume and pending-approval cancellation
-with process reaped in about 40 ms. Four model turns total; post-deployment checks
-used zero inference. Availability is installation-based and launch remains
-supervised. Service-scoped runtime/model defaults preserve saved profiles.
+Branch `fix/wakewatch-connector-20261030` starts from merged fork/staging
+`7b64a69bc34d418b31c1f902c7714122a20783a3`. PR #284 is already merged. The backend
+binary, database, service identity and original deployment receipts are unchanged.
 
-A real final-backup refusal exercised automatic recovery before any binary switch.
-SQLite read-only opening created an empty WAL; a detached repro and regression
-fix allow only that exact transition. Fresh data/ownership checks preceded the
-successful package. Current data, protected history, original reader/CU and all
-17 uncertain inputs were retained. No old snapshot was restored or input replayed.
+WakeWatch's explicit printer-connector transport is installed and enabled since
+11:38:59 UTC after operator approval. Existing timer, owner, incident ledger,
+notification policy and cleanup approvals remain. The process inventory now
+recognizes tightly scoped unrelated infrastructure without ignoring unknown work.
+The single approved acknowledgement test completed at 12:00:07 UTC after waiting
+for ordinary capacity. Its exact assistant reply matched; no resend, extra turn or
+forced capacity increase occurred.
 
-Repository custody includes 134 deployed source records, 27 inert incident
-sources, 50 paired connector files, bounded ACP diagnostics/native runner,
-current-data rehearsal, owned activation/recovery, RAM SQLite backup, B proof
-reuse, frontend asset retention, release mirroring and operational documentation.
-Private history/account material stays outside Git. Old source catalogs remain
-historical; the new release provenance is recorded separately.
+TurnSteer already exists in the live backend and connector. After the operator's
+refresh, this client's discovery now exposes all 46 tools, including both steering
+tools, six issue-workflow tools and two handoff tools. A receipt lookup through
+the refreshed plugin succeeded. The installed local CLI is an alternative for
+authorized shells with loopback access; Dot's read-only, network-disabled host
+tool cannot make its API calls.
 
-Validation: 13 offline Antigravity regressions; native provider acceptance above;
-130 recovery/custody checks pass with 22 private/optional skips; 13 auth/privacy
-checks; 24 steering/stop and 30 connector contracts. Hosted Test plus seven other
-workflows passed on `a4213813210ea15affb1d91a306883cb27f452e3`, including the final
-recovery and mirror tooling. Exact run links and skipped/private coverage are in
-[the backend handoff](BACKEND_DEPLOYMENT_HANDOFF.md#hosted-validation-and-source-integration).
-Read-only live verification passed again at 09:20:33 UTC. Documentation successors
-must pass their own PR checks before merge. These checks do not claim every feature
-had paid-provider QA.
+185 watcher tests and 14 steering tests pass. Live steering target/receipt reads
+and connector health pass; no new unrelated-agent correction was sent. Scheduled
+first-run, targeted stop, automatic Git sync and issue workflows are already enabled.
+Native watcher v2 remains separate; unqualified provider failover and recovery
+cleanup/PR-monitor protections remain explicit limitations.
 
-Prior stream: [previous record](deployment-history/20261030-before-reconciliation/STREAM.md)
-and [STREAM history](STREAM_HISTORY_20261017.md).
+Read [WakeWatch recipe](scripts/watcher-events/CONNECTOR_TRANSPORT.md),
+[TurnSteer access](TURNSTEER_ACCESS.md) and the deployment checklist.
+Prior stream: [full historical archive](STREAM_HISTORY_20261017.md).

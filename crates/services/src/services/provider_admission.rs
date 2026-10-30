@@ -515,10 +515,10 @@ pub async fn before_start<C: ContainerService + ?Sized>(
     workspace: Uuid,
     session: Uuid,
 ) -> Result<(), ContainerError> {
-    if let Some(r) = store::owner(&c.db().pool, workspace).await? {
-        if execution_id(workspace, session)? != Some(r.execution_id) {
-            return Err(error("provider_continuation_owner_conflict"));
-        }
+    if let Some(r) = store::owner(&c.db().pool, workspace).await?
+        && execution_id(workspace, session)? != Some(r.execution_id)
+    {
+        return Err(error("provider_continuation_owner_conflict"));
     }
     Ok(())
 }

@@ -271,7 +271,7 @@ pub async fn activate<C: ContainerService>(
         }
         let ctx = ExecutionProcess::load_context(&container.db().pool, execution).await?;
         let selected = ctx.execution_process.executor_action()?;
-        let config = executors::routing::config(&selected)
+        let config = executors::routing::config(selected)
             .ok_or_else(|| held("Selected execution config absent"))?;
         if a.work.execution_id != execution.to_string()
             || a.work.workspace_id != ctx.workspace.id.to_string()
@@ -441,13 +441,11 @@ pub async fn release<C: ContainerService>(
         container.verify_provider_checkpoint(cp).await?;
         let c = controller(PathBuf::from(&a.journal_root), false)?;
         if let Some(owner) = provider_handoff::owner(&container.db().pool, ctx.workspace.id).await?
-        {
-            if owner.next_execution_id != execution
+            && (owner.next_execution_id != execution
                 || provider_handoff::reconcile(&container.db().pool, &owner, true).await?
-                    != "terminal_checkpoint_verified"
-            {
-                return Ok(stopped(hold("completion_owner_not_terminal")));
-            }
+                    != "terminal_checkpoint_verified")
+        {
+            return Ok(stopped(hold("completion_owner_not_terminal")));
         }
         c.lock().map_err(|_| held("Controller poisoned"))?.finish(
             &a.work_id,

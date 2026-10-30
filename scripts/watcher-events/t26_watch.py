@@ -94,7 +94,8 @@ def protected_ssh_broker(proc):
 
 
 def reviewed_infrastructure(proc, config):
-    # Exact reviewed infrastructure identities only. Never blanket-ignore an
+    # Legacy compatibility helper; the shared owner reader does not use these
+    # PID exceptions. Exact reviewed infrastructure identities only, never an
     # unreadable process, a name, or a service cgroup. PID reuse/restart invalidates
     # the exception; any new unreadable process still holds delivery.
     if protected_ssh_broker(proc):
@@ -112,70 +113,17 @@ def reviewed_infrastructure(proc, config):
 
 
 def owner_status(config):
-    """Read coding/script turns, independent Codex jobs, queues and OS processes.
-
-    Never turn an unreadable inventory into idle. Only IDs/counts cross into state.
-    Native admission adds atomic watcher checks; the explicit connector transport
-    uses ordinary follow-up admission after this advisory preflight.
-    """
-    result = {'coding_or_script_turns': [], 'independent_jobs': [], 'queued': [],
-              'process_ids': [], 'inventory_unknown': False}
-    workspace, session = configured_owner(config)
-    path = Path(config['vibe_db']).resolve(strict=True)
-    with sqlite3.connect(path.as_uri() + '?mode=ro', uri=True, timeout=0.2) as db:
-        db.execute('PRAGMA query_only=ON')
-        deadline = time.monotonic() + 2
-        db.set_progress_handler(lambda: int(time.monotonic() > deadline), 10000)
-        rows = db.execute('SELECT id FROM sessions WHERE workspace_id=? LIMIT 17',
-                          (uuid.UUID(workspace).bytes,)).fetchall()
-        if not rows or len(rows) > 16 or uuid.UUID(session).bytes not in [r[0] for r in rows]:
-            raise ValueError('owner_binding_unavailable')
-        result['coding_or_script_turns'] = [str(uuid.UUID(bytes=r[0])) for r in db.execute(
-            "SELECT e.id FROM execution_processes e JOIN sessions s ON s.id=e.session_id "
-            "WHERE s.workspace_id=? AND e.status='running' AND e.run_reason != 'devserver' LIMIT 128", (uuid.UUID(workspace).bytes,))]
-    for row in rows:
-        sid = str(uuid.UUID(bytes=row[0]))
-        jobs = local_get('/api/execution-processes/subagents/session?session_id=' + sid)
-        if not isinstance(jobs, list) or len(jobs) > 128:
-            raise ValueError('job_inventory_unavailable')
-        for job in jobs:
-            if job.get('status') == 'running':
-                result['independent_jobs'].append(str(job['id']))
-            elif job.get('status') not in ('completed', 'failed'):
-                result['inventory_unknown'] = True
-        queue = local_get('/api/sessions/' + sid + '/queue')
-        if not isinstance(queue, dict) or queue.get('status') not in ('empty', 'queued'):
-            raise ValueError('queue_inventory_unavailable')
-        if queue['status'] != 'empty':
-            result['queued'].append(sid)
-    roots = [str(Path(p).resolve(strict=True)) for p in config['owner_roots']]
-    for proc in Path('/proc').iterdir():
-        if not proc.name.isdecimal() or int(proc.name) == os.getpid():
-            continue
-        try:
-            if proc.stat().st_uid != os.getuid():
-                continue
-            cwd = os.readlink(proc / 'cwd')
-            # Inspect only for exact owned path references; never retain arguments.
-            with (proc / 'cmdline').open('rb') as stream:
-                args = stream.read(65536)
-            if any(cwd == r or cwd.startswith(r + '/') or r.encode() in args for r in roots):
-                result['process_ids'].append(int(proc.name))
-        except (FileNotFoundError, ProcessLookupError):
-            pass
-        except PermissionError:
-            if not reviewed_infrastructure(proc, config):
-                result['inventory_unknown'] = True
-    return result
+    import owner_activity
+    return owner_activity.inspect(config, api_get=local_get)
 
 
 def busy(owner):
-    return owner.get('inventory_unknown', True) or any(owner.get(k) for k in
-        ('coding_or_script_turns', 'independent_jobs', 'queued', 'process_ids'))
+    import owner_activity
+    return owner_activity.busy(owner)
 
 
 def active(owner):
-    # Positive activity suppresses this episode; unknown alone never proves active.
+    # Activity is informative; callers retain pending delivery while busy.
     return any(owner.get(k) for k in ('coding_or_script_turns', 'independent_jobs', 'process_ids'))
 
 
@@ -278,6 +226,12 @@ def cycle(store, config, samples, errors, owner, meta, now, bridge_factory=monit
             notifications[key] = 'configuration_unavailable'
             with store.db:
                 store.audit('phone_config_unavailable', {'volume': key})
+    # Upgrade old host-inventory-only waits once, only when no delivery was ever
+    # attempted. Never shorten a real receipt/attempt's durable retry delay.
+    if meta.get('owner_wait_policy') != 1:
+        if not store.db.execute('SELECT 1 FROM attempts LIMIT 1').fetchone() and not store.db.execute('SELECT 1 FROM batches LIMIT 1').fetchone():
+            meta.update(next_attempt=0, failures=0)
+        meta['owner_wait_policy'] = 1
     # Bound waits across wall-clock regressions; never create a new incident to retry.
     meta['next_attempt'] = min(meta.get('next_attempt', 0), now + 3600)
     if 'last_accepted' in meta:
@@ -289,22 +243,17 @@ def cycle(store, config, samples, errors, owner, meta, now, bridge_factory=monit
                                               for k, v in samples.items()}})
     meta.update(history=history, last_read_at=now)
     pending = store.pending(samples)
-    covered = bool(pending and active(owner))
-    if covered:
-        store.cover_active_owner(pending)
-        pending = store.pending(samples)
     wake_samples = ntfy_wake_samples(store, config, samples, now, root_receipt_reader)
     ready_to_wake = store.pending(wake_samples)
     unsettled = store.db.execute("SELECT 1 FROM batches WHERE status IN ('dispatching','unknown','accepted')").fetchone()
-    status = ('suppressed_active_owner' if covered else
-              'observation_unknown' if errors else 'healthy_or_episode_already_reported')
+    status = 'observation_unknown' if errors else 'healthy_or_episode_already_reported'
     if pending or unsettled:
-        if now < meta.get('next_attempt', 0):
+        if busy(owner):
+            status = 'pending_owner_busy_or_inventory_unknown'
+        elif now < meta.get('next_attempt', 0):
             status = 'backoff'
         elif not ready_to_wake and not unsettled:
             status = 'pending_ntfy_receipt'
-        elif busy(owner):
-            status = 'pending_owner_busy_or_inventory_unknown'
         elif not monitor.transport_enabled(config):
             status = ('pending_connector_activation' if config.get('dispatch_transport') == 'connector-follow-up-v1'
                       else 'pending_native_release_and_binding')
@@ -316,12 +265,12 @@ def cycle(store, config, samples, errors, owner, meta, now, bridge_factory=monit
             status = store.dispatch(wake_samples, bridge, Path(config['state_file']))
         if status == 'accepted':
             meta.update(last_accepted=now, failures=0, next_attempt=now + COOLDOWN)
-        elif status != 'backoff':
+        elif status not in ('backoff', 'pending_owner_busy_or_inventory_unknown'):
             failures = min(meta.get('failures', 0) + 1, 7)
             meta.update(failures=failures, next_attempt=now + min(3600, 60 * 2 ** (failures - 1)))
     else:
         meta.update(failures=0, next_attempt=0)
-    return meta, {'at': now, 'status': status, 'pending_incidents': len(pending),
+    return meta, {'at': now, 'status': status, 'pending_incidents': len(store.pending(samples)),
                   'native_transport_enabled': config.get('native_transport', {}).get('enabled') is True,
                   'dispatch_transport': config.get('dispatch_transport', 'storage-admission-v2'),
                   'wake_dispatch_enabled': monitor.transport_enabled(config),

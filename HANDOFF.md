@@ -1,3 +1,14 @@
+# Shared assigned-owner wake correction — October 30
+
+Read [OWNER_ACTIVITY](scripts/watcher-events/OWNER_ACTIVITY.md). Disk and the
+existing printer consumer now share exact target turn/job/queue/lifetime reads;
+protected unrelated Chrome churn stays diagnostic. Busy alerts remain pending,
+then admit once at idle. Local211 watcher and20 printer tests passed; live timer
+receipt/execution was independently verified. Vibe was not restarted. The printer
+observer alone reloaded its shared-helper caller; active print and uncertain
+historical events survived. Retain private preimages/current ledger and never
+replay accepted/unknown receipts. Native v2 remains separately disabled.
+
 # WakeWatch and TurnSteer pickup — 2026-10-30
 
 WakeWatch is active via the existing timer/connector, with no service restart.

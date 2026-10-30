@@ -1,3 +1,14 @@
+# Shared watcher owner state — October 30
+
+The current scoped correction reuses the existing WakeWatch/connector source and
+PR285. See [owner-state contract](scripts/watcher-events/OWNER_ACTIVITY.md).
+One shared reader drives disk, generic registry and printer decisions: preserve
+pending alerts while busy, inspect exact native turns/jobs/queues/custody, and
+scope uncertain process evidence to its owner. Client-only hot application and
+ordinary-timer delivery were verified without a Vibe restart. Existing receipt,
+job, printer and activation custody remains intact. No native API activation,
+backend deployment or additional watcher is included.
+
 # WakeWatch activation and TurnSteer access without restarts
 
 Branch `fix/wakewatch-connector-20261030` starts from merged fork/staging

@@ -44,41 +44,9 @@ def database(config):
 
 def owner_idle(config):
     import t26_watch
-    if t26_watch.busy(t26_watch.owner_status(config)):
-        return False
-    wid = uuid.UUID(config['workspace_id']).bytes
-    with database(config) as db:
-        if db.execute('SELECT 1 FROM watcher_job_leases WHERE workspace_id=? AND closed_at IS NULL LIMIT 1', (wid,)).fetchone():
-            return False
-        threads = db.execute('SELECT DISTINCT cat.agent_session_id FROM coding_agent_turns cat JOIN execution_processes e ON e.id=cat.execution_process_id JOIN sessions s ON s.id=e.session_id WHERE s.workspace_id=? AND cat.agent_session_id IS NOT NULL LIMIT 4097', (wid,)).fetchall()
-    if len(threads) > 4096:
-        return False
-    directory = Path(config['connector_transport']['delegation_journal_dir']).resolve(strict=True)
-    if not directory.is_dir():
-        return False
-    budget = 16 * 1024 * 1024
-    for (thread,) in threads:
-        if not isinstance(thread, str) or not re.fullmatch('[A-Za-z0-9_-]{1,128}', thread):
-            return False
-        path = directory / (thread + '.json')
-        try:
-            metadata = path.lstat()
-            size = metadata.st_size
-        except FileNotFoundError:
-            continue
-        if not stat.S_ISREG(metadata.st_mode) or size > 2 * 1024 * 1024 or size > budget:
-            return False
-        budget -= size
-        with path.open("rb") as stream:
-            raw = stream.read(2 * 1024 * 1024 + 1)
-        if len(raw) > 2 * 1024 * 1024 or len(raw) > budget + size:
-            return False
-        records = json.loads(raw)
-        if not isinstance(records, dict) or len(records) > 4096:
-            return False
-        if any(not isinstance(r, dict) or r.get('status') not in {'completed', 'failed', 'interrupted', 'blocked', 'cancelled'} for r in records.values()):
-            return False
-    return True
+    import owner_activity
+    return (not t26_watch.busy(t26_watch.owner_status(config))
+            and not owner_activity.custody_issues(config))
 
 
 class ConnectorBridge:

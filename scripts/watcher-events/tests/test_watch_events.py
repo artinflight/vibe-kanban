@@ -122,25 +122,31 @@ class WatchEventsTests(unittest.TestCase):
         self.ingest(event(6, 1, start+240))
         self.assertEqual(self.store.db.execute('SELECT count(*) FROM incidents').fetchone()[0], 2)
 
-    def test_active_coding_and_independent_jobs_cover_episode_after_idle(self):
+    def test_active_coding_and_independent_jobs_stay_pending_then_wake_once(self):
         for activity in ('coding_or_script_turns', 'independent_jobs', 'process_ids'):
             with self.subTest(activity=activity):
-                sample = event(resource=activity.replace('_', '-')); self.ingest(sample)
+                self.store.close()
+                self.store = events.EventStore(Path(self.tmp.name)/(activity+'.sqlite'))
+                self.ingest(event(resource=activity.replace('_', '-')))
                 status = idle(None); status[activity] = ['fixture-active']
-                self.assertEqual(self.run_drain(owner=lambda _: status), 'covered_active_owner')
-                self.run_drain(now=time.time()+61)
-        self.assertEqual(self.fixture.posts, [])
+                count = len(self.fixture.posts)
+                self.assertEqual(self.run_drain(owner=lambda _: status), 'held_owner_or_backoff')
+                self.assertEqual(len(self.fixture.posts), count)
+                self.assertEqual(self.run_drain(), 'accepted')
+                self.run_drain()
+                self.assertEqual(len(self.fixture.posts), count+1)
 
-    def test_active_owner_covers_all_episodes_beyond_one_batch(self):
+    def test_busy_owner_preserves_all_episodes_beyond_one_batch(self):
         for i in range(10):
             self.ingest(event(resource='resource-'+str(i)))
         status = {**idle(None), 'independent_jobs': ['fixture-active']}
-        self.assertEqual(self.run_drain(owner=lambda _: status), 'covered_active_owner')
-        self.assertEqual(self.store.db.execute("SELECT count(*) FROM incidents WHERE delivery='covered_active_owner'").fetchone()[0], 10)
-        self.run_drain(now=time.time()+61)
+        self.assertEqual(self.run_drain(owner=lambda _: status), 'held_owner_or_backoff')
+        self.assertEqual(self.store.db.execute("SELECT count(*) FROM incidents WHERE delivery='pending'").fetchone()[0], 10)
         self.assertEqual(self.fixture.posts, [])
+        self.assertEqual(self.run_drain(now=time.time()+61), 'accepted')
+        self.assertEqual(len(self.fixture.posts), 1)
 
-    def test_native_busy_race_covers_episode_after_owner_finishes(self):
+    def test_native_busy_race_stays_pending_and_retries_same_batch_after_idle(self):
         self.ingest(event())
         self.fixture.result = 'deferred'
         def busy_native(method, path, body):
@@ -148,11 +154,17 @@ class WatchEventsTests(unittest.TestCase):
             reply['reason'] = reply['receipt']['reason'] = 'owner_busy'
             return reply
         self.assertEqual(events.drain(self.store, self.registry, 'disk-space', time.time(), idle, busy_native), 'deferred')
-        self.assertEqual(self.store.db.execute('SELECT delivery FROM incidents').fetchone()[0], 'covered_active_owner')
+        self.assertEqual(self.store.db.execute('SELECT delivery FROM incidents').fetchone()[0], 'deferred')
+        original = self.fixture.posts[0]
         self.fixture.result = 'accepted'
         self.ingest(event(2))
-        events.drain(self.store, self.registry, 'disk-space', time.time()+61, idle, self.fixture)
-        self.assertEqual(len(self.fixture.posts), 1)
+        self.assertEqual(events.drain(self.store, self.registry, 'disk-space', time.time()+61, idle, self.fixture), 'accepted')
+        self.assertEqual(len(self.fixture.posts), 2)
+        self.assertEqual(self.fixture.posts[1]['batch_id'], original['batch_id'])
+        self.assertEqual(self.fixture.posts[1]['intent_sha256'], original['intent_sha256'])
+        self.assertNotEqual(self.fixture.posts[1]['attempt_id'], original['attempt_id'])
+        self.run_drain(now=time.time()+1900)
+        self.assertEqual(len(self.fixture.posts), 2)
 
     def test_queue_and_unknown_do_not_claim_activity_or_drop_delivery(self):
         self.ingest(event())

@@ -142,14 +142,17 @@ class NtfyWake(unittest.TestCase):
         self.assertEqual(bridge.posts,[])
         self.assertEqual(self.store.db.execute('SELECT COUNT(*) FROM incidents').fetchone()[0],1)
 
-    def test_active_owner_covers_episode_so_it_does_not_wake_after_turn_ends(self):
+    def test_busy_owner_preserves_pending_then_wakes_once_when_idle(self):
         values={'ssd':sample('ssd',1)}
         result,bridge=self.run_cycle(1000,values,owner=dict(self.owner,coding_or_script_turns=['active']))
-        self.assertEqual(result['status'],'suppressed_active_owner')
+        self.assertEqual(result['status'],'pending_owner_busy_or_inventory_unknown')
         self.assertEqual(bridge.posts,[])
-        self.assertEqual(self.store.db.execute('SELECT delivery FROM incidents').fetchone()[0],'covered_active_owner')
-        self.run_cycle(1060,{'ssd':sample('ssd',1,1060)},bridge=bridge)
-        self.assertEqual(bridge.posts,[])
+        self.assertEqual(self.store.db.execute('SELECT delivery FROM incidents').fetchone()[0],'pending')
+        bridge.samples={'ssd':sample('ssd',1,1060)}
+        result,_=self.run_cycle(1060,bridge.samples,bridge=bridge)
+        self.assertEqual(result['status'],'accepted')
+        self.run_cycle(1120,{'ssd':sample('ssd',1,1120)},bridge=bridge)
+        self.assertEqual(len(bridge.posts),1)
         self.assertEqual(len(self.notifications),1)
 
     def test_recovery_reaches_ntfy_but_never_new_wake(self):

@@ -217,9 +217,10 @@ and SSD available<25,000,000,000B, recovery>=12,000,000,000B/27,000,000,000B for
 valid samples60..150s apart, and1800s cooldown. These warning/cleanup-dispatch
 thresholds do not change build or safety admission. It retains exact bytes,
 decimal GB, mount/device/UUID/maj:min and measured growth. Only confirmed low ntfy
-receipts can wake; recovery cannot. Coding turns, independent jobs or owned
-processes cover the current incident without a later wake after they finish;
-queues and unknown inventories retain pending delivery. Cleanup stays with
+receipts can wake; recovery cannot. Coding turns, independent jobs, queues or positively owned processes keep the
+current incident pending until the assigned owner is idle. Unrelated unreadable
+processes do not make all owners unknown; target-related uncertainty remains a
+component-specific hold. See OWNER_ACTIVITY.md. Cleanup stays with
 workspace `PRIVATE_CONFIGURED_ID` / session
 `PRIVATE_CONFIGURED_ID` and its existing per-action rules.
 
@@ -230,8 +231,9 @@ known attempt list, strict native receipt decoder and lookup reconciliation.
 Accepted work never resubmits; uncertain/lost/HTML/error/not-found responses hold
 and GET only. A positive native capacity/queue no-admission deferral can retry the same batch
 with a new attempt only after strictly newer, still eligible observations.
-A confirmed native `owner_busy` or active independent-job receipt covers that
-incident episode; it does not wake again when the owner later becomes idle.
+A confirmed native `owner_busy` or active independent-job no-admission receipt
+keeps the same incident and immutable batch pending. Fresh eligible evidence and
+the existing bounded backoff permit admission after the owner becomes idle.
 Unknown/unsettled lifetime evidence keeps delivery pending.
 A durable in-flight reservation without execution binding is
 `owner_admission_unsettled`, not proof of activity. Controlled child activity is
@@ -285,7 +287,7 @@ quota. A planned retention/migration needs explicit receipt-preservation review.
    client reopen and native reopen give at most one execution per incident.
    Assert native receipt/hash/known attempt/owner/execution identities, not just
    a fixture's outcome string. Unknown/not-found may not authorize resend.
-5. **Jobs and queues:** coding turn active covers the episode; a real independent
+5. **Jobs and queues:** coding turn active retains the pending episode; a real independent
    same-owner job active after its parent turn ends also excludes launch. Inject
    job arrival between preflight and native reservation in **both race orders**;
    authoritative ownership must persist through job lifetime, error/restart and

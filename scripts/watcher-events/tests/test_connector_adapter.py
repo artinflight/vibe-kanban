@@ -174,7 +174,7 @@ class OwnerInventoryTests(unittest.TestCase):
         self.journal.symlink_to(target)
         self.assertFalse(c.owner_idle(self.config))
         self.config['connector_transport']['delegation_journal_dir'] = str(self.root/'absent')
-        with self.assertRaises(FileNotFoundError): c.owner_idle(self.config)
+        self.assertFalse(c.owner_idle(self.config))
     def test_busy_inventory_cannot_reach_database(self):
         with patch('t26_watch.owner_status', return_value={'inventory_unknown': True}), patch.object(c, 'database') as db:
             self.assertFalse(c.owner_idle(self.config)); db.assert_not_called()

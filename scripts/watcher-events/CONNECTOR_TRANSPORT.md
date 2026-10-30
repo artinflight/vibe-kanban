@@ -123,24 +123,23 @@ exact expected assistant reply. Exact session/prompt/config execution reconcilia
 passed before that independent reply check. This proves the installed timer-to-agent
 delivery path; no artificial disk-pressure incident or cleanup test was performed.
 
-## Live inventory correction and custody
+## Assigned-owner correction and custody
 
-The former process inventory marked every unreadable same-UID process unknown,
-including unrelated protected browsers, SSH and user-system services. That made
-idle detection permanently false on this host. The correction keeps unknown
-processes as holds and uses two narrow forms of positive infrastructure identity:
+The October30 owner correction is documented in [OWNER_ACTIVITY.md](OWNER_ACTIVITY.md).
+Disk, connector, generic registry and the existing printer consumer share the
+same target-specific reader. Native current turns, jobs, queues and lifetime
+custody decide readiness. Unrelated protected Chrome PID churn and unfamiliar
+unattributed processes remain bounded diagnostics rather than a host-wide unknown
+hold. No process name/PID allowlist or security change is required. Busy alerts
+remain pending until idle; no-admission busy receipts retain their immutable batch.
+Existing accepted/queued/unknown receipts still cannot authorize a resend.
 
-- Fourteen reviewed unrelated running browser/system/Tailscale processes are bound
-  privately by boot ID, PID, start ticks, name and full cgroup. Any restart, PID
-  reuse or changed identity invalidates the exception; no broad name/cgroup skip.
-- SSH transport brokers and their direct SFTP subsystem are recognized only through
-  root-owned sshd ancestry and the expected user-session cgroup. Their shells,
-  scripts, agents and other descendants are still scanned normally. No new sudo
-  permission, privilege, proc visibility change or service was introduced.
-
-Future new unreadable processes still hold delivery until classified; this is an
-explicit operational limitation, not an idle claim. There is no generic fallback
-that ignores unknown process inventory.
+The earlier fourteen infrastructure identities and SSH broker exception are
+retained historical custody, not the current reader's admission policy. Private
+host evidence records successful ordinary-timer delivery after this correction,
+with the exact existing-owner execution independently read back. Vibe was not
+restarted. The printer observer alone reloaded to adopt the common helper CLI;
+ongoing printing and uncertain historical receipts were preserved.
 
 Live installation uses narrow patches against the pre-existing private disk client;
 public source retains its generic configured-owner and event-registry integration.

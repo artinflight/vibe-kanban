@@ -2,8 +2,7 @@
 
 For WakeWatch on the current MCP host, see [the explicit printer-connector
 transport](CONNECTOR_TRANSPORT.md). It permits disk wake delivery without a backend
-restart; implementation is prepared, with production activation and live acceptance
-still pending. The native implementation described below remains distinct.
+restart; the connector is installed and active. Native v2 selection remains separate. The native implementation described below remains distinct.
 
 The Vibe module connects existing watchers to existing agent sessions through the
 native admission path. Disk Space is its first consumer. Adding a source,
@@ -25,9 +24,12 @@ private bindings, pending delivery and the acceptance checklist.
 - Root warns/dispatches strictly below **10,000,000,000 available bytes**; work SSD
   below **25,000,000,000 bytes**. Reports include decimal GB, exact bytes, actual
   mount/device/UUID and measured growth. These do not change build/safety floors.
-- Known active coding or independent work covers that incident episode. Queues,
-  unknown inventory, unbound reservations and unsettled job lifetimes retain
-  pending delivery. Recovery does not wake an agent.
+- Busy coding turns, independent jobs and queued work retain the alert pending.
+  The assigned owner wakes once when idle and the condition is still eligible.
+  `owner_activity.py` supplies one fresh target-specific turn/job/queue/lifetime
+  decision for disk, connector, generic registry and printer consumers. Unfamiliar
+  unattributed processes are bounded diagnostics; target-related uncertainty holds
+  only that owner. Recovery does not wake an agent.
 - Intent and attempt commit before POST. Accepted/uncertain deliveries reconcile
   by exact receipt GET. Duplicate events cannot create duplicate executions;
   positive capacity/queue deferral requires strictly newer fresh evidence.
@@ -95,3 +97,10 @@ not a seal of subsequently edited files. [Retained migration/validation history]
 preserves the prior notes. The implementation belongs in VK Dev and
 `artinflight/vibe-kanban`, targeting its existing `staging` branch. Original
 Operations/workspace/session history and PR277's source branch are preserved.
+
+
+## Assigned-owner state without a backend restart
+
+Read [OWNER_ACTIVITY.md](OWNER_ACTIVITY.md) for the common status contract,
+Chrome regression, installation/custody and busy-to-idle validation. Existing
+incident IDs and accepted/unknown receipts survive this policy correction.

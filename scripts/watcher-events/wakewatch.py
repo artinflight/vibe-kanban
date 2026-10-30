@@ -8,6 +8,7 @@ from pathlib import Path
 import time
 import uuid
 import monitor
+import owner_activity
 import connector_adapter as adapter
 
 CONFIG=Path('/mnt/vk-storage/t26-disk-space-watcher/config.json')
@@ -20,10 +21,12 @@ def main():
     state=Path(config['state_file']);probe_path=state.parent/'connector-probe.json'
     if args.action=='status':
         latest=json.loads((state.parent/'latest.json').read_text())
+        owner=owner_activity.inspect(config)
         result={'transport':config.get('dispatch_transport','storage-admission-v2'),
                 'enabled':monitor.transport_enabled(config),'native_route_enabled':config.get('native_transport',{}).get('enabled') is True,
                 'last_observation':{k:latest.get(k) for k in ('at','status','pending_incidents','dispatch_transport','wake_dispatch_enabled')},
-                'runbook':'/home/mcp/code/Operations/docs/wakewatch-access.md'}
+                'runbook':'/home/mcp/code/Operations/docs/wakewatch-access.md',
+                'assigned_owner':{k:owner.get(k) for k in ('observed_at','state','turn_state','current_turn','owner_uncertainties','unattributed_process_count')}}
         if probe_path.exists():
             probe=json.loads(probe_path.read_text());result['delivery_test']={k:probe.get(k) for k in ('state','expected_reply','expires_at')}
             result['delivery_test']['execution_id']=probe.get('outcome',{}).get('execution_id')
@@ -33,7 +36,9 @@ def main():
         print(json.dumps(result,indent=2));return
     bridge=adapter.ConnectorBridge(config)
     if args.action=='check':
-        print(json.dumps({'ready_now':bridge.ready(),'transport':adapter.TRANSPORT,'mutated':False}));return
+        owner=owner_activity.inspect(config)
+        print(json.dumps({'ready_now':not owner_activity.busy(owner) and bridge.ready(),
+                          'transport':adapter.TRANSPORT,'mutated':False,'assigned_owner':owner}));return
     # Explicit user invocation queues exactly one bounded probe. It does not
     # start a second agent, interrupt current work, or submit a prompt now.
     with state.with_suffix('.lock').open('a') as lock:

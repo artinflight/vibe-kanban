@@ -1,5 +1,10 @@
 # Current production and protections — 2026-10-30
 
+WakeWatch now uses [shared assigned-owner activity](scripts/watcher-events/OWNER_ACTIVITY.md):
+busy alerts remain pending until idle, unrelated protected Chrome/process churn
+does not poison native turn status, and the real timer delivery was independently
+verified. This client correction did not restart Vibe or enable native v2.
+
 WakeWatch automatic disk waking is now enabled through the existing printer-style
 connector without a restart. Its single approved verification turn completed at
 12:00:07 UTC with the exact expected acknowledgement. The refreshed client now

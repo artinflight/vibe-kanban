@@ -171,8 +171,8 @@
       "path": "crates/executors/src/executors/antigravity.rs",
       "deployed_sha256": "6d8c46c890af4e4b61a1055fbc53ffdc65c906fb957acb2b7636a4e1f0e833d2",
       "private_input": false,
-      "public_sha256": "b280bdd1769698b35735b00b246a4c95f6feaa5ce26180f27416ab13e52f9bb7",
-      "reconciliation_difference": "Repository activation candidate after real native acceptance; not deployed by source commit."
+      "public_sha256": "770083d807c35a3126ff61ba8d3182d7831492bcb864ed2bdf522db13b8c69d8",
+      "reconciliation_difference": "Qualified supervised activation candidate and generated schema; production remains on its recorded source until cutover."
     },
     {
       "path": "crates/executors/src/executors/claude.rs",
@@ -823,7 +823,8 @@
       "path": "shared/schemas/antigravity.json",
       "deployed_sha256": "60dbea6541ed0a5a62e4c33e3aa88002f2a6f6ed1f4fd25a27fcf01bc5965909",
       "private_input": false,
-      "public_sha256": "60dbea6541ed0a5a62e4c33e3aa88002f2a6f6ed1f4fd25a27fcf01bc5965909"
+      "public_sha256": "d47e1e736e0e92a57f00e0de661f3599870d4b78beb7371cd4d6dc5302ec1944",
+      "reconciliation_difference": "Qualified supervised activation candidate and generated schema; production remains on its recorded source until cutover."
     },
     {
       "path": "shared/types.ts",

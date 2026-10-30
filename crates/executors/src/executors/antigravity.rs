@@ -55,7 +55,13 @@ pub struct Antigravity {
 
 impl Antigravity {
     fn command(&self) -> Result<CommandParts, ExecutorError> {
-        let path = self.executable.as_deref().unwrap_or("");
+        // A service-scoped default avoids rewriting saved profiles at deployment.
+        // Explicit user profile values always win; an invalid value never falls back.
+        let configured = self
+            .executable
+            .clone()
+            .or_else(|| std::env::var("VK_ANTIGRAVITY_ACP_EXECUTABLE").ok());
+        let path = configured.as_deref().unwrap_or("");
         if !Path::new(path).is_absolute() || !Path::new(path).is_file() {
             return Err(ExecutorError::ExecutableNotFound {
                 program: path.into(),
@@ -68,6 +74,12 @@ impl Antigravity {
             vec![]
         };
         Ok(CommandParts::new(path.into(), args))
+    }
+
+    fn selected_model(&self) -> Option<String> {
+        self.model
+            .clone()
+            .or_else(|| std::env::var("VK_ANTIGRAVITY_ACP_MODEL").ok())
     }
 
     fn check_activation(&self) -> Result<(), ExecutorError> {
@@ -95,7 +107,7 @@ impl Antigravity {
         self.check_activation()?;
         let mut harness =
             AcpAgentHarness::with_session_namespace("antigravity-acp").with_personal_auth();
-        if let Some(model) = &self.model {
+        if let Some(model) = self.selected_model() {
             harness = harness.with_model(model);
         }
         harness
@@ -169,7 +181,7 @@ impl StandardCodingAgentExecutor for Antigravity {
         ExecutorConfig {
             executor: BaseCodingAgent::Antigravity,
             variant: None,
-            model_id: self.model.clone(),
+            model_id: self.selected_model(),
             agent_id: None,
             reasoning_id: None,
             permission_policy: Some(PermissionPolicy::Supervised),

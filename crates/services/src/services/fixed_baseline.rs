@@ -112,6 +112,8 @@ fn wall_seconds() -> i64 {
     chrono::Utc::now().timestamp()
 }
 impl FixedAcceptance {
+    // Keep every source, action and native-baseline identity explicit at this boundary.
+    #[allow(clippy::too_many_arguments)]
     fn verify(
         &self,
         workspace: Uuid,
@@ -343,6 +345,8 @@ pub async fn reserve_native(
 /// No runtime caller can supply a FixedAcceptance; default builds load None.
 /// Witness root and dataset marker require exact reviewed deployment bindings;
 /// neither is supplied by an API, environment or mutable runtime profile.
+// Keep every source, action and native-baseline identity explicit at this boundary.
+#[allow(clippy::too_many_arguments)]
 async fn reserve_exact(
     pool: &SqlitePool,
     fixed: &FixedAcceptance,
@@ -390,6 +394,8 @@ async fn reserve_exact(
 /// Inert adapter primitive: caller must hold admission custody across native
 /// recapture, this recheck, and the existing sole spawn. This does not capture
 /// native state itself and is not yet connected to a production launch path.
+// Keep every source, action and native-baseline identity explicit at this boundary.
+#[allow(clippy::too_many_arguments)]
 pub async fn revalidate_after_setup(
     pool: &SqlitePool,
     fixed: &FixedAcceptance,

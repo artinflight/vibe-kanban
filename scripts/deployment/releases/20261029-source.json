@@ -461,13 +461,15 @@
       "path": "crates/services/src/services/fixed_baseline.rs",
       "deployed_sha256": "84bf6234dcbfa9d78c1c63e347eb502b424641551d33d52a2270f9cdb25e1693",
       "private_input": false,
-      "public_sha256": "84bf6234dcbfa9d78c1c63e347eb502b424641551d33d52a2270f9cdb25e1693"
+      "public_sha256": "3d9c66d1b0ecc13e95e0aa9c7aeeaae388237f54b8585666c335fc8042c6a725",
+      "public_difference": "Semantics-preserving Clippy corrections after reconciliation CI; deployed hash remains unchanged."
     },
     {
       "path": "crates/services/src/services/fixed_baseline_capture.rs",
       "deployed_sha256": "7fd8adbbb7b4ba5c1ef6493ed8437bb70e389089feb41fe69b94db2eabdd8319",
       "private_input": false,
-      "public_sha256": "7fd8adbbb7b4ba5c1ef6493ed8437bb70e389089feb41fe69b94db2eabdd8319"
+      "public_sha256": "9a53cd255044154d35e70e423360b5a7cce163787670120609f53acd0f7056e6",
+      "public_difference": "Semantics-preserving Clippy corrections after reconciliation CI; deployed hash remains unchanged."
     },
     {
       "path": "crates/services/src/services/fixed_baseline_hold_archive.json",
@@ -497,7 +499,8 @@
       "path": "crates/services/src/services/provider_admission.rs",
       "deployed_sha256": "43e449ec8b026f05433fe873adec601638fbabaf1de29d5008df62997a587151",
       "private_input": false,
-      "public_sha256": "43e449ec8b026f05433fe873adec601638fbabaf1de29d5008df62997a587151"
+      "public_sha256": "d6477d69fe0a8fd994bb379121bfb52bae6b422cd33d2de58da7260164fe3faf",
+      "public_difference": "Semantics-preserving Clippy corrections after reconciliation CI; deployed hash remains unchanged."
     },
     {
       "path": "crates/services/src/services/provider_admission/checkpoint.rs",
@@ -509,7 +512,8 @@
       "path": "crates/services/src/services/provider_failover.rs",
       "deployed_sha256": "b092ed3b3e3b690c0b22d8889cf9ef0edc8a7b107b856b69005c57be4981aee5",
       "private_input": false,
-      "public_sha256": "b092ed3b3e3b690c0b22d8889cf9ef0edc8a7b107b856b69005c57be4981aee5"
+      "public_sha256": "f5c6c49df696edc77c6052beb1a57649b3981fb0f9f64d67013a29670bb68cba",
+      "public_difference": "Semantics-preserving Clippy corrections after reconciliation CI; deployed hash remains unchanged."
     },
     {
       "path": "crates/services/src/services/provider_receipts.rs",

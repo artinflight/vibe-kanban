@@ -241,7 +241,7 @@ pub(super) async fn capture(
     ];
     let mut before = BTreeMap::new();
     for (name, q) in queries {
-        before.insert(name, rows(&mut *tx, q, workspace, excluded).await?);
+        before.insert(name, rows(&mut tx, q, workspace, excluded).await?);
     }
     let names:Vec<String>=sqlx::query_scalar("SELECT r.name FROM repos r JOIN workspace_repos wr ON r.id=wr.repo_id WHERE wr.workspace_id=? ORDER BY r.name")
         .bind(workspace).fetch_all(&mut *tx).await.map_err(|e|e.to_string())?;
@@ -374,7 +374,7 @@ pub(super) async fn capture(
     tx.commit().await.map_err(|e| e.to_string())?;
     let mut check = pool.begin().await.map_err(|e| e.to_string())?;
     for (name, q) in queries {
-        if before.get(name) != Some(&rows(&mut *check, q, workspace, excluded).await?) {
+        if before.get(name) != Some(&rows(&mut check, q, workspace, excluded).await?) {
             return Err("native database changed during capture".into());
         }
     }

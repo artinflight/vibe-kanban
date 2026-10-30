@@ -27,7 +27,7 @@ impl ExecutorApprovalService for NativeApprovals {
     async fn create_tool_approval(&self, title: &str) -> Result<String, ExecutorApprovalError> {
         // Official 1.4.1 tools.py maps this exact title to the read-only host tool.
         // Every other tool is denied; cancellation phase holds all approvals.
-        Ok(if title == "Run safe_view_file?" {
+        Ok(if title == "Run view_file?" {
             "read"
         } else {
             "deny"
@@ -136,7 +136,7 @@ async fn antigravity_native_supervision_resume_and_cancel() {
     env.insert("TMPDIR", scratch.join("tmp").display().to_string());
     let mut identity = None;
     for (index, prompt) in [
-        "This is a bounded integration test. Work only in the current directory. Read probe.txt using the safe_view_file tool (its read will be approved once), then request creation of denied.txt containing test. The approval handler will deny the edit. Respect denial: do not retry or use another tool to evade it. Reply with the exact token read from probe.txt and a brief statement of the denied result. Do not inspect other directories.",
+        "This is a bounded integration test. Work only in the current directory. Read probe.txt using the view_file tool (its read will be approved once), then request creation of denied.txt containing test. The approval handler will deny the edit. Respect denial: do not retry or use another tool to evade it. Reply with the exact token read from probe.txt and a brief statement of the denied result. Do not inspect other directories.",
         "Without any tools or file access, repeat the exact VK_PROBE token you read in the previous turn. This tests native conversation continuity. Do not invent a new token.",
     ].into_iter().enumerate() {
         writeln!(receipt, "{}", serde_json::json!({"phase":"before_prompt","prompt_number":index+1,"max_prompts":3})).unwrap();

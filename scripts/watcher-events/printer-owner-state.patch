@@ -1,9 +1,6 @@
 --- a/tasks/prusa-calibration/printer-alert-watcher.py
 +++ b/tasks/prusa-calibration/printer-alert-watcher.py
-@@ -137,18 +137,18 @@
- 
- 
- def session_busy():
+@@ -140,12 +140,12 @@
 -    session = local_get('/api/sessions/' + SESSION)
 -    if session.get('workspace_id') != WORKSPACE or session.get('executor') != 'CODEX':
 -        raise ValueError('Session ownership mismatch')
@@ -28,6 +25,3 @@
 +            or owner.get('workspace_id') != WORKSPACE or owner.get('session_id') != SESSION):
 +        raise ValueError('Assigned owner binding mismatch')
 +    return owner.get('state') != 'idle'
- 
- 
- def make_prompt(event, path):

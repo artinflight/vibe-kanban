@@ -24,7 +24,11 @@ type Snapshot = {
   scope: {
     issue_label: string;
     workspace_label: string;
-    previous_threads?: { thread_id: string; issue_id: string; issue_label: string }[];
+    previous_threads?: {
+      thread_id: string;
+      issue_id: string;
+      issue_label: string;
+    }[];
   };
   messages: SidechatMessage[];
   receipts: Record<string, SidechatReceipt>;
@@ -270,13 +274,21 @@ function DotSidechatSession({ workspaceId, projectId }: ChatTarget) {
         messages.push(...page.messages);
         Object.assign(receipts, page.receipts);
       }
-      if (!signal.aborted && revision === readStateRevision.current && activeView.current === selectedView) {
+      if (
+        !signal.aborted &&
+        revision === readStateRevision.current &&
+        activeView.current === selectedView
+      ) {
         setPreviousThreads(page.scope.previous_threads ?? []);
         setSnapshot({ ...page, messages, receipts });
         setError(null);
       }
     } catch (failure) {
-      if (!signal.aborted && revision === readStateRevision.current && activeView.current === selectedView) {
+      if (
+        !signal.aborted &&
+        revision === readStateRevision.current &&
+        activeView.current === selectedView
+      ) {
         setSnapshot(null);
         if (failure instanceof PairingRequired) {
           setSession(null);
@@ -286,7 +298,8 @@ function DotSidechatSession({ workspaceId, projectId }: ChatTarget) {
       }
     } finally {
       if (refreshing.current === selectedView) refreshing.current = null;
-      if (!signal.aborted && activeView.current === selectedView) setLoading(false);
+      if (!signal.aborted && activeView.current === selectedView)
+        setLoading(false);
     }
   }, [session, contextId, viewQuery]);
 
@@ -428,8 +441,13 @@ function DotSidechatSession({ workspaceId, projectId }: ChatTarget) {
       loading
     )
       return;
-    if (pending.current?.thread && pending.current.thread !== snapshot.thread.id) {
-      setError('Choose the original conversation to retry this retained message.');
+    if (
+      pending.current?.thread &&
+      pending.current.thread !== snapshot.thread.id
+    ) {
+      setError(
+        'Choose the original conversation to retry this retained message.'
+      );
       return;
     }
     busy.current = true;
@@ -455,13 +473,22 @@ function DotSidechatSession({ workspaceId, projectId }: ChatTarget) {
       // Persist BEFORE submitting; retries retain exact thread, key and body.
       sessionStorage.setItem(storageKey, JSON.stringify(outgoing));
       pending.current = outgoing;
-      const saved = await dotApi('send', lifetime.current.signal, outgoing, session.csrf);
+      const saved = await dotApi(
+        'send',
+        lifetime.current.signal,
+        outgoing,
+        session.csrf
+      );
       sessionStorage.removeItem(storageKey);
       clearRetainedDraft();
       pending.current = null;
       setDraft('');
       setReplyTargetId(null);
-      if (workspaceId && typeof saved.thread === 'string' && saved.thread !== snapshot.thread.id)
+      if (
+        workspaceId &&
+        typeof saved.thread === 'string' &&
+        saved.thread !== snapshot.thread.id
+      )
         setHistoryThread(saved.thread);
       await refresh();
     } catch (failure) {

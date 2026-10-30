@@ -1,3 +1,5 @@
+> Current deployed source custody and offline current-contract validation: [snapshot](deployed-20261029/README.md), `python3 -B scripts/dot-connector/verify_deployed_snapshot.py`. The overlay installation notes below describe preparation before deployment; do not reapply them to an already integrated adapter.
+
 > October17 exact execution Stop: see [the current guarded control and deployment gates](../../DOT_STOP_CONTROL.md).
 > This additive overlay preserves steering and does not expose the legacy broad Stop.
 

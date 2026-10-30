@@ -2094,3 +2094,7 @@ producer; normal Disk allocation protection remains. Staging20copied-data SQL
 checks acknowledged, private runtime/receipt-safe rollback remains separate.
 Corrected predecessor b249/7a Python87run to86pass/1optional connector skip.
 No activation/host build/shared-target growth or live changes.
+
+## 2026-10-30 — recovered deployment source custody
+
+Reconciled the October29 deployed build and ordinary-send repair with current staging, recovered deployment/recovery and connector source/tests, and replaced stale live-runtime records with verified identities. Antigravity initializes but requires authentication; gate remains disabled. See BACKEND_DEPLOYMENT_HANDOFF.md and DEPLOYMENT_CHECKLIST_20261030.md. No production change during reconciliation.

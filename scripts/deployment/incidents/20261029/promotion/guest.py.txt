@@ -1,0 +1,21 @@
+from pathlib import Path
+import subprocess,time,json,hashlib,os,re
+E=Path('/build/r3-evidence');r={'phases':[],'production_changed':False}
+def save():
+ p=E/'RESULT.next';p.write_text(json.dumps(r,indent=2)+'\n');p.replace(E/'RESULT.json')
+os.environ['PYTHONDONTWRITEBYTECODE']='1';os.environ['TMPDIR']='/tmp';Path('/tmp/native-fixtures').mkdir(exist_ok=True)
+os.environ['VK_FAILOVER_TEST_ROOT']='/tmp/native-fixtures'
+base=['--profile','acceptance','--frozen','--offline','--config','/build/r3-tools/concurrency.toml']
+for name,cmd in [('regressions',['/rust/bin/cargo','test','-p','local-deployment','--lib',*base,'--config','profile.acceptance.package.server.debug-assertions=true','--config','profile.acceptance.package.utils.debug-assertions=true','--config','profile.acceptance.package.rust-embed.debug-assertions=true','github_sync_tests','--','--test-threads=1']),('build',['/rust/bin/cargo','build','-p','server','--bin','server',*base])]:
+ start=time.monotonic();log=E/(name+'.log')
+ with log.open('xb') as f:
+  p=subprocess.run(cmd,stdout=f,stderr=subprocess.STDOUT)
+ phase={'name':name,'exit_code':p.returncode,'seconds':time.monotonic()-start};r['phases'].append(phase);save()
+ assert p.returncode==0,name+' failed; no artifact accepted'
+ if name=='regressions':
+  result=re.findall(r'test result: ok\. (\d+) passed; (\d+) failed;',log.read_text());assert result and int(result[-1][0])>0;phase['result']=result[-1];save()
+p=Path('/build/target/acceptance/server');out=E/'candidate-server'
+with p.open('rb') as src,out.open('xb') as dst:
+ while block:=src.read(1024**2):dst.write(block)
+ dst.flush();os.fsync(dst.fileno())
+out.chmod(0o755);r['artifact']={'path':str(out),'sha256':hashlib.sha256(out.read_bytes()).hexdigest(),'bytes':out.stat().st_size};r['passed']=True;save()

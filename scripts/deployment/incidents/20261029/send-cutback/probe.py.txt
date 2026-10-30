@@ -1,0 +1,52 @@
+import json,sqlite3,os,importlib.util,subprocess,hashlib,shutil,time
+from pathlib import Path
+D=Path(__file__).resolve().parent;K=Path('/mnt/vk-storage/vk-cutback-ready-20261029');B=K/'bundle'
+s=importlib.util.spec_from_file_location('sandbox',B/'rehearsal/server_sandbox.py');H=importlib.util.module_from_spec(s);s.loader.exec_module(H)
+DB=Path('/home/mcp/.local/share/vibe-kanban-green-xdg/vibe-kanban/db.v2.sqlite')
+with sqlite3.connect(DB.resolve().as_uri()+'?mode=ro',uri=True)as a,sqlite3.connect(D/'before.sqlite')as b:a.backup(b)
+results=[]
+for variant in ['candidate','fallback']:
+ F=D/('probe-v2-'+variant);F.mkdir(mode=0o700)
+ for n in ['assets','home','workspaces','tmp']:(F/n).mkdir()
+ working=F/'assets/db.v2.sqlite';shutil.copy2(D/'before.sqlite',working)
+ with sqlite3.connect(working)as c:
+  c.execute("update workspaces set container_ref='/run/fixture/workspaces/probe' where id=x'1E80E56C1732422A8B503C2FCE7FBA1D'")
+  c.execute("update repos set path='/run/fixture/repo',setup_script=null,cleanup_script=null,copy_files=null where id=x'1044584DE1884D7CBD0F18E99F194D09'")
+  c.execute("update workspace_repos set target_branch='main' where workspace_id=x'1E80E56C1732422A8B503C2FCE7FBA1D'")
+  dataset=c.execute('select dataset_id from vk_runtime_identity').fetchone()[0]
+ cfg=json.loads((B/'rehearsal/private-config.json').read_text());cfg['workspace_dir']='/run/fixture/workspaces';(F/'assets/config.json').write_text(json.dumps(cfg))
+ (F/'stub.py').write_text('import time\ntime.sleep(45)\n')
+ info=json.loads((K/('fallback'if variant=='fallback'else'candidate_return')+'-BUILD.json').read_text()) if False else json.loads((K/(('fallback'if variant=='fallback'else'candidate_return')+'-BUILD.json')).read_text())
+ assets=info['assetDirectory'];(F/'identity').write_text(H.pin(assets+'/db.v2.sqlite','/run/fixture/workspaces',working,F/'workspaces',dataset))
+ runner=r'''
+import subprocess,json,pathlib,time,urllib.request,urllib.error,sqlite3
+F=pathlib.Path('/run/fixture')
+def git(*a):subprocess.run(['git',*a],check=True,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+git('init','-b','main',str(F/'repo'));git('-C',str(F/'repo'),'config','user.name','Detached probe');git('-C',str(F/'repo'),'config','user.email','probe@invalid');(F/'repo/sentinel').write_text('isolated');git('-C',str(F/'repo'),'add','sentinel');git('-C',str(F/'repo'),'commit','-m','isolated fixture')
+with (F/'server.log').open('w')as log:
+ p=subprocess.Popen(['/run/server'],stdout=log,stderr=log)
+ try:
+  for _ in range(200):
+   try:urllib.request.urlopen('http://127.0.0.1:39001/api/health',timeout=.2).read();break
+   except OSError:time.sleep(.1)
+  payload={'prompt':'Detached send admission test.','executor_config':{'executor':'CODEX','model_id':'gpt-6-astra','reasoning_id':'xhigh','permission_policy':'AUTO','routing':{'mode':'manual','floor':'assessed','denied_models':[],'allow_escalation':False}},'retry_process_id':None,'perform_git_reset':None,'force_when_dirty':None}
+  req=urllib.request.Request('http://127.0.0.1:39001/api/sessions/INCIDENT_UUID_6A50B3C0C31D6D7E/follow-up',data=json.dumps(payload).encode(),headers={'Content-Type':'application/json'})
+  try:
+   with urllib.request.urlopen(req,timeout=25)as r:status=r.status;data=json.load(r)
+  except urllib.error.HTTPError as e:status=e.code;data=json.load(e)
+  if status==409 and data.get('error_data',{}).get('code')=='ownership_changed':
+   try:
+    with urllib.request.urlopen(req,timeout=25)as r:status=r.status;data=json.load(r)
+   except urllib.error.HTTPError as e:status=e.code;data=json.load(e)
+  result={'http_status':status,'success':data.get('success'),'message':data.get('message'),'error_data':data.get('error_data'),'execution':data.get('data',{}).get('id')if isinstance(data.get('data'),dict)else None}
+  (F/'RESULT.json').write_text(json.dumps(result));print(json.dumps(result),flush=True)
+ finally:p.kill();p.wait(timeout=5)
+'''
+ cmd=['/usr/bin/bwrap','--unshare-all','--new-session','--die-with-parent','--ro-bind','/','/','--tmpfs','/home','--tmpfs','/mnt','--tmpfs','/run','--tmpfs','/tmp','--proc','/proc','--dev','/dev','--bind',str(F),'/run/fixture','--bind',str(F/'assets'),assets,'--ro-bind',str(B/variant/'server'),'/run/server','--clearenv']
+ env={'HOME':'/run/fixture/home','PATH':'/usr/bin:/bin','TMPDIR':'/run/fixture/tmp','BACKEND_PORT':'39001','PREVIEW_PROXY_PORT':'39002','RUST_LOG':'info','VK_DISABLE_PR_MONITOR':'1','VK_AUTOMATIC_GITHUB_SYNC':'1','VK_RUNTIME_IDENTITY_FILE':'/run/fixture/identity','VK_CODEX_BASE_COMMAND':'/usr/bin/python3 /run/fixture/stub.py'}
+ for k,v in env.items():cmd+=['--setenv',k,v]
+ cmd+=['--chdir','/run/fixture','/usr/bin/python3','-B','-c',runner]
+ run=subprocess.run(cmd,capture_output=True,text=True,timeout=50);print(variant,run.returncode,run.stdout,run.stderr,flush=True)
+ if run.returncode:raise ValueError('probe failed')
+ results.append(dict(variant=variant,**json.loads((F/'RESULT.json').read_text())))
+(D/'PROBES-v2.json').write_text(json.dumps(results,indent=2)+'\n')

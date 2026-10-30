@@ -274,8 +274,11 @@ def inspect(config, api_get=None, process_reader=None):
         issue('turn', 'assigned_owner_state_unavailable')
         result['turn_state'] = 'unknown'
     result['independent_jobs'] = result['independent_jobs'][:MAX_ITEMS]
-    result['inventory_unknown'] = bool(result['owner_uncertainties'])
-    result['state'] = 'busy' if any(result[k] for k in ('coding_or_script_turns', 'independent_jobs', 'process_ids')) else 'unknown' if result['inventory_unknown'] else 'queued' if result['queued'] else 'idle'
+    # Legacy alias means the assigned binding/turn snapshot itself is missing.
+    # Partial job/queue/process uncertainty must not erase the known inventory.
+    result['inventory_unknown'] = any(r['reason'] == 'assigned_owner_state_unavailable'
+                                      for r in result['owner_uncertainties'])
+    result['state'] = 'busy' if any(result[k] for k in ('coding_or_script_turns', 'independent_jobs', 'process_ids')) else 'unknown' if result['owner_uncertainties'] else 'queued' if result['queued'] else 'idle'
     result['observed_at'] = time.time()
     return result
 

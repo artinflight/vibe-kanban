@@ -24,7 +24,10 @@ read catches arrivals during slower status reads. No idle cache is retained.
 Protocol `watcher-owner-state-v1` returns the binding, `current_turn`, `turn_state`,
 `state`, activity IDs and bounded `owner_uncertainties` with component/session.
 `state=idle` permits existing preflight; busy, queued and target-specific unknown
-all retain pending delivery. Unknown job/provider states, missing native binding,
+all retain pending delivery. The legacy `inventory_unknown` alias is set only
+when the assigned binding/turn snapshot itself is unavailable; partial uncertainty
+retains known turn evidence and its component-specific hold. Unknown job/provider
+states, missing native binding,
 unreadable owner custody and uncertain leases never certify idle. This advisory
 reader does not replace backend admission, capacity, budget or approval checks.
 The existing connector independently rejects a running session; capacity may

@@ -77,7 +77,8 @@ class AssignedOwner(unittest.TestCase):
         self.insert(reason='devserver'); self.assertEqual(self.read()['state'], 'idle')
     def test_unfamiliar_turn_status_holds_only_its_assigned_target(self):
         self.insert(status='future-provider-state')
-        out = self.read(); self.assertTrue(out['inventory_unknown'])
+        out = self.read(); self.assertFalse(out['inventory_unknown'])
+        self.assertEqual(out['state'], 'unknown')
         self.assertEqual(out['turn_state'], 'unknown')
         cfg = {**self.cfg, 'workspace_id':str(self.other_wid), 'session_id':str(self.other_sid)}
         self.assertEqual(self.read(cfg)['state'],'idle')
@@ -85,6 +86,7 @@ class AssignedOwner(unittest.TestCase):
         self.jobs[str(self.sid)] = [{'id':'child-job','status':'future-child-state'}]
         out = self.read(); self.assertTrue(a.busy(out))
         self.assertEqual(out['owner_uncertainties'][0]['component'], 'jobs')
+        self.assertFalse(out['inventory_unknown']);self.assertEqual(out['state'],'unknown')
         cfg = {**self.cfg,'workspace_id':str(self.other_wid),'session_id':str(self.other_sid)}
         self.assertFalse(a.busy(self.read(cfg)))
     def test_unknown_and_running_independent_jobs_hold_after_parent_finishes(self):
@@ -142,7 +144,7 @@ class AssignedOwner(unittest.TestCase):
     def test_scanner_failure_is_component_scoped_not_idle(self):
         def fail(*_):raise OSError()
         out=self.read(reader=fail)
-        self.assertTrue(a.busy(out));self.assertEqual(out['turn_state'],'idle')
+        self.assertTrue(a.busy(out));self.assertFalse(out['inventory_unknown']);self.assertEqual(out['turn_state'],'idle')
         self.assertEqual(out['owner_uncertainties'][0]['component'],'process')
     def test_chrome_restart_unreadable_process_does_not_poison_owner_turn(self):
         for pid in (101,202,303,404):

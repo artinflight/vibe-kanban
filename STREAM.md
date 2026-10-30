@@ -1,9 +1,12 @@
 # Deployment reconciliation and Antigravity activation
 
 Branch `fix/deployment-reconciliation-20261030`, based on fork/staging
-`2bf2676d2d3841c252fa7f2a9b4e7993128bb093`. Draft PR #284 reconciles the actual
+`2bf2676d2d3841c252fa7f2a9b4e7993128bb093`.
+[PR #284](https://github.com/artinflight/vibe-kanban/pull/284) reconciles the actual
 October 29 recovery/409/history work and the October 30 Antigravity activation.
-No unrelated canonical work was reset and no staging/main merge was performed.
+The operator requested a rebase merge into staging; the PR merge event is the
+authoritative integration record. Main promotion is separate. Original deployed
+commit IDs and the dirty canonical checkout remain preserved.
 
 The matched activation release is live: backend source `9a4179e8b`, binary
 `137d6cd7b647…`, accepted 03:18:14 UTC. Public/frontend and backend root use the
@@ -32,9 +35,12 @@ historical; the new release provenance is recorded separately.
 Validation: 13 offline Antigravity regressions; native provider acceptance above;
 130 recovery/custody checks pass with 22 private/optional skips; 13 auth/privacy
 checks; 24 steering/stop and 30 connector contracts. Hosted Test plus seven other
-workflows passed on `aaacd278b` (the same deployed Rust/frontend inputs); recovery
-CI passed on `1d48c6f39`. Format, governance and source inventories pass. Final docs
-and mirror tooling are not a claim that every feature had paid-provider QA.
+workflows passed on `a4213813210ea15affb1d91a306883cb27f452e3`, including the final
+recovery and mirror tooling. Exact run links and skipped/private coverage are in
+[the backend handoff](BACKEND_DEPLOYMENT_HANDOFF.md#hosted-validation-and-source-integration).
+Read-only live verification passed again at 09:20:33 UTC. Documentation successors
+must pass their own PR checks before merge. These checks do not claim every feature
+had paid-provider QA.
 
 Prior stream: [previous record](deployment-history/20261030-before-reconciliation/STREAM.md)
 and [STREAM history](STREAM_HISTORY_20261017.md).

@@ -26,6 +26,9 @@ consumed evidence, never a request to rerun them.
 - Immediate fallback is the working `ddaaf64a` / `a63eb3a68173…` backend and its
   paired frontend. The older `d154fe9d` bundle is also retained. All use the same
   current compatible DB; no data restoration is a normal software cutback.
+- Source integration is tracked by [PR #284](https://github.com/artinflight/vibe-kanban/pull/284).
+  Rebase changes Git commit IDs, not the deployed build. Keep original source IDs,
+  branch and immutable receipts; the PR merge event records integration into staging.
 
 ## Backup boundary and the rejected first attempt
 

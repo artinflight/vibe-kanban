@@ -1,7 +1,8 @@
 # Deployment validation — 2026-10-30
 
 **Antigravity is deployed and available.** New release accepted 03:18:14 UTC;
-independent public readback passed 03:20:10 UTC. Exact runtime identity and limits
+independent public readback passed 03:20:10 UTC and again at 09:20:33 UTC before
+PR integration. Exact runtime identity and limits
 are in [the manifest](LIVE_DEPLOYMENT.json); procedure/evidence in
 [the handoff](BACKEND_DEPLOYMENT_HANDOFF.md) and [activation record](ACTIVATION_RECOVERY_20261030.md).
 
@@ -28,7 +29,8 @@ are in [the manifest](LIVE_DEPLOYMENT.json); procedure/evidence in
 | Stall recovery after cutoff removal | PASS, scoped | 600 s verified-no-progress watchdog and separate 300 s recovery; 130 offline checks pass, 22 private/optional skips. No total 50-minute cutoff. |
 | Consumers and protected reader | PASS | Owned consumers resumed; original CU process and protected history reader preserved. |
 | Source/tooling custody | RECONCILED | 134 historical source records, 27 inert incident templates, 50 connector files, new activation/recovery/backup/rehearsal tooling and tests. Private bindings stay outside Git. |
-| Branch validation | PASS / final CI tracked | All eight deployed-code workflows passed on aaacd278b; updated recovery CI passed on 1d48c6f39. Format/governance/source checks pass; final docs-head CI and staging/main merge are separate. |
+| Branch validation | PASS at a421381321 | All eight hosted workflows passed, including final recovery/mirror tooling; [exact runs and coverage limits](BACKEND_DEPLOYMENT_HANDOFF.md#hosted-validation-and-source-integration). Later documentation commits require their own PR checks. |
+| Release and recovery evidence on Desktop B | PASS | 45 sealed release items / 201,792,843 bytes plus 62 terminal/reconstruction items / 7,944,662 bytes independently verified; 53 fallback-only assets retained. |
 | Automatic provider failover | DISABLED | External-effect continuation remains unqualified; existing Recommend behavior preserved. |
 
 The first activation was aborted before binary replacement and recovered normally.
@@ -38,8 +40,11 @@ Antigravity execution is disabled on that fallback. Never restore an old snapsho
 over later writes or stop new executions automatically to roll back.
 
 No further operator login is needed. Refresh Vibe once to pick up the new frontend.
-[Draft PR #284](https://github.com/artinflight/vibe-kanban/pull/284) contains source
-and operational reconciliation. No staging/main merge is claimed. Private remote
-CI checks without deploy credentials are explicitly skipped, not certified.
+[PR #284](https://github.com/artinflight/vibe-kanban/pull/284) contains source and
+operational reconciliation, targeting staging by the operator-requested rebase
+method. Its merge event records final integration status and rebased IDs. Main
+promotion is separate; original build identities and the fallback remain retained.
+Private remote CI without deploy credentials and combined capture consent acceptance
+were skipped, not certified.
 Top-level service memory limits remain unchanged/unlimited; executor limits and
 capacity guards remain separate. AG reset/fork and non-supervised modes are unsupported.

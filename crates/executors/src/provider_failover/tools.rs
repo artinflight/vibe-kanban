@@ -234,16 +234,15 @@ impl Controller {
                     .find(|g| g.tool == tool && g.input == *input)
             })
             .map(|g| g.effect_id.clone());
-        if let Some(e) = &effect_id {
-            if !self
+        if let Some(e) = &effect_id
+            && !self
                 .work(id)
                 .and_then(|w| w.effects.get(e))
                 .is_some_and(|e| e.outcome == EffectOutcome::NotStarted)
-            {
-                return Err(invalid(
-                    "Effect completed/uncertain; cannot replay under a new tool ID",
-                ));
-            }
+        {
+            return Err(invalid(
+                "Effect completed/uncertain; cannot replay under a new tool ID",
+            ));
         }
         let mut next = self.state.clone();
         if let Some(e) = &effect_id {

@@ -640,7 +640,7 @@ impl Controller {
         if !p.authorized
             || !p.adapter_verified
             || !p.handoff_supported
-            || !p.auth_verified_at_ms.is_some_and(|t| t <= p.observed_at_ms)
+            || p.auth_verified_at_ms.is_none_or(|t| t > p.observed_at_ms)
             || !p.windows_complete
             || p.observed_at_ms > now
             || now >= p.valid_until_ms
@@ -764,9 +764,8 @@ impl Controller {
             })
             .cloned()
             .collect();
-        match self.select(w, &mut choices, now) {
-            Err(reason) => return hold(reason),
-            Ok(()) => {}
+        if let Err(reason) = self.select(w, &mut choices, now) {
+            return hold(reason);
         }
         let Some(candidate) = choices.into_iter().next() else {
             let retry = self

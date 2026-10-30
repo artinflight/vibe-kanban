@@ -239,7 +239,8 @@
       "path": "crates/executors/src/provider_failover/mod.rs",
       "deployed_sha256": "24f4c2fe3e4179bdfdf695d00b59941bfea2e60c26025341bbcce805a9a5e703",
       "private_input": false,
-      "public_sha256": "24f4c2fe3e4179bdfdf695d00b59941bfea2e60c26025341bbcce805a9a5e703"
+      "public_sha256": "98b889e4d6d7de64877359c06ad5868b7d5fb9eaeafb47d71a4790604c3fbfbd",
+      "public_difference": "Semantics-preserving Clippy corrections after reconciliation CI; deployed hash remains unchanged."
     },
     {
       "path": "crates/executors/src/provider_failover/native.rs",
@@ -251,7 +252,8 @@
       "path": "crates/executors/src/provider_failover/observer.rs",
       "deployed_sha256": "c2c5d6eb671611c89ffcbe548456bca0179d48bb7aecd864b1d64ef0f4246f05",
       "private_input": false,
-      "public_sha256": "c2c5d6eb671611c89ffcbe548456bca0179d48bb7aecd864b1d64ef0f4246f05"
+      "public_sha256": "68562dfc70f712470fd1ba3a1af62afc4bc0adb9e3b0fe96089cd694e6645cf0",
+      "public_difference": "Semantics-preserving Clippy corrections after reconciliation CI; deployed hash remains unchanged."
     },
     {
       "path": "crates/executors/src/provider_failover/readiness.rs",
@@ -263,7 +265,8 @@
       "path": "crates/executors/src/provider_failover/selection.rs",
       "deployed_sha256": "79b88bd68662089b3896b3ce32a382ff0b65e4f932c51cb24e00d0f8f0ae4fcf",
       "private_input": false,
-      "public_sha256": "79b88bd68662089b3896b3ce32a382ff0b65e4f932c51cb24e00d0f8f0ae4fcf"
+      "public_sha256": "28f729c80585a9e87c217ddd90d46b8ce714257bb123a56279ae47b0f36cf63f",
+      "public_difference": "Semantics-preserving Clippy corrections after reconciliation CI; deployed hash remains unchanged."
     },
     {
       "path": "crates/executors/src/provider_failover/tests.rs",
@@ -275,7 +278,8 @@
       "path": "crates/executors/src/provider_failover/tools.rs",
       "deployed_sha256": "6513f1bba800551b0379ddebaa42c7e909753683751a3be9f3e5d21f03d67d7a",
       "private_input": false,
-      "public_sha256": "6513f1bba800551b0379ddebaa42c7e909753683751a3be9f3e5d21f03d67d7a"
+      "public_sha256": "29c0fa2891b33043461f324bded2c59d00b26ba156571bb194c1bb195f23e8c1",
+      "public_difference": "Semantics-preserving Clippy corrections after reconciliation CI; deployed hash remains unchanged."
     },
     {
       "path": "crates/executors/src/stdout_dup.rs",

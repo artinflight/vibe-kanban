@@ -52,6 +52,65 @@ def local_get(path):
         conn.close()
 
 
+def process_identity(proc):
+    """Metadata only; never return command lines, environments or open files."""
+    before = (proc / 'stat').read_text().rpartition(') ')[2].split()[19]
+    value = {'pid': int(proc.name), 'start_ticks': before,
+             'boot_id': Path('/proc/sys/kernel/random/boot_id').read_text().strip(),
+             'name': (proc / 'comm').read_text().strip(),
+             'cgroup': (proc / 'cgroup').read_text().strip()}
+    if (proc / 'stat').read_text().rpartition(') ')[2].split()[19] != before:
+        raise ValueError('process_identity_changed')
+    return value
+
+
+def ssh_broker_metadata(proc):
+    value = process_identity(proc)
+    status = dict(line.split(':', 1) for line in (proc / 'status').read_text().splitlines() if ':' in line)
+    value.update(uids=[int(n) for n in status['Uid'].split()], parent=int(status['PPid'].strip()))
+    return value
+
+
+def protected_ssh_broker(proc):
+    # A root-owned sshd vouches only for its transport broker and direct SFTP
+    # subsystem. Shells, Python, agents and all other descendants remain scanned.
+    # No sudo, new privilege or generic same-UID/name exclusion is introduced.
+    try:
+        child = ssh_broker_metadata(proc)
+        if child['uids'] != [os.getuid()] * 4 or child['name'] not in {'sshd', 'sftp-server'}:
+            return False
+        if not child['cgroup'].startswith('0::/user.slice/user-' + str(os.getuid()) + '.slice/session-') or not child['cgroup'].endswith('.scope'):
+            return False
+        parent = ssh_broker_metadata(Path('/proc') / str(child['parent']))
+        if child['name'] == 'sftp-server':
+            if parent['name'] != 'sshd' or parent['uids'] != child['uids'] or parent['cgroup'] != child['cgroup']:
+                return False
+            parent = ssh_broker_metadata(Path('/proc') / str(parent['parent']))
+        if parent['name'] != 'sshd' or parent['uids'] != [0] * 4:
+            return False
+        return ssh_broker_metadata(proc) == child
+    except (OSError, ValueError, IndexError, KeyError):
+        return False
+
+
+def reviewed_infrastructure(proc, config):
+    # Exact reviewed infrastructure identities only. Never blanket-ignore an
+    # unreadable process, a name, or a service cgroup. PID reuse/restart invalidates
+    # the exception; any new unreadable process still holds delivery.
+    if protected_ssh_broker(proc):
+        return True
+    rows = config.get('reviewed_infrastructure_processes', [])
+    if not isinstance(rows, list) or len(rows) > 128:
+        return False
+    expected = next((r for r in rows if isinstance(r, dict) and r.get('pid') == int(proc.name)), None)
+    if expected is None or not isinstance(expected.get('reason'), str) or not expected['reason']:
+        return False
+    try:
+        return process_identity(proc) == {k: v for k, v in expected.items() if k != 'reason'}
+    except (OSError, ValueError, IndexError):
+        return False
+
+
 def owner_status(config):
     """Read coding/script turns, independent Codex jobs, queues and OS processes.
 
@@ -105,7 +164,8 @@ def owner_status(config):
         except (FileNotFoundError, ProcessLookupError):
             pass
         except PermissionError:
-            result['inventory_unknown'] = True
+            if not reviewed_infrastructure(proc, config):
+                result['inventory_unknown'] = True
     return result
 
 

@@ -1,8 +1,11 @@
 # Current production and protections — 2026-10-30
 
-WakeWatch disk observation is active, but automatic waking remains disabled. An
-explicit printer-connector transport is prepared for restart-free activation;
-live enablement and acceptance await approval. See [current scope and limitations](scripts/watcher-events/CONNECTOR_TRANSPORT.md).
+WakeWatch automatic disk waking is now enabled through the existing printer-style
+connector without a restart. One approved verification turn is capacity-queued;
+actual reply remains pending. TurnSteer is live in the backend/connector and has a
+shell entrypoint for existing host access; Dot's refreshed catalog still needs
+independent confirmation. See [current scope](scripts/watcher-events/CONNECTOR_TRANSPORT.md)
+and [TurnSteer access](TURNSTEER_ACCESS.md).
 
 The Antigravity-enabled release is live at `https://vibe.local`. It was accepted
 at 03:18:14 UTC: backend source `9a4179e8bdf38e93d1a81faca6c665cadd6fddc7`,

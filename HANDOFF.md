@@ -1,17 +1,21 @@
-# WakeWatch pickup — 2026-10-30
+# WakeWatch and TurnSteer pickup — 2026-10-30
 
-Read [the connector recipe](scripts/watcher-events/CONNECTOR_TRANSPORT.md) first.
-Source is prepared; production activation and live delivery acceptance are pending
-explicit approval after automatic approval review rejected the live enablement.
-Do not say Disk Space can already wake automatically. Status/receipt inspection
-is available now. No service restart is permitted.
+WakeWatch is active via the existing timer/connector, with no service restart.
+Read [the connector recipe](scripts/watcher-events/CONNECTOR_TRANSPORT.md) and
+[TurnSteer access](TURNSTEER_ACCESS.md). No further activation approval is needed.
+One approved no-cleanup acknowledgement test is already queued for capacity.
+Use `wakewatch status`; never submit a replacement or increase capacity to force it.
+Confirm its actual execution and exact expected reply after a slot becomes free.
 
-The isolated preparation is `/mnt/vk-storage/wakewatch-connector-20261030`.
-Preserve its test logs, original service identities and private configuration
-snapshot. Install only after approval; capture original module bytes before
-replacement, pin the current saved configuration and use the existing ledger lock.
-Never retry queued/unknown delivery. The current owner may be busy; wait for idle. The full watcher suite passed all 183
-tests, including installed-connector compatibility and owner/custody regressions. No Rust/UI build was rerun.
+The operator refreshed Dot's plugin, but this pre-existing client still has its old
+catalog. Both steering tools are advertised by the server. The installed `turnsteer`
+CLI is available through existing Dot host access. Do not restart the connector.
+
+Evidence/rollback: `/mnt/vk-storage/wakewatch-connector-20261030` on mounted SSD.
+Installed private client variants are retained there; generic source/tests are in
+this branch. 185 watcher and 14 steering tests pass, with live readiness/receipt/
+target/health checks. No new model-level TurnSteer correction is claimed.
+The original backend, printer and connector PIDs/invocation IDs remain unchanged.
 
 Prior backend handoff, retained below, still applies to the unchanged deployment.
 

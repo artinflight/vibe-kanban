@@ -2117,3 +2117,11 @@ Prepared an explicit disk transport using the proven printer connector, existing
 timer/ledger and durable no-resend reconciliation. Native startup setting remains
 absent. Automatic approval review blocked production installation/activation and
 one idle-only test pending explicit approval. Backend and printer remain unchanged.
+
+## 2026-10-30 — Approved restart-free activation and access
+
+Operator approval received; WakeWatch installed/enabled with exact infrastructure
+identity handling and original rollback bytes retained. One approved test queued
+for capacity; reply pending. TurnSteer server tools already live; operator refreshed
+client catalog and a same-connector shell entrypoint is installed. 185 watcher and
+14 steering tests pass. No service restarted; no uncertain request replayed.

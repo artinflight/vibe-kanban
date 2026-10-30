@@ -179,4 +179,34 @@ class OwnerInventoryTests(unittest.TestCase):
         with patch('t26_watch.owner_status', return_value={'inventory_unknown': True}), patch.object(c, 'database') as db:
             self.assertFalse(c.owner_idle(self.config)); db.assert_not_called()
 
+class InfrastructureIdentityTests(unittest.TestCase):
+    def test_only_complete_reviewed_identity_may_resolve_permission_hold(self):
+        import t26_watch as w
+        p = Path('/proc/123')
+        identity = {'pid': 123, 'start_ticks': '456', 'boot_id': 'boot', 'name': 'sshd', 'cgroup': 'scope'}
+        config = {'reviewed_infrastructure_processes': [{**identity, 'reason': 'reviewed transport broker'}]}
+        with patch.object(w, 'process_identity', return_value=identity):
+            self.assertTrue(w.reviewed_infrastructure(p, config))
+            self.assertFalse(w.reviewed_infrastructure(p, {}))
+        for key, changed in (('start_ticks', '457'), ('boot_id', 'newboot'), ('cgroup', 'other'), ('name', 'agent')):
+            with patch.object(w, 'process_identity', return_value={**identity, key: changed}):
+                self.assertFalse(w.reviewed_infrastructure(p, config))
+        with patch.object(w, 'process_identity', side_effect=PermissionError):
+            self.assertFalse(w.reviewed_infrastructure(p, config))
+
+class SSHBrokerTests(unittest.TestCase):
+    def test_only_root_owned_transport_ancestry_is_excluded(self):
+        import t26_watch as w
+        child = {'pid': 123, 'start_ticks': '10', 'name': 'sshd', 'parent': 12, 'uids': [os.getuid()]*4,
+                 'cgroup': '0::/user.slice/user-'+str(os.getuid())+'.slice/session-1.scope'}
+        parent = {'pid': 12, 'name': 'sshd', 'parent': 1, 'uids': [0]*4}
+        with patch.object(w, 'ssh_broker_metadata', side_effect=[child,parent,child]):
+            self.assertTrue(w.protected_ssh_broker(Path('/proc/123')))
+        with patch.object(w, 'ssh_broker_metadata', side_effect=[child,{**parent,'uids':[os.getuid()]*4}]):
+            self.assertFalse(w.protected_ssh_broker(Path('/proc/123')))
+        with patch.object(w, 'ssh_broker_metadata', return_value={**child,'name':'python3'}):
+            self.assertFalse(w.protected_ssh_broker(Path('/proc/123')))
+        with patch.object(w, 'ssh_broker_metadata', side_effect=[child,parent,{**child,'start_ticks':'11'}]):
+            self.assertFalse(w.protected_ssh_broker(Path('/proc/123')))
+
 if __name__=='__main__':unittest.main()

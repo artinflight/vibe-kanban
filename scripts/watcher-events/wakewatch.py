@@ -27,6 +27,9 @@ def main():
         if probe_path.exists():
             probe=json.loads(probe_path.read_text());result['delivery_test']={k:probe.get(k) for k in ('state','expected_reply','expires_at')}
             result['delivery_test']['execution_id']=probe.get('outcome',{}).get('execution_id')
+            reason=probe.get('outcome',{}).get('reason');result['delivery_test']['reason']=reason
+            if reason=='connector_queued_no_retry' and not result['delivery_test']['execution_id']:
+                result['delivery_test']['state']='queued_for_capacity'
         print(json.dumps(result,indent=2));return
     bridge=adapter.ConnectorBridge(config)
     if args.action=='check':

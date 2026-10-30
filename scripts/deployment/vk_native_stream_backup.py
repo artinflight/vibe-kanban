@@ -140,3 +140,54 @@ def verify_unchanged(row, client, *, guard, progress=lambda **_: None):
     return dict(source=str(source), original_source_API_point_at=row['original_source_API_point_at'],
                 unchanged_image_reverified=True, new_final_epoch_claimed=False,
                 sha256=row['sha256'], bytes=row['bytes'])
+
+
+def validate_capture_entry(before, row):
+    """Only admit SQLite's own empty-WAL creation at read-only connection open.
+
+    The captured generation is still checked after API copy and after B transfer.
+    Existing WAL replacement/change, nonempty WAL, main DB or journal changes
+    are rejected. This does not admit a committed write or stale snapshot reuse.
+    """
+    after = row['source_generation']
+    if before == after:
+        return False
+    created = after['-wal']
+    if (before[''] == after[''] and before['-journal'] == after['-journal']
+            and before['-wal'] is None and created is not None and created[3] == 0):
+        return True
+    raise ValueError('Native source changed before API capture')
+
+
+def verify_retained_custody(row, client, *, guard, progress=lambda **_: None):
+    """Reuse sealed prior body proofs with fresh native B identity verification.
+
+    Caller authenticates this receipt and holds the physical writer fence. This
+    is never a fresh body decode or a new SQLite API epoch. Changed/missing B
+    objects fail closed in the native store's existing probe_accepted contract.
+    """
+    source = Path(row['source'])
+    if (row.get('schema') != 1 or row.get('method') != 'SQLite-backup-API-RAM-file'
+            or row.get('independently_reopened_sqlite') is not True
+            or row.get('independent_native_readback_verified') is not True
+            or row.get('new_final_epoch_claimed') is not False
+            or source.resolve(strict=True) != source or generation(source) != row['source_generation']
+            or sum(segment['bytes'] for segment in row['segments']) != row['bytes']):
+        raise ValueError('Fresh SQLite API capture required')
+    proofs = []
+    for offset in range(0, len(row['segments']), 64):
+        guard(0)
+        proof = client.probe_accepted(row['segments'][offset:offset+64])
+        if (proof.get('prior_independent_readback_proofs_reused') is not True
+                or proof.get('fresh_body_decode_claimed') is not False
+                or proof.get('payload_bytes_read') != 0 or proof.get('new_payload_bytes_written') != 0):
+            raise ValueError('Native accepted-object custody proof required')
+        proofs.append(proof)
+        progress(phase='Desktop_B_accepted_identities', verified_segments=min(offset+64, len(row['segments'])),
+                 total_segments=len(row['segments']))
+    if generation(source) != row['source_generation']:
+        raise ValueError('Native source changed during B custody verification')
+    return dict(source=str(source), original_source_API_point_at=row['original_source_API_point_at'],
+                unchanged_image_custody_reverified=True, new_final_epoch_claimed=False,
+                prior_independent_readback_proofs_reused=True, fresh_body_decode_claimed=False,
+                proofs=proofs, sha256=row['sha256'], bytes=row['bytes'])

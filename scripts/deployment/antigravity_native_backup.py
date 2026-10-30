@@ -20,7 +20,7 @@ SINCE = datetime.datetime(2026, 10, 29, 20, 55, tzinfo=datetime.timezone.utc).ti
 BINDING = json.loads((D / 'BINDING.private.json').read_text())
 module = Path(__file__).with_name('vk_native_stream_backup.py')
 assert hashlib.sha256(module.read_bytes()).hexdigest() == BINDING['stream_backup_module_sha256']
-from vk_native_stream_backup import capture_sqlite, generation, identity, verify_unchanged
+from vk_native_stream_backup import capture_sqlite, generation, identity, verify_retained_custody, validate_capture_entry
 from vk_restart_writer_fence import unit_state
 
 
@@ -101,7 +101,7 @@ def main():
             before = generation(source)
             relay = lambda **value: progress(database=name, **value)
             if str(source) == baseline['source'] and before == baseline['source_generation']:
-                verified = verify_unchanged(baseline, remote.client, guard=guard, progress=relay)
+                verified = verify_retained_custody(baseline, remote.client, guard=guard, progress=relay)
                 row = copy.deepcopy(baseline)
                 row['final_unchanged_reverification'] = verified
                 row['online_checkpoint_only'] = False
@@ -109,8 +109,9 @@ def main():
                 row = capture_sqlite(source, remote.client, maximum_image_bytes=3500*1024**2,
                                      chunk_bytes=control['maximum_object_bytes'], guard=guard, progress=relay)
                 row['captured_under_final_fence'] = True
-            assert before == generation(source), 'Native writer changed during recovery capture'
-            bindings.update({str(source)+suffix: value for suffix, value in before.items()})
+            row['read_only_open_created_empty_WAL'] = validate_capture_entry(before, row)
+            assert row['source_generation'] == generation(source), 'Native writer changed during recovery capture'
+            bindings.update({str(source)+suffix: value for suffix, value in row['source_generation'].items()})
             descriptor = remote.client.ensure((json.dumps(row, sort_keys=True)+'\n').encode())
             row['descriptor'] = descriptor
             records.append(row)

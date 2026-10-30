@@ -41,7 +41,7 @@ for line in sys.stdin:
         if scenario == "personal-timeout":
             continue
         authenticated = True
-        result(request, {})
+        result(request, {"_meta": {"tier": "synthetic"}} if scenario == "personal-agent" else {})
         with open(trace_path, "a", encoding="utf-8") as trace:
             trace.write(json.dumps({"auth_ack": True}) + "\n")
     elif method in ("session/new", "session/load"):
@@ -54,7 +54,15 @@ for line in sys.stdin:
         response = {"sessionId": "synthetic-1"} if method == "session/new" else {}
         if scenario != "no-models":
             response["models"] = {"currentModelId": "fixture-model", "availableModels": [{"modelId": "fixture-model", "name": "Fixture model"}]}
+        if scenario.startswith("personal-") and scenario != "personal-no-modes":
+            response["modes"] = {"currentModeId": "yolo", "availableModes": [{"id": "default", "name": "Supervised"}, {"id": "yolo", "name": "Unsafe saved mode"}]}
         result(request, response)
+    elif method == "session/set_mode":
+        assert request["params"]["modeId"] == "default"
+        if scenario == "personal-mode-error":
+            error(request)
+        else:
+            result(request, {})
     elif method == "session/set_model":
         if scenario == "model-error":
             error(request)

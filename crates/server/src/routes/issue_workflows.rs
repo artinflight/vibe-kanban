@@ -63,6 +63,8 @@ struct Request {
 }
 
 impl Request {
+    // Preserve the shared HTTP error contract; no large WebRTC error is created here.
+    #[allow(clippy::result_large_err)]
     fn validate(&self) -> Result<(), ApiError> {
         let invalid = || ApiError::BadRequest("Invalid bounded issue workflow request".into());
         if self.request_id.is_nil() || self.project_id.is_nil() {
@@ -94,15 +96,14 @@ impl Request {
             Operation::Relink if self.link.is_some() && self.start.is_none() => {}
             _ => return Err(invalid()),
         }
-        if let Some(link) = &self.link {
-            if link.workspace_id.is_nil()
+        if let Some(link) = &self.link
+            && (link.workspace_id.is_nil()
                 || link.expected_issue_id.is_nil()
                 || link.expected_link_revision < 0
                 || link.target_issue_id.is_some_and(|id| id.is_nil())
-                || link.chat_previous_issue_id.is_some_and(|id| id.is_nil())
-            {
-                return Err(invalid());
-            }
+                || link.chat_previous_issue_id.is_some_and(|id| id.is_nil()))
+        {
+            return Err(invalid());
         }
         if let Some(start) = &self.start {
             if start.name.trim().is_empty()
@@ -134,6 +135,8 @@ impl Request {
         Ok(())
     }
 
+    // Preserve the shared HTTP error contract; no large WebRTC error is created here.
+    #[allow(clippy::result_large_err)]
     fn hash(&self) -> Result<String, ApiError> {
         Ok(format!(
             "{:x}",
@@ -252,15 +255,14 @@ async fn publish_reserved_workspace(
     deployment: &DeploymentImpl,
     row: &IssueWorkflow,
 ) -> Result<(), ApiError> {
-    if let Some(id) = row.workspace_id {
-        if let Some(workspace) =
+    if let Some(id) = row.workspace_id
+        && let Some(workspace) =
             Workspace::find_by_id_with_status(&deployment.db().pool, id).await?
-        {
-            deployment
-                .events()
-                .msg_store()
-                .push_patch(services::services::events::workspace_patch::add(&workspace));
-        }
+    {
+        deployment
+            .events()
+            .msg_store()
+            .push_patch(services::services::events::workspace_patch::add(&workspace));
     }
     Ok(())
 }

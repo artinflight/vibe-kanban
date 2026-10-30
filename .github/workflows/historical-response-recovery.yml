@@ -35,6 +35,8 @@ jobs:
       - name: Bind disposable hosted storage
         run: |
           mkdir -p dev_assets
+          install -d -m 700 "$RUNNER_TEMP/vk-capture-tests"
+          echo "VK_CAPTURE_TEST_ROOT=$RUNNER_TEMP/vk-capture-tests" >> "$GITHUB_ENV"
           echo "VK_TEST_OUTPUT=$RUNNER_TEMP/recovery-ui" >> "$GITHUB_ENV"
           echo "TEST_RENDERER_PATH=$RUNNER_TEMP/history-tools/node_modules/react-test-renderer" >> "$GITHUB_ENV"
       - name: Compiled authentic-format recovery and real HTTP/reader tests

@@ -105,7 +105,9 @@ def authenticate(runtime, expected_sha256, attempt_dir, browser_command, display
         result.update(phase='awaiting_operator_signin', initialize_passed=True, authenticate_calls=1)
         save()
         ack = request(2, 'authenticate', {'methodId': 'oauth-personal'}, auth_timeout)
-        if not isinstance(ack, dict) or ack:
+        # ACP permits optional _meta; Antigravity returns tier metadata here.
+        # A successful response may include it, but never retain its contents.
+        if not isinstance(ack, dict) or set(ack) - {'_meta'}:
             raise ValueError('unexpected authentication acknowledgment')
         result.update(authenticate_ack=True, phase='verifying_empty_session')
         save()

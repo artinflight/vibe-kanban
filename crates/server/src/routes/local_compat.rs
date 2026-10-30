@@ -2361,6 +2361,27 @@ pub fn router() -> Router<DeploymentImpl> {
         )
 }
 
+/// The dedicated workflow uses the same configured local statuses and metadata
+/// as the existing issue API; unknown status IDs do not silently become To do.
+pub(crate) async fn workflow_issue_fields(
+    deployment: &DeploymentImpl,
+    project: Uuid,
+    status_id: &str,
+    description: &str,
+) -> Result<(TaskStatus, String), ApiError> {
+    let tasks = load_project_tasks(deployment, project).await?;
+    let configured = load_project_status_configs(deployment, project).await?;
+    let statuses = compat_statuses(project, &tasks, &configured);
+    let status = statuses
+        .iter()
+        .find(|s| s.id == status_id)
+        .ok_or_else(|| ApiError::BadRequest("Status unavailable in project".into()))?;
+    Ok((
+        parse_task_status(&status.name),
+        ensure_status_metadata(Some(description.into()), &status.name).unwrap_or_default(),
+    ))
+}
+
 #[cfg(test)]
 mod tests {
     use api_types::IssuePriority;
@@ -2500,25 +2521,4 @@ mod tests {
         assert_eq!(extract_priority(description.as_deref()), None);
         assert!(!description.as_deref().unwrap().contains("Local Priority"));
     }
-}
-
-/// The dedicated workflow uses the same configured local statuses and metadata
-/// as the existing issue API; unknown status IDs do not silently become To do.
-pub(crate) async fn workflow_issue_fields(
-    deployment: &DeploymentImpl,
-    project: Uuid,
-    status_id: &str,
-    description: &str,
-) -> Result<(TaskStatus, String), ApiError> {
-    let tasks = load_project_tasks(deployment, project).await?;
-    let configured = load_project_status_configs(deployment, project).await?;
-    let statuses = compat_statuses(project, &tasks, &configured);
-    let status = statuses
-        .iter()
-        .find(|s| s.id == status_id)
-        .ok_or_else(|| ApiError::BadRequest("Status unavailable in project".into()))?;
-    Ok((
-        parse_task_status(&status.name),
-        ensure_status_metadata(Some(description.into()), &status.name).unwrap_or_default(),
-    ))
 }

@@ -4,7 +4,7 @@ Requires explicit account authorization. The caller supplies the already-compile
 unit test, pinned hashes, a previously advertised model ID, and the existing
 personal credential file. Only the native runtime reads that credential through
 a read-only bind mount; this runner never reads, copies or logs its contents.
-The test sends at most three prompts (supervision, native resume, cancellation), never enables Vibe,
+The test sends at most two prompts (write approval/denial, native resume with cancellation), never enables Vibe,
 and refuses a consumed output directory. Keep all results private.
 """
 import argparse
@@ -67,9 +67,9 @@ def main():
     for key, value in environment.items():
         command += ['--setenv', key, value]
     command += ['--chdir', str(output), str(binary), '--exact',
-                'executors::acp::supervised::native_acceptance::antigravity_native_supervision_resume_and_cancel',
+                'executors::acp::supervised::native_acceptance::antigravity_native_write_approval_denial_resume_and_cancel',
                 '--ignored', '--test-threads=1']
-    result = dict(schema=1, max_prompt_calls=3, runtime_sha256=args.runtime_sha256,
+    result = dict(schema=1, max_prompt_calls=2, runtime_sha256=args.runtime_sha256,
                   test_sha256=args.test_sha256, harness_sha256=args.harness_sha256, credential_read_by_runner=False,
                   original_credential_read_only=True, production_changed=False)
     child = None
@@ -78,7 +78,7 @@ def main():
             os.chmod(log.name, 0o600)
             child = subprocess.Popen(command, stdout=log, stderr=subprocess.STDOUT, start_new_session=True)
             try:
-                result['exit_code'] = child.wait(timeout=390)
+                result['exit_code'] = child.wait(timeout=300)
             except subprocess.TimeoutExpired:
                 result['timed_out'] = True
     finally:

@@ -1,60 +1,43 @@
-# Current-state index
+# Current production and protections — 2026-10-30
 
-Read this index, [STREAM](STREAM.md) and [HANDOFF](HANDOFF.md), then only the
-topic needed for the task. Full prior text, decisions, identities and test
-receipts survive byte-for-byte in [STATE history](STATE_HISTORY_20261017.md).
-[Archive provenance and section locations](CONTINUITY_ARCHIVE.json) bind that
-snapshot to staging `7110930b6d9d1fa3f403a963a1ded49140b3eec1`.
-Historical statements describe their dated checkpoint, not present authority.
+The repaired new build is serving `https://vibe.local`: backend source
+`ddaaf64a5870124842c385e490a0b40e1174db86`, executable SHA256
+`a63eb3a68173d90b894bd933b6676d989ec8325d7ba31135ea52b214bd06c336`.
+It was promoted October 29 at 22:00:11 UTC. The version label 0.1.42 also identifies
+older artifacts and is not proof of deployment. Use [LIVE_DEPLOYMENT.json](LIVE_DEPLOYMENT.json)
+and fresh readback. Public gateway 4720 serves the paired new frontend and routes
+API through the retained history proxy 5640 to backend 5621. Blue stays retired.
 
-## Authority and safety
+The October 29 recovery preserved current database/history/native homes, repaired
+proven stale child metadata without erasing historical failures, fixed ordinary
+send admission, and rehearsed new→fallback→new with later writes preserved.
+[Backend handoff](BACKEND_DEPLOYMENT_HANDOFF.md) and
+[deployment checklist](DEPLOYMENT_CHECKLIST_20261030.md) carry evidence and limits.
 
-- Code and validated behavior precede this index. A source merge, prepared
-  artifact, fixture pass or agent statement alone does not prove deployment.
-- Green is the sole active Vibe instance; retired Blue stays stopped/disabled.
-  Preserve the incumbent, current data, compatible rollback, private readers,
-  proxy/frontend and all original native histories. Never restore stale data
-  over later writes. Cleanup stays disabled until human QA and exact authority.
-- Preserve Recommend-only, selected models/effort, AutoSwitch, first-run holds,
-  usage/credit controls, capacity guards and the user execution lane. At most
-  seven occupied coding lanes leave one of eight for the user. No extra worker,
-  compiler or browser without resource/owner admission; preserve build caches.
-- Preparation does not authorize a restart, admission hold, routing change,
-  privilege installation, arbitrary deletion or new security access. Respect
-  the current no-restart instruction. Only the release owner holds cutover.
-- Full consumer visibility and managed-owner/lease gates fail closed. Expensive
-  hashes and SSH preparation precede final held-boundary clearance; bounded
-  local identity/freshness checks follow it. A receipt is not an atomic global
-  process fence. No blanket sudo or same-account reviewer security boundary.
-- Preserve complete recoverable sessions, dirty/untracked/unpublished work,
-  attachments, incident/fallback evidence and historical Git obligations.
-  A directory named cache/build/target/node_modules is not deletion authority.
-- Operational diagnostics, account values and private manifests stay private
-  on local/B storage. Publish only reviewed public source. No secrets in Git.
+Antigravity is compiled but deliberately unavailable. The official ACP runtime
+is installed and initializes; current session creation requires authentication.
+See [the corrected readiness assessment](VK_ANTIGRAVITY_ACP.md). Automatic
+provider failover remains disabled. Recommend, saved model/effort/permission,
+queue semantics and existing approval controls must be preserved.
 
-## Topic map and present evidence boundaries
+Do not replace production with an ordinary public build: private retained-history
+bindings and the protected reader are required. Preserve current data, all
+uncertain inputs without replay, existing attachment routes, subscriptions,
+native sessions, and original histories. Rollback means paired executable/UI
+cutback on the latest compatible database, not restoration of a stale snapshot.
+Consumed October 29 controllers, PIDs, leases and manifests are historical only.
 
-| Area | Read next | Boundary |
-| --- | --- | --- |
-| Runtime/restart | [Workflow](VK_WORKFLOW.md), [agent runbook](VK_AGENT_DEPLOYMENT_RUNBOOK.md), [restart protocol](VK_BACKEND_RESTART_PROTOCOL.md) | Latest authoritative actor receipt decides live identity; no restart is armed by this index. |
-| Queue/preparation | [Preparation](VK_PREPARATION_PERFORMANCE.md), [queue source](crates/local-deployment/src/container.rs) | PR262 merged into staging at `7110930b6`; ordinary wakeup needs compiled-artifact start/readback, not source-only claims. |
-| Nightly B/recovery | [Sole integration PR263](https://github.com/artinflight/vibe-kanban/pull/263), [retained restart history](HANDOFF_HISTORY_20261017.md) | Workspace604d is sole backup/package/schedule owner. Counted capacity is not publication or whole-plan restore. Schedule adoption remains unverified; default is 02:00 America/Toronto, DST-aware. |
-| Git preservation | [Automatic sync](VK_AUTOMATIC_GITHUB_SYNC.md), [preservation](VK_TURN_GIT_PRESERVATION.md) | Preserve native ledgers/originals and actual held writer fence. Invalid old watcher coverage cannot be reset or replaced by manifest booleans. Scope-specific handover gates do not block independent backup verification. |
-| Release integration | [Stop PR264](https://github.com/artinflight/vibe-kanban/pull/264), [Dot steering](VK_DOT_SESSION_STEERING.md) | Staging owns combined build/copy/rollback/queue acceptance. Public artifacts omit retained private bindings and cannot replace the live package. |
-| Dot/mobile/reporting | [Notifications](DOT_NOTIFICATION_ROLLOUT.md), [reliability](DOT_RELIABILITY_ROLLOUT.md), [integration](DOT_INTEGRATION_HANDOFF.md), [sent drafts](VK_SENT_STEERING_DRAFT.md) | Preserve mobile, steering, existing connector reporting and paired subscriptions; source-ready and served acceptance are separate. |
-| Storage alert admission | [Native contract](VK_STORAGE_ALERT_ADMISSION.md) | Source-only supporting dependency of Operations issue214; native integration/review and release acceptance remain separate. No activation authority. |
-| Generated files | [Artifact links](VK_ARTIFACT_LINKS.md) | Upload and verify intended files before offering browser links; filesystem paths alone are not delivery. |
+Builds use an owned shared target on mounted SSD, incremental compilation off,
+bounded memory/CPU and fresh capacity checks. Backups go to Desktop B with
+verified reopen; bulky staging stays on the mounted secondary SSD. Do not clean
+dirty/active worktrees, native histories or attachments to make space.
 
-## Maintaining this index
+Current reconciliation is based on fork/staging, isolated from the dirty canonical
+checkout. It records deployed source plus public-safe tooling; it is not another
+production deployment. Existing storage-admission/automatic-routing activation
+gates are not lifted by source custody.
 
-Replace superseded current statements; put detailed receipts in the owning
-topic guide and link them here. Do not prepend the same update into all three
-pickup files. Keep their combined UTF-8 size below 16 KiB. Historical archives
-are immutable evidence, not mandatory reading on every turn. Find a specific
-section with `python3 scripts/continuity/pickup.py find QUERY`; read its reported
-line range, widening it when the task needs surrounding constraints.
-
-Current release coordination, newer Sidebar adoption and remaining private gates:
-[October 17 release status](VK_RELEASE_COORDINATION_20261017.md).
-
-Collapsible issue behavior and approved frontend release: [topic evidence](VK_COLLAPSIBLE_ISSUES.md).
+Prior topic map and protections are preserved exactly in
+[the previous index](deployment-history/20261030-before-reconciliation/STATE.md).
+The original full [STATE history](STATE_HISTORY_20261017.md) remains immutable
+and indexed by [CONTINUITY_ARCHIVE.json](CONTINUITY_ARCHIVE.json).

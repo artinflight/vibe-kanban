@@ -1,0 +1,22 @@
+from pathlib import Path
+import copy,hashlib,json,sys
+D=Path(__file__).resolve().parent;sys.path.insert(0,'/mnt/vk-storage/vk-stale-activity-20261029');from backup import guard,sha
+
+def main():
+ guard();manifest=Path('/mnt/vk-storage/vk-staging-catchup-20261028/cutover-v5-20261029/MANIFEST.private.json');assert sha(manifest)=='703488c3caa16d48336049e9be23e60967cccb95c4a48b10466b896200d0c961'
+ cfg=json.loads(manifest.read_text());plan=json.loads(Path(cfg['plan']['path']).read_text());sys.path.insert(0,plan['source_folder']);from vk_nightly_desktop_objects import DesktopObjects
+ control=copy.deepcopy(plan['workers']['files']['desktop']);control.pop('whole_cycle_deadline_UTC',None);records=[]
+ names=['evidence/candidate-server','evidence/RESULT.json','promote.py','native_backup_fenced.py','cutback_preflight.py','test_cu_fence.py','candidate-execstart.conf','BINDING.private.json','repair.patch','roundtrip/RESULT.private.json','send-probe/PROBES-v2.json']
+ with DesktopObjects(control,guard=guard) as remote:
+  for name in names:
+   p=D/name;h=hashlib.sha256();parts=[]
+   class Sink:
+    def write(self,raw):h.update(raw);return len(raw)
+   with p.open('rb')as f:
+    while block:=f.read(control['maximum_object_bytes']):parts.append(remote.client.ensure(block,readback_sink=Sink()))
+   expected=sha(p);assert h.hexdigest()==expected
+   desc=dict(format='vk-repaired-release-recovery-v1',file=name,bytes=p.stat().st_size,sha256=expected,segments=parts)
+   records.append(dict(name=name,sha256=expected,bytes=p.stat().st_size,descriptor=remote.client.ensure((json.dumps(desc,sort_keys=True)+'\n').encode()),independent_native_readback_verified=True))
+   print(json.dumps({'file':name,'Desktop_B_verified':True}),flush=True)
+ (D/'RELEASE_B.private.json').write_text(json.dumps({'complete':True,'B_root':control['B_root'],'files':records},indent=2)+'\n')
+if __name__=='__main__':main()

@@ -1,0 +1,19 @@
+from pathlib import Path
+import json,subprocess,os
+D=Path(__file__).resolve().parent;W=Path('/mnt/vk-storage/worktrees/4e18-vk-staging-check/_vibe_kanban_repo');old=W/'.restart-preparation/tonight-20261027/build-v4'
+(D/'evidence').mkdir(mode=0o700,exist_ok=True)
+a=json.loads((old/'command.json').read_text());b=[];i=0
+while i<len(a)-3:
+ k=a[i]
+ if k in ('--ro-bind','--bind'):
+  host,guest=a[i+1:i+3];i+=3
+  if guest=='/build/source':host=str(D/'source')
+  if guest=='/build/tools':host=str(D)
+  if guest=='/build/r3-evidence':host=str(D/'evidence')
+  b += [k,host,guest]
+ elif k=='--setenv':
+  key,val=a[i+1:i+3];i+=3
+  if key=='VK_BUILD_SOURCE_COMMIT':val=subprocess.check_output(['git','-C',str(D/'source'),'rev-parse','HEAD'],text=True).strip()
+  b += [k,key,val]
+ else:b.append(k);i+=1
+b+=['/usr/bin/python3','-B','/build/tools/guest.py'];(D/'command.json').write_text(json.dumps(b))

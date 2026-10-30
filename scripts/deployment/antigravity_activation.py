@@ -85,6 +85,13 @@ def accept(cfg,ops,variant,before):
  P.transaction.preserve_settings(old,new,candidate=variant=='candidate')
  ops.verify_semantics(before['semantic']);ops.recovery_acceptance(variant);ops.reader_check()
  assert P.quiet(ops)['fingerprint']==before['boundary']['fingerprint'],'Queue/history changed during switch'
+ if variant=='candidate':
+  available=ops.h.read_api(5621,'agents/check-availability?executor=ANTIGRAVITY')
+  presets=ops.h.read_api(5621,'agents/preset-options?executor=ANTIGRAVITY')
+  assert available['success'] and available['data']['type']=='INSTALLATION_FOUND'
+  assert presets['success'] and presets['data']['permission_policy']=='SUPERVISED'
+  assert presets['data']['model_id']=='gemini-3.8-flash-low'
+  save('ANTIGRAVITY_LIVE.safe.json',dict(available=available['data'],presets=presets['data'],prompt_calls=0))
  progress(variant+'-fresh-data-history-settings-verified')
 
 def cu_idle():

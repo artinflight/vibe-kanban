@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "additionalProperties": false,
-  "description": "Unavailable preparation profile. Saving settings does not enable execution or authenticate an account.",
+  "description": "Supervised official ACP runtime. Requires an explicit executable and personal account authentication; saving settings does not authenticate an account.",
   "type": "object",
   "properties": {
     "append_prompt": {

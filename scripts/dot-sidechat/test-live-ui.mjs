@@ -34,7 +34,8 @@ function load(saved={}) {
         if(route==='send'){
           assert.equal(opts.headers['X-Dot-CSRF'],'csrf-test');
           const body=JSON.parse(opts.body);sends.push(body);
-          assert.deepEqual(Object.keys(body).sort(),['body','request','workspace']);
+          assert.deepEqual(Object.keys(body).sort(),['body','request','thread','workspace']);
+          assert.equal(body.thread,'thread-one');
           if(!messages.length)messages=[{id:'message-one',seq:1,role:'owner',body:body.body,workspace:body.workspace,created:1}];
           if(loseResponse){loseResponse=false;throw Error('Response lost');}
           return reply(200,messages[0]);
@@ -62,7 +63,13 @@ await wait(()=>!dom.window.document.querySelector('button[type=submit]').disable
 dom.window.document.querySelector('button[type=submit]').click();
 await wait(()=>dom.window.document.body.textContent.includes('Response lost'));
 const saved=Object.fromEntries(Object.keys(dom.window.sessionStorage).map(k=>[k,dom.window.sessionStorage.getItem(k)]));
-assert.equal(Object.keys(saved).length,1);
+const pendingKeys=Object.keys(saved).filter(k=>k.startsWith('vibe-dot-pending:'));
+const draftKeys=Object.keys(saved).filter(k=>k.startsWith('vibe-dot-draft:'));
+assert.equal(pendingKeys.length,1);
+assert.equal(draftKeys.length,1);
+assert.equal(Object.keys(saved).length,2);
+assert.equal(JSON.parse(saved[pendingKeys[0]]).body,'Keep this exact message on retry.');
+assert.equal(JSON.parse(saved[draftKeys[0]]).body,'Keep this exact message on retry.');
 dom.window.close();
 dom=load(saved);dom.window.eval(js);
 await wait(()=>dom.window.document.body.textContent.includes('Retry same message'));

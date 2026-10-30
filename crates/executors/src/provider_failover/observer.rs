@@ -74,13 +74,12 @@ impl Drop for Registration {
         if self.retained {
             return;
         }
-        if let Ok(mut registry) = bindings().lock() {
-            if registry
+        if let Ok(mut registry) = bindings().lock()
+            && registry
                 .get(&self.execution)
                 .is_some_and(|b| Arc::ptr_eq(b, &self.binding))
-            {
-                registry.remove(&self.execution);
-            }
+        {
+            registry.remove(&self.execution);
         }
     }
 }
@@ -224,6 +223,8 @@ pub fn codex_started(
     }
     Ok(())
 }
+// Keep the explicit worker, session and profile identity checks at this boundary.
+#[allow(clippy::too_many_arguments)]
 fn register_inner(
     controller: &Arc<Mutex<Controller>>,
     work_id: &str,

@@ -49,12 +49,11 @@ impl Controller {
             ));
         }
         let key = serde_json::to_string(&v.candidate)?;
-        if let Some(old) = self.state.capacities.get(&key) {
-            if old.observed_at_ms > v.observed_at_ms
-                || (old.observed_at_ms == v.observed_at_ms && old != &v)
-            {
-                return Err(invalid("Older/conflicting capacity evidence"));
-            }
+        if let Some(old) = self.state.capacities.get(&key)
+            && (old.observed_at_ms > v.observed_at_ms
+                || (old.observed_at_ms == v.observed_at_ms && old != &v))
+        {
+            return Err(invalid("Older/conflicting capacity evidence"));
         }
         let mut next = self.state.clone();
         next.last_now_ms = next.last_now_ms.max(v.observed_at_ms);
@@ -89,13 +88,13 @@ impl Controller {
             .iter()
             .filter_map(|c| self.capacity(c, now))
             .collect();
-        if let Some(first) = measured.first() {
-            if measured.iter().any(|v| {
+        if let Some(first) = measured.first()
+            && measured.iter().any(|v| {
                 v.reference_work != first.reference_work
                     || v.calibration_version != first.calibration_version
-            }) {
-                return Err("capacity_measurements_incomparable");
-            }
+            })
+        {
+            return Err("capacity_measurements_incomparable");
         }
         choices.sort_by_key(|c| {
             let v = self.capacity(c, now);

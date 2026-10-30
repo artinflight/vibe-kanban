@@ -11,10 +11,11 @@ work. Use a clean SSD worktree. In this checkout `fork` is the operator's reposi
 and `origin` is upstream; confirm URLs before fetching/pushing. Normal work targets
 fork/staging, then reviewed staging→main promotion. Commit/push is not deployment.
 
-The sole current writer is `vibe-kanban-native-review-20261015.service` on5621,
+The sole current writer is `vibe-kanban-native-review-20261015.service` on 5621,
 with the existing green data/native home. Public gateway 4720 serves the paired
 frontend and routes API through the protected history proxy 5640. Blue is retired.
-Backend root pages have a legacy frontend; use `https://vibe.local` for UI checks.
+Backend/history-proxy and public roots now use the matched activation frontend.
+Both paired releases retain old/new assets; use `https://vibe.local` for UI checks.
 Never restart an old service just because its name appears in an archived guide.
 
 Preserve existing runtime environment, receipt-bound startup identity, native
@@ -43,3 +44,7 @@ and resumed consumers. No fake completion or uncertain-input replay. Update
 the manifest/checklist with exact evidence and explicit gaps. Frontend-only
 publication uses a new paired release plus atomic pointer, not an in-place
 directory overwrite. Native provider end-to-end QA is separate from mocks.
+
+Antigravity is live with the existing account and supervised permissions. See
+[activation/recovery evidence](ACTIVATION_RECOVERY_20261030.md) for the exact runtime,
+private inputs, final-checkpoint correction and current-data fallback procedure.

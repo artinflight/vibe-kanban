@@ -1,35 +1,40 @@
-# Deployment reconciliation and Antigravity readiness
+# Deployment reconciliation and Antigravity activation
 
-Branch: `fix/deployment-reconciliation-20261030`, based on fork/staging
-`2bf2676d2d3841c252fa7f2a9b4e7993128bb093`. User requested investigation,
-conditional Antigravity activation, repository custody, commit/sync, checklist
-and a reproducible backend-deployment handoff.
+Branch `fix/deployment-reconciliation-20261030`, based on fork/staging
+`2bf2676d2d3841c252fa7f2a9b4e7993128bb093`. Draft PR #284 reconciles the actual
+October 29 recovery/409/history work and the October 30 Antigravity activation.
+No unrelated canonical work was reset and no staging/main merge was performed.
 
-Reconciled the deployed backend/frontend/generated source and exact ordinary-send
-409 fix without pushing the private candidate's Git ancestry. Public recovery
-bindings are intentionally empty; private host acceptance remains mandatory.
-Recovered deployment modules and tests, inert exact incident templates, paired
-connector source, source catalogs and bounded ACP readiness diagnostics now live
-in this branch. No production file/service changed during this reconciliation.
+The matched activation release is live: backend source `9a4179e8b`, binary
+`137d6cd7b647…`, accepted 03:18:14 UTC. Public/frontend and backend root use the
+new bundle; old/new hashed chunks remain reachable. Exact identity, backup,
+fallback and limitations are in [the manifest](LIVE_DEPLOYMENT.json).
 
-Current native checks:11 Antigravity,2 ACP stderr and14 send-admission tests pass.
-Recovery checks:110 pass/22 explicit skips. New source-custody4 and ACP-probe6
-tests pass. Connector steering/stop24 and captured-current-contract30 pass.
-The old connector start fixture lacked now-required issue scope; the new runner
-fixes the fixture without changing captured deployed code.
+Existing-account auth and actual native Vibe adapter acceptance passed: approved
+write, denied writes, exact-token native resume and pending-approval cancellation
+with process reaped in about 40 ms. Four model turns total; post-deployment checks
+used zero inference. Availability is installation-based and launch remains
+supervised. Service-scoped runtime/model defaults preserve saved profiles.
 
-Authentication is the current Antigravity blocker. Official documentation now
-explicitly supports custom ACP clients; the old missing-runtime/custom-client
-uncertainty is superseded. No prompt was sent. configOptions/model/mode,
-permission denial, cancel/reap and native resume still need authenticated
-end-to-end acceptance. The compile-time gate remains false.
+A real final-backup refusal exercised automatic recovery before any binary switch.
+SQLite read-only opening created an empty WAL; a detached repro and regression
+fix allow only that exact transition. Fresh data/ownership checks preceded the
+successful package. Current data, protected history, original reader/CU and all
+17 uncertain inputs were retained. No old snapshot was restored or input replayed.
 
-See [handoff](BACKEND_DEPLOYMENT_HANDOFF.md), [checklist](DEPLOYMENT_CHECKLIST_20261030.md)
-and [live manifest](LIVE_DEPLOYMENT.json). Source sync is separate from a staging/
-main merge or another deployment. Keep PR draft until its full required checks
-and private release acceptance are complete.
+Repository custody includes 134 deployed source records, 27 inert incident
+sources, 50 paired connector files, bounded ACP diagnostics/native runner,
+current-data rehearsal, owned activation/recovery, RAM SQLite backup, B proof
+reuse, frontend asset retention, release mirroring and operational documentation.
+Private history/account material stays outside Git. Old source catalogs remain
+historical; the new release provenance is recorded separately.
 
-Prior stream retained in [the exact previous record](deployment-history/20261030-before-reconciliation/STREAM.md)
-and [STREAM_HISTORY_20261017.md](STREAM_HISTORY_20261017.md).
+Validation: 13 offline Antigravity regressions; native provider acceptance above;
+130 recovery/custody checks pass with 22 private/optional skips; 13 auth/privacy
+checks; 24 steering/stop and 30 connector contracts. Hosted Test plus seven other
+workflows passed on `aaacd278b` (the same deployed Rust/frontend inputs); recovery
+CI passed on `1d48c6f39`. Format, governance and source inventories pass. Final docs
+and mirror tooling are not a claim that every feature had paid-provider QA.
 
-Local `pnpm run format` and `pnpm run ops:check` passed. Standard `pnpm run check` and `pnpm run lint` stopped at missing `tsc `/`eslint` because this clean worktree has no node_modules. No bulk dependency install or full host workspace build was started; hosted CI is the remaining full-branch check.
+Prior stream: [previous record](deployment-history/20261030-before-reconciliation/STREAM.md)
+and [STREAM history](STREAM_HISTORY_20261017.md).

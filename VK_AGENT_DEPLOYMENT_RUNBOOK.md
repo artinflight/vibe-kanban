@@ -10,7 +10,7 @@ Its old service names, install paths and commands are not current authority.
 
 1. Discover actual serving process/hash, public route/assets, data inode/target,
    service environment and protected-reader identity. Do not infer build identity
-   from0.1.42. Preserve dirty canonical work; branch from current operator staging
+   from 0.1.42. Preserve dirty canonical work; branch from current operator staging
    in a clean SSD worktree and record included/excluded code explicitly.
 2. Reconcile private history bindings, live UI/connector changes, schema and
    generated types. Verify source catalogs. Preserve startup identity, capacity,
@@ -46,5 +46,8 @@ Its old service names, install paths and commands are not current authority.
     credentials, histories and backups out of public Git. Mark unresolved gates
     and CI explicitly. Use the artifact publisher for operator-facing reports.
 
-Antigravity remains gated until [its authenticated acceptance](VK_ANTIGRAVITY_ACP.md)
-passes. Existing source authorization is not proof of an authenticated account.
+Antigravity authenticated native acceptance passed and the matched activation is live.
+Use [its evidence](VK_ANTIGRAVITY_ACP.md) and the [fresh-package recipe](ACTIVATION_RECOVERY_20261030.md).
+Retain the supervised/default-model service settings; no further provider call is
+authorized by the completed four-turn acceptance budget. Future runtime changes
+require fresh bounded qualification.

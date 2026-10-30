@@ -1,27 +1,26 @@
 {
   "schema": 2,
-  "generated_at_utc": "2026-10-30T00:23:48Z",
+  "generated_at_utc": "2026-10-30T03:20:09.706863+00:00",
   "canonical_repo": "/home/mcp/_vibe_kanban_repo",
   "canonical_repo_dirty": true,
   "canonical_branch": "vk/land-live-fixes-20260422",
   "canonical_head": "06a65a3ce4b522a54cb7a3ae13a6ce200826b282",
-  "source_commit": "ddaaf64a5870124842c385e490a0b40e1174db86",
-  "deployed_at_utc": "2026-10-29T22:00:11Z",
+  "source_commit": "9a4179e8bdf38e93d1a81faca6c665cadd6fddc7",
+  "deployed_at_utc": "2026-10-30T03:18:14Z",
   "version_label": "0.1.42",
   "live_service": "vibe-kanban-native-review-20261015.service",
-  "live_binary": "/mnt/vk-storage/vk-new-build-repair-20261029/evidence/candidate-server",
-  "live_binary_sha256": "a63eb3a68173d90b894bd933b6676d989ec8325d7ba31135ea52b214bd06c336",
+  "live_binary": "/mnt/vk-storage/vk-deployment-reconcile-20261030/activation-build-1/candidate-server",
+  "live_binary_sha256": "137d6cd7b6475f47f9b92455a879b5fd23d3b3a5374743c77d0c694f3f1257d2",
   "last_observed_process": {
-    "MainPID": "2100850",
+    "MainPID": "645213",
     "MemoryHigh": "infinity",
     "MemoryMax": "infinity",
     "MemorySwapMax": "infinity",
     "TasksMax": "38282",
     "ActiveState": "active",
     "SubState": "running",
-    "FragmentPath": "/home/mcp/.config/systemd/user/vibe-kanban-native-review-20261015.service",
-    "InvocationID": "b2a146863e794d86acb393f19decc4c9",
-    "executable_sha256": "a63eb3a68173d90b894bd933b6676d989ec8325d7ba31135ea52b214bd06c336"
+    "InvocationID": "440a8acde3f4428abc3a27a8f601808d",
+    "executable_sha256": "137d6cd7b6475f47f9b92455a879b5fd23d3b3a5374743c77d0c694f3f1257d2"
   },
   "live_state_dir": "/home/mcp/.local/share/vibe-kanban-green-xdg/vibe-kanban",
   "live_database": "/home/mcp/.local/share/vibe-kanban-green-xdg/vibe-kanban/db.v2.sqlite",
@@ -33,14 +32,17 @@
   "history_proxy_port": 5640,
   "gateway_port": 4720,
   "public_frontend_pointer": "/home/mcp/.local/share/vibe-kanban/frontend-dist/current",
-  "public_frontend_release": "/mnt/vk-storage/worktrees/4e18-vk-staging-check/_vibe_kanban_repo/.restart-preparation/combined-ag-custody-20261022/issue-chat-frontend-v1/view/packages/local-web/dist",
-  "public_assets": ["/assets/index-BBpTkgZU.js", "/assets/index-CUBB2mA2.css"],
-  "frontend_routing_note": "Gateway/public route serves paired new frontend. Backend 5621 and history proxy 5640 root pages still use the legacy frontend environment; do not use those root pages for public UI acceptance.",
+  "public_frontend_release": "/mnt/vk-storage/vk-deployment-reconcile-20261030/activation-release-1/paired-frontend/candidate",
+  "public_assets": [
+    "/assets/index-CUBB2mA2.css",
+    "/assets/index-DNMY17oB.js"
+  ],
+  "frontend_routing_note": "Gateway, backend and history-proxy frontend roots now use the matched release; both paired roots retain old and new hashed assets.",
   "selected_runtime_environment": {
     "HOST": "127.0.0.1",
     "PORT": "5621",
     "BACKEND_PORT": "5621",
-    "VK_FRONTEND_DIST_DIR": "/mnt/vk-storage/vk-safe-release-20261009/frontend66-over-c3/packages/local-web/dist-v6",
+    "VK_FRONTEND_DIST_DIR": "/mnt/vk-storage/vk-deployment-reconcile-20261030/activation-release-1/paired-frontend/candidate",
     "CODEX_HOME": "/home/mcp/.local/share/vibe-kanban-green-codex-home",
     "XDG_DATA_HOME": "/home/mcp/.local/share/vibe-kanban-green-xdg",
     "DISABLE_WORKTREE_CLEANUP": "1",
@@ -52,10 +54,71 @@
     "VK_CODEX_MAX_ACTIVE_EXECUTIONS": "8",
     "VK_CODEX_BASE_COMMAND": "/mnt/vk-storage/vk-model-autoswitch-v1/integration/runtime/codex.mjs",
     "VK_ALLOWED_ORIGINS": "http://127.0.0.1:5511,http://127.0.0.1:4720,https://vibe-green.local,https://vibe.local",
-    "VK_CODEX_ROUTING_MODULE": "/mnt/vk-storage/vk-cutover-artifacts-20261009/c3c48e63/autoswitch-module/current"
+    "VK_CODEX_ROUTING_MODULE": "/mnt/vk-storage/vk-cutover-artifacts-20261009/c3c48e63/autoswitch-module/current",
+    "VK_ANTIGRAVITY_ACP_EXECUTABLE": "/home/mcp/.local/share/vibe-runtimes/antigravity-acp/1.4.1/agy_acp_server.par",
+    "VK_ANTIGRAVITY_ACP_MODEL": "gemini-3.8-flash-low"
   },
   "protected_history_reader_service": "vk-chat-history-readonly-20261010.service",
   "fallback": {
+    "path": "/mnt/vk-storage/vk-new-build-repair-20261029/evidence/candidate-server",
+    "sha256": "a63eb3a68173d90b894bd933b6676d989ec8325d7ba31135ea52b214bd06c336",
+    "bytes": 94400752,
+    "source_commit": "ddaaf64a5870124842c385e490a0b40e1174db86",
+    "frontend": "/mnt/vk-storage/vk-deployment-reconcile-20261030/activation-release-1/paired-frontend/fallback",
+    "release_package": "/mnt/vk-storage/vk-deployment-reconcile-20261030/activation-release-2",
+    "policy": "Drain current work and recheck compatibility; use paired executable/frontend against the latest data. Never overwrite new writes with an old snapshot.",
+    "roundtrip": "Fresh current-data candidate/fallback/candidate preserved 60 tables including later-write probe, 99 migrations, 18 protected and four recent histories.",
+    "antigravity_execution": "Disabled by fallback; existing Antigravity records remain recognizable; recheck after future writes/schema changes."
+  },
+  "antigravity": {
+    "activation_verified": true,
+    "installed_acp_version": "1.4.1",
+    "runtime_sha256": "57e7c4c505fdc8787993d4ff868274f44fd7aa4e4c82cf424fece3bf6c487643",
+    "initialize_passed": true,
+    "prompt_calls": 4,
+    "status": "Available in live backend and public API; authenticated real adapter approval/denial/native-resume/cancel acceptance passed.",
+    "authenticate_ack": true,
+    "session_created": true,
+    "authentication_verified_at_utc": "2026-10-30T01:12:16Z",
+    "legacy_models_advertised": true,
+    "config_options_advertised": true,
+    "supervised_mode_id": "default",
+    "tested_model": "gemini-3.8-flash-low",
+    "permission_policy": "SUPERVISED",
+    "supervised_native_acceptance_passed": true,
+    "native_cancel_to_reaped_seconds": 0.040265185,
+    "post_deployment_inference_calls": 0,
+    "production_workspace_conversation_tested": false,
+    "operator_viewer": "closed and browser stopped; profile retained"
+  },
+  "reconciliation": {
+    "branch": "fix/deployment-reconciliation-20261030",
+    "base": "2bf2676d2d3841c252fa7f2a9b4e7993128bb093",
+    "runtime_changed": true,
+    "production_source_is_not_reconciliation_head": true,
+    "public_source_catalog": "scripts/deployment/releases/20261029-source.json",
+    "private_input_required": "crates/server/src/routes/execution_processes/historical_response/additional-reviewed-requests.json",
+    "pull_request": "https://github.com/artinflight/vibe-kanban/pull/284",
+    "synced_source_head": "1d48c6f396d3261aa992e6cf0a6edbf41d1a694b",
+    "full_test_ci_passed_source": "1d48c6f396d3261aa992e6cf0a6edbf41d1a694b",
+    "full_test_ci_run": "https://github.com/artinflight/vibe-kanban/actions/runs/40995913274",
+    "recovery_ci_passed_source": "1d48c6f396d3261aa992e6cf0a6edbf41d1a694b",
+    "recovery_ci_run": "https://github.com/artinflight/vibe-kanban/actions/runs/40995913315",
+    "staging_or_main_merge_performed": false
+  },
+  "evidence_root": "/mnt/vk-storage/vk-deployment-reconcile-20261030/activation-release-2",
+  "current_investigation_root": "/mnt/vk-storage/vk-deployment-reconcile-20261030",
+  "desktop_backup_root": "desktop:B:/vk-backups/vk-nightly-efficiency-20261026/objects-v1",
+  "previous_record": "deployment-history/20261030-before-reconciliation/LIVE_DEPLOYMENT.json",
+  "unresolved": [
+    "Final documentation-head hosted CI is separate from passed deployed-code and recovery checks; no staging/main merge performed.",
+    "Private retained-history bindings and retained host/Nightly controls remain required and deliberately absent from public Git.",
+    "No additional production-workspace Antigravity prompt was sent after the four-turn native acceptance budget.",
+    "Service-level MemoryHigh/MemoryMax remain unlimited; executor limits and capacity guard are separate.",
+    "Automatic provider failover and external-effect continuation remain disabled/unqualified.",
+    "Antigravity reset/fork and non-supervised modes remain unsupported."
+  ],
+  "older_retained_fallback": {
     "source_commit": "d154fe9d83c136acb83012914e1b544898ba4c84",
     "binary_sha256": "95312f4f3be43cdc109159acc680dc6be73daed0f162e3a220eb5ac6a936cddc",
     "bundle": "/mnt/vk-storage/vk-cutback-ready-20261029/bundle",
@@ -63,33 +126,22 @@
     "policy": "Switch the paired executable/frontend against latest data; never restore an old database over new writes.",
     "roundtrip": "59 application tables, migrations and a later-write sentinel retained in isolated new-to-fallback-to-new rehearsal"
   },
-  "antigravity": {
-    "activation_verified": false,
-    "installed_acp_version": "1.4.1",
-    "runtime_sha256": "57e7c4c505fdc8787993d4ff868274f44fd7aa4e4c82cf424fece3bf6c487643",
-    "initialize_passed": true,
-    "session_error_code": -32000,
-    "prompt_calls": 0,
-    "status": "Authentication required; supervised real-session acceptance and configOptions compatibility remain unverified"
+  "previous_live_release_evidence": "/mnt/vk-storage/vk-new-build-repair-20261029",
+  "frontend_build": {
+    "source_commit": "aaacd278b30021814d04c9d2a9c616ccdae960d7",
+    "workflow_run": 40990973645,
+    "artifact_id": 12949546000,
+    "archive_sha256": "e613e117f139648afdfab58f1997668525604ae947ce67686dab3c87e662b8f0",
+    "verified_manifest_files": 417,
+    "retained_both_version_assets": 403
   },
-  "reconciliation": {
-    "branch": "fix/deployment-reconciliation-20261030",
-    "base": "2bf2676d2d3841c252fa7f2a9b4e7993128bb093",
-    "runtime_changed": false,
-    "production_source_is_not_reconciliation_head": true,
-    "public_source_catalog": "scripts/deployment/releases/20261029-source.json",
-    "private_input_required": "crates/server/src/routes/execution_processes/historical_response/additional-reviewed-requests.json"
-  },
-  "evidence_root": "/mnt/vk-storage/vk-new-build-repair-20261029",
-  "current_investigation_root": "/mnt/vk-storage/vk-deployment-reconcile-20261030",
-  "desktop_backup_root": "desktop:B:/vk-backups/vk-nightly-efficiency-20261026/objects-v1",
-  "previous_record": "deployment-history/20261030-before-reconciliation/LIVE_DEPLOYMENT.json",
-  "unresolved": [
-    "Antigravity account sign-in and supervised runtime acceptance",
-    "Whole-workspace hosted validation of the reconciliation branch; no staging/main merge claimed",
-    "Private retained-history bindings are deliberately absent from public source",
-    "Backend root still serves legacy frontend; public gateway is the supported UI entry",
-    "Service-level MemoryHigh/MemoryMax are unlimited; executor limits and capacity guard remain separate. No limit change made.",
-    "Automatic provider failover and external-effect continuation remain disabled/unqualified"
-  ]
+  "recovery": {
+    "total_50_minute_cutoff": false,
+    "verified_no_progress_seconds": 600,
+    "separate_recovery_seconds": 300,
+    "first_attempt": "aborted before binary switch on empty reader-WAL identity mismatch; original PID and consumers recovered without data restoration",
+    "corrected_attempt": "activation-release-2",
+    "offline_tests_passed": 130,
+    "private_optional_tests_skipped": 22
+  }
 }

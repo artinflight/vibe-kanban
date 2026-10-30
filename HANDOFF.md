@@ -1,26 +1,33 @@
 # Backend owner pickup — 2026-10-30
 
-Start with [STATE](STATE.md), [the live manifest](LIVE_DEPLOYMENT.json),
-[BACKEND_DEPLOYMENT_HANDOFF](BACKEND_DEPLOYMENT_HANDOFF.md) and
-[the evidence checklist](DEPLOYMENT_CHECKLIST_20261030.md).
+Start with [STATE](STATE.md), [live manifest](LIVE_DEPLOYMENT.json),
+[backend handoff](BACKEND_DEPLOYMENT_HANDOFF.md), [activation recipe](ACTIVATION_RECOVERY_20261030.md)
+and [validation checklist](DEPLOYMENT_CHECKLIST_20261030.md).
 
-The new repaired binary is live; this reconciliation branch is not the running
-source revision. Do not redeploy it merely to make Git and production hashes
-look alike. A public build omits private retained-history bindings and is not
-a drop-in replacement. The canonical checkout is dirty; preserve it.
+Antigravity is deployed and available. Live binary `137d6cd7b647…`, source
+`9a4179e8b`, accepted 03:18:14 UTC; observed PID 645213. The matched public JS is
+`index-DNMY17oB.js`. These are observations, never authority to stop a future owner.
+Existing-account native approval/denial/resume/cancel passed; no further login or
+provider call is needed to complete this release. Four-turn test budget is spent.
 
-Antigravity requires operator sign-in before actual execution testing. The
-readiness probe initializes successfully then receives ACP AUTH_REQUIRED(-32000).
-It sent zero prompts. Keep the gate disabled until supervised tool/denial/cancel,
-advertised models/modes and bound native resume are proven. Use the private
-browser handoff only after the operator requests it; never inspect credentials.
+Successful package: `/mnt/vk-storage/vk-deployment-reconcile-20261030/activation-release-2`.
+It retained current DB/history, 17 uncertain inputs without replay and the original
+protected reader/CU process. Six native DBs plus nine changed rollouts (15 files,
+3,607,837,269 bytes) and application SQLite were verified on Desktop B. Large-image
+reuse authenticates prior body proofs and fresh native identities, not a fictitious
+new capture. The first package's failure/recovery evidence is retained separately.
 
-Rollback artifacts and latest-data compatibility evidence are retained. Fresh
-idle/writer/capacity ownership and a new backup are required before another
-cutover; old controllers are consumed. A 600-second no-progress supervisor and
-separate 300-second recovery remain despite removal of the total50-minute cutoff.
-Preserve the protected reader, original native homes, uncertain inputs and every
-new write. Do not restore the pre-cutover database as a normal rollback.
+Immediate fallback is October 29 `ddaaf64a`/`a63eb3a68173…` with its paired frontend.
+Fresh roundtrip preserved all 60 tables including later-write probe, 99 migrations,
+18 protected/four recent histories. Both frontend pairs retain both asset sets.
+Future cutback must drain/recheck compatibility and preserve latest data; it disables
+Antigravity execution. Never restore a stale snapshot or rerun a consumed controller.
 
-Detailed prior pickup is retained in [the previous record](deployment-history/20261030-before-reconciliation/HANDOFF.md)
-and [HANDOFF_HISTORY_20261017.md](HANDOFF_HISTORY_20261017.md).
+Public Git lacks private retained-history bindings; bind the exact retained input
+for production. Canonical checkout is dirty and untouched. Source/docs/tooling sync
+is tracked in draft PR #284; no staging/main merge. Full deployed-code CI and updated
+recovery CI passed; final documentation-head CI may still be running. Automatic
+provider failover, AG reset/fork/non-supervised modes remain unqualified/disabled.
+
+Prior pickup: [previous record](deployment-history/20261030-before-reconciliation/HANDOFF.md)
+and [HANDOFF history](HANDOFF_HISTORY_20261017.md).

@@ -1225,3 +1225,227 @@ async fn missing_publication_policy_callback_retains_b_across_reset_restart_and_
     assert_eq!(jobs[0].state, "waiting");
     assert_eq!(jobs[0].observation_state, "observed");
 }
+
+#[cfg(target_os = "linux")]
+#[tokio::test]
+async fn paid_start_rejects_missing_policy_or_retained_observation_before_profile_or_spawn() {
+    use executors::{
+        actions::coding_agent_initial::CodingAgentInitialRequest, executors::BaseCodingAgent,
+    };
+    for (retained_observation, scheduling) in [(false, true), (true, true), (true, false)] {
+        let mut fixture =
+            ObservationFixture::with_publication_policy(retained_observation, false).await;
+        fixture.container.automatic_sync_override = Some(scheduling);
+        if !scheduling {
+            fixture.container.preservation_config = None;
+        }
+        let mut config = ExecutorConfig::new(BaseCodingAgent::ClaudeCode);
+        // Deliberately nonexistent profile: even a regression cannot invoke a provider.
+        config.variant = Some("READINESS_TEST_MUST_NOT_RESOLVE".into());
+        let action = ExecutorAction::new(
+            ExecutorActionType::CodingAgentInitialRequest(CodingAgentInitialRequest {
+                prompt: "offline fixture".into(),
+                executor_config: config,
+                working_dir: None,
+            }),
+            None,
+        );
+        sqlx::query("UPDATE execution_processes SET executor_action=? WHERE id=?")
+            .bind(serde_json::to_string(&action).unwrap())
+            .bind(fixture.execution)
+            .execute(&fixture.container.db.pool)
+            .await
+            .unwrap();
+        let ctx = ExecutionProcess::load_context(&fixture.container.db.pool, fixture.execution)
+            .await
+            .unwrap();
+        let ledger = fixture
+            ._root
+            .path()
+            .join("private-state")
+            .join(fixture.workspace.to_string())
+            .join(format!("{}.json", fixture.execution));
+        let before = std::fs::read(&ledger).unwrap();
+        let result = fixture
+            .container
+            .start_execution_inner(&ctx.workspace, &ctx.execution_process, &action)
+            .await;
+        let Err(ContainerError::ReadinessBlocked(report)) = result else {
+            panic!("known Git prerequisite must reject before provider/profile resolution")
+        };
+        assert_eq!(
+            report["code"],
+            if retained_observation {
+                "observation_unproven"
+            } else {
+                "publication_policy_missing"
+            }
+        );
+        assert_eq!(report["provider_started"], false);
+        assert!(
+            !fixture
+                .container
+                .child_store
+                .read()
+                .await
+                .contains_key(&fixture.execution)
+        );
+        assert!(
+            !fixture
+                .container
+                .exit_monitor_handles
+                .read()
+                .await
+                .contains_key(&fixture.execution)
+        );
+        assert_eq!(std::fs::read(ledger).unwrap(), before);
+        let jobs = TurnGithubSync::for_workspace(&fixture.container.db.pool, fixture.workspace)
+            .await
+            .unwrap();
+        if retained_observation {
+            assert_eq!(jobs[0].observation_state, "pending");
+        } else {
+            assert!(jobs.is_empty());
+        }
+    }
+}
+
+#[cfg(target_os = "linux")]
+#[tokio::test]
+async fn readiness_rejects_changed_native_owner_head_checkpoint_and_inventory() {
+    let fixture = ObservationFixture::with_publication_policy(false, true).await;
+    let ctx = ExecutionProcess::load_context(&fixture.container.db.pool, fixture.execution)
+        .await
+        .unwrap();
+    let check = |result: Result<serde_json::Value, ContainerError>, code: &str| {
+        let Err(ContainerError::ReadinessBlocked(report)) = result else {
+            panic!("changed native binding must fail before launch")
+        };
+        assert_eq!(report["code"], code);
+        assert_eq!(report["provider_started"], false);
+    };
+    check(
+        fixture
+            .container
+            .execution_git_readiness(&ctx.workspace, &ctx.execution_process, json!({}))
+            .await,
+        "source_binding_changed",
+    );
+    check(
+        fixture
+            .container
+            .execution_git_readiness(
+                &ctx.workspace,
+                &ctx.execution_process,
+                json!({"expected_source_heads": {"unmatched": "checkpoint"}}),
+            )
+            .await,
+        "checkpoint_source_mismatch",
+    );
+    let mut changed_owner = ctx.workspace.clone();
+    changed_owner.branch = "changed-owner".into();
+    check(
+        fixture
+            .container
+            .execution_git_readiness(&changed_owner, &ctx.execution_process, json!({}))
+            .await,
+        "ownership_changed",
+    );
+    let other = ExecutionProcess::create(
+        &fixture.container.db.pool,
+        &CreateExecutionProcess {
+            session_id: fixture.session,
+            executor_action: ctx.execution_process.executor_action().unwrap().clone(),
+            run_reason: ExecutionProcessRunReason::CodingAgent,
+        },
+        Uuid::new_v4(),
+        &[],
+    )
+    .await
+    .unwrap();
+    check(
+        fixture
+            .container
+            .execution_git_readiness(&ctx.workspace, &ctx.execution_process, json!({}))
+            .await,
+        "owner_busy",
+    );
+    ExecutionProcess::update_completion(
+        &fixture.container.db.pool,
+        other.id,
+        ExecutionProcessStatus::Failed,
+        None,
+    )
+    .await
+    .unwrap();
+    sqlx::query("DELETE FROM execution_process_repo_states WHERE execution_process_id=?")
+        .bind(fixture.execution)
+        .execute(&fixture.container.db.pool)
+        .await
+        .unwrap();
+    check(
+        fixture
+            .container
+            .execution_git_readiness(&ctx.workspace, &ctx.execution_process, json!({}))
+            .await,
+        "source_binding_missing",
+    );
+    assert!(fixture.container.child_store.read().await.is_empty());
+    assert!(
+        !TurnGithubSync::has_unobserved(&fixture.container.db.pool, fixture.workspace)
+            .await
+            .unwrap()
+    );
+}
+
+#[cfg(target_os = "linux")]
+#[tokio::test]
+async fn known_git_blocker_rejects_before_routing_or_creating_execution() {
+    use executors::{
+        actions::coding_agent_initial::CodingAgentInitialRequest,
+        executors::BaseCodingAgent,
+        routing::{CapabilityFloor, RoutingMode, RoutingPolicy},
+    };
+    let fixture = ObservationFixture::with_publication_policy(true, false).await;
+    let ctx = ExecutionProcess::load_context(&fixture.container.db.pool, fixture.execution)
+        .await
+        .unwrap();
+    let before: i64 = sqlx::query_scalar("SELECT count(*) FROM execution_processes")
+        .fetch_one(&fixture.container.db.pool)
+        .await
+        .unwrap();
+    let mut config = ExecutorConfig::new(BaseCodingAgent::Codex);
+    config.routing = Some(Box::new(RoutingPolicy {
+        mode: RoutingMode::Shadow,
+        floor: CapabilityFloor::Workhorse,
+        denied_models: vec!["gpt-6-astra".into()],
+        allow_escalation: false,
+    }));
+    let action = ExecutorAction::new(
+        ExecutorActionType::CodingAgentInitialRequest(CodingAgentInitialRequest {
+            prompt: "offline classification must never be reached".into(),
+            executor_config: config,
+            working_dir: None,
+        }),
+        None,
+    );
+    let result = fixture
+        .container
+        .start_execution(
+            &ctx.workspace,
+            &ctx.session,
+            &action,
+            &ExecutionProcessRunReason::CodingAgent,
+        )
+        .await;
+    let Err(ContainerError::ReadinessBlocked(report)) = result else {
+        panic!("known observation must reject before routing");
+    };
+    assert_eq!(report["code"], "observation_unproven");
+    assert_eq!(report["provider_started"], false);
+    let after: i64 = sqlx::query_scalar("SELECT count(*) FROM execution_processes")
+        .fetch_one(&fixture.container.db.pool)
+        .await
+        .unwrap();
+    assert_eq!(before, after);
+}

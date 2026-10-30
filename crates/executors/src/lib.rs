@@ -10,6 +10,7 @@ pub mod mcp_config;
 pub mod model_selector;
 pub mod original_worker;
 pub mod profile;
+pub mod provider_failover;
 pub mod routing;
 pub mod routing_assessment;
 mod routing_availability;

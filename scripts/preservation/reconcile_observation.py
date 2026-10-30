@@ -24,6 +24,8 @@ from turn_git import Blocked, atomic_json, digest, git, read_json, require
 
 FAULT = 'affected repository inventory differs from admitted turn'
 NO_POLICY = 'repository has no approved publication policy'
+COMPLETED_SCOPE = 'legacy-completion-observation-only'
+FAILED_SCOPE = 'legacy-failed-owner-observation-only'
 
 
 def sha(raw):
@@ -90,16 +92,30 @@ def check_original(repo, oid):
             'original commit object is missing')
 
 
-def eligible_job(job):
+def eligible_job(job, failed_owner=False):
+    expected = 'failed' if failed_owner else 'completed'
     require(job['state'] != 'verified' and job['observation_state'] == 'failed' and
             json.loads(job['observation_report'] or '{}').get('reason') == FAULT and
-            job['execution_status'] == 'completed' and not job['dropped'],
-            'only the exact completed legacy inventory fault can be reconciled')
+            job['execution_status'] == expected and not job['dropped'],
+            'only the exact ' + expected + ' legacy inventory fault can be reconciled')
 
 
-def create_plan(database, config_path, workspace, output, turn=None):
+def failed_execution_evidence(connection, job):
+    row = connection.execute(
+        'SELECT session_id,status,exit_code,created_at,completed_at,dropped FROM execution_processes WHERE id=?',
+        (job['execution_process_id'],)).fetchone()
+    require(row and row['status'] == 'failed' and row['exit_code'] is not None and
+            row['completed_at'] and not row['dropped'],
+            'failed owner requires its exact terminal native failure evidence')
+    return dict(session=str(uuid.UUID(bytes=row['session_id'])), status=row['status'],
+                exit_code=row['exit_code'], created_at=row['created_at'],
+                completed_at=row['completed_at'], dropped=bool(row['dropped']))
+
+
+def create_plan(database, config_path, workspace, output, turn=None, failed_owner=False):
     workspace = str(uuid.UUID(workspace))
     selected_turn = None if turn is None else str(uuid.UUID(turn))
+    require(not failed_owner or selected_turn is not None, 'failed-owner planning requires one exact --turn')
     config = read_json(Path(config_path))
     mount = Path(config['storage_mount']).resolve()
     state_root = Path(config['state_root']).resolve()
@@ -119,7 +135,8 @@ def create_plan(database, config_path, workspace, output, turn=None):
         entries = []
         originals = {}
         for job in selected:
-            eligible_job(job)
+            eligible_job(job, failed_owner)
+            failure_evidence = failed_execution_evidence(connection, job) if failed_owner else None
             request = json.loads(job['request'])
             turn = str(uuid.UUID(bytes=job['execution_process_id']))
             require(request['workspace'] == workspace and request['turn'] == turn,
@@ -156,10 +173,12 @@ def create_plan(database, config_path, workspace, output, turn=None):
                                 native_states=states, ledger=str(ledger_path),
                                 ledger_before_base64=base64.b64encode(raw).decode(),
                                 ledger_before_sha256=sha(raw)))
+            if failed_owner:
+                entries[-1]['failed_execution_evidence'] = failure_evidence
     for original in originals.values():
         for oid in original['commits']:
             check_original(Path(original['path']), oid)
-    plan = dict(version=1, scope='legacy-completion-observation-only',
+    plan = dict(version=1, scope=FAILED_SCOPE if failed_owner else COMPLETED_SCOPE,
                 database=str(Path(database).resolve()), config=str(Path(config_path).resolve()),
                 config_digest=digest(config), workspace=workspace, originals=originals,
                 entries=entries, publication_permission=False, coverage_verified=False)
@@ -174,6 +193,12 @@ def expected_ledger(entry, plan, plan_sha):
     record = json.loads(base64.b64decode(entry['ledger_before_base64']))
     for ident, original in plan['originals'].items():
         record['obligations'][ident]['commits'] = list(original['commits'])
+    if plan['scope'] == FAILED_SCOPE:
+        record['failed_owner_observation_resolution'] = dict(
+            native_failure=entry['failed_execution_evidence'],
+            prior_ledger_reason=record.get('reason'),
+            prior_observation_report=json.loads(entry['old_observation_report']),
+            task_success_proven=False, coverage_verified=False)
     record.update(observation_complete=True, admission_failure=NO_POLICY,
                   state='blocked', reason=NO_POLICY,
                   reconciled_observation_inventory=[dict(id=i['id'], path=str(Path(i['path']).resolve()))
@@ -189,7 +214,7 @@ def apply_plan(plan_path, expected_sha):
     raw = plan_path.read_bytes()
     require(sha(raw) == expected_sha, 'repair plan SHA-256 differs from reviewed plan')
     plan = json.loads(raw)
-    require(plan.get('version') == 1 and plan.get('scope') == 'legacy-completion-observation-only' and
+    require(plan.get('version') == 1 and plan.get('scope') in [COMPLETED_SCOPE, FAILED_SCOPE] and
             plan.get('coverage_verified') is False and plan.get('publication_permission') is False,
             'unsupported repair authority')
     config = read_json(Path(plan['config']))
@@ -216,6 +241,17 @@ def apply_plan(plan_path, expected_sha):
             require({str(uuid.UUID(bytes=j['execution_process_id'])) for j in current} ==
                     {e['turn'] for e in plan['entries']}, 'owner inventory changed after planning')
             by_turn = {str(uuid.UUID(bytes=j['execution_process_id'])): j for j in current}
+            failed_owner = plan['scope'] == FAILED_SCOPE
+            if failed_owner:
+                require(plan.get('selected_turn') and len(plan['entries']) == 1 and
+                        plan['entries'][0]['turn'] == plan['selected_turn'],
+                        'failed-owner authority requires one exact selected turn')
+                for entry in plan['entries']:
+                    require(failed_execution_evidence(connection, by_turn[entry['turn']]) ==
+                            entry.get('failed_execution_evidence'),
+                            'native failure evidence changed after planning')
+                    require(native_states(connection, by_turn[entry['turn']]) == entry['native_states'],
+                            'failed-owner terminal capture changed after planning')
             if all(j['observation_state'] == 'observed' and
                    json.loads(j['observation_report'] or '{}').get('reconciliation_plan_sha256') == expected_sha
                    for j in current):
@@ -232,7 +268,7 @@ def apply_plan(plan_path, expected_sha):
             retained = {}
             for entry in plan['entries']:
                 job = by_turn[entry['turn']]
-                eligible_job(job)
+                eligible_job(job, failed_owner)
                 require(job['request'] == entry['request'] and
                         job['observation_report'] == entry['old_observation_report'] and
                         native_states(connection, job) == entry['native_states'],
@@ -291,6 +327,9 @@ def apply_plan(plan_path, expected_sha):
                            reason='original heads reconciled from contemporaneous execution records; publication unverified',
                            admission_failure=NO_POLICY, reconciliation_plan_sha256=expected_sha,
                            previous_observation_report=json.loads(entry['old_observation_report']))
+                if failed_owner:
+                    ack.update(native_execution=entry['failed_execution_evidence'],
+                               task_success_proven=False, coverage_verified=False)
                 report = dict(version=2, state='blocked', workspace=plan['workspace'],
                               turn=entry['turn'], reason=NO_POLICY)
                 changed = connection.execute(
@@ -315,17 +354,20 @@ def main():
     parser.add_argument('--config')
     parser.add_argument('--workspace')
     parser.add_argument('--turn', help='Plan only this exact owner; retain every other observation gate')
+    parser.add_argument('--failed-owner', action='store_true',
+                        help='Plan one exact failed owner with unchanged terminal-provenance guards')
     parser.add_argument('--plan')
     parser.add_argument('--apply')
     parser.add_argument('--sha256')
     args = parser.parse_args()
     try:
         if args.apply:
+            require(not args.failed_owner, '--failed-owner selects planning only; apply uses reviewed plan scope')
             require(bool(args.sha256), 'apply requires the exact reviewed plan SHA-256')
             result = apply_plan(args.apply, args.sha256)
         else:
             require(all([args.database, args.config, args.workspace, args.plan]), 'incomplete plan arguments')
-            result = create_plan(args.database, args.config, args.workspace, args.plan, args.turn)
+            result = create_plan(args.database, args.config, args.workspace, args.plan, args.turn, args.failed_owner)
         print(json.dumps(result, sort_keys=True))
         return 0
     except (Blocked, OSError, ValueError, KeyError, sqlite3.Error) as error:

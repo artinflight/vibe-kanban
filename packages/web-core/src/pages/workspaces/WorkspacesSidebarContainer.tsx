@@ -3,6 +3,12 @@ import { useQueries, useQuery } from '@tanstack/react-query';
 import { useParams } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { useWorkspaceContext } from '@/shared/hooks/useWorkspaceContext';
+import { useAppNavigation } from '@/shared/hooks/useAppNavigation';
+import { useDotProjectNotifications } from '@/shared/hooks/useDotNotifications';
+import {
+  projectDotNotices,
+  openProjectDotChat,
+} from '@/shared/lib/dotProjectNotices';
 import { useUserContext } from '@/shared/hooks/useUserContext';
 import { useScratch } from '@/shared/hooks/useScratch';
 import { useAllOrganizationProjects } from '@/shared/hooks/useAllOrganizationProjects';
@@ -276,8 +282,15 @@ export function WorkspacesSidebarContainer({
   } = useWorkspaceContext();
 
   const isMobile = useIsMobile();
+  const navigation = useAppNavigation();
+  const projectNotifications = useDotProjectNotifications();
   const { hosts: remoteCloudHosts } = useRemoteCloudHostsAppBarModel();
-  const { hostId: routeHostId } = useParams({ strict: false });
+  const {
+    hostId: routeHostId,
+    projectId: routeProjectId,
+    issueId: routeIssueId,
+    workspaceId: routeWorkspaceId,
+  } = useParams({ strict: false });
   const participants = useLocalParticipants();
   const localAssignmentView = participants.isLocalOnlySession && !routeHostId;
   const [assignmentFilter, setAssignmentFilter] =
@@ -389,6 +402,16 @@ export function WorkspacesSidebarContainer({
     enabled: isLocalAuthBypassed,
     staleTime: 60_000,
   });
+  const projectNotices = useMemo(
+    () =>
+      routeHostId
+        ? []
+        : projectDotNotices(projectNotifications, [
+            ...localProjects,
+            ...(allRemoteProjects ?? []),
+          ]),
+    [routeHostId, projectNotifications, localProjects, allRemoteProjects]
+  );
   const localProjectWorkspaceQueries = useQueries({
     queries: localProjects.map((project) => ({
       queryKey: ['project-workspaces', project.id],
@@ -850,6 +873,15 @@ export function WorkspacesSidebarContainer({
 
   return (
     <WorkspacesSidebar
+      projectDotNotices={projectNotices}
+      onOpenProjectChat={(projectId) => {
+        if (isMobile) setMobileActiveTab('chat');
+        openProjectDotChat(
+          projectId,
+          navigation.goToProject,
+          !routeIssueId && !routeWorkspaceId ? routeProjectId : null
+        );
+      }}
       workspaces={paginatedActiveWorkspaces}
       activityWorkspaces={sortedActiveWorkspaces}
       totalWorkspacesCount={sortedActiveWorkspaces.length}

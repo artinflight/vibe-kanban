@@ -42,7 +42,7 @@ impl TurnGithubSync {
 
     /// Independent of owner metadata, scheduling flags, retry timing and page limits.
     pub async fn has_unobserved(pool: &SqlitePool, workspace: Uuid) -> Result<bool, sqlx::Error> {
-        sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM turn_github_sync WHERE workspace_id = ? AND observation_state != 'observed')")
+        sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM turn_github_sync WHERE workspace_id = ?1 AND observation_state != 'observed') OR EXISTS(SELECT 1 FROM workspace_baseline_acceptance WHERE workspace_id = ?1)")
             .bind(workspace).fetch_one(pool).await
     }
 
@@ -124,6 +124,12 @@ mod tests {
         .execute(&pool)
         .await
         .unwrap();
+        sqlx::raw_sql(include_str!(
+            "../../migrations/20261022093000_workspace_baseline_acceptance.sql"
+        ))
+        .execute(&pool)
+        .await
+        .unwrap();
         let owner = Uuid::new_v4();
         let workspace = Uuid::new_v4();
         TurnGithubSync::enqueue(&pool, owner, workspace, "retained request")
@@ -200,6 +206,12 @@ mod tests {
         .await
         .unwrap();
         let workspace = Uuid::new_v4();
+        sqlx::raw_sql(include_str!(
+            "../../migrations/20261022093000_workspace_baseline_acceptance.sql"
+        ))
+        .execute(&pool)
+        .await
+        .unwrap();
         let owner = Uuid::new_v4();
         sqlx::query("INSERT INTO workspaces VALUES (?)")
             .bind(workspace)

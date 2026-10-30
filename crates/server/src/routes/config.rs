@@ -57,6 +57,9 @@ pub fn router() -> Router<DeploymentImpl> {
             "/agents/discovered-options/ws",
             get(stream_executor_discovered_options_ws),
         )
+        .layer(axum::middleware::from_fn(
+            crate::middleware::checkpoint_admission::checkpoint_admission,
+        ))
 }
 
 #[derive(Debug, Serialize, Deserialize, TS)]

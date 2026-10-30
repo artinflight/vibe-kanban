@@ -517,7 +517,7 @@ impl LocalContainerService {
     ) -> serde_json::Value {
         let root = PathBuf::from(workspace.container_ref.as_deref().unwrap_or(""));
         json!({
-            "workspace": workspace.id.to_string(), "turn": process.id.to_string(),
+            "workspace": workspace.id.to_string(), "turn": process.id.to_string(), "session": process.session_id.to_string(),
             "outcome": process.status, "writers_fenced": writers_fenced,
             "repositories": repos.iter().map(|repo| json!({
                 "id": repo.id.to_string(), "path": root.join(&repo.name)
@@ -526,6 +526,14 @@ impl LocalContainerService {
     }
 
     async fn preservation_writers_fenced(&self, ctx: &ExecutionContext) -> bool {
+        self.preservation_writers_fenced_excluding(ctx, None).await
+    }
+
+    async fn preservation_writers_fenced_excluding(
+        &self,
+        ctx: &ExecutionContext,
+        own: Option<Uuid>,
+    ) -> bool {
         // Check all known executions sharing these repositories, including setup/dev scripts.
         // Unknown host writers are detected by the helper's repeated snapshot checks.
         // A cutover controller must independently hold its complete writer fence.
@@ -533,7 +541,7 @@ impl LocalContainerService {
             return false;
         };
         for process in running {
-            if process.id == ctx.execution_process.id {
+            if process.id == ctx.execution_process.id || Some(process.id) == own {
                 continue;
             }
             let Ok(other) = ExecutionProcess::load_context(&self.db.pool, process.id).await else {
@@ -834,7 +842,7 @@ impl LocalContainerService {
             }
             Ok(true) => {}
         }
-        let report = match ExecutionProcess::load_context(&self.db.pool, execution).await {
+        let mut report = match ExecutionProcess::load_context(&self.db.pool, execution).await {
             Ok(ctx) => {
                 let request = Self::preservation_request(
                     &ctx.workspace,
@@ -848,6 +856,12 @@ impl LocalContainerService {
                 json!({"version": 2, "state": "blocked", "reason": "owner context unavailable during completion; original obligation retained"})
             }
         };
+        report["preservation_outcome"] = json!(if crate::turn_preservation::observed(&report) {
+            "completion_captured"
+        } else {
+            "blocked"
+        });
+        report["task_success_proven"] = json!(false);
         if let Err(error) = TurnGithubSync::record_observation(
             &self.db.pool,
             execution,
@@ -955,7 +969,13 @@ impl LocalContainerService {
             );
             let report = if request["workspace"] != current["workspace"]
                 || request["turn"] != current["turn"]
-                || request["repositories"] != current["repositories"]
+                || !crate::turn_preservation::same_inventory(
+                    &request["repositories"],
+                    &current["repositories"],
+                )
+                || request
+                    .get("session")
+                    .is_some_and(|s| s != &current["session"])
             {
                 crate::turn_preservation::blocked(
                     &ctx.workspace.id.to_string(),
@@ -1141,9 +1161,63 @@ impl LocalContainerService {
                 } else {
                     None
                 };
-                let preservation_blocked = preservation
-                    .as_ref()
-                    .is_some_and(|report| !crate::turn_preservation::verified(report));
+                // A native limit is not a handoff boundary. Persist existing exit,
+                // group and preservation evidence only for an explicitly bound host.
+                // This does not certify detached writers, side effects or admission.
+                if executors::provider_failover::observer::is_registered(&exec_id.to_string()) {
+                    let quiet = group_id.is_some_and(crate::turn_preservation::group_quiescent);
+                    let preserved = preservation
+                        .as_ref()
+                        .is_some_and(crate::turn_preservation::verified);
+                    let observation = executors::provider_failover::observer::ended(
+                        &exec_id.to_string(),
+                        exit_code,
+                        quiet,
+                        preserved,
+                    );
+                    if let Err(error) = &observation {
+                        tracing::warn!(%exec_id,%error,"Provider lifecycle held; no handoff authorized");
+                    }
+                    if let Err(error) = db::models::provider_handoff::terminal(
+                        &db.pool,
+                        exec_id,
+                        observation.is_ok() && quiet && preserved && exit_code.is_some(),
+                    )
+                    .await
+                    {
+                        tracing::warn!(%exec_id,%error,"Provider terminal ownership receipt unavailable; reservation retained");
+                    }
+                }
+                let provider_owned = match services::services::provider_failover::boundary(
+                    &container, exec_id,
+                )
+                .await
+                {
+                    Ok(services::services::provider_failover::Outcome::Unmanaged) => false,
+                    Ok(outcome) => {
+                        tracing::info!(%exec_id,?outcome,"Provider boundary disposition");
+                        true
+                    }
+                    Err(error) => {
+                        tracing::warn!(%exec_id,%error,"Provider boundary failed; durable ownership remains fenced");
+                        !matches!(
+                            db::models::provider_handoff::activation(&db.pool, ctx.workspace.id)
+                                .await,
+                            Ok(None)
+                        )
+                    }
+                };
+                // A continuation holds exclusive ownership through terminal capture;
+                // do not consume user queues or run chained effects under its fence.
+                let continuation_owned = !matches!(
+                    db::models::provider_admission::owner(&db.pool, ctx.workspace.id).await,
+                    Ok(None)
+                );
+                let preservation_blocked = continuation_owned
+                    || provider_owned
+                    || preservation
+                        .as_ref()
+                        .is_some_and(|report| !crate::turn_preservation::verified(report));
                 if preservation_blocked {
                     tracing::warn!(workspace = %ctx.workspace.id,
                         "Turn remains blocked on Git preservation; chained actions and cleanup withheld");
@@ -2339,6 +2413,363 @@ impl ContainerService for LocalContainerService {
         Ok(true)
     }
 
+    fn requires_git_admission_fence(&self) -> bool {
+        self.automatic_sync_enabled() || self.preservation_enabled()
+    }
+
+    async fn pre_route_git_readiness(
+        &self,
+        workspace: &Workspace,
+        session: &Session,
+        proposed_execution: Uuid,
+    ) -> Result<(), ContainerError> {
+        let blocked = |code: &str, action: &str| {
+            ContainerError::ReadinessBlocked(json!({
+                "version":2,"state":"blocked","workspace":workspace.id,"turn":proposed_execution,
+                "code":code,"action":action,"provider_started":false,"coverage_verified":false
+            }))
+        };
+        let current_session = Session::find_by_id(&self.db.pool, session.id).await?;
+        let current_workspace = Workspace::find_by_id(&self.db.pool, workspace.id).await?;
+        if current_session.is_none_or(|s| s.workspace_id != workspace.id)
+            || current_workspace.is_none_or(|w| {
+                w.branch != workspace.branch || w.container_ref != workspace.container_ref
+            })
+        {
+            return Err(blocked(
+                "ownership_changed",
+                "refresh_exact_owner_checkpoint",
+            ));
+        }
+        if !services::services::fixed_baseline::history_exception(workspace.id, proposed_execution)
+            && self
+                .workspace_observation_gate(workspace.id, proposed_execution)
+                .await
+                .is_some()
+        {
+            return Err(blocked(
+                "observation_unproven",
+                "reconcile_exact_failed_observation",
+            ));
+        }
+        if !self.requires_git_admission_fence() {
+            return Ok(());
+        }
+        if ExecutionProcess::has_other_running_workspace_owner(
+            &self.db.pool,
+            workspace.id,
+            proposed_execution,
+        )
+        .await?
+        {
+            return Err(blocked("owner_busy", "wait_for_safe_idle_checkpoint"));
+        }
+        if services::services::fixed_baseline::history_exception(workspace.id, proposed_execution) {
+            return Ok(()); // Already captured native state under the same admission lock; no publication grant.
+        }
+        let repos = WorkspaceRepo::find_repos_for_workspace(&self.db.pool, workspace.id).await?;
+        let root = PathBuf::from(workspace.container_ref.as_deref().unwrap_or(""));
+        // Read-only existing preflight, not begin/capture. This proposed execution
+        // has no native row yet: no source_heads or successful checkpoint is forged.
+        let request = json!({"workspace":workspace.id.to_string(),"turn":proposed_execution.to_string(),
+            "session":session.id.to_string(),"expected_branch":workspace.branch,
+            "repositories":repos.iter().map(|r|json!({"id":r.id.to_string(),"path":root.join(&r.name)})).collect::<Vec<_>>()});
+        let report = self.invoke_preservation_helper("preflight", request).await;
+        if report["version"] != 2
+            || report["code"] != "git_ready"
+            || report["state"] != "pending"
+            || report["provider_started"] != false
+            || report["coverage_verified"] != false
+            || report["reusable"] != false
+            || report["workspace"].as_str() != Some(workspace.id.to_string().as_str())
+            || report["turn"].as_str() != Some(proposed_execution.to_string().as_str())
+            || report["scope"] != "git_ownership_only"
+        {
+            return Err(ContainerError::ReadinessBlocked(report));
+        }
+        Ok(())
+    }
+
+    async fn execution_git_readiness(
+        &self,
+        workspace: &Workspace,
+        execution: &ExecutionProcess,
+        context: serde_json::Value,
+    ) -> Result<serde_json::Value, ContainerError> {
+        let blocked = |code: &str, action: &str| {
+            ContainerError::ReadinessBlocked(json!({
+                "version":2, "readiness_version":1, "state":"blocked",
+                "workspace":workspace.id, "turn":execution.id,
+                "code":code, "action":action, "provider_started":false, "coverage_verified":false
+            }))
+        };
+        if execution.dropped
+            || !matches!(
+                execution.status,
+                ExecutionProcessStatus::Running | ExecutionProcessStatus::Completed
+            )
+            || (execution.status == ExecutionProcessStatus::Completed
+                && execution.exit_code != Some(0))
+        {
+            return Err(blocked(
+                "execution_not_admissible",
+                "retain_failure_and_select_valid_checkpoint",
+            ));
+        }
+        let session = Session::find_by_id(&self.db.pool, execution.session_id)
+            .await
+            .map_err(|_| blocked("readiness_query_failed", "retry_exact_read_only_checkpoint"))?;
+        let persisted = ExecutionProcess::find_by_id(&self.db.pool, execution.id)
+            .await
+            .map_err(|_| blocked("readiness_query_failed", "retry_exact_read_only_checkpoint"))?;
+        let owner = Workspace::find_by_id(&self.db.pool, workspace.id)
+            .await
+            .map_err(|_| blocked("readiness_query_failed", "retry_exact_read_only_checkpoint"))?;
+        if session.is_none_or(|s| s.workspace_id != workspace.id)
+            || persisted.is_none_or(|e| {
+                e.session_id != execution.session_id
+                    || e.status != execution.status
+                    || e.dropped
+                    || e.run_reason != execution.run_reason
+                    || e.created_at != execution.created_at
+                    || json!(e.executor_action) != json!(execution.executor_action)
+            })
+            || owner.is_none_or(|w| {
+                w.branch != workspace.branch || w.container_ref != workspace.container_ref
+            })
+        {
+            return Err(blocked(
+                "ownership_changed",
+                "refresh_exact_owner_checkpoint",
+            ));
+        }
+        if ExecutionProcess::has_other_running_workspace_owner(
+            &self.db.pool,
+            workspace.id,
+            execution.id,
+        )
+        .await
+        .map_err(|_| blocked("readiness_query_failed", "retry_exact_read_only_checkpoint"))?
+        {
+            return Err(blocked("owner_busy", "wait_for_safe_idle_checkpoint"));
+        }
+        if self
+            .workspace_observation_gate(workspace.id, execution.id)
+            .await
+            .is_some()
+        {
+            return Err(blocked(
+                "observation_unproven",
+                "reconcile_exact_failed_observation",
+            ));
+        }
+        let repos = WorkspaceRepo::find_repos_for_workspace(&self.db.pool, workspace.id)
+            .await
+            .map_err(|_| blocked("readiness_query_failed", "retry_exact_read_only_checkpoint"))?;
+        let states =
+            ExecutionProcessRepoState::find_by_execution_process_id(&self.db.pool, execution.id)
+                .await
+                .map_err(|_| {
+                    blocked("readiness_query_failed", "retry_exact_read_only_checkpoint")
+                })?;
+        if states.len() != repos.len()
+            || repos
+                .iter()
+                .any(|r| states.iter().filter(|s| s.repo_id == r.id).count() != 1)
+            || states.iter().any(|s| {
+                (if execution.status == ExecutionProcessStatus::Running {
+                    &s.before_head_commit
+                } else {
+                    &s.after_head_commit
+                })
+                .is_none()
+                    || !repos.iter().any(|r| r.id == s.repo_id)
+            })
+        {
+            return Err(blocked(
+                "source_binding_missing",
+                "refresh_native_repository_checkpoint",
+            ));
+        }
+        let mut request = Self::preservation_request(workspace, execution, &repos, false);
+        request["expected_branch"] = json!(workspace.branch);
+        request["source_heads"] = json!(
+            states
+                .into_iter()
+                .map(|s| (
+                    s.repo_id.to_string(),
+                    json!(
+                        (if execution.status == ExecutionProcessStatus::Running {
+                            s.before_head_commit
+                        } else {
+                            s.after_head_commit
+                        })
+                        .unwrap()
+                    )
+                ))
+                .collect::<serde_json::Map<String, serde_json::Value>>()
+        );
+        if !context["expected_source_heads"].is_null()
+            && context["expected_source_heads"] != request["source_heads"]
+        {
+            return Err(blocked(
+                "checkpoint_source_mismatch",
+                "reconcile_exact_repository_binding",
+            ));
+        }
+        request["dispatch_context"] = context["dispatch_context"].clone();
+        request["require_dispatch_context"] = json!(context["require_dispatch_context"] == true);
+        if !context["readiness_receipt"].is_null() {
+            request["readiness_receipt"] = context["readiness_receipt"].clone();
+        }
+        let report = self
+            .invoke_preservation_helper("preflight", request.clone())
+            .await;
+        if report["state"] != "pending"
+            || report["code"] != "git_ready"
+            || report["inventory_version"] != 1
+        {
+            return Err(ContainerError::ReadinessBlocked(report));
+        }
+        // Private internal request is returned only to trusted in-process callers.
+        Ok(json!({"receipt":report, "admission_request":request}))
+    }
+
+    async fn verify_provider_checkpoint(
+        &self,
+        checkpoint: &executors::provider_failover::Checkpoint,
+    ) -> Result<(), ContainerError> {
+        self.verify_provider_checkpoint_at(checkpoint, None).await
+    }
+
+    async fn verify_provider_checkpoint_at(
+        &self,
+        checkpoint: &executors::provider_failover::Checkpoint,
+        own: Option<Uuid>,
+    ) -> Result<(), ContainerError> {
+        let fail = || {
+            ContainerError::Other(anyhow!(
+                "Provider checkpoint/process/workspace evidence changed or unavailable"
+            ))
+        };
+        let execution = Uuid::parse_str(&checkpoint.execution_id).map_err(|_| fail())?;
+        let ctx = ExecutionProcess::load_context(&self.db.pool, execution).await?;
+        if let Some(id) = own {
+            // Only this task-local exact reservation may be excluded. Its native
+            // worker has not spawned; unrelated scripts/jobs still block.
+            let row = db::models::provider_admission::owner(&self.db.pool, ctx.workspace.id)
+                .await?
+                .ok_or_else(fail)?;
+            if services::services::provider_admission::execution_id(
+                ctx.workspace.id,
+                row.session_id,
+            )? != Some(id)
+                || row.execution_id != id
+                || !matches!(row.status.as_str(), "reserved" | "dispatching")
+            {
+                return Err(fail());
+            }
+        }
+        if ctx.workspace.id.to_string() != checkpoint.workspace_id
+            || ctx.workspace.branch != checkpoint.branch
+            || ctx.workspace.container_ref.as_deref() != Some(checkpoint.workspace_path.as_str())
+            || ctx.execution_process.status == ExecutionProcessStatus::Running
+            || !self.preservation_writers_fenced_excluding(&ctx, own).await
+        {
+            return Err(fail());
+        }
+        self.verify_provider_continuation_boundary(&ctx.workspace, own)
+            .await?;
+        let job:TurnGithubSync=sqlx::query_as("SELECT execution_process_id,workspace_id,request,writer_group,state,attempts,report,observation_state,observation_report FROM turn_github_sync WHERE execution_process_id=? AND workspace_id=?")
+            .bind(execution).bind(ctx.workspace.id).fetch_optional(&self.db.pool).await?.ok_or_else(fail)?;
+        if job.state != "verified"
+            || job.observation_state != "observed"
+            || !job
+                .writer_group
+                .and_then(|g| u32::try_from(g).ok())
+                .is_some_and(crate::turn_preservation::group_quiescent)
+        {
+            return Err(fail());
+        }
+        let mut request: serde_json::Value =
+            serde_json::from_str(&job.request).map_err(|_| fail())?;
+        request["writers_fenced"] = serde_json::Value::Bool(true);
+        // Existing check never repairs/publishes; it rechecks complete workspace
+        // snapshots and retained originals/remote receipts. No history reset.
+        let report = self.invoke_preservation("check", request).await;
+        if !crate::turn_preservation::verified(&report)
+            || report["workspace"].as_str() != Some(checkpoint.workspace_id.as_str())
+            || report["turn"].as_str() != Some(checkpoint.execution_id.as_str())
+            || report["receipt_digest"].as_str() != Some(checkpoint.workspace_snapshot.as_str())
+        {
+            return Err(fail());
+        }
+        Ok(())
+    }
+
+    fn provider_continuation_queue_pending(&self, session: Uuid) -> bool {
+        self.queued_message_service.has_queued(session)
+    }
+
+    async fn verify_provider_continuation_boundary(
+        &self,
+        workspace: &Workspace,
+        own: Option<Uuid>,
+    ) -> Result<(), ContainerError> {
+        let fail = || ContainerError::Other(anyhow!("native_checkpoint_or_capture_not_terminal"));
+        // One newest process per session, not a page of all historical turns.
+        // Long histories must not become an arbitrary 256-turn launch limit.
+        let rows:Vec<(Uuid,Uuid)>=sqlx::query_as("SELECT e.id,e.session_id FROM execution_processes e JOIN sessions s ON s.id=e.session_id WHERE s.workspace_id=? AND (? IS NULL OR e.id!=?) AND NOT EXISTS(SELECT 1 FROM execution_processes n WHERE n.session_id=e.session_id AND (? IS NULL OR n.id!=?) AND (n.created_at>e.created_at OR (n.created_at=e.created_at AND n.rowid>e.rowid))) LIMIT 129")
+            .bind(workspace.id).bind(own).bind(own).bind(own).bind(own).fetch_all(&self.db.pool).await?;
+        if rows.len() > 128 {
+            return Err(fail());
+        }
+        // Check every tracked process, including older sibling scripts/drainers,
+        // instead of assuming the newest database row owns all surviving writers.
+        let tracked: Vec<Uuid> = self
+            .child_store
+            .read()
+            .await
+            .keys()
+            .chain(
+                self.db_stream_handles
+                    .read()
+                    .await
+                    .iter()
+                    .filter(|(_, h)| !h.is_finished())
+                    .map(|(id, _)| id),
+            )
+            .copied()
+            .collect();
+        for id in tracked {
+            if Some(id) == own {
+                continue;
+            }
+            let ctx = ExecutionProcess::load_context(&self.db.pool, id).await?;
+            if ctx.workspace.id == workspace.id {
+                return Err(fail());
+            }
+        }
+        for (id, _) in rows {
+            let ctx = ExecutionProcess::load_context(&self.db.pool, id).await?;
+            if ctx.execution_process.status == ExecutionProcessStatus::Running {
+                return Err(fail());
+            }
+            let job:TurnGithubSync=sqlx::query_as("SELECT execution_process_id,workspace_id,request,writer_group,state,attempts,report,observation_state,observation_report FROM turn_github_sync WHERE execution_process_id=? AND workspace_id=?")
+                .bind(id).bind(workspace.id).fetch_optional(&self.db.pool).await?.ok_or_else(fail)?;
+            if job.state != "verified"
+                || job.observation_state != "observed"
+                || !job
+                    .writer_group
+                    .and_then(|g| u32::try_from(g).ok())
+                    .is_some_and(crate::turn_preservation::group_quiescent)
+            {
+                return Err(fail());
+            }
+        }
+        Ok(())
+    }
+
     async fn start_execution_inner(
         &self,
         workspace: &Workspace,
@@ -2347,7 +2778,12 @@ impl ContainerService for LocalContainerService {
     ) -> Result<(), ContainerError> {
         if executor_action.base_executor().is_some() {
             let background = matches!(executor_action.typ(), ExecutorActionType::CodingAgentFollowUpRequest(request) if request.capacity.is_some());
-            if services::services::original_worker::in_dispatch() {
+            if services::services::provider_admission::in_dispatch() {
+                executors::capacity::controller::before_no_takeover_launch(
+                    execution_process.session_id,
+                )
+                .await
+            } else if services::services::original_worker::in_dispatch() {
                 executors::capacity::controller::before_bounded_worker_launch().await
             } else {
                 executors::capacity::controller::before_launch(
@@ -2373,6 +2809,7 @@ impl ContainerService for LocalContainerService {
                     BaseCodingAgent::Codex
                     | BaseCodingAgent::ClaudeCode
                     | BaseCodingAgent::Gemini
+                    | BaseCodingAgent::Antigravity
                     | BaseCodingAgent::QwenCode
                     | BaseCodingAgent::Opencode,
                 ) => ExecutorApprovalBridge::new(
@@ -2393,51 +2830,88 @@ impl ContainerService for LocalContainerService {
             )));
         }
         let repos = WorkspaceRepo::find_repos_for_workspace(&self.db.pool, workspace.id).await?;
-        if self.automatic_sync_enabled()
-            && execution_process.run_reason == ExecutionProcessRunReason::CodingAgent
-        {
-            let request = Self::preservation_request(workspace, execution_process, &repos, false);
-            TurnGithubSync::enqueue(
-                &self.db.pool,
-                execution_process.id,
-                workspace.id,
-                &request.to_string(),
-            )
-            .await?;
-            let report = self.invoke_preservation_helper("begin", request).await;
-            self.emit_preservation_message(execution_process.id, &report)
-                .await;
+        let paid_owner = executor_action.base_executor().is_some();
+        if paid_owner && json!(execution_process.executor_action()?) != json!(executor_action) {
+            return Err(ContainerError::ReadinessBlocked(json!({
+                "version":2,"readiness_version":1,"state":"blocked", "workspace":workspace.id,
+                "turn":execution_process.id,"code":"action_binding_changed",
+                "action":"refresh_exact_owner_checkpoint", "provider_started":false,"coverage_verified":false
+            })));
         }
-        if !self.automatic_sync_enabled()
-            && matches!(
-                execution_process.run_reason,
-                ExecutionProcessRunReason::CodingAgent | ExecutionProcessRunReason::CleanupScript
+        // Retained observations remain authoritative after disabling policy/scheduling.
+        if paid_owner
+            && !services::services::fixed_baseline::history_exception(
+                workspace.id,
+                execution_process.id,
             )
-            && let Some(report) = self
+            && let Some(evidence) = self
                 .workspace_observation_gate(workspace.id, execution_process.id)
                 .await
         {
-            return Err(ContainerError::Other(anyhow!(
-                crate::turn_preservation::message(&report)
-            )));
+            return Err(ContainerError::ReadinessBlocked(json!({
+                "version":2,"readiness_version":1,"state":"blocked", "workspace":workspace.id,
+                "turn":execution_process.id,"code":"observation_unproven", "action":"reconcile_exact_failed_observation",
+                "provider_started":false,"coverage_verified":false,"evidence":evidence
+            })));
         }
-        if !self.automatic_sync_enabled()
-            && self.preservation_enabled()
+        let mut admitted_request = None;
+        if paid_owner
+            && !services::services::fixed_baseline::history_exception(
+                workspace.id,
+                execution_process.id,
+            )
+            && (self.automatic_sync_enabled() || self.preservation_enabled())
+        {
+            let readiness = self
+                .execution_git_readiness(workspace, execution_process, json!({}))
+                .await?;
+            let request = readiness["admission_request"].clone();
+            let report = self
+                .invoke_preservation_helper("begin", request.clone())
+                .await;
+            self.emit_preservation_message(execution_process.id, &report)
+                .await;
+            if report["state"] != "pending"
+                || report["admission_failure"].is_string()
+                || report["inventory_version"] != 1
+                || report["admitted_inventory"] != readiness["receipt"]["inventory"]
+            {
+                return Err(ContainerError::ReadinessBlocked(json!({
+                    "version":2,"readiness_version":1,"state":"blocked", "workspace":workspace.id,
+                    "turn":execution_process.id,"code":"admission_failed", "action":"review_exact_admission_failure",
+                    "provider_started":false,"coverage_verified":false,"evidence":report
+                })));
+            }
+            admitted_request = Some(request);
+        }
+        // Preserve the existing non-provider script/legacy observation boundary.
+        if !paid_owner
+            && !self.automatic_sync_enabled()
             && matches!(
                 execution_process.run_reason,
                 ExecutionProcessRunReason::CodingAgent | ExecutionProcessRunReason::CleanupScript
             )
         {
-            let report = self
-                .invoke_preservation(
-                    "begin",
-                    Self::preservation_request(workspace, execution_process, &repos, false),
-                )
-                .await;
-            if report["state"] != "pending" {
+            if let Some(report) = self
+                .workspace_observation_gate(workspace.id, execution_process.id)
+                .await
+            {
                 return Err(ContainerError::Other(anyhow!(
                     crate::turn_preservation::message(&report)
                 )));
+            }
+            if self.preservation_enabled() {
+                let report = self
+                    .invoke_preservation(
+                        "begin",
+                        Self::preservation_request(workspace, execution_process, &repos, false),
+                    )
+                    .await;
+                if report["state"] != "pending" {
+                    return Err(ContainerError::Other(anyhow!(
+                        crate::turn_preservation::message(&report)
+                    )));
+                }
             }
         }
         let repo_names: Vec<String> = repos.iter().map(|r| r.name.clone()).collect();
@@ -2468,6 +2942,99 @@ impl ContainerService for LocalContainerService {
         env.insert("VK_EXECUTION_PROCESS_ID", execution_process.id.to_string());
         env.insert("VK_WORKSPACE_BRANCH", &workspace.branch);
         env.original_worker = executors::original_worker::attach(&env).await?;
+        if let Some(pin) =
+            services::services::provider_admission::launch_pin(&self.db.pool, executor_action)?
+        {
+            if env.original_worker.is_some() {
+                return Err(ContainerError::Other(anyhow!(
+                    "existing_native_owner_guard"
+                )));
+            }
+            env.original_worker = Some(pin);
+        }
+
+        if let Some(request) = admitted_request {
+            // Recheck native ownership and policy after any asynchronous setup.
+            self.execution_git_readiness(workspace, execution_process, json!({}))
+                .await?;
+            // Last check before the only paid spawn. Never enqueue/claim a
+            // completed observation for a start rejected before this boundary.
+            let report = self
+                .invoke_preservation_helper("validate-admission", request.clone())
+                .await;
+            if report["state"] != "pending"
+                || report["admission_validated"] != true
+                || report["inventory_version"] != 1
+            {
+                return Err(ContainerError::ReadinessBlocked(json!({
+                    "version":2,"readiness_version":1,"state":"blocked", "workspace":workspace.id,
+                    "turn":execution_process.id,"code":"admission_changed", "action":"refresh_readiness_at_idle_checkpoint",
+                    "provider_started":false,"coverage_verified":false,"evidence":report
+                })));
+            }
+            // Check both admissions before the durable launch-intent row. The
+            // final cheap check below also catches expiry during that SQL await;
+            // an uncertain post-intent outcome stays held, never marked observed.
+            services::services::provider_failover::before_provider_spawn(
+                workspace.id,
+                execution_process.session_id,
+                executor_action,
+            )?;
+            if self.automatic_sync_enabled() {
+                TurnGithubSync::enqueue(
+                    &self.db.pool,
+                    execution_process.id,
+                    workspace.id,
+                    &request.to_string(),
+                )
+                .await?;
+            }
+        }
+
+        services::services::provider_failover::before_provider_spawn(
+            workspace.id,
+            execution_process.session_id,
+            executor_action,
+        )?;
+
+        services::services::provider_admission::before_spawn(
+            self,
+            workspace.id,
+            execution_process.session_id,
+            executor_action,
+        )
+        .await?;
+
+        // The sole normal spawn consumes task-local authority once. No restart
+        // restores this context; the independent spent marker remains permanent.
+        let fixed_launch = services::services::fixed_baseline::before_spawn(
+            &self.db.pool,
+            workspace.id,
+            execution_process.id,
+            executor_action,
+        )
+        .await
+        .map_err(|e| ContainerError::Other(anyhow!(e)))?;
+        if fixed_launch {
+            let mut request =
+                Self::preservation_request(workspace, execution_process, &repos, false);
+            request["fixed_baseline_launch"] =
+                json!({"historical_coverage_verified":false,"publication_authorized":false});
+            TurnGithubSync::enqueue(
+                &self.db.pool,
+                execution_process.id,
+                workspace.id,
+                &request.to_string(),
+            )
+            .await?;
+        }
+
+        services::services::fixed_baseline::issue_spawn_once(
+            workspace.id,
+            execution_process.id,
+            executor_action,
+        )
+        .map_err(|e| ContainerError::Other(anyhow!(e)))?;
 
         // Create the child and stream, add to execution tracker with timeout
         let mut spawned = tokio::time::timeout(
@@ -2505,6 +3072,14 @@ impl ContainerService for LocalContainerService {
         }
         self.add_child_to_store(execution_process.id, spawned.child)
             .await;
+        if let Err(error) = services::services::fixed_baseline::after_tracked_spawn(
+            &self.db.pool,
+            execution_process.id,
+        )
+        .await
+        {
+            tracing::error!(%error, "Fixed child is tracked; uncertain acceptance remains held");
+        }
 
         // Store cancellation token for graceful shutdown
         if let Some(cancel) = spawned.cancel {

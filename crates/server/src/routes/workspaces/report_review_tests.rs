@@ -826,3 +826,320 @@ async fn stopped_capture_owner_leaves_terminal_error_not_endless_draining() {
     );
     assert!(app.unread().await);
 }
+
+struct ResumeNotificationCapture {
+    raw: String,
+    normalized: Vec<Value>,
+    requests: Vec<Value>,
+}
+
+fn latest_normalized_values(store: &MsgStore) -> Vec<Value> {
+    let mut entries = std::collections::BTreeMap::new();
+    for message in store.get_history() {
+        if let utils::log_msg::LogMsg::JsonPatch(patch) = message
+            && let Some((index, entry)) =
+                executors::logs::utils::patch::extract_normalized_entry_from_patch(&patch)
+        {
+            entries.insert(index, serde_json::to_value(entry).unwrap());
+        }
+    }
+    entries.into_values().collect()
+}
+
+async fn capture_resume_notifications(runtime: &str) -> ResumeNotificationCapture {
+    use std::process::Stdio;
+
+    use executors::{
+        env::RepoContext,
+        executors::codex::{
+            client::{AppServerClient, LogWriter},
+            jsonrpc::{ExitSignalSender, JsonRpcPeer},
+            normalize_logs::normalize_logs,
+        },
+    };
+    use sha2::{Digest, Sha256};
+    use tokio::io::AsyncReadExt;
+    use tokio_util::{io::ReaderStream, sync::CancellationToken};
+
+    let app = App::unwritten().await;
+    let store = Arc::new(MsgStore::with_durable_capture(4 * 1024 * 1024, 64, 64));
+    let normalizers = normalize_logs(store.clone(), std::path::Path::new("/workspace"));
+    let writer = services::services::execution_process::spawn_stream_raw_logs_to_storage(
+        store.clone(),
+        db::DBService {
+            pool: app.context.pool.clone(),
+        },
+        app.execution,
+        app.session,
+    );
+
+    // This is the same byte path used by the executor: AppServerClient writes
+    // raw JSONL to its LogWriter, the process stream is decoded into MsgStore,
+    // and the durable consumer persists it independently of UI normalization.
+    let (log_sink, log_source) = tokio::io::duplex(64 * 1024);
+    let source = store
+        .clone()
+        .spawn_forwarder(utils::execution_logs::decode_stdout(ReaderStream::new(
+            log_source,
+        )));
+
+    let full: Value = serde_json::from_str(include_str!(
+        "../../../../executors/src/executors/codex/fixtures/new-error-resume.json"
+    ))
+    .unwrap();
+    let mut empty = full.clone();
+    empty["thread"]["turns"] = json!([]);
+    let mut child = tokio::process::Command::new("python3")
+        .args([
+            "-u",
+            "-c",
+            r#"
+import json, sys
+runtime, empty_raw, full_raw = sys.argv[1:]
+empty = json.loads(empty_raw)
+full = json.loads(full_raw)
+notifications = [
+    {"method":"turn/started","params":{"threadId":"thread-fixture","turn":{"id":"synthetic-turn","items":[],"status":"inProgress","error":None}}},
+    {"method":"item/started","params":{"threadId":"thread-fixture","turnId":"synthetic-turn","item":{"type":"commandExecution","id":"synthetic-tool","command":"printf synthetic-tool-output","cwd":"/workspace","processId":None,"status":"inProgress","commandActions":[],"aggregatedOutput":None,"exitCode":None,"durationMs":None}}},
+    {"method":"item/completed","params":{"threadId":"thread-fixture","turnId":"synthetic-turn","item":{"type":"commandExecution","id":"synthetic-tool","command":"printf synthetic-tool-output","cwd":"/workspace","processId":None,"status":"completed","commandActions":[],"aggregatedOutput":"synthetic-tool-output","exitCode":0,"durationMs":1}}},
+    {"method":"item/completed","params":{"threadId":"thread-fixture","turnId":"synthetic-turn","item":{"type":"agentMessage","id":"synthetic-final","text":"new assistant terminal survives — ✓","phase":"final_answer","memoryCitation":None}}},
+    {"method":"turn/completed","params":{"threadId":"thread-fixture","turn":{"id":"synthetic-turn","items":[],"status":"completed","error":None}}},
+]
+for line in sys.stdin:
+    request = json.loads(line)
+    print(json.dumps(request, separators=(",", ":")), file=sys.stderr, flush=True)
+    if "id" not in request:
+        continue
+    method = request["method"]
+    if method == "initialize":
+        result = {"userAgent": runtime, "platformFamily": "unix", "platformOs": "linux"}
+    elif method == "thread/resume":
+        result = empty if request["params"].get("excludeTurns") is True else full
+    elif method == "turn/start":
+        result = {"turn":{"id":"synthetic-turn","items":[],"status":"inProgress","error":None}}
+    else:
+        result = {}
+    print(json.dumps({"id":request["id"],"result":result}, separators=(",", ":")), flush=True)
+    if method == "turn/start":
+        for notification in notifications:
+            print(json.dumps(notification, separators=(",", ":")), flush=True)
+"#,
+        ])
+        .arg(runtime)
+        .arg(empty.to_string())
+        .arg(full.to_string())
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .kill_on_drop(true)
+        .spawn()
+        .unwrap();
+    let mut stderr = child.stderr.take().unwrap();
+    let cancel = CancellationToken::new();
+    let client = AppServerClient::new(
+        LogWriter::new(log_sink),
+        None,
+        false,
+        false,
+        RepoContext::default(),
+        false,
+        String::new(),
+        cancel.clone(),
+    );
+    let (exit_tx, exit_rx) = tokio::sync::oneshot::channel();
+    client.connect(JsonRpcPeer::spawn(
+        child.stdin.take().unwrap(),
+        child.stdout.take().unwrap(),
+        client.clone(),
+        ExitSignalSender::new(exit_tx),
+        cancel.clone(),
+    ));
+    client.initialize().await.unwrap();
+    let resumed = client
+        .delegation_request("thread/resume", json!({"threadId":"thread-fixture"}))
+        .await
+        .unwrap();
+    assert_eq!(resumed["thread"]["id"], "thread-fixture");
+    client.register_session("thread-fixture").await.unwrap();
+    let turn = client
+        .delegation_request(
+            "turn/start",
+            json!({"threadId":"thread-fixture","input":[]}),
+        )
+        .await
+        .unwrap();
+    assert_eq!(turn["turn"]["id"], "synthetic-turn");
+    tokio::time::timeout(Duration::from_secs(5), exit_rx)
+        .await
+        .unwrap()
+        .unwrap();
+    let _ = child.kill().await;
+    child.wait().await.unwrap();
+    cancel.cancel();
+    drop(client);
+    tokio::time::timeout(Duration::from_secs(5), source)
+        .await
+        .unwrap()
+        .unwrap();
+
+    // Do not publish metadata EOF until both real notification-derived entries
+    // have traversed the normalizer. This keeps the writer footer after them.
+    tokio::time::timeout(Duration::from_secs(5), async {
+        loop {
+            let entries = latest_normalized_values(&store);
+            if entries
+                .iter()
+                .any(|entry| entry["content"] == "new assistant terminal survives — ✓")
+                && entries.iter().any(|entry| {
+                    entry["entry_type"]["type"] == "tool_use"
+                        && entry["entry_type"]["tool_name"] == "bash"
+                        && entry["entry_type"]["status"]["status"] == "success"
+                })
+            {
+                break;
+            }
+            tokio::task::yield_now().await;
+        }
+    })
+    .await
+    .unwrap();
+    store.push_finished();
+    for normalizer in normalizers {
+        normalizer.await.unwrap();
+    }
+    writer.await.unwrap();
+
+    let path = utils::execution_logs::process_log_file_path(app.session, app.execution);
+    utils::execution_logs::validate_native_capture(&path, 4 * 1024 * 1024)
+        .await
+        .unwrap();
+    let (bytes, messages) =
+        utils::execution_logs::read_execution_log_strict(&path, 4 * 1024 * 1024)
+            .await
+            .unwrap();
+    let raw = messages
+        .iter()
+        .filter_map(|message| match message {
+            utils::log_msg::LogMsg::Stdout(stdout) => Some(stdout.as_str()),
+            _ => None,
+        })
+        .collect::<String>();
+    let footer: Value = serde_json::from_slice(
+        &tokio::fs::read(path.with_extension("capture.json"))
+            .await
+            .unwrap(),
+    )
+    .unwrap();
+    assert_eq!(footer["capture_state"], "closed");
+    let finalized: (i64, String) = sqlx::query_as(
+        "SELECT raw_bytes,raw_sha256 FROM workspace_review_log_finalized WHERE execution_id=?",
+    )
+    .bind(app.execution)
+    .fetch_one(&app.context.pool)
+    .await
+    .unwrap();
+    assert_eq!(finalized.0, bytes.len() as i64);
+    assert_eq!(finalized.1, format!("{:x}", Sha256::digest(&bytes)));
+
+    let mut request_log = String::new();
+    stderr.read_to_string(&mut request_log).await.unwrap();
+    ResumeNotificationCapture {
+        raw,
+        normalized: latest_normalized_values(&store),
+        requests: request_log
+            .lines()
+            .map(|line| serde_json::from_str(line).unwrap())
+            .collect(),
+    }
+}
+
+#[tokio::test]
+async fn resume_suppression_preserves_real_notifications_normalization_and_footer() {
+    let narrow = capture_resume_notifications("codex_cli_rs/0.159.2 (synthetic)").await;
+    let legacy = capture_resume_notifications("codex_cli_rs/0.116.0 (synthetic)").await;
+
+    let narrow_resume = narrow
+        .requests
+        .iter()
+        .find(|request| request["method"] == "thread/resume")
+        .unwrap();
+    let legacy_resume = legacy
+        .requests
+        .iter()
+        .find(|request| request["method"] == "thread/resume")
+        .unwrap();
+    assert_eq!(narrow_resume["params"]["excludeTurns"], true);
+    assert!(legacy_resume["params"].get("excludeTurns").is_none());
+
+    assert!(!narrow.raw.contains("Potentially unintended activity"));
+    assert!(legacy.raw.contains("Potentially unintended activity"));
+    assert!(narrow.raw.len() < legacy.raw.len());
+
+    let new_events = |raw: &str| {
+        raw.lines()
+            .filter_map(|line| serde_json::from_str::<Value>(line).ok())
+            .filter(|value| {
+                matches!(
+                    value["method"].as_str(),
+                    Some("turn/started" | "turn/completed" | "item/started" | "item/completed")
+                )
+            })
+            .collect::<Vec<_>>()
+    };
+    let narrow_events = new_events(&narrow.raw);
+    let legacy_events = new_events(&legacy.raw);
+    assert_eq!(narrow_events, legacy_events);
+    for events in [&narrow_events, &legacy_events] {
+        assert!(events.iter().any(|event| {
+            event["method"] == "item/completed"
+                && event["params"]["item"]["type"] == "agentMessage"
+                && event["params"]["item"]["text"] == "new assistant terminal survives — ✓"
+        }));
+        assert!(events.iter().any(|event| {
+            event["method"] == "item/completed"
+                && event["params"]["item"]["type"] == "commandExecution"
+                && event["params"]["item"]["aggregatedOutput"] == "synthetic-tool-output"
+        }));
+    }
+    assert_eq!(narrow.normalized, legacy.normalized);
+    assert!(narrow.normalized.iter().any(|entry| {
+        entry["entry_type"]["type"] == "assistant_message"
+            && entry["content"] == "new assistant terminal survives — ✓"
+    }));
+    assert!(narrow.normalized.iter().any(|entry| {
+        entry["entry_type"]["type"] == "tool_use"
+            && entry["entry_type"]["tool_name"] == "bash"
+            && entry["entry_type"]["status"]["status"] == "success"
+            && entry["entry_type"]["action_type"]["result"]["output"] == "synthetic-tool-output"
+    }));
+}
+
+#[tokio::test]
+async fn pr57_subscriber_timeout_preserves_durable_footer_and_final() {
+    let app = App::unwritten().await;
+    let (blocked, ()) = tokio::join!(
+        crate::routes::execution_processes::bounded_execution_log_ws_io::<()>(
+            "send",
+            std::future::pending()
+        ),
+        app.write_log()
+    );
+    assert!(blocked.unwrap_err().to_string().contains("send timed out"));
+    let process = ExecutionProcess::find_by_id(&app.context.pool, app.execution)
+        .await
+        .unwrap()
+        .unwrap();
+    let messages = services::services::report_review::replay_review_log(
+        &app.context.pool,
+        &process,
+        &asset_dir(),
+    )
+    .await
+    .unwrap();
+    let (selected_index, digest) =
+        crate::routes::execution_processes::log_history::fingerprint_review_messages(messages)
+            .unwrap();
+    assert_eq!(selected_index, 0);
+    assert_eq!(digest, sha("Fixture report"));
+    assert!(app.unread().await);
+}

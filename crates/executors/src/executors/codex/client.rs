@@ -116,6 +116,51 @@ pub async fn original_worker_attestation(
     ))
 }
 
+#[derive(Serialize)]
+#[serde(untagged)]
+enum ResumeWireRequest<'a, T> {
+    Original(&'a T),
+    Narrow(Value),
+}
+
+fn narrow_resume_supported(runtime: Option<&str>) -> bool {
+    runtime.and_then(|s| s.split_ascii_whitespace().next()) == Some("codex_cli_rs/0.159.2")
+}
+
+fn resume_wire_request<'a, T: Serialize>(
+    request: &'a T,
+    method: &str,
+    runtime: Option<&str>,
+) -> Result<ResumeWireRequest<'a, T>, ExecutorError> {
+    if method != "thread/resume" || !narrow_resume_supported(runtime) {
+        return Ok(ResumeWireRequest::Original(request));
+    }
+    let mut wire = serde_json::to_value(request)?;
+    if wire["method"] != "thread/resume" {
+        return Err(ExecutorError::Io(io::Error::other(
+            "Resume method mismatch",
+        )));
+    }
+    let params = wire["params"]
+        .as_object_mut()
+        .ok_or_else(|| ExecutorError::Io(io::Error::other("Resume params must be an object")))?;
+    params.insert("excludeTurns".into(), Value::Bool(true));
+    Ok(ResumeWireRequest::Narrow(wire))
+}
+
+fn validate_narrow_resume(
+    method: &str,
+    runtime: Option<&str>,
+    turns_empty: bool,
+) -> Result<(), ExecutorError> {
+    if method == "thread/resume" && narrow_resume_supported(runtime) && !turns_empty {
+        return Err(ExecutorError::Io(io::Error::other(
+            "Native resume did not confirm empty turns; no retry or new turn",
+        )));
+    }
+    Ok(())
+}
+
 pub struct AppServerClient {
     rpc: OnceLock<JsonRpcPeer>,
     delegation: OnceLock<Arc<super::delegation::Delegation>>,
@@ -541,14 +586,27 @@ impl AppServerClient {
         let id = self.next_request_id();
         self.delegation_requests.lock().await.insert(id.clone());
         let request = serde_json::json!({"id":id,"method":method,"params":params});
+        let wire = resume_wire_request(
+            &request,
+            method,
+            self.continuation_runtime.get().map(String::as_str),
+        )?;
         // Retain timed-out IDs until a late response arrives, so it cannot become a root session ID.
-        tokio::time::timeout(
+        let response: Value = tokio::time::timeout(
             Duration::from_secs(10),
-            self.rpc()
-                .request(id, &request, method, self.cancel.clone()),
+            self.rpc().request(id, &wire, method, self.cancel.clone()),
         )
         .await
-        .map_err(|_| ExecutorError::Io(io::Error::other("Delegation API timed out")))?
+        .map_err(|_| ExecutorError::Io(io::Error::other("Delegation API timed out")))??;
+        validate_narrow_resume(
+            method,
+            self.continuation_runtime.get().map(String::as_str),
+            response
+                .pointer("/thread/turns")
+                .and_then(Value::as_array)
+                .is_some_and(Vec::is_empty),
+        )?;
+        Ok(response)
     }
 
     pub fn set_exit_signal(&self, signal: ExitSignalSender) {
@@ -1240,7 +1298,13 @@ impl AppServerClient {
             request_id: self.next_request_id(),
             params,
         };
-        self.send_request(request, "thread/resume").await
+        let response: ThreadResumeResponse = self.send_request(request, "thread/resume").await?;
+        validate_narrow_resume(
+            "thread/resume",
+            self.continuation_runtime.get().map(String::as_str),
+            response.thread.turns.is_empty(),
+        )?;
+        Ok(response)
     }
 
     pub async fn turn_start_with_mode(
@@ -2153,6 +2217,11 @@ impl AppServerClient {
         R: DeserializeOwned + std::fmt::Debug,
     {
         let request_id = request_id(&request);
+        let wire = resume_wire_request(
+            &request,
+            label,
+            self.continuation_runtime.get().map(String::as_str),
+        )?;
         if let Some(guard) = self.original_worker.get().filter(|g| g.worker())
             && matches!(label, "thread/resume" | "turn/start")
         {
@@ -2160,7 +2229,7 @@ impl AppServerClient {
                 .rpc()
                 .request_with_deadline(
                     request_id,
-                    &request,
+                    &wire,
                     label,
                     self.cancel.clone(),
                     Duration::from_secs(10),
@@ -2177,7 +2246,7 @@ impl AppServerClient {
             result
         } else {
             self.rpc()
-                .request(request_id, &request, label, self.cancel.clone())
+                .request(request_id, &wire, label, self.cancel.clone())
                 .await
         }
     }
@@ -2518,6 +2587,19 @@ impl JsonRpcCallbacks for AppServerClient {
         raw: &str,
         notification: JSONRPCNotification,
     ) -> Result<bool, ExecutorError> {
+        // Dormant unless the trusted existing host explicitly binds this execution.
+        // Capture rate windows before the normal raw-log suppression; preserve all
+        // existing retry/approval/routing behavior. Observability cannot launch work.
+        if let Some(execution) = self.execution_id.get()
+            && let Some(params) = &notification.params
+            && let Err(error) = crate::provider_failover::observer::codex(
+                &execution.to_string(),
+                &notification.method,
+                params,
+            )
+        {
+            tracing::warn!(%execution, %error, "Provider observation held; execution behavior unchanged");
+        }
         if matches!(
             notification.method.as_str(),
             "turn/started" | "turn/completed"
@@ -2864,6 +2946,297 @@ mod tests {
     use codex_app_server_protocol::ThreadResumeParams;
 
     use super::*;
+
+    async fn spawn_resume_fixture(
+        runtime: &str,
+    ) -> (
+        Arc<AppServerClient>,
+        tokio::process::Child,
+        tokio::process::ChildStderr,
+        tempfile::NamedTempFile,
+        CancellationToken,
+    ) {
+        use std::process::Stdio;
+
+        let full: Value =
+            serde_json::from_str(include_str!("fixtures/new-error-resume.json")).unwrap();
+        let mut empty = full.clone();
+        empty["thread"]["turns"] = serde_json::json!([]);
+        let mut child = tokio::process::Command::new("python3")
+            .args([
+                "-u",
+                "-c",
+                r#"
+import json, sys
+runtime, empty_raw, full_raw = sys.argv[1:]
+empty = json.loads(empty_raw)
+full = json.loads(full_raw)
+for line in sys.stdin:
+    request = json.loads(line)
+    print(json.dumps(request, separators=(",", ":")), file=sys.stderr, flush=True)
+    if "id" not in request:
+        continue
+    method = request["method"]
+    if method == "initialize":
+        result = {"userAgent": runtime, "platformFamily": "unix", "platformOs": "linux"}
+    elif method == "thread/resume":
+        result = full if request["params"]["threadId"] == "reject" else empty
+    elif method == "thread/goal/get":
+        result = {"goal": None}
+    elif method == "turn/start":
+        result = {"delta": "new-delta-marker", "threadId": request["params"]["threadId"]}
+    else:
+        result = {}
+    print(json.dumps({"id": request["id"], "result": result}, separators=(",", ":")), flush=True)
+"#,
+            ])
+            .arg(runtime)
+            .arg(empty.to_string())
+            .arg(full.to_string())
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .kill_on_drop(true)
+            .spawn()
+            .unwrap();
+        let stderr = child.stderr.take().unwrap();
+        let log = tempfile::NamedTempFile::new().unwrap();
+        let cancel = CancellationToken::new();
+        let client = AppServerClient::new(
+            LogWriter::new(tokio::fs::File::create(log.path()).await.unwrap()),
+            None,
+            false,
+            false,
+            RepoContext::default(),
+            false,
+            String::new(),
+            cancel.clone(),
+        );
+        let (exit_tx, _exit_rx) = tokio::sync::oneshot::channel();
+        client.connect(JsonRpcPeer::spawn(
+            child.stdin.take().unwrap(),
+            child.stdout.take().unwrap(),
+            client.clone(),
+            ExitSignalSender::new(exit_tx),
+            cancel.clone(),
+        ));
+        client.initialize().await.unwrap();
+        (client, child, stderr, log, cancel)
+    }
+
+    async fn finish_resume_fixture(
+        mut child: tokio::process::Child,
+        mut stderr: tokio::process::ChildStderr,
+        cancel: CancellationToken,
+    ) -> Vec<Value> {
+        use tokio::io::AsyncReadExt;
+
+        cancel.cancel();
+        child.kill().await.unwrap();
+        child.wait().await.unwrap();
+        let mut captured = String::new();
+        stderr.read_to_string(&mut captured).await.unwrap();
+        captured
+            .lines()
+            .map(|line| serde_json::from_str(line).unwrap())
+            .collect()
+    }
+
+    #[test]
+    fn resume_wire_is_narrow_only_for_verified_native_version() {
+        let request = ClientRequest::ThreadResume {
+            request_id: RequestId::Integer(42),
+            params: ThreadResumeParams {
+                thread_id: "synthetic-thread".into(),
+                model: Some("synthetic-model".into()),
+                approval_policy: Some(codex_app_server_protocol::AskForApproval::OnRequest),
+                sandbox: Some(codex_app_server_protocol::SandboxMode::WorkspaceWrite),
+                ..Default::default()
+            },
+        };
+        let original = serde_json::to_value(&request).unwrap();
+        let mut narrow = serde_json::to_value(
+            resume_wire_request(
+                &request,
+                "thread/resume",
+                Some("codex_cli_rs/0.159.2 (synthetic)"),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(narrow["params"]["excludeTurns"], true);
+        narrow["params"]
+            .as_object_mut()
+            .unwrap()
+            .remove("excludeTurns");
+        assert_eq!(narrow, original);
+        for runtime in [
+            None,
+            Some(""),
+            Some("codex_cli_rs/0.116.0"),
+            Some("codex_cli_rs/0.159.20"),
+            Some("codex_cli_rs/0.162.1"),
+        ] {
+            let wire = resume_wire_request(&request, "thread/resume", runtime).unwrap();
+            assert_eq!(
+                serde_json::to_vec(&wire).unwrap(),
+                serde_json::to_vec(&request).unwrap()
+            );
+        }
+    }
+
+    #[test]
+    fn resume_wire_preserves_other_methods_and_rejects_ignored_flag() {
+        let request = serde_json::json!({"id":7,"method":"turn/start","params":{"threadId":"synthetic-thread"}});
+        let native = Some("codex_cli_rs/0.159.2 (synthetic)");
+        let wire = resume_wire_request(&request, "turn/start", native).unwrap();
+        assert_eq!(serde_json::to_value(wire).unwrap(), request);
+        assert!(validate_narrow_resume("thread/resume", native, true).is_ok());
+        assert!(validate_narrow_resume("thread/resume", native, false).is_err());
+        assert!(validate_narrow_resume("thread/resume", None, false).is_ok());
+    }
+
+    #[tokio::test]
+    async fn actual_client_narrows_ordinary_deadline_and_delegated_resumes() {
+        #[derive(Debug)]
+        struct WorkerGuard(Arc<tokio::sync::Mutex<()>>);
+
+        #[async_trait::async_trait]
+        impl crate::original_worker::LaunchGuard for WorkerGuard {
+            async fn resolved(
+                &self,
+                _: &crate::executors::CodingAgent,
+                _: &crate::profile::ExecutorConfig,
+            ) -> io::Result<()> {
+                Ok(())
+            }
+
+            async fn activation(
+                &self,
+                _: &str,
+                _: Option<&str>,
+            ) -> io::Result<crate::original_worker::ActivationFence> {
+                Ok(self.0.clone().lock_owned().await)
+            }
+
+            fn worker(&self) -> bool {
+                true
+            }
+        }
+
+        let (client, child, stderr, log, cancel) =
+            spawn_resume_fixture("codex_cli_rs/0.159.2 (synthetic)").await;
+        let ordinary = client
+            .thread_resume(ThreadResumeParams {
+                thread_id: "ordinary".into(),
+                ..Default::default()
+            })
+            .await
+            .unwrap();
+        assert_eq!(ordinary.thread.id, "thread-fixture");
+        assert_eq!(ordinary.model, "gpt-6-astra");
+        assert_eq!(ordinary.cwd.to_string_lossy(), "/workspace");
+        assert!(ordinary.thread.turns.is_empty());
+        let ordinary_wire = serde_json::to_value(&ordinary).unwrap();
+        assert_eq!(ordinary_wire["approvalPolicy"], "on-request");
+        assert_eq!(ordinary_wire["approvalsReviewer"], "user");
+        assert_eq!(ordinary_wire["sandbox"]["type"], "dangerFullAccess");
+        assert_eq!(ordinary_wire["reasoningEffort"], "xhigh");
+
+        let delegated = client
+            .delegation_request("thread/resume", serde_json::json!({"threadId":"delegated"}))
+            .await
+            .unwrap();
+        assert_eq!(delegated["thread"]["id"], "thread-fixture");
+        assert_eq!(delegated["thread"]["turns"], serde_json::json!([]));
+
+        client.set_original_worker_guard(Arc::new(WorkerGuard(Arc::new(tokio::sync::Mutex::new(
+            (),
+        )))));
+        let deadline = client
+            .thread_resume(ThreadResumeParams {
+                thread_id: "deadline".into(),
+                ..Default::default()
+            })
+            .await
+            .unwrap();
+        assert_eq!(deadline.thread.id, "thread-fixture");
+        assert!(deadline.thread.turns.is_empty());
+
+        let delta = client
+            .delegation_request(
+                "turn/start",
+                serde_json::json!({"threadId":"thread-fixture","input":[]}),
+            )
+            .await
+            .unwrap();
+        assert_eq!(delta["delta"], "new-delta-marker");
+
+        let successful_raw = tokio::fs::read_to_string(log.path()).await.unwrap();
+        assert!(successful_raw.contains("thread-fixture"));
+        assert!(successful_raw.contains("gpt-6-astra"));
+        assert!(successful_raw.contains("new-delta-marker"));
+        assert!(!successful_raw.contains("Potentially unintended activity"));
+
+        let rejected = client
+            .thread_resume(ThreadResumeParams {
+                thread_id: "reject".into(),
+                ..Default::default()
+            })
+            .await
+            .unwrap_err();
+        assert!(
+            rejected
+                .to_string()
+                .contains("Native resume did not confirm empty turns")
+        );
+
+        let requests = finish_resume_fixture(child, stderr, cancel).await;
+        let resumes: Vec<&Value> = requests
+            .iter()
+            .filter(|request| request["method"] == "thread/resume")
+            .collect();
+        assert_eq!(resumes.len(), 4, "a rejected response must not be retried");
+        assert!(
+            resumes
+                .iter()
+                .all(|request| request["params"]["excludeTurns"] == true)
+        );
+        let turn_start = requests
+            .iter()
+            .find(|request| request["method"] == "turn/start")
+            .unwrap();
+        assert!(turn_start["params"].get("excludeTurns").is_none());
+
+        let rejected_raw = tokio::fs::read_to_string(log.path()).await.unwrap();
+        assert_eq!(
+            rejected_raw
+                .matches("Potentially unintended activity")
+                .count(),
+            1
+        );
+    }
+
+    #[tokio::test]
+    async fn actual_client_preserves_legacy_resume_wire_and_response() {
+        let (client, child, stderr, _log, cancel) =
+            spawn_resume_fixture("codex_cli_rs/0.116.0 (synthetic)").await;
+        let response = client
+            .thread_resume(ThreadResumeParams {
+                thread_id: "reject".into(),
+                ..Default::default()
+            })
+            .await
+            .unwrap();
+        assert_eq!(response.thread.turns.len(), 1);
+
+        let requests = finish_resume_fixture(child, stderr, cancel).await;
+        let resume = requests
+            .iter()
+            .find(|request| request["method"] == "thread/resume")
+            .unwrap();
+        assert!(resume["params"].get("excludeTurns").is_none());
+    }
 
     #[test]
     fn request_id_supports_thread_resume() {

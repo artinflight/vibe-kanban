@@ -19,12 +19,14 @@ pub mod execution_processes;
 pub mod frontend;
 pub mod health;
 pub mod host_relay;
+pub mod issue_workflows;
 pub mod local_assignments;
 pub mod local_compat;
 pub mod oauth;
 pub mod organizations;
 pub mod preview;
 pub mod projects;
+pub mod provider_admission;
 pub mod relay_auth;
 pub mod releases;
 pub mod remote;
@@ -51,6 +53,7 @@ pub fn router(deployment: DeploymentImpl) -> IntoMakeService<Router> {
         .merge(oauth::router())
         .merge(organizations::router())
         .merge(projects::router())
+        .merge(issue_workflows::router())
         .merge(filesystem::router())
         .merge(repo::router())
         .merge(events::router(&deployment))
@@ -63,6 +66,7 @@ pub fn router(deployment: DeploymentImpl) -> IntoMakeService<Router> {
         .merge(releases::router())
         .merge(sessions::router(&deployment))
         .merge(storage_alerts::router())
+        .merge(provider_admission::router(&deployment))
         .merge(terminal::router())
         .route("/ssh-session", get(ssh_session::ssh_session_ws))
         .nest("/remote", remote::router())

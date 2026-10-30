@@ -60,6 +60,10 @@ pub async fn github_sync_status(
             serde_json::json!({"execution_process_id": job.execution_process_id,
             "state": job.state, "attempts": job.attempts,
             "observation_state": job.observation_state,
+            "preservation_outcome": if job.observation_state != "observed" { "blocked" }
+                else if report.as_ref().is_some_and(|r| r["state"] == "verified") { "remote_verified" }
+                else { "pending" },
+            "task_success_proven": false,
             "admission_reason": job.observation_report.as_ref().and_then(|text| serde_json::from_str::<serde_json::Value>(text).ok()).and_then(|r| r.get("admission_failure").cloned()),
             "observation_reason": job.observation_report.as_ref().and_then(|text| serde_json::from_str::<serde_json::Value>(text).ok()).map(|r| r["reason"].clone()),
             "reason": report.as_ref().and_then(|r| r["reason"].as_str()),

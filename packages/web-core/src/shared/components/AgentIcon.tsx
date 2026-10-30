@@ -18,7 +18,7 @@ export function getAgentName(
     case BaseCodingAgent.GEMINI:
       return 'Gemini';
     case BaseCodingAgent.ANTIGRAVITY:
-      return 'Antigravity ACP (unavailable)';
+      return 'Antigravity ACP';
     case BaseCodingAgent.CODEX:
       return 'Codex';
     case BaseCodingAgent.OPENCODE:

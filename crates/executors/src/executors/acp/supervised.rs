@@ -204,7 +204,7 @@ pub(super) async fn spawn(
                         conn.initialize(proto::InitializeRequest::new(proto::ProtocolVersion::V1)).await
                             .map_err(|e| format!("ACP initialize failed (code {})", e.code))
                     };
-                    // Drain concurrently: the pinned stream broadcast has capacity one.
+                    // Drain initialization metadata concurrently with the typed handshake.
                     let (init, raw_auth) = if let Some(stream) = auth_stream.as_mut() {
                         let (init, raw) = tokio::try_join!(initialize, read_initialize_auth(stream))?;
                         (init, Some(raw))

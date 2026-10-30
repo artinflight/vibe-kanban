@@ -143,8 +143,9 @@
       "path": "crates/executors/src/executors/acp/supervised.rs",
       "deployed_sha256": "3407f15f000b9e76e26795ed72a73842c303dcfb5c55f091c292577d5284ef9b",
       "private_input": false,
-      "public_sha256": "bdbc5681365e4188a66d326eea7978e378317509bf01b6a9fe42c118e362460e",
-      "public_difference": "Reconciliation adds acknowledged supervised mode before new/resumed personal-account prompts; not yet deployed."
+      "public_sha256": "8bf1d1c5fbdc342d73da72bfd10bffd408de7c2c62a74bd27454b5547ff5dbcf",
+      "public_difference": "Reconciliation adds acknowledged supervised mode before new/resumed personal-account prompts; not yet deployed.",
+      "reconciliation_difference": "Repository activation candidate after real native acceptance; not deployed by source commit."
     },
     {
       "path": "crates/executors/src/executors/acp/supervised/fixture.py",
@@ -170,7 +171,8 @@
       "path": "crates/executors/src/executors/antigravity.rs",
       "deployed_sha256": "6d8c46c890af4e4b61a1055fbc53ffdc65c906fb957acb2b7636a4e1f0e833d2",
       "private_input": false,
-      "public_sha256": "6d8c46c890af4e4b61a1055fbc53ffdc65c906fb957acb2b7636a4e1f0e833d2"
+      "public_sha256": "b280bdd1769698b35735b00b246a4c95f6feaa5ce26180f27416ab13e52f9bb7",
+      "reconciliation_difference": "Repository activation candidate after real native acceptance; not deployed by source commit."
     },
     {
       "path": "crates/executors/src/executors/claude.rs",
@@ -676,7 +678,8 @@
       "path": "packages/web-core/src/shared/components/AgentIcon.tsx",
       "deployed_sha256": "fc3752ca6f3c78479484ec7cdf9b12a98880192e80bef151dc257f7afc3be2f6",
       "private_input": false,
-      "public_sha256": "fc3752ca6f3c78479484ec7cdf9b12a98880192e80bef151dc257f7afc3be2f6"
+      "public_sha256": "d94481b8c88d73a249ddbf2f21f08468dd0e920a72e09565560c9b95d73850c1",
+      "reconciliation_difference": "Repository activation candidate after real native acceptance; not deployed by source commit."
     },
     {
       "path": "packages/web-core/src/shared/components/ui-new/containers/NavbarContainer.tsx",

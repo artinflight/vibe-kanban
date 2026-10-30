@@ -1,4 +1,4 @@
-//! Preparation for Google's separate ACP runtime. Never invokes the agy CLI.
+//! Supervised Google's official ACP runtime. Never invokes the agy CLI.
 use std::{path::Path, sync::Arc};
 
 use async_trait::async_trait;
@@ -22,17 +22,18 @@ use crate::{
     profile::ExecutorConfig,
 };
 
-// Deliberately not configurable through profiles or environment variables. A future
-// reviewed change must establish custom-client licensing, account/runtime support,
-// supervised tool behavior and end-to-end verification before lifting this gate.
-const ACTIVATION_VERIFIED: bool = false;
-const GATE: &str = "Antigravity ACP preparation is disabled: supported account, custom-client permission, runtime and end-to-end validation are pending";
+// Qualified on the official 1.4.1 runtime: personal auth, explicit default mode,
+// model selection, AllowOnce, denial, native load and cancellation. No environment
+// or profile can bypass supervised approval requirements. Installation discovery
+// does not assert account access; every launch must authenticate successfully.
+const ACTIVATION_VERIFIED: bool = true;
+const GATE: &str = "Antigravity ACP execution is disabled pending native acceptance for this build";
 
 #[derive(Derivative, Default, Clone, Serialize, Deserialize, TS, JsonSchema)]
 #[derivative(Debug, PartialEq)]
 #[serde(deny_unknown_fields)]
 #[schemars(
-    description = "Unavailable preparation profile. Saving settings does not enable execution or authenticate an account."
+    description = "Supervised official ACP runtime. Requires an explicit executable and personal account authentication; saving settings does not authenticate an account."
 )]
 pub struct Antigravity {
     #[serde(default)]
@@ -156,9 +157,13 @@ impl StandardCodingAgentExecutor for Antigravity {
         None
     }
     fn get_availability_info(&self) -> AvailabilityInfo {
-        // Neither an installed executable nor a credential-file timestamp proves
-        // supported account access. Never probe credentials or start a process here.
-        AvailabilityInfo::NotFound
+        // Installation is distinct from authentication. Never inspect credentials
+        // or start a process merely to render the executor selector.
+        if ACTIVATION_VERIFIED && self.command().is_ok() {
+            AvailabilityInfo::InstallationFound
+        } else {
+            AvailabilityInfo::NotFound
+        }
     }
     fn get_preset_options(&self) -> ExecutorConfig {
         ExecutorConfig {
@@ -193,7 +198,7 @@ impl StandardCodingAgentExecutor for Antigravity {
 mod tests {
     use super::*;
     #[tokio::test]
-    async fn antigravity_is_unavailable_and_cannot_launch() {
+    async fn antigravity_unconfigured_or_without_approval_owner_cannot_launch() {
         let agent = Antigravity::default();
         assert!(matches!(
             agent.get_availability_info(),
@@ -206,9 +211,26 @@ mod tests {
                 .await
                 .unwrap_err()
                 .to_string()
-                .contains("preparation is disabled")
+                .contains("interactive supervised approvals")
         );
         assert!(agent.command().is_err());
         assert!(serde_json::from_str::<Antigravity>(r#"{"enabled":true}"#).is_err());
+    }
+
+    #[test]
+    fn antigravity_configured_installation_does_not_claim_authenticated() {
+        let executable = tempfile::NamedTempFile::new().unwrap();
+        let agent = Antigravity {
+            executable: Some(executable.path().display().to_string()),
+            ..Default::default()
+        };
+        assert!(matches!(
+            agent.get_availability_info(),
+            AvailabilityInfo::InstallationFound
+        ));
+        assert!(
+            agent.check_activation().is_err(),
+            "approval owner remains mandatory"
+        );
     }
 }

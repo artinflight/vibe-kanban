@@ -143,13 +143,15 @@
       "path": "crates/executors/src/executors/acp/supervised.rs",
       "deployed_sha256": "3407f15f000b9e76e26795ed72a73842c303dcfb5c55f091c292577d5284ef9b",
       "private_input": false,
-      "public_sha256": "3407f15f000b9e76e26795ed72a73842c303dcfb5c55f091c292577d5284ef9b"
+      "public_sha256": "bdbc5681365e4188a66d326eea7978e378317509bf01b6a9fe42c118e362460e",
+      "public_difference": "Reconciliation adds acknowledged supervised mode before new/resumed personal-account prompts; not yet deployed."
     },
     {
       "path": "crates/executors/src/executors/acp/supervised/fixture.py",
       "deployed_sha256": "9f6683f2680309a4823ad5523608017306ddb60dcc306bdb0d8db7c0e784e26b",
       "private_input": false,
-      "public_sha256": "9f6683f2680309a4823ad5523608017306ddb60dcc306bdb0d8db7c0e784e26b"
+      "public_sha256": "d2f5626b3eb31e364c76da8c9267539b77a2767acdc41afda839c88d83226839",
+      "public_difference": "Reconciliation adds acknowledged supervised mode before new/resumed personal-account prompts; not yet deployed."
     },
     {
       "path": "crates/executors/src/executors/acp/supervised/stderr.rs",
@@ -161,7 +163,8 @@
       "path": "crates/executors/src/executors/acp/supervised/tests.rs",
       "deployed_sha256": "e9af70f84ab2dab93fb75765998a752c40c0c96edf545b1e1ac557e7904f9890",
       "private_input": false,
-      "public_sha256": "e9af70f84ab2dab93fb75765998a752c40c0c96edf545b1e1ac557e7904f9890"
+      "public_sha256": "17627af0096e1c3cb349136c055ab737454bb7113ba0181fff65e38e2d7e5408",
+      "public_difference": "Reconciliation adds acknowledged supervised mode before new/resumed personal-account prompts; not yet deployed."
     },
     {
       "path": "crates/executors/src/executors/antigravity.rs",
@@ -339,7 +342,8 @@
       "path": "crates/server/src/routes/execution_processes.rs",
       "deployed_sha256": "6b4cff6366b736bf54fe3b160360923c00eb4b25117ab8609679e857265b033b",
       "private_input": false,
-      "public_sha256": "6b4cff6366b736bf54fe3b160360923c00eb4b25117ab8609679e857265b033b"
+      "public_sha256": "08b78a9075bda70dda477f442d53cf96bc7db22281d026d1db1190db8b0a6d54",
+      "public_difference": "Semantics-preserving Clippy correction or item reordering after reconciliation CI; deployed hash remains unchanged."
     },
     {
       "path": "crates/server/src/routes/execution_processes/historical_response/additional-reviewed-requests.json",
@@ -365,13 +369,15 @@
       "path": "crates/server/src/routes/issue_workflows.rs",
       "deployed_sha256": "ecb2a951837442202cb7d09c6a35843ced8601e9fe270f06f39540fc393edf0f",
       "private_input": false,
-      "public_sha256": "ecb2a951837442202cb7d09c6a35843ced8601e9fe270f06f39540fc393edf0f"
+      "public_sha256": "cb797ae1ad01c3c6cd98a16ab17b2c13d9122249e1d68dfb46ddd6bc1cbecba8",
+      "public_difference": "Semantics-preserving Clippy correction or item reordering after reconciliation CI; deployed hash remains unchanged."
     },
     {
       "path": "crates/server/src/routes/local_compat.rs",
       "deployed_sha256": "0e2753419817150e0a54d7b6f249b37c202537f36f43fc2f6173e76699e6f4ba",
       "private_input": false,
-      "public_sha256": "0e2753419817150e0a54d7b6f249b37c202537f36f43fc2f6173e76699e6f4ba"
+      "public_sha256": "94c70f6691226e45e277a82abf2052155c9fc71f9c22e89cf472a4cdd971d41f",
+      "public_difference": "Semantics-preserving Clippy correction or item reordering after reconciliation CI; deployed hash remains unchanged."
     },
     {
       "path": "crates/server/src/routes/mod.rs",

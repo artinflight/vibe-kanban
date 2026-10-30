@@ -85,6 +85,8 @@ async fn activate_provider_failover(
             .map_err(ApiError::Container)?;
     Ok(ResponseJson(ApiResponse::success(result)))
 }
+// Reserved for verified completion integration; intentionally not exposed as a route.
+#[allow(dead_code)]
 async fn complete_provider_failover(
     Extension(execution): Extension<ExecutionProcess>,
     State(deployment): State<DeploymentImpl>,

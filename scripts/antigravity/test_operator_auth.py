@@ -59,6 +59,12 @@ for line in sys.stdin:
         self.assertEqual(self.attempt.stat().st_mode & 0o777, 0o700)
         self.assertEqual(json.loads(private.read_text())['sessionId'], 'PRIVATE_SESSION')
 
+    def test_auth_ack_metadata_is_accepted_without_publishing_it(self):
+        result = self.run_auth(self.peer({'result': {'_meta': {'tier': 'PRIVATE_METADATA'}}}))
+        self.assertTrue(result['authenticate_ack'])
+        self.assertTrue(result['session_created'])
+        self.assertNotIn('PRIVATE_METADATA', (self.attempt / 'RESULT.safe.json').read_text())
+
     def test_auth_rejection_never_creates_session_or_logs_provider_error(self):
         result = self.run_auth(self.peer({'error': {'code': -32000, 'message': 'PRIVATE_TOKEN'}}))
         self.assertFalse(result['session_created'])

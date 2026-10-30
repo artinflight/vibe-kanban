@@ -216,18 +216,27 @@ pub(super) async fn spawn(
                     if let Some(raw) = raw_auth.as_ref() {
                         authenticate_personal(&conn, raw).await?;
                     }
-                    let (session, models) = if let Some(identity) = resume {
+                    let (session, models, modes) = if let Some(identity) = resume {
                         if !init.agent_capabilities.load_session { return Err("ACP native resume is unsupported; no history replay was sent".into()); }
                         let loaded = conn.load_session(proto::LoadSessionRequest::new(identity.session.clone(), cwd.clone())).await
                             .map_err(|e| format!("ACP resume failed (code {}); check supported account access outside VK", e.code))?;
-                        (identity.session, loaded.models)
+                        (identity.session, loaded.models, loaded.modes)
                     } else {
                         let created = conn.new_session(proto::NewSessionRequest::new(cwd.clone())).await
                             .map_err(|e| format!("ACP session creation failed (code {}); check supported account access outside VK", e.code))?;
-                        (created.session_id.0.to_string(), created.models)
+                        (created.session_id.0.to_string(), created.models, created.modes)
                     };
                     if session.is_empty() { return Err("ACP returned an empty session identity".into()); }
                     *active_session.borrow_mut() = Some(session.clone());
+                    // Antigravity's default mode is the advertised interactive permission flow.
+                    // Reassert it on load too: saved auto_edit/yolo must never be inherited.
+                    if personal_auth {
+                        if !modes.as_ref().is_some_and(|m| m.available_modes.iter().any(|mode| mode.id.0.as_ref() == "default")) {
+                            return Err("ACP supervised default mode was not advertised; no prompt was sent".into());
+                        }
+                        conn.set_session_mode(proto::SetSessionModeRequest::new(session.clone(), "default")).await
+                            .map_err(|e| format!("ACP supervised mode selection failed (code {}); no prompt was sent", e.code))?;
+                    }
                     if let Some(model) = model {
                         if !models.as_ref().is_some_and(|m| m.available_models.iter().any(|item| item.model_id.0.as_ref() == model)) {
                             return Err("Requested model was not advertised by ACP; no fallback was selected".into());
@@ -289,3 +298,6 @@ pub(super) async fn spawn(
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+mod native_acceptance;

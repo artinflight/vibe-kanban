@@ -346,7 +346,13 @@ async fn antigravity_personal_auth_ack_precedes_new_load_and_one_prompt() {
             let methods: Vec<_> = rows.iter().filter_map(|r| r["method"].as_str()).collect();
             assert_eq!(
                 methods,
-                ["initialize", "authenticate", expected, "session/prompt"]
+                [
+                    "initialize",
+                    "authenticate",
+                    expected,
+                    "session/set_mode",
+                    "session/prompt"
+                ]
             );
             assert!(
                 rows.iter().position(|r| r["auth_ack"] == true).unwrap()
@@ -402,6 +408,25 @@ async fn antigravity_personal_auth_failures_never_start_session_or_prompt() {
         assert_eq!(
             methods.iter().filter(|m| **m == "authenticate").count(),
             expected
+        );
+    }
+}
+
+#[tokio::test]
+async fn antigravity_personal_missing_or_rejected_supervision_never_prompts() {
+    for scenario in ["personal-no-modes", "personal-mode-error"] {
+        let dir = tempfile::tempdir().unwrap();
+        let (ok, logs) = finish_personal(
+            start_personal(dir.path(), scenario, None, None)
+                .await
+                .unwrap(),
+        )
+        .await;
+        assert!(!ok, "{logs}");
+        assert!(
+            !std::fs::read_to_string(dir.path().join("trace"))
+                .unwrap()
+                .contains("session/prompt")
         );
     }
 }

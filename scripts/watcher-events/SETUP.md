@@ -311,3 +311,9 @@ quota. A planned retention/migration needs explicit receipt-preservation review.
    real mount readings and exact live receipts for both connections. Record
    forward/new writes/latest-data cutback preservation. Only then enable the
    existing Disk flags and mark the modular goal complete.
+
+## Existing backend without the native owner startup setting
+
+Use [the explicit connector transport recipe](CONNECTOR_TRANSPORT.md) for the
+existing disk runner. It reuses the proven printer connector and requires no
+backend restart. It does not activate native v2 or the generic event registry.

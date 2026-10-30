@@ -392,7 +392,7 @@ class Store:
         return result
 
 
-class Bridge(native.NativeAdapter):
+class NativeBridge(native.NativeAdapter):
     """Prepared fixed-gateway wiring, disabled until explicit configuration approval.
 
     The gateway uses existing host/process access, not direct-request authentication.
@@ -443,6 +443,23 @@ class Bridge(native.NativeAdapter):
         # An old configuration's accepted/uncertain receipt still needs GET
         # reconciliation after settings drift. Never POST that old intent.
         return super().lookup(batch_id, fingerprint, document)
+
+
+def transport_enabled(config):
+    selected = config.get('dispatch_transport', 'storage-admission-v2')
+    if selected == 'connector-follow-up-v1':
+        return config.get('activation_approved') is True and config.get('connector_transport', {}).get('enabled') is True
+    return selected == 'storage-admission-v2' and config.get('native_transport', {}).get('enabled') is True
+
+
+def Bridge(config):
+    selected = config.get('dispatch_transport', 'storage-admission-v2')
+    if selected == 'connector-follow-up-v1':
+        from connector_adapter import ConnectorBridge
+        return ConnectorBridge(config)
+    if selected != 'storage-admission-v2':
+        raise ValueError('unknown_dispatch_transport')
+    return NativeBridge(config)
 
 
 def publisher(config):

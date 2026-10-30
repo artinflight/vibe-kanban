@@ -2110,3 +2110,10 @@ and the strict empty-reader-WAL correction are documented. All eight hosted
 workflows passed at a421381321. PR #284 records requested rebase integration into
 staging; original build IDs/branch remain retained and main promotion is separate.
 See BACKEND_DEPLOYMENT_HANDOFF.md for exact runs, recovery mirrors and remaining limits.
+
+## 2026-10-30 — WakeWatch connector preparation
+
+Prepared an explicit disk transport using the proven printer connector, existing
+timer/ledger and durable no-resend reconciliation. Native startup setting remains
+absent. Automatic approval review blocked production installation/activation and
+one idle-only test pending explicit approval. Backend and printer remain unchanged.

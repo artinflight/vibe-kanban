@@ -48,3 +48,14 @@ Private remote CI without deploy credentials and combined capture consent accept
 were skipped, not certified.
 Top-level service memory limits remain unchanged/unlimited; executor limits and
 capacity guards remain separate. AG reset/fork and non-supervised modes are unsupported.
+
+## WakeWatch follow-up — 2026-10-30
+
+- [x] Identify the installed Disk Space watcher and why native wakes are disabled.
+- [x] Verify the existing printer connector path against retained real receipts.
+- [x] Prepare restart-free disk connector transport; all 183 watcher tests pass.
+- [ ] Obtain explicit activation approval required by automatic approval review.
+- [ ] Install/enable on the existing timer and verify one idle-only agent reply.
+- [ ] Record unchanged service identities and live rollback custody.
+
+Prepared source is not deployed behavior. See [the activation recipe](scripts/watcher-events/CONNECTOR_TRANSPORT.md).

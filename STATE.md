@@ -1,5 +1,9 @@
 # Current production and protections — 2026-10-30
 
+WakeWatch disk observation is active, but automatic waking remains disabled. An
+explicit printer-connector transport is prepared for restart-free activation;
+live enablement and acceptance await approval. See [current scope and limitations](scripts/watcher-events/CONNECTOR_TRANSPORT.md).
+
 The Antigravity-enabled release is live at `https://vibe.local`. It was accepted
 at 03:18:14 UTC: backend source `9a4179e8bdf38e93d1a81faca6c665cadd6fddc7`,
 executable SHA256 `137d6cd7b6475f47f9b92455a879b5fd23d3b3a5374743c77d0c694f3f1257d2`.

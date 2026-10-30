@@ -1,5 +1,10 @@
 # Reusable watcher-to-agent events
 
+For WakeWatch on the current MCP host, see [the explicit printer-connector
+transport](CONNECTOR_TRANSPORT.md). It permits disk wake delivery without a backend
+restart; implementation is prepared, with production activation and live acceptance
+still pending. The native implementation described below remains distinct.
+
 The Vibe module connects existing watchers to existing agent sessions through the
 native admission path. Disk Space is its first consumer. Adding a source,
 condition or compatible target uses reviewed configuration files after the initial

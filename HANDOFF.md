@@ -1,3 +1,20 @@
+# WakeWatch pickup — 2026-10-30
+
+Read [the connector recipe](scripts/watcher-events/CONNECTOR_TRANSPORT.md) first.
+Source is prepared; production activation and live delivery acceptance are pending
+explicit approval after automatic approval review rejected the live enablement.
+Do not say Disk Space can already wake automatically. Status/receipt inspection
+is available now. No service restart is permitted.
+
+The isolated preparation is `/mnt/vk-storage/wakewatch-connector-20261030`.
+Preserve its test logs, original service identities and private configuration
+snapshot. Install only after approval; capture original module bytes before
+replacement, pin the current saved configuration and use the existing ledger lock.
+Never retry queued/unknown delivery. The current owner may be busy; wait for idle. The full watcher suite passed all 183
+tests, including installed-connector compatibility and owner/custody regressions. No Rust/UI build was rerun.
+
+Prior backend handoff, retained below, still applies to the unchanged deployment.
+
 # Backend owner pickup — 2026-10-30
 
 Start with [STATE](STATE.md), [live manifest](LIVE_DEPLOYMENT.json),

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """T26 runner for the existing PR215 client; shares resource-guard's timer.
 
-No cleanup, ordinary follow-up, steering, server restart or credential access.
-Production dispatch stays gated until native admission is actually released.
+No cleanup, steering, server restart or credential acquisition.
+Dispatch requires an explicitly enabled native or existing-connector transport.
 """
 import argparse
 import contextlib
@@ -56,7 +56,8 @@ def owner_status(config):
     """Read coding/script turns, independent Codex jobs, queues and OS processes.
 
     Never turn an unreadable inventory into idle. Only IDs/counts cross into state.
-    Native atomic admission is still required after this advisory preflight.
+    Native admission adds atomic watcher checks; the explicit connector transport
+    uses ordinary follow-up admission after this advisory preflight.
     """
     result = {'coding_or_script_turns': [], 'independent_jobs': [], 'queued': [],
               'process_ids': [], 'inventory_unknown': False}
@@ -244,8 +245,9 @@ def cycle(store, config, samples, errors, owner, meta, now, bridge_factory=monit
             status = 'pending_ntfy_receipt'
         elif busy(owner):
             status = 'pending_owner_busy_or_inventory_unknown'
-        elif config.get('native_transport', {}).get('enabled') is not True:
-            status = 'pending_native_release_and_binding'
+        elif not monitor.transport_enabled(config):
+            status = ('pending_connector_activation' if config.get('dispatch_transport') == 'connector-follow-up-v1'
+                      else 'pending_native_release_and_binding')
         elif not unsettled and now - meta.get('last_accepted', -COOLDOWN) < COOLDOWN:
             status = 'episode_cooldown'
         else:
@@ -261,6 +263,8 @@ def cycle(store, config, samples, errors, owner, meta, now, bridge_factory=monit
         meta.update(failures=0, next_attempt=0)
     return meta, {'at': now, 'status': status, 'pending_incidents': len(pending),
                   'native_transport_enabled': config.get('native_transport', {}).get('enabled') is True,
+                  'dispatch_transport': config.get('dispatch_transport', 'storage-admission-v2'),
+                  'wake_dispatch_enabled': monitor.transport_enabled(config),
                   'owner': owner, 'errors': errors, 'ntfy': notifications, 'report': text}
 
 
@@ -296,6 +300,13 @@ def main():
             store.db.execute('CREATE TABLE IF NOT EXISTS runtime (id INTEGER PRIMARY KEY CHECK(id=1), body TEXT)')
             saved = store.db.execute('SELECT body FROM runtime WHERE id=1').fetchone()
             meta = json.loads(saved[0]) if saved else {}
+            if config.get('dispatch_transport') == 'connector-follow-up-v1':
+                try:
+                    import connector_adapter
+                    connector_adapter.process_probe(config)
+                except Exception:
+                    # A probe error never disables ordinary observation/alerts.
+                    pass
             samples, errors = {}, {}
             for key, volume in config['volumes'].items():
                 try:

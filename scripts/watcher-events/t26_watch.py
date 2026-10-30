@@ -208,6 +208,57 @@ def ntfy_wake_samples(store, config, samples, now, receipt_reader=root_notificat
     return result
 
 
+def rearm_completed(store, config, samples, owner, now):
+    """New reassessment, never a resend of an accepted/uncertain delivery.
+
+    Opt in only for the existing disk response owner. A model turn completing is
+    not physical recovery. Keep the old receipt and require independently
+    reconciled completion, fresh continued pressure, idle custody and the full
+    existing cooldown before making the incident pending again. Admission and
+    per-action cleanup approvals remain downstream, unchanged.
+    """
+    if config.get('rearm_completed_incidents') is not True:
+        return None
+    if store.db.execute("SELECT 1 FROM batches WHERE status IN ('dispatching','accepted','unknown')").fetchone():
+        return None
+    rows = store.db.execute("SELECT i.id,i.volume,i.identity,i.batch FROM incidents i "
+                            "JOIN batches b ON b.id=i.batch WHERE i.recovered IS NULL "
+                            "AND b.status='completed'").fetchall()
+    waiting = None
+    for row in rows:
+        sample = samples.get(row['volume'])
+        if (not sample or sample['identity'] != row['identity']
+                or not -5 <= now - sample['at'] <= 30
+                or not sample.get('pressure', {}).get('eligible')):
+            continue
+        if busy(owner):
+            waiting = 'unresolved_incident_owner_busy'
+            continue
+        # The batch's original `updated` value is acceptance, not completion.
+        # Use the existing independent-execution reconciliation audit instead.
+        completed = []
+        for receipt in store.db.execute("SELECT at,detail FROM audit WHERE kind='execution_completed'"):
+            try:
+                if json.loads(receipt['detail']).get('batch') == row['batch']:
+                    completed.append(receipt['at'])
+            except (ValueError, TypeError, AttributeError):
+                continue
+        if not completed or max(completed) > now:
+            waiting = 'unresolved_incident_completion_unverified'
+            continue
+        if now - max(completed) < COOLDOWN:
+            waiting = 'unresolved_incident_cooldown'
+            continue
+        with store.db:
+            changed = store.db.execute("UPDATE incidents SET batch=NULL,delivery='pending' "
+                                       "WHERE id=? AND batch=? AND recovered IS NULL",
+                                       (row['id'], row['batch'])).rowcount
+            if changed:
+                store.audit('completed_pressure_rearmed', {'incident': row['id'],
+                            'previous_batch': row['batch'], 'completion_at': max(completed)})
+    return waiting
+
+
 def cycle(store, config, samples, errors, owner, meta, now, bridge_factory=monitor.Bridge,
           publisher_factory=monitor.publisher, root_receipt_reader=root_notification_receipt):
     store.observations(samples, errors, now)
@@ -242,11 +293,13 @@ def cycle(store, config, samples, errors, owner, meta, now, bridge_factory=monit
         history.append({'at': now, 'volumes': {k: {p: v[p] for p in ('available', 'identity')}
                                               for k, v in samples.items()}})
     meta.update(history=history, last_read_at=now)
+    unresolved = rearm_completed(store, config, samples, owner, now)
     pending = store.pending(samples)
     wake_samples = ntfy_wake_samples(store, config, samples, now, root_receipt_reader)
     ready_to_wake = store.pending(wake_samples)
     unsettled = store.db.execute("SELECT 1 FROM batches WHERE status IN ('dispatching','unknown','accepted')").fetchone()
-    status = 'observation_unknown' if errors else 'healthy_or_episode_already_reported'
+    status = ('observation_unknown' if errors else unresolved
+              or 'healthy_or_episode_already_reported')
     if pending or unsettled:
         if busy(owner):
             status = 'pending_owner_busy_or_inventory_unknown'

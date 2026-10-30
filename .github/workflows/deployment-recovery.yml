@@ -32,7 +32,7 @@ jobs:
           for path in sorted(root.glob('test_*.py')):
               if path.name.startswith('test_vk_restart_') or path.name in (
                   'test_restart_queue_boundary.py', 'test_vk_reconcile_orphaned_subagents.py',
-                  'test_incident_cu_fence.py', 'test_source_custody.py'):
+                  'test_incident_cu_fence.py', 'test_source_custody.py', 'test_native_stream_backup.py'):
                   suite.addTests(loader.loadTestsFromName(path.stem))
           result = unittest.TextTestRunner(verbosity=2).run(suite)
           raise SystemExit(not result.wasSuccessful())

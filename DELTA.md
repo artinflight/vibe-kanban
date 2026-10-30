@@ -2125,3 +2125,14 @@ identity handling and original rollback bytes retained. One approved test queued
 for capacity; reply pending. TurnSteer server tools already live; operator refreshed
 client catalog and a same-connector shell entrypoint is installed. 185 watcher and
 14 steering tests pass. No service restarted; no uncertain request replayed.
+
+## 2026-10-30 — Live acknowledgement and refreshed tool closure
+
+The single WakeWatch test completed at 12:00:07 UTC and independently returned
+the exact expected assistant marker. No resend, capacity increase or restart.
+Operator refresh now exposes all 46 Vibe tools in this client, including steering,
+issue workflows and handoff; the actual steering receipt tool read succeeded.
+Corrected earlier CLI guidance: Dot's separate read-only/network-disabled host
+tool cannot make local API calls; use the now-exposed Vibe tools. Desktop B
+rollback archive is independently hash-verified. Native v2, unqualified automatic
+provider failover and recovery cleanup/PR-monitor holds remain explicitly separate.

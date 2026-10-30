@@ -1,10 +1,10 @@
 # Current production and protections — 2026-10-30
 
 WakeWatch automatic disk waking is now enabled through the existing printer-style
-connector without a restart. One approved verification turn is capacity-queued;
-actual reply remains pending. TurnSteer is live in the backend/connector and has a
-shell entrypoint for existing host access; Dot's refreshed catalog still needs
-independent confirmation. See [current scope](scripts/watcher-events/CONNECTOR_TRANSPORT.md)
+connector without a restart. Its single approved verification turn completed at
+12:00:07 UTC with the exact expected acknowledgement. The refreshed client now
+exposes all 46 Vibe tools, including both TurnSteer tools, and a real receipt read
+through the refreshed tool succeeded. See [current scope](scripts/watcher-events/CONNECTOR_TRANSPORT.md)
 and [TurnSteer access](TURNSTEER_ACCESS.md).
 
 The Antigravity-enabled release is live at `https://vibe.local`. It was accepted

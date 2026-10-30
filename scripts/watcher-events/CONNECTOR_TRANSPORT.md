@@ -5,10 +5,12 @@
 The restart-free disk transport is **installed and enabled** since
 2026-10-30T11:38:59Z, following explicit operator approval. The existing timer has
 loaded it, and live owner/configuration readiness passed. The single approved
-acknowledgement test reached Vibe at 11:39:14Z and is capacity-queued behind eight
-active executions. Its immutable batch is retained; it will never be resent.
-An actual execution and exact reply are still pending, not claimed as passed.
-No service was restarted. Original module/config bytes are retained on mounted SSD.
+acknowledgement test reached Vibe at 11:39:14Z, waited for ordinary capacity and
+completed at 12:00:07Z. Execution `02f6a6f4-46d5-4939-9fdb-b86107522752` returned
+exactly `WAKEWATCH_READY_4f2df84a`, independently read through the Vibe plugin.
+Its immutable batch is retained; no resend or extra turn occurred.
+No service was restarted. Original module/config bytes are retained on mounted SSD
+and in a hash-verified Desktop B archive.
 
 This is an explicit alternative to native `storage-admission-v2`, whose running
 backend lacks `VK_STORAGE_ALERT_OWNER_FILE`. The native route remains disabled.
@@ -116,8 +118,10 @@ capacity queues, config/session drift, busy/stale holds, duplicate evidence,
 pre-invocation crash, no-resend persistence, disabled selection and bounded probes.
 The full repository watcher suite passed all 185 tests, including compatibility
 with the installed connector, owner/custody and infrastructure identity regressions. No Rust or frontend code changed; full Rust/UI builds were not rerun.
-Mocks do not prove a live model wake; the explicitly approved one-turn test is
-retained in the live capacity queue, with actual execution/reply pending. No artificial disk-pressure incident or cleanup test is performed.
+The explicitly approved live one-turn test completed with exit code 0 and the
+exact expected assistant reply. Exact session/prompt/config execution reconciliation
+passed before that independent reply check. This proves the installed timer-to-agent
+delivery path; no artificial disk-pressure incident or cleanup test was performed.
 
 ## Live inventory correction and custody
 
@@ -144,5 +148,14 @@ Exact installed module hashes and source are retained in
 `/mnt/vk-storage/wakewatch-connector-20261030/activation.safe.json` and `source/`.
 Original bytes are in `rollback/`, including all seven original modules and the
 private config. The native/connector/printer service PIDs and invocation IDs match
-preparation. Do not restore the old disabled config or modules while this probe is
-queued/uncertain. Disable new dispatch under the lock and reconcile first.
+preparation. The single probe is now completed and its exact reply is verified.
+Before any future rollback, disable new dispatch under the lock and reconcile all
+then-outstanding delivery; this completed test is not proof that later work is idle.
+
+Desktop backup: `B:/vk-backups/wakewatch-connector-20261030/wakewatch-activation-rollback.zip`,
+51,142 bytes, SHA256
+`854ba11379e18cf2a73cb623b09f40d4b34308a042c2d151659a553cdbd651b0`.
+Independent Desktop hash readback passed. It contains original module/private-config
+bytes plus the activated client and evidence captured before the reply completed;
+no live database. Later completion proof is retained separately on SSD. Never
+replace current application data or reset incident/queue custody during rollback.

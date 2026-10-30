@@ -54,19 +54,19 @@ capacity guards remain separate. AG reset/fork and non-supervised modes are unsu
 | Feature / check | Outcome | Current evidence and remaining limit |
 | --- | --- | --- |
 | WakeWatch automatic disk dispatch | ENABLED | Explicit connector transport selected at 11:38:59Z; existing timer readback and live owner/config readiness passed. Native v2 remains separately disabled. |
-| WakeWatch actual model reply | QUEUED | One approved acknowledgement test reached Vibe at 11:39:14Z; eight active executions consume capacity. Exact execution/reply pending; never resubmit. |
+| WakeWatch actual model reply | PASS, live | The single test completed at 12:00:07Z; execution 02f6a6f4-46d5-4939-9fdb-b86107522752 returned exactly WAKEWATCH_READY_4f2df84a. No resend or cleanup. |
 | WakeWatch source tests | PASS | All 185 watcher tests, including queue/lost-ack no-resend and protected-infrastructure inventory. |
 | TurnSteer backend/connector | AVAILABLE | Both tools in live discovery, real target/receipt GETs pass, all 14 steering tests pass. Existing native acceptance retained; no fresh unrelated-agent correction. |
-| TurnSteer caller discovery | PARTIAL | Server advertises 46 tools; this existing client catalog has 36. Operator refreshed plugin; fresh Dot exposure still unverified. Installed `turnsteer` CLI reaches the same connector via existing host access. |
-| Issue workflow creation/linking | AVAILABLE | Live capabilities v1, atomic reservation, conditional relink and durable launch receipts; six new tools in server discovery. Client catalog may need refresh. |
-| Claude-to-Codex handoff | AVAILABLE, guarded | Both handoff tools advertised; verified checkpoint dispatch required. No blind automatic provider failover. |
+| TurnSteer caller discovery | PASS | Operator refresh took effect: this client now exposes all 46 tools including both steering tools. A real receipt lookup through the refreshed tool succeeded. No new live correction was sent. |
+| Issue workflow creation/linking | AVAILABLE | Live capabilities v1, atomic reservation, conditional relink and durable launch receipts; all six tools now exposed in this refreshed client as well as server discovery. No new issue created for this check. |
+| Claude-to-Codex handoff | AVAILABLE, guarded | Both handoff tools now exposed in this refreshed client; verified checkpoint dispatch required. No blind automatic provider failover. |
 | Scheduled native goal first run | ENABLED | Authenticated live capacity API reports scheduledGoalInitialization=1 and targetedStop=true. |
 | Automatic Git synchronization | ENABLED | Running backend has VK_AUTOMATIC_GITHUB_SYNC=1; existing ownership/preservation gates still apply. No publication generated for this check. |
-| Eight-execution capacity limit | ACTIVE | Authenticated capacity API reports eight running executions. This is admission control, not a disabled feature. |
+| Eight-execution capacity limit | ACTIVE | Authenticated capacity API reported eight running executions during the probe's wait. This is admission control, not a disabled feature. |
 | Automatic provider failover | NOT READY | Live contract explicitly reports false and external_effect_resume_qualified=false; no safe activation switch is claimed. |
 | Recovery cleanup / PR monitor | HELD | Existing recovery flags remain; no worktree deletion or unrelated monitoring activation performed. |
 | Restarts / original runtime | PASS | Backend, connector and printer PIDs and invocation IDs unchanged; no daemon reload or restart. |
-| Client rollback | RETAINED | Seven original modules and private config on SSD. Reconcile queued/uncertain deliveries before reverting; preserve current ledger/data. |
+| Client rollback | VERIFIED BACKUP | Seven original modules/private config retained on SSD and in an independently hash-verified 51,142-byte Desktop B archive. Reconcile outstanding deliveries before reverting; preserve current ledger/data. |
 
 Read [WakeWatch recipe](scripts/watcher-events/CONNECTOR_TRANSPORT.md) and
 [TurnSteer access](TURNSTEER_ACCESS.md). New capability availability is distinct

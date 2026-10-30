@@ -3,19 +3,26 @@
 WakeWatch is active via the existing timer/connector, with no service restart.
 Read [the connector recipe](scripts/watcher-events/CONNECTOR_TRANSPORT.md) and
 [TurnSteer access](TURNSTEER_ACCESS.md). No further activation approval is needed.
-One approved no-cleanup acknowledgement test is already queued for capacity.
-Use `wakewatch status`; never submit a replacement or increase capacity to force it.
-Confirm its actual execution and exact expected reply after a slot becomes free.
+The single approved no-cleanup acknowledgement test completed at 12:00:07 UTC.
+Execution `02f6a6f4-46d5-4939-9fdb-b86107522752` returned exactly
+`WAKEWATCH_READY_4f2df84a`. Use `wakewatch status`; never submit a replacement.
 
-The operator refreshed Dot's plugin, but this pre-existing client still has its old
-catalog. Both steering tools are advertised by the server. The installed `turnsteer`
-CLI is available through existing Dot host access. Do not restart the connector.
+The operator's refresh succeeded: this client now exposes all 46 Vibe tools and
+a real steering-receipt lookup through the refreshed plugin succeeded. Use
+`steer_session_prompt` only for an explicit user correction to the exact running
+CODEX execution. The local CLI needs an authorized shell with loopback access;
+Dot's separate read-only/network-disabled host tool cannot make API calls.
 
 Evidence/rollback: `/mnt/vk-storage/wakewatch-connector-20261030` on mounted SSD.
 Installed private client variants are retained there; generic source/tests are in
 this branch. 185 watcher and 14 steering tests pass, with live readiness/receipt/
 target/health checks. No new model-level TurnSteer correction is claimed.
 The original backend, printer and connector PIDs/invocation IDs remain unchanged.
+Rollback archive is independently verified on Desktop
+`B:/vk-backups/wakewatch-connector-20261030/wakewatch-activation-rollback.zip`.
+Its hash and delivery/catalog evidence are recorded in the connector recipe and
+private safe receipts. Preserve current database/ledger; this archive contains no
+live database and does not authorize replay.
 
 Prior backend handoff, retained below, still applies to the unchanged deployment.
 

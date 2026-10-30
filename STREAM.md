@@ -8,13 +8,16 @@ WakeWatch's explicit printer-connector transport is installed and enabled since
 11:38:59 UTC after operator approval. Existing timer, owner, incident ledger,
 notification policy and cleanup approvals remain. The process inventory now
 recognizes tightly scoped unrelated infrastructure without ignoring unknown work.
-One approved acknowledgement test is in Vibe's capacity queue; no resend, extra
-turn or forced capacity increase. Exact reply verification remains pending.
+The single approved acknowledgement test completed at 12:00:07 UTC after waiting
+for ordinary capacity. Its exact assistant reply matched; no resend, extra turn or
+forced capacity increase occurred.
 
-TurnSteer already exists in the live backend and connector. Fresh discovery lists
-46 tools while this pre-existing client catalog lists 36. The operator refreshed
-it; new Dot catalog verification is still pending. The installed `turnsteer` CLI
-provides immediate use through existing host access without a new service.
+TurnSteer already exists in the live backend and connector. After the operator's
+refresh, this client's discovery now exposes all 46 tools, including both steering
+tools, six issue-workflow tools and two handoff tools. A receipt lookup through
+the refreshed plugin succeeded. The installed local CLI is an alternative for
+authorized shells with loopback access; Dot's read-only, network-disabled host
+tool cannot make its API calls.
 
 185 watcher tests and 14 steering tests pass. Live steering target/receipt reads
 and connector health pass; no new unrelated-agent correction was sent. Scheduled

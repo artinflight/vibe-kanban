@@ -12,10 +12,14 @@ pub mod file_ranker;
 pub mod file_search;
 pub mod filesystem;
 pub mod filesystem_watcher;
+pub mod fixed_baseline;
 pub mod notification;
 pub mod oauth_credentials;
 pub mod original_worker;
 pub mod pr_monitor;
+pub mod provider_admission;
+pub mod provider_failover;
+pub mod provider_receipts;
 pub mod storage_admission;
 
 #[cfg(feature = "qa-mode")]
@@ -25,3 +29,5 @@ pub mod remote_client;
 pub mod remote_sync;
 pub mod repo;
 pub mod report_review;
+
+mod fixed_baseline_capture;

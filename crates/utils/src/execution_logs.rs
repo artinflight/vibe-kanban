@@ -143,20 +143,231 @@ pub async fn validate_native_capture(path: &Path, maximum: usize) -> std::io::Re
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
         Err(e) => return Err(e),
     }
-    let (_, messages) = read_execution_log_strict(path, maximum).await?;
-    let stdout: String = messages
-        .iter()
-        .filter_map(|m| match m {
-            LogMsg::Stdout(s) => Some(s.as_str()),
-            _ => None,
-        })
-        .collect();
-    if stdout.is_empty() || !stdout.ends_with('\n') {
-        return Err(std::io::Error::other("Incomplete native log capture"));
+    // Review materialization keeps its existing whole-file bound. Presentation
+    // validates every byte while bounding each outer record and streaming each
+    // native JSON line without retaining historical response bodies.
+    let owned = path.to_path_buf();
+    tokio::task::spawn_blocking(move || validate_native_capture_streaming(&owned, maximum))
+        .await
+        .map_err(|e| std::io::Error::other(format!("Capture verifier failed: {e}")))?
+}
+
+struct NativeCaptureReader<R> {
+    outer: R,
+    pending: std::io::Cursor<Vec<u8>>,
+    maximum_record: usize,
+    records: usize,
+    saw_stdout: bool,
+    last_stdout_byte: Option<u8>,
+}
+
+impl<R: std::io::BufRead> std::io::Read for NativeCaptureReader<R> {
+    fn read(&mut self, output: &mut [u8]) -> std::io::Result<usize> {
+        if output.is_empty() {
+            return Ok(0);
+        }
+        loop {
+            let read = std::io::Read::read(&mut self.pending, output)?;
+            if read != 0 {
+                return Ok(read);
+            }
+            let mut line = Vec::new();
+            loop {
+                let available = self.outer.fill_buf()?;
+                if available.is_empty() {
+                    if !line.is_empty() {
+                        return Err(std::io::Error::other("Unterminated outer capture record"));
+                    }
+                    if !self.saw_stdout || self.last_stdout_byte != Some(b'\n') {
+                        return Err(std::io::Error::other("Incomplete native log capture"));
+                    }
+                    return Ok(0);
+                }
+                let count = available
+                    .iter()
+                    .position(|&b| b == b'\n')
+                    .map_or(available.len(), |p| p + 1);
+                if line
+                    .len()
+                    .checked_add(count)
+                    .is_none_or(|n| n > self.maximum_record)
+                {
+                    return Err(std::io::Error::other(
+                        "Capture record exceeds existing materialization bound",
+                    ));
+                }
+                let complete = available[count - 1] == b'\n';
+                line.extend_from_slice(&available[..count]);
+                self.outer.consume(count);
+                if complete {
+                    break;
+                }
+            }
+            if self.records >= 100_000 {
+                return Err(std::io::Error::other("Capture record bound exceeded"));
+            }
+            self.records += 1;
+            let message: LogMsg = serde_json::from_slice(&line)
+                .map_err(|_| std::io::Error::other("Invalid outer capture record"))?;
+            match message {
+                LogMsg::Stdout(text) => {
+                    if let Some(last) = text.as_bytes().last() {
+                        self.saw_stdout = true;
+                        self.last_stdout_byte = Some(*last);
+                    }
+                    self.pending = std::io::Cursor::new(text.into_bytes());
+                }
+                LogMsg::Stderr(_) => {}
+                _ => return Err(std::io::Error::other("Unsupported capture record")),
+            }
+        }
     }
-    for line in stdout.lines() {
-        serde_json::from_str::<serde_json::Value>(line)
+}
+
+// Expose exactly one newline-terminated native JSON record as a finite reader.
+// serde's IgnoredAny validates all JSON syntax without allocating response trees.
+struct NativeLine<'a, R> {
+    input: &'a mut R,
+    ended: bool,
+    depth: usize,
+    quoted: bool,
+    escaped: bool,
+    number: Vec<u8>,
+    maximum_number: usize,
+}
+impl<R> NativeLine<'_, R> {
+    fn check_bytes(&mut self, bytes: &[u8]) -> std::io::Result<()> {
+        for &byte in bytes {
+            if self.quoted {
+                if self.escaped {
+                    self.escaped = false;
+                } else if byte == b'\\' {
+                    self.escaped = true;
+                } else if byte == b'"' {
+                    self.quoted = false;
+                }
+                continue;
+            }
+            if !self.number.is_empty()
+                && !matches!(byte, b'0'..=b'9' | b'-' | b'+' | b'.' | b'e' | b'E')
+            {
+                let value: serde_json::Value =
+                    serde_json::from_slice(&self.number).map_err(|_| {
+                        std::io::Error::other("Native JSON number out of range or invalid")
+                    })?;
+                if !value.is_number() {
+                    return Err(std::io::Error::other("Invalid native JSON number"));
+                }
+                self.number.clear();
+            }
+            if !self.number.is_empty() || matches!(byte, b'0'..=b'9' | b'-') {
+                if self.number.len() >= self.maximum_number {
+                    return Err(std::io::Error::other(
+                        "Native number exceeds existing materialization bound",
+                    ));
+                }
+                self.number.push(byte);
+            }
+            match byte {
+                b'"' => self.quoted = true,
+                b'[' | b'{' => {
+                    self.depth += 1;
+                    if self.depth >= 128 {
+                        return Err(std::io::Error::other(
+                            "Native JSON recursion limit exceeded",
+                        ));
+                    }
+                }
+                b']' | b'}' => self.depth = self.depth.saturating_sub(1),
+                _ => {}
+            }
+        }
+        Ok(())
+    }
+}
+impl<R: std::io::BufRead> std::io::Read for NativeLine<'_, R> {
+    fn read(&mut self, output: &mut [u8]) -> std::io::Result<usize> {
+        if output.is_empty() || self.ended {
+            return Ok(0);
+        }
+        let available = self.input.fill_buf()?;
+        if available.is_empty() {
+            return Err(std::io::Error::other("Unterminated native JSON record"));
+        }
+        let count = output.len().min(
+            available
+                .iter()
+                .position(|&b| b == b'\n')
+                .map_or(available.len(), |p| p + 1),
+        );
+        self.ended = available[count - 1] == b'\n';
+        output[..count].copy_from_slice(&available[..count]);
+        self.check_bytes(&output[..count])?;
+        self.input.consume(count);
+        Ok(count)
+    }
+}
+
+fn same_capture_version(a: &std::fs::Metadata, b: &std::fs::Metadata) -> bool {
+    let mut same = a.len() == b.len() && a.modified().ok() == b.modified().ok();
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::MetadataExt;
+        same &= a.dev() == b.dev()
+            && a.ino() == b.ino()
+            && a.ctime_nsec() == b.ctime_nsec()
+            && a.ctime() == b.ctime();
+    }
+    same
+}
+
+fn validate_native_capture_streaming(path: &Path, maximum_record: usize) -> std::io::Result<()> {
+    use std::io::BufRead;
+
+    use serde::Deserialize;
+    let file = std::fs::File::open(path)?;
+    let before = file.metadata()?;
+    let input = NativeCaptureReader {
+        outer: std::io::BufReader::with_capacity(65536, file),
+        pending: std::io::Cursor::new(Vec::new()),
+        maximum_record,
+        records: 0,
+        saw_stdout: false,
+        last_stdout_byte: None,
+    };
+    let mut input = std::io::BufReader::with_capacity(65536, input);
+    let mut records = 0;
+    while !input.fill_buf()?.is_empty() {
+        let mut line = NativeLine {
+            input: &mut input,
+            ended: false,
+            depth: 0,
+            quoted: false,
+            escaped: false,
+            number: Vec::new(),
+            maximum_number: maximum_record,
+        };
+        let mut buffered = std::io::BufReader::with_capacity(65536, &mut line);
+        let mut decoder = serde_json::Deserializer::from_reader(&mut buffered);
+        serde::de::IgnoredAny::deserialize(&mut decoder)
             .map_err(|_| std::io::Error::other("Damaged native log capture"))?;
+        decoder.end().map_err(|_| {
+            std::io::Error::other("Multiple/invalid native JSON records on one line")
+        })?;
+        drop(decoder);
+        drop(buffered);
+        if !line.ended {
+            return Err(std::io::Error::other("Incomplete native JSON record"));
+        }
+        records += 1;
+    }
+    if records == 0 {
+        return Err(std::io::Error::other("Empty native log capture"));
+    }
+    let opened = input.get_ref().outer.get_ref().metadata()?;
+    let named = std::fs::metadata(path)?;
+    if !same_capture_version(&before, &opened) || !same_capture_version(&before, &named) {
+        return Err(std::io::Error::other("Capture changed during validation"));
     }
     Ok(())
 }
@@ -282,5 +493,171 @@ mod capture_tests {
             0xe2, 0x9c,
         ]))]));
         assert!(stream.next().await.unwrap().is_err());
+    }
+}
+
+#[cfg(test)]
+mod bounded_native_capture_tests {
+    use std::io::Write;
+
+    use super::*;
+
+    struct FixtureRoot(PathBuf);
+    impl Drop for FixtureRoot {
+        fn drop(&mut self) {
+            std::fs::remove_dir_all(&self.0).expect("remove only this synthetic fixture");
+        }
+    }
+    fn fixture(chunks: &[&str]) -> (FixtureRoot, PathBuf) {
+        let root = FixtureRoot(
+            PathBuf::from(std::env::var_os("VK_CAPTURE_TEST_ROOT").expect("owned test RAM root"))
+                .join(format!("capture-stream-test-{}", Uuid::new_v4())),
+        );
+        std::fs::create_dir(&root.0).unwrap();
+        let path = root.0.join("capture.jsonl");
+        let mut file = std::fs::File::create(&path).unwrap();
+        for chunk in chunks {
+            serde_json::to_writer(&mut file, &LogMsg::Stdout((*chunk).into())).unwrap();
+            writeln!(file).unwrap();
+        }
+        (root, path)
+    }
+
+    #[test]
+    fn streaming_total_exceeds_record_bound_without_raising_it() {
+        let chunks = vec!["{\"ok\":true}\n"; 100];
+        let (_root, path) = fixture(&chunks);
+        assert!(path.metadata().unwrap().len() > 64);
+        validate_native_capture_streaming(&path, 64).unwrap();
+    }
+
+    #[test]
+    fn streaming_large_native_value_across_small_outer_records() {
+        let (_root, path) = fixture(&["{\"body\":\"", &"a".repeat(200_000), "\"}\n"]);
+        // Split the large outer record as a normal captured native pipe does.
+        let file = std::fs::File::create(&path).unwrap();
+        let mut file = std::io::BufWriter::new(file);
+        let document = format!("{{\"body\":\"{}\"}}\n", "x".repeat(200_000));
+        for chunk in document.as_bytes().chunks(512) {
+            serde_json::to_writer(
+                &mut file,
+                &LogMsg::Stdout(std::str::from_utf8(chunk).unwrap().into()),
+            )
+            .unwrap();
+            writeln!(file).unwrap();
+        }
+        file.flush().unwrap();
+        validate_native_capture_streaming(&path, 1024).unwrap();
+    }
+
+    #[test]
+    fn streaming_malformed_outer_refuses() {
+        let (_root, path) = fixture(&["{}\n"]);
+        std::fs::OpenOptions::new()
+            .append(true)
+            .open(&path)
+            .unwrap()
+            .write_all(b"BROKEN\n")
+            .unwrap();
+        assert!(validate_native_capture_streaming(&path, 1024).is_err());
+    }
+
+    #[test]
+    fn streaming_malformed_native_refuses() {
+        let (_root, path) = fixture(&["{bad}\n"]);
+        assert!(validate_native_capture_streaming(&path, 1024).is_err());
+    }
+
+    #[test]
+    fn streaming_partial_native_refuses() {
+        let (_root, path) = fixture(&["{}"]);
+        assert!(validate_native_capture_streaming(&path, 1024).is_err());
+    }
+
+    #[test]
+    fn streaming_partial_outer_refuses() {
+        let (_root, path) = fixture(&["{}\n"]);
+        let f = std::fs::OpenOptions::new().write(true).open(&path).unwrap();
+        f.set_len(f.metadata().unwrap().len() - 1).unwrap();
+        assert!(validate_native_capture_streaming(&path, 1024).is_err());
+    }
+
+    #[test]
+    fn streaming_native_line_boundary_remains_strict() {
+        for value in ["{}{}\n", "{}\n\n", "{\n}\n"] {
+            let (_root, path) = fixture(&[value]);
+            assert!(
+                validate_native_capture_streaming(&path, 1024).is_err(),
+                "framing accepted"
+            );
+        }
+    }
+
+    #[test]
+    fn streaming_outer_record_bound_remains_strict() {
+        let (_root, path) = fixture(&[&format!("{{\"body\":\"{}\"}}\n", "x".repeat(1024))]);
+        assert!(validate_native_capture_streaming(&path, 128).is_err());
+    }
+
+    #[test]
+    fn streaming_unsupported_outer_refuses() {
+        let (_root, path) = fixture(&["{}\n"]);
+        std::fs::OpenOptions::new()
+            .append(true)
+            .open(&path)
+            .unwrap()
+            .write_all(b"\"Finished\"\n")
+            .unwrap();
+        assert!(validate_native_capture_streaming(&path, 1024).is_err());
+    }
+
+    #[tokio::test]
+    async fn streaming_pending_writer_stays_unavailable() {
+        let (_root, path) = fixture(&["{}\n"]);
+        std::fs::write(
+            path.with_extension("capture.json"),
+            br#"{"capture_state":"pending"}"#,
+        )
+        .unwrap();
+        assert!(validate_native_capture(&path, 1024).await.is_err());
+        std::fs::write(
+            path.with_extension("capture.json"),
+            br#"{"capture_state":"closed"}"#,
+        )
+        .unwrap();
+        validate_native_capture(&path, 1024).await.unwrap();
+    }
+
+    #[test]
+    fn streaming_replaced_source_version_refuses() {
+        let (_root, path) = fixture(&["{}\n"]);
+        let old = path.metadata().unwrap();
+        std::fs::write(path.with_extension("next"), b"other").unwrap();
+        std::fs::rename(path.with_extension("next"), &path).unwrap();
+        assert!(!same_capture_version(&old, &path.metadata().unwrap()));
+    }
+
+    #[test]
+    fn streaming_preserves_original_recursion_and_number_semantics() {
+        for document in [
+            format!("{}0{}\n", "[".repeat(128), "]".repeat(128)),
+            "{\"n\":1e400}\n".into(),
+        ] {
+            let (_root, path) = fixture(&[&document]);
+            assert!(validate_native_capture_streaming(&path, 4096).is_err());
+        }
+        let (_root, path) = fixture(&["{\"text\":\"[{\\\"—\",\"n\":-1.25e2}\n"]);
+        validate_native_capture_streaming(&path, 4096).unwrap();
+    }
+
+    #[test]
+    #[ignore = "explicit admitted read-only retained-capture probe only"]
+    fn streaming_actual_retained_capture() {
+        let path = PathBuf::from(
+            std::env::var_os("VK_NATIVE_CAPTURE_TEST_PATH")
+                .expect("explicit readonly retained capture binding"),
+        );
+        validate_native_capture_streaming(&path, 32 * 1024 * 1024)
+            .expect("full retained outer/native integrity");
     }
 }

@@ -21,12 +21,14 @@
   outline: 2px solid #d7834b;
 }
 .dot-fixture-container {
+  min-width: 0;
   display: flex;
   flex-direction: column;
   min-height: 0;
   height: 100%;
 }
 .dot-panel {
+  min-width: 0;
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -132,9 +134,14 @@
 }
 .dot-byline {
   display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
   justify-content: space-between;
   font-size: 11px;
   gap: 12px;
+}
+.dot-byline time {
+  white-space: nowrap;
 }
 .dot-byline a {
   color: inherit;
@@ -145,8 +152,71 @@
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   margin: 8px 0;
-  font-size: 13px;
+  font-size: 1rem;
 }
+
+.dot-code-block {
+  min-width: 0;
+  max-width: 100%;
+  margin: 8px 0;
+  border: 1px solid #8884;
+  border-radius: 6px;
+  background: #88808;
+  font-size: 1rem;
+}
+.dot-code-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 8px;
+  border-bottom: 1px solid #8883;
+  font-size: 12px;
+}
+.dot-code-toolbar > span {
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+.dot-code-toolbar button {
+  flex-shrink: 0;
+  min-height: 32px;
+  padding: 4px 10px;
+  border: 1px solid #8885;
+  border-radius: 5px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.dot-code-block pre {
+  margin: 0;
+  padding: 12px;
+  overflow-x: auto;
+  white-space: pre;
+  overflow-wrap: normal;
+  tab-size: 4;
+}
+.dot-code-block code {
+  font: inherit;
+  font-family: 'IBM Plex Mono', monospace;
+}
+.dot-code-toolbar button:focus-visible,
+.dot-code-block pre:focus-visible {
+  outline: 2px solid #bc926b;
+  outline-offset: -2px;
+}
+.dot-code-copy-error {
+  display: block;
+  padding: 4px 8px;
+  font-size: 12px;
+}
+@media (max-width: 767px) {
+  .dot-code-toolbar button {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
 .dot-message small {
   font-size: 10px;
   opacity: 0.6;
@@ -166,6 +236,7 @@
   padding: 12px;
   color: inherit;
   font: inherit;
+  font-size: 1rem;
   outline: none;
 }
 .dot-composer textarea:focus {
@@ -358,6 +429,94 @@
 }
 @media (pointer: coarse) {
   .dot-reply-actions button {
+    min-height: 44px;
+  }
+}
+
+.dot-reply-reference,
+.dot-reply-target {
+  border-left: 2px solid currentColor;
+  padding: 8px 10px;
+  margin: 8px 0;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.dot-reply-reference a {
+  color: inherit;
+  text-decoration: underline;
+}
+.dot-reply-reference p,
+.dot-reply-target p {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  white-space: pre-wrap;
+  margin: 4px 0 0;
+}
+.dot-reply-target {
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+.dot-reply-target > div {
+  min-width: 0;
+}
+.dot-reply-target time {
+  display: block;
+  font-size: 11px;
+}
+.dot-reply-button {
+  min-height: 36px;
+  padding: 6px 10px;
+  color: inherit;
+  background: none;
+  border: 1px solid #8884;
+  border-radius: 6px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.dot-reply-button:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+@media (max-width: 767px) {
+  .dot-reply-button {
+    min-height: 44px;
+  }
+}
+
+.dot-attention-nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px 10px;
+  flex-shrink: 0;
+  font-size: 12px;
+}
+.dot-attention-nav button {
+  min-width: 36px;
+  min-height: 36px;
+  padding: 6px 8px;
+  border: 1px solid #8884;
+  border-radius: 6px;
+  color: inherit;
+  background: none;
+  cursor: pointer;
+}
+.dot-attention-nav button:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+.dot-message[data-dot-attention-current] {
+  outline: 2px solid #bc926b;
+  outline-offset: 2px;
+}
+@media (max-width: 767px) {
+  .dot-attention-nav button {
+    min-width: 44px;
     min-height: 44px;
   }
 }

@@ -888,6 +888,26 @@ async fn storage_alert_launch(
     Ok(())
 }
 
+/// Explicit guarded continuation is not an interactive takeover. Read only the
+/// target session authority; unrelated jobs keep their grants and normal limits.
+pub async fn before_no_takeover_launch(session: Uuid) -> io::Result<()> {
+    let Some(controller) = configured()? else {
+        return Ok(());
+    };
+    let c = controller.lock().await;
+    c.ensure_owner()?;
+    if c.state
+        .goals
+        .get(&session)
+        .is_some_and(|g| g.grant.is_some())
+    {
+        return Err(invalid(
+            "Scheduled authority blocks continuation; no takeover",
+        ));
+    }
+    Ok(())
+}
+
 /// Bounded worker admission cannot exercise interactive takeover authority.
 /// Read existing authority only; never revoke leases or stop another process.
 pub async fn before_bounded_worker_launch() -> io::Result<()> {

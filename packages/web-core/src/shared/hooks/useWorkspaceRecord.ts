@@ -23,7 +23,15 @@ export function useWorkspaceRecord(workspaceId?: string, opts?: Options) {
 
   return useQuery<Workspace>({
     queryKey: workspaceRecordKeys.byId(workspaceId, hostId),
-    queryFn: () => workspacesApi.get(workspaceId!),
+    queryFn: async () => {
+      const workspace = await workspacesApi.get(workspaceId!);
+      if (workspace.id !== workspaceId) {
+        throw new Error(
+          'Workspace response does not match the requested destination'
+        );
+      }
+      return workspace;
+    },
     enabled,
   });
 }

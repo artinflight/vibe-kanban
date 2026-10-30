@@ -56,6 +56,12 @@ pub(crate) async fn queue_message_admitted<D: Deployment>(
     State(deployment): State<D>,
     Json(payload): Json<QueueMessageRequest>,
 ) -> Result<ResponseJson<ApiResponse<QueueStatus>>, ApiError> {
+    services::services::provider_admission::before_start(
+        deployment.container(),
+        session.workspace_id,
+        session.id,
+    )
+    .await?;
     services::services::original_worker::record_input(&deployment.db().pool, session.id, false)
         .await
         .map_err(|e| ApiError::Conflict(e.to_string()))?;

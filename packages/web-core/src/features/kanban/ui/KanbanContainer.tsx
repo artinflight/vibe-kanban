@@ -25,6 +25,7 @@ import {
   useUiPreferencesStore,
   resolveKanbanProjectState,
   KANBAN_ASSIGNEE_FILTER_VALUES,
+  resolveKanbanViewFilters,
   KANBAN_PROJECT_VIEW_IDS,
   type KanbanFilterState,
   type KanbanSortField,
@@ -836,7 +837,12 @@ export function KanbanContainer() {
     collapsedStatusIds: defaultCollapsedStatusIds,
   } = resolvedProjectState;
   const projectViewPreferences = projectViewPreferencesById?.[activeViewId];
-  const kanbanFilters = projectViewPreferences?.filters ?? defaultKanbanFilters;
+  const storedKanbanFilters =
+    projectViewPreferences?.filters ?? defaultKanbanFilters;
+  const kanbanFilters = useMemo(
+    () => resolveKanbanViewFilters(activeViewId, storedKanbanFilters),
+    [activeViewId, storedKanbanFilters]
+  );
   const showSubIssues =
     projectViewPreferences?.showSubIssues ?? defaultShowSubIssues;
   const showWorkspaces =
@@ -1260,6 +1266,7 @@ export function KanbanContainer() {
             hasPendingApproval: localWorkspace?.hasPendingApproval,
             hasRunningDevServer: localWorkspace?.hasRunningDevServer,
             hasUnseenActivity: localWorkspace?.hasUnseenActivity,
+            dotManaged: localWorkspace?.dotManaged,
             dotUnreadCount: localWorkspace?.dotUnreadCount,
             dotNeedsAttentionCount: localWorkspace?.dotNeedsAttentionCount,
             latestProcessCompletedAt: localWorkspace?.latestProcessCompletedAt,

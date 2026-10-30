@@ -133,6 +133,12 @@ pub async fn follow_up(
     State(deployment): State<DeploymentImpl>,
     Json(payload): Json<CreateFollowUpAttempt>,
 ) -> Result<ResponseJson<ApiResponse<ExecutionProcess, QueueStatus>>, ApiError> {
+    services::services::provider_admission::before_start(
+        deployment.container(),
+        session.workspace_id,
+        session.id,
+    )
+    .await?;
     let pool = deployment.db().pool.clone();
     let received = services::services::queued_message::QueuedMessageService::receive(
         &pool,
@@ -157,6 +163,12 @@ pub(crate) async fn follow_up_admitted<D: Deployment>(
     State(deployment): State<D>,
     Json(payload): Json<CreateFollowUpAttempt>,
 ) -> Result<ResponseJson<ApiResponse<ExecutionProcess, QueueStatus>>, ApiError> {
+    services::services::provider_admission::before_start(
+        deployment.container(),
+        session.workspace_id,
+        session.id,
+    )
+    .await?;
     services::services::original_worker::record_input(
         &deployment.db().pool,
         session.id,
@@ -372,7 +384,7 @@ pub async fn reset_process(
     State(deployment): State<DeploymentImpl>,
     Json(payload): Json<ResetProcessRequest>,
 ) -> Result<ResponseJson<ApiResponse<()>>, ApiError> {
-    services::services::admission::run(reset_process_admitted(
+    services::services::admission::locked(reset_process_admitted(
         Extension(session),
         State(deployment),
         Json(payload),
@@ -385,6 +397,12 @@ async fn reset_process_admitted(
     State(deployment): State<DeploymentImpl>,
     Json(payload): Json<ResetProcessRequest>,
 ) -> Result<ResponseJson<ApiResponse<()>>, ApiError> {
+    services::services::provider_admission::before_start(
+        deployment.container(),
+        session.workspace_id,
+        session.id,
+    )
+    .await?;
     let force_when_dirty = payload.force_when_dirty.unwrap_or(false);
     let perform_git_reset = payload.perform_git_reset.unwrap_or(true);
 

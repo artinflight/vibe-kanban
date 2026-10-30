@@ -43,6 +43,23 @@ pub async fn resolve_for_launch(
         .get_coding_agent(&profile)
         .ok_or_else(|| crate::executors::ExecutorError::UnknownExecutorType(profile.to_string()))?;
     agent.apply_overrides(raw);
+    if let Some(execution) = env.get("VK_EXECUTION_PROCESS_ID")
+        && crate::provider_failover::observer::provider_launch(execution)?
+    {
+        if let crate::executors::CodingAgent::ClaudeCode(ref native) = agent {
+            crate::provider_failover::claude::validate_profile(
+                &native.provider_profile_facts(raw.variant.as_deref().unwrap_or("DEFAULT")),
+            )?;
+        } else if !matches!(agent, crate::executors::CodingAgent::Codex(_)) {
+            return Err(crate::executors::ExecutorError::Io(io::Error::other(
+                "Wrong provider at handoff launch",
+            )));
+        }
+        crate::provider_failover::observer::verify_profile_pin(
+            execution,
+            &profile_digest(&agent)?,
+        )?;
+    }
     if let Some(guard) = &env.original_worker {
         guard.resolved(&agent, raw).await?;
     }

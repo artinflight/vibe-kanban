@@ -154,5 +154,5 @@ export default defineConfig({
   optimizeDeps: {
     exclude: ['wa-sqlite'],
   },
-  build: { sourcemap: true },
+  build: { sourcemap: false },
 });

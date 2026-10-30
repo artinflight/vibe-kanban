@@ -30,6 +30,26 @@ pub fn codex_home() -> Option<PathBuf> {
     dirs::home_dir().map(|home| home.join(".codex"))
 }
 
+fn stable_app_server_process_cwd(current_dir: &Path) -> PathBuf {
+    stable_app_server_process_cwd_with_home(current_dir, dirs::home_dir())
+}
+
+fn stable_app_server_process_cwd_with_home(
+    current_dir: &Path,
+    home_dir: Option<PathBuf>,
+) -> PathBuf {
+    home_dir
+        .filter(|home| home.is_absolute())
+        .unwrap_or_else(|| {
+            current_dir
+                .ancestors()
+                .last()
+                .filter(|root| root.is_absolute())
+                .unwrap_or_else(|| Path::new("/"))
+                .to_path_buf()
+        })
+}
+
 pub(crate) fn resolve_model(model: Option<&str>) -> (Option<&str>, bool) {
     match model.and_then(|m| m.strip_suffix("-fast")) {
         Some(base) => (Some(base), true),
@@ -185,6 +205,95 @@ pub fn original_worker_capacity_available() -> bool {
 
 #[cfg(test)]
 mod tests {
+
+    #[test]
+    fn pr18_stable_process_cwd_preserves_workspace_rpc() {
+        let cwd = Path::new("/synthetic/worktree");
+        assert_eq!(
+            stable_app_server_process_cwd_with_home(cwd, Some("/synthetic/home".into())),
+            PathBuf::from("/synthetic/home")
+        );
+        let codex: Codex = serde_json::from_value(serde_json::json!({})).unwrap();
+        let request = serde_json::to_value(codex.build_thread_start_params(cwd)).unwrap();
+        assert_eq!(request["cwd"], "/synthetic/worktree");
+        assert_eq!(request["approvalPolicy"], "on-request");
+    }
+    #[test]
+    fn pr18_missing_or_relative_home_uses_absolute_root() {
+        for home in [None, Some(PathBuf::from("relative-home"))] {
+            assert_eq!(
+                stable_app_server_process_cwd_with_home(Path::new("/synthetic/worktree"), home),
+                PathBuf::from("/")
+            );
+        }
+        assert_eq!(
+            stable_app_server_process_cwd_with_home(Path::new("relative/worktree"), None),
+            PathBuf::from("/")
+        );
+    }
+    #[tokio::test]
+    async fn pr18_actual_direct_process_and_thread_rpc_keep_distinct_cwds() {
+        struct Restore(Option<std::ffi::OsString>);
+        impl Drop for Restore {
+            fn drop(&mut self) {
+                unsafe {
+                    if let Some(v) = &self.0 {
+                        std::env::set_var("VK_USE_SYSTEMD_RUN", v)
+                    } else {
+                        std::env::remove_var("VK_USE_SYSTEMD_RUN")
+                    }
+                }
+            }
+        }
+        let _restore = Restore(std::env::var_os("VK_USE_SYSTEMD_RUN"));
+        unsafe { std::env::set_var("VK_USE_SYSTEMD_RUN", "0") };
+        let work = tempfile::tempdir().unwrap();
+        let workspace = work.path().to_path_buf();
+        let expected = stable_app_server_process_cwd(&workspace);
+        std::fs::create_dir_all(&expected).unwrap();
+        let codex: Codex = serde_json::from_value(serde_json::json!({})).unwrap();
+        let params = codex.build_thread_start_params(&workspace);
+        let fixture = include_str!("codex/fixtures/new-error-resume.json");
+        let command=CommandParts::new("python3".into(),vec!["-u".into(),"-c".into(),r#"
+import json,os,sys
+fixture=json.loads(sys.argv[1])
+for line in sys.stdin:
+ q=json.loads(line)
+ if 'id' not in q: continue
+ method=q.get('method')
+ if method=='initialize': result={'userAgent':'codex_cli_rs/0.159.2 (synthetic)','platformFamily':'unix','platformOs':'linux'}
+ elif method=='config/read': result={'config':{}}
+ elif method=='thread/start':
+  result=dict(fixture);result['cwd']=q['params']['cwd'];result['thread']=dict(fixture['thread']);result['thread']['turns']=[]
+ elif method=='synthetic/process-cwd': result={'cwd':os.getcwd()}
+ elif method=='thread/goal/get': result={'goal':None}
+ else: result={}
+ print(json.dumps({'id':q['id'],'result':result}),flush=True)
+"#.into(),fixture.into()]);
+        let env = ExecutionEnv::new(crate::env::RepoContext::default(), false, String::new());
+        let (done, receipt) = tokio::sync::oneshot::channel();
+        let expected_workspace = workspace.clone();
+        let mut child = codex
+            .spawn_app_server(&workspace, command, &env, move |client, _| async move {
+                let reply = client.thread_start(params).await?;
+                assert_eq!(reply.cwd, expected_workspace);
+                let actual = client
+                    .delegation_request("synthetic/process-cwd", serde_json::json!({}))
+                    .await?;
+                assert_eq!(actual["cwd"], expected.to_string_lossy().as_ref());
+                let _ = done.send(());
+                Ok(())
+            })
+            .await
+            .unwrap();
+        let outcome = tokio::time::timeout(std::time::Duration::from_secs(15), receipt).await;
+        if let Some(cancel) = child.cancel.take() {
+            cancel.cancel();
+        }
+        let _ = child.child.kill().await;
+        let _ = child.child.wait().await;
+        outcome.unwrap().unwrap();
+    }
     use super::*;
     use crate::{
         executors::{BaseCodingAgent, StandardCodingAgentExecutor},
@@ -903,6 +1012,22 @@ impl StandardCodingAgentExecutor for Codex {
     }
 }
 
+fn resolved_service_tier_label(tier: Option<ServiceTier>) -> &'static str {
+    match tier {
+        Some(ServiceTier::Fast) => "fast",
+        Some(ServiceTier::Flex) => "flex",
+        None => "standard",
+    }
+}
+
+#[cfg(test)]
+#[test]
+fn resolved_service_tier_observer_labels() {
+    assert_eq!(resolved_service_tier_label(Some(ServiceTier::Fast)), "fast");
+    assert_eq!(resolved_service_tier_label(Some(ServiceTier::Flex)), "flex");
+    assert_eq!(resolved_service_tier_label(None), "standard");
+}
+
 impl Codex {
     pub fn base_command() -> String {
         std::env::var("VK_CODEX_BASE_COMMAND")
@@ -1245,6 +1370,23 @@ impl Codex {
                 }
             }
         }
+        if let Some(execution) = telemetry_env.get("VK_EXECUTION_PROCESS_ID")
+            && crate::provider_failover::observer::provider_launch(execution)?
+        {
+            if resolved_provider != "openai" {
+                return Err(ExecutorError::Io(std::io::Error::other(
+                    "Provider return requires native OpenAI route",
+                )));
+            }
+            let native_effort = serde_json::to_value(resolved_effort)?;
+            crate::provider_failover::observer::codex_started(
+                execution,
+                &thread_id,
+                &resolved_model,
+                native_effort.as_str(),
+                resolved_service_tier_label(resolved_tier),
+            )?;
+        }
         client.set_resolved_model(resolved_model);
         client.register_session(&thread_id).await?;
         client.refresh_goal().await?;
@@ -1371,6 +1513,7 @@ impl Codex {
                 )));
             }
         }
+        let process_cwd = stable_app_server_process_cwd(current_dir);
         let mut transient_unit_name = None;
         let mut child = if systemd_run::enabled() {
             let mut env_vars = effective_env.vars.clone();
@@ -1403,7 +1546,7 @@ impl Codex {
             if let Some(capacity) = &effective_env.capacity {
                 systemd_run::spawn_capacity_unit(
                     &unit_name,
-                    current_dir,
+                    &process_cwd,
                     &program_path,
                     &args,
                     &env_vars,
@@ -1413,7 +1556,7 @@ impl Codex {
                 systemd_run::spawn_transient_unit(
                     &unit_name,
                     "VK Codex execution",
-                    current_dir,
+                    &process_cwd,
                     &program_path,
                     &args,
                     &env_vars,
@@ -1432,7 +1575,7 @@ impl Codex {
                 .stdin(std::process::Stdio::piped())
                 .stdout(std::process::Stdio::piped())
                 .stderr(std::process::Stdio::piped())
-                .current_dir(current_dir)
+                .current_dir(&process_cwd)
                 .env("NPM_CONFIG_LOGLEVEL", "error")
                 .env("NODE_NO_WARNINGS", "1")
                 .env("NO_COLOR", "1")

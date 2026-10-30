@@ -173,6 +173,13 @@ impl<C: ContainerService + Send + Sync + 'static> PrMonitorService<C> {
         workspace_id: uuid::Uuid,
         pr_number: i64,
     ) -> Result<(), PrMonitorError> {
+        super::admission::run(self.try_archive_workspace_admitted(workspace_id, pr_number)).await
+    }
+    async fn try_archive_workspace_admitted(
+        &self,
+        workspace_id: uuid::Uuid,
+        pr_number: i64,
+    ) -> Result<(), PrMonitorError> {
         let Some(workspace) = Workspace::find_by_id(&self.db.pool, workspace_id).await? else {
             return Ok(());
         };

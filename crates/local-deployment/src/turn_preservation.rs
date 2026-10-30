@@ -20,6 +20,43 @@ pub fn blocked(workspace: &str, turn: &str, reason: &str) -> Value {
         "turn": turn, "reason": reason})
 }
 
+/// Compare complete repository requests after canonicalization, preserving every
+/// required-files/commits field. Duplicate IDs or aliased roots fail closed.
+pub fn same_inventory(left: &Value, right: &Value) -> bool {
+    fn canonical(value: &Value) -> Option<Vec<Value>> {
+        let entries = value.as_array()?;
+        if entries.is_empty() {
+            return None;
+        }
+        let mut ids = std::collections::BTreeMap::new();
+        let mut paths = std::collections::BTreeSet::new();
+        for entry in entries {
+            let mut entry = entry.clone();
+            let id = entry["id"].as_str()?.to_owned();
+            if id.is_empty() {
+                return None;
+            }
+            let requested = Path::new(entry["path"].as_str()?);
+            if !requested.is_absolute() {
+                return None;
+            }
+            let path = requested.canonicalize().ok()?;
+            if !paths.insert(path.clone()) {
+                return None;
+            }
+            entry["path"] = json!(path);
+            if ids.insert(id, entry).is_some() {
+                return None;
+            }
+        }
+        Some(ids.into_values().collect())
+    }
+    match (canonical(left), canonical(right)) {
+        (Some(left), Some(right)) => left == right,
+        _ => false,
+    }
+}
+
 pub fn verified(report: &Value) -> bool {
     report.get("version").and_then(Value::as_u64) == Some(2)
         && report.get("state").and_then(Value::as_str) == Some("verified")
@@ -192,6 +229,9 @@ pub(crate) async fn invoke_with_config(action: &str, request: Value, config: &Pa
                     if report["version"] == 2
                         && report["workspace"] == request["workspace"]
                         && report["turn"] == request["turn"]
+                        && (!(matches!(action, "preflight" | "validate-admission")
+                            && report["state"] == "pending")
+                            || output.status.success())
                         && (!verified(&report) || output.status.success())
                         && (!awaiting_policy(&report) || output.status.success())
                         && (action != "observe-finished"
@@ -223,6 +263,27 @@ mod tests {
             assert!(!verified(&report));
         }
         assert!(verified(&json!({"version": 2, "state": "verified"})));
+    }
+
+    #[test]
+    fn canonical_inventory_preserves_required_scope_and_rejects_alias_duplicates() {
+        let root = tempfile::tempdir().unwrap();
+        let repo = root.path().join("repo");
+        let other = root.path().join("other");
+        std::fs::create_dir(&repo).unwrap();
+        std::fs::create_dir(&other).unwrap();
+        let left =
+            json!([{"id":"a","path":repo,"required_files":["safe.txt"]}, {"id":"b","path":other}]);
+        let right = json!([{"id":"b","path":other}, {"id":"a","path":repo.join("../repo"),"required_files":["safe.txt"]}]);
+        assert!(same_inventory(&left, &right));
+        let mut changed = right.clone();
+        changed[1]["required_files"] = json!([]);
+        assert!(!same_inventory(&left, &changed));
+        assert!(!same_inventory(
+            &left,
+            &json!([{"id":"a","path":repo}, {"id":"b","path":repo.join("../repo")}])
+        ));
+        assert!(!same_inventory(&json!([]), &json!([])));
     }
 
     #[test]

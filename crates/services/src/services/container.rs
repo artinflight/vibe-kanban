@@ -178,6 +178,8 @@ pub enum ContainerError {
     Io(#[from] std::io::Error),
     #[error("Failed to kill process: {0}")]
     KillFailed(std::io::Error),
+    #[error("Execution readiness blocked: {0}")]
+    ReadinessBlocked(serde_json::Value),
     #[error(transparent)]
     Other(#[from] AnyhowError), // Catches any unclassified errors
 }
@@ -203,6 +205,131 @@ pub trait ContainerService: Send + Sync {
 
     async fn workspace_has_external_processes(&self, _workspace: &Workspace) -> bool {
         false
+    }
+
+    /// Git/ownership readiness only. Caller retains permission/toolchain/quota admission.
+    /// Implementations must never start a provider while evaluating this contract.
+    async fn execution_git_readiness(
+        &self,
+        workspace: &Workspace,
+        execution: &ExecutionProcess,
+        _context: serde_json::Value,
+    ) -> Result<serde_json::Value, ContainerError> {
+        Err(ContainerError::ReadinessBlocked(serde_json::json!({
+            "version": 2, "readiness_version": 1, "state": "blocked",
+            "workspace": workspace.id, "turn": execution.id,
+            "code": "readiness_unsupported", "action": "adopt_matching_readiness_implementation",
+            "provider_started": false, "coverage_verified": false
+        })))
+    }
+
+    /// Zero-inference workspace/policy probe before semantic routing. No native
+    /// history or successful admission may be invented for this proposed row.
+    async fn pre_route_git_readiness(
+        &self,
+        workspace: &Workspace,
+        _session: &Session,
+        proposed_execution: Uuid,
+    ) -> Result<(), ContainerError> {
+        if self.requires_git_admission_fence() {
+            return Err(ContainerError::ReadinessBlocked(serde_json::json!({
+                "version":2,"state":"blocked","workspace":workspace.id,"turn":proposed_execution,
+                "code":"readiness_unsupported","action":"adopt_matching_readiness_implementation",
+                "provider_started":false,"coverage_verified":false
+            })));
+        }
+        Ok(())
+    }
+
+    /// Provider dispatch requires fresh existing preservation/process proof.
+    /// Backends without that lifecycle support cannot silently accept the adapter.
+    async fn verify_provider_checkpoint(
+        &self,
+        _checkpoint: &executors::provider_failover::Checkpoint,
+    ) -> Result<(), ContainerError> {
+        Err(ContainerError::Other(anyhow!(
+            "Provider checkpoint verification unsupported"
+        )))
+    }
+
+    /// Revalidate preserved source after the exact unspawned successor row exists.
+    /// Unsupported backends must not ignore arbitrary running rows.
+    async fn verify_provider_checkpoint_at(
+        &self,
+        checkpoint: &executors::provider_failover::Checkpoint,
+        own: Option<Uuid>,
+    ) -> Result<(), ContainerError> {
+        if own.is_some() {
+            return Err(ContainerError::Other(anyhow!(
+                "checkpoint_successor_recheck_unsupported"
+            )));
+        }
+        self.verify_provider_checkpoint(checkpoint).await
+    }
+
+    /// Defaults fail closed in deployments without an authoritative queue view.
+    fn provider_continuation_queue_pending(&self, _session: Uuid) -> bool {
+        true
+    }
+
+    /// Existing-provider continuation requires actual native/process/capture proof.
+    /// Unsupported deployments fail closed rather than treating a DB idle row as proof.
+    async fn verify_provider_continuation_boundary(
+        &self,
+        _workspace: &Workspace,
+        _own: Option<Uuid>,
+    ) -> Result<(), ContainerError> {
+        Err(ContainerError::Other(anyhow!(
+            "native_continuation_checkpoint_unsupported"
+        )))
+    }
+
+    /// Trusted integration boundary. No request/model can submit successful Git,
+    /// entitlement or budget booleans. Concrete Git/CU readers return
+    /// known missing authoritative evidence is returned BEFORE any provider process/inference.
+    async fn prepare_provider_activation(
+        &self,
+        execution: Uuid,
+    ) -> Result<
+        super::provider_failover::Activation,
+        executors::provider_failover::readiness::Readiness,
+    > {
+        Err(super::provider_receipts::preparation(self, execution).await)
+    }
+    async fn prepare_provider_dispatch(
+        &self,
+        _work: &str,
+        execution: Uuid,
+    ) -> Result<
+        super::provider_failover::DispatchRequest,
+        executors::provider_failover::readiness::Readiness,
+    > {
+        Err(super::provider_receipts::preparation(self, execution).await)
+    }
+    async fn prepare_provider_completion(
+        &self,
+        execution: Uuid,
+    ) -> Result<
+        super::provider_failover::Completion,
+        executors::provider_failover::readiness::Readiness,
+    > {
+        Err(super::provider_receipts::completion_preparation(self, execution).await)
+    }
+    async fn refresh_provider_readiness(
+        &self,
+        scope: &executors::provider_failover::readiness::Scope,
+    ) -> Result<
+        executors::provider_failover::readiness::Receipt,
+        executors::provider_failover::readiness::Readiness,
+    > {
+        let execution = Uuid::parse_str(&scope.execution_id).map_err(|_| {
+            executors::provider_failover::readiness::Readiness::Blocked {
+                code: "ownership_changed".into(),
+                action: "refresh_exact_owner_checkpoint".into(),
+                provider_started: false,
+            }
+        })?;
+        Err(super::provider_receipts::preparation(self, execution).await)
     }
 
     fn status_worktree_cleanup_enabled(&self) -> bool {
@@ -1014,6 +1141,12 @@ pub trait ContainerService: Send + Sync {
         perform_git_reset: bool,
         force_when_dirty: bool,
     ) -> Result<(), ContainerError> {
+        let bound_session = Session::find_by_id(&self.db().pool, session_id)
+            .await?
+            .ok_or_else(|| ContainerError::Other(anyhow!("Session not found")))?;
+        super::provider_admission::before_start(self, bound_session.workspace_id, session_id)
+            .await?;
+
         let pool = &self.db().pool;
 
         let process = ExecutionProcess::find_by_id(pool, target_process_id)
@@ -1130,6 +1263,11 @@ pub trait ContainerService: Send + Sync {
     ) -> Result<ContainerRef, ContainerError>;
 
     async fn is_container_clean(&self, workspace: &Workspace) -> Result<bool, ContainerError>;
+
+    /// Keep native repository capture and protected paid spawn under one admission fence.
+    fn requires_git_admission_fence(&self) -> bool {
+        false
+    }
 
     async fn start_execution_inner(
         &self,
@@ -1449,8 +1587,6 @@ pub trait ContainerService: Send + Sync {
         // Create container
         self.create(workspace).await?;
 
-        let repos = WorkspaceRepo::find_repos_for_workspace(&self.db().pool, workspace.id).await?;
-
         let workspace = Workspace::find_by_id(&self.db().pool, workspace.id)
             .await?
             .ok_or(SqlxError::RowNotFound)?;
@@ -1467,6 +1603,28 @@ pub trait ContainerService: Send + Sync {
         )
         .await?;
 
+        self.start_workspace_session(&workspace, &session, executor_config, prompt)
+            .await
+    }
+
+    /// Same setup/cleanup/native admission path with an atomically reserved
+    /// session. The issue workflow prepares the container and claims launch
+    /// durably first. No provider policy or ordinary-input takeover is added.
+    async fn start_workspace_session(
+        &self,
+        workspace: &Workspace,
+        session: &Session,
+        executor_config: ExecutorConfig,
+        prompt: String,
+    ) -> Result<ExecutionProcess, ContainerError> {
+        if session.workspace_id != workspace.id
+            || session.executor.as_deref() != Some(executor_config.executor.to_string().as_str())
+        {
+            return Err(ContainerError::Other(anyhow!(
+                "Reserved session binding changed"
+            )));
+        }
+        let repos = WorkspaceRepo::find_repos_for_workspace(&self.db().pool, workspace.id).await?;
         let repos_with_setup: Vec<_> = repos.iter().filter(|r| r.setup_script.is_some()).collect();
 
         let all_parallel = repos_with_setup.iter().all(|r| r.parallel_setup_script);
@@ -1494,8 +1652,8 @@ pub trait ContainerService: Send + Sync {
                 if let Some(action) = Self::setup_action_for_repo(repo)
                     && let Err(e) = self
                         .start_execution(
-                            &workspace,
-                            &session,
+                            workspace,
+                            session,
                             &action,
                             &ExecutionProcessRunReason::SetupScript,
                         )
@@ -1505,8 +1663,8 @@ pub trait ContainerService: Send + Sync {
                 }
             }
             self.start_execution(
-                &workspace,
-                &session,
+                workspace,
+                session,
                 &coding_action,
                 &ExecutionProcessRunReason::CodingAgent,
             )
@@ -1515,8 +1673,8 @@ pub trait ContainerService: Send + Sync {
             // Any sequential: chain ALL setups → coding agent via next_action
             let main_action = Self::build_sequential_setup_chain(&repos_with_setup, coding_action);
             self.start_execution(
-                &workspace,
-                &session,
+                workspace,
+                session,
                 &main_action,
                 &ExecutionProcessRunReason::SetupScript,
             )
@@ -1533,11 +1691,23 @@ pub trait ContainerService: Send + Sync {
         executor_action: &ExecutorAction,
         run_reason: &ExecutionProcessRunReason,
     ) -> Result<ExecutionProcess, ContainerError> {
-        super::admission::run(super::admission::owner(
-            workspace.id,
-            self.start_execution_admitted(workspace, session, executor_action, run_reason),
-        ))
-        .await
+        let admission = super::admission::owner(workspace.id, async {
+            super::fixed_baseline::with_request(
+                &self.db().pool,
+                workspace.id,
+                session.id,
+                executor_action,
+                run_reason,
+                self.start_execution_admitted(workspace, session, executor_action, run_reason),
+            )
+            .await
+            .map_err(|e| ContainerError::Other(anyhow!(e)))?
+        });
+        if executor_action.base_executor().is_some() {
+            super::admission::locked(admission).await
+        } else {
+            super::admission::run(admission).await
+        }
     }
 
     async fn start_execution_admitted(
@@ -1553,6 +1723,9 @@ pub trait ContainerService: Send + Sync {
         {
             return Err(ContainerError::StorageOwnerBusy);
         }
+        super::provider_admission::before_start(self, workspace.id, session.id).await?;
+        super::provider_failover::before_start(self, workspace.id, session.id, executor_action)
+            .await?;
         super::original_worker::before_start(session.id, executor_action)
             .await
             .map_err(|e| ContainerError::Other(anyhow!(e)))?;
@@ -1560,6 +1733,21 @@ pub trait ContainerService: Send + Sync {
             && let Some(error) = codex_execution_limit_error_for_action(executor_action)
         {
             return Err(ContainerError::ExecutorError(error));
+        }
+
+        let reserved_execution = reconcile_execution_bindings(&[
+            super::storage_admission::candidate_execution_id(),
+            super::provider_admission::execution_id(workspace.id, session.id)?,
+            super::provider_failover::reserved_execution(
+                workspace.id,
+                session.id,
+                executor_action,
+            )?,
+        ])?;
+        let proposed_execution = reserved_execution.unwrap_or_else(Uuid::new_v4);
+        if executor_action.base_executor().is_some() && !super::fixed_baseline::in_request() {
+            self.pre_route_git_readiness(workspace, session, proposed_execution)
+                .await?;
         }
 
         // Route only here, after queue admission and before persisting the action.
@@ -1615,6 +1803,19 @@ pub trait ContainerService: Send + Sync {
         super::original_worker::restore_raw_action(&mut resolved_action, executor_action)
             .map_err(|e| ContainerError::Other(anyhow!(e)))?;
         let executor_action = &resolved_action;
+        let fixed_execution =
+            super::fixed_baseline::reserve_current(&self.db().pool, executor_action)
+                .await
+                .map_err(|e| ContainerError::Other(anyhow!(e)))?;
+        let proposed_execution =
+            reconcile_execution_bindings(&[fixed_execution, reserved_execution])?
+                .unwrap_or(proposed_execution);
+        if fixed_execution.is_some() {
+            self.pre_route_git_readiness(workspace, session, proposed_execution)
+                .await?;
+        }
+
+        super::provider_admission::bind_resolved(&self.db().pool, executor_action).await?;
 
         // Create new execution process record
         // Capture current HEAD per repository as the "before" commit for this execution
@@ -1652,7 +1853,16 @@ pub trait ContainerService: Send + Sync {
         let execution_process = ExecutionProcess::create(
             &self.db().pool,
             &create_execution_process,
-            super::storage_admission::candidate_execution_id().unwrap_or_else(Uuid::new_v4),
+            reconcile_execution_bindings(&[
+                Some(proposed_execution),
+                super::storage_admission::candidate_execution_id(),
+                super::provider_failover::reserved_execution(
+                    workspace.id,
+                    session.id,
+                    executor_action,
+                )?,
+            ])?
+            .expect("proposed execution is present"),
             &repo_states,
         )
         .await?;
@@ -1669,7 +1879,7 @@ pub trait ContainerService: Send + Sync {
         ) {
             executors::routing_telemetry::emit(event).await;
         }
-        if *run_reason != ExecutionProcessRunReason::ArchiveScript {
+        if *run_reason != ExecutionProcessRunReason::ArchiveScript && fixed_execution.is_none() {
             Workspace::set_archived(&self.db().pool, workspace.id, false).await?;
         }
 
@@ -2106,5 +2316,41 @@ mod historical_replay_output_tests {
                 1
             );
         })
+    }
+}
+
+// Independent admission systems must agree on the execution they authorize.
+// Never replace a watcher receipt's binding with another continuation's ID.
+fn reconcile_execution_bindings(ids: &[Option<Uuid>]) -> Result<Option<Uuid>, ContainerError> {
+    let mut selected = None;
+    for id in ids.iter().flatten() {
+        if selected.is_some_and(|current| current != *id) {
+            return Err(ContainerError::Other(anyhow!(
+                "Conflicting native execution reservations"
+            )));
+        }
+        selected = Some(*id);
+    }
+    Ok(selected)
+}
+
+#[cfg(test)]
+mod combined_admission_tests {
+    use super::*;
+    #[test]
+    fn native_bindings_preserve_a_single_receipt_and_reject_conflicts() {
+        let watcher = Uuid::new_v4();
+        let other = Uuid::new_v4();
+        assert_eq!(
+            reconcile_execution_bindings(&[None, Some(watcher), None]).unwrap(),
+            Some(watcher)
+        );
+        assert_eq!(
+            reconcile_execution_bindings(&[Some(watcher), Some(watcher)]).unwrap(),
+            Some(watcher)
+        );
+        assert_eq!(reconcile_execution_bindings(&[None, None]).unwrap(), None);
+        assert!(reconcile_execution_bindings(&[Some(watcher), Some(other)]).is_err());
+        assert!(reconcile_execution_bindings(&[Some(other), Some(watcher)]).is_err());
     }
 }

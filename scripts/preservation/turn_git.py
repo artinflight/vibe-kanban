@@ -41,6 +41,51 @@ def digest(value):
     return hashlib.sha256(json.dumps(value, sort_keys=True).encode()).hexdigest()
 
 
+INVENTORY_VERSION = 1
+READINESS_TTL = 30
+
+
+def canonical_inventory(items):
+    require(isinstance(items, list) and items, 'empty affected repository inventory')
+    result = []
+    ids, paths = set(), set()
+    for item in items:
+        require(isinstance(item, dict) and isinstance(item.get('id'), str) and
+                IDENT.fullmatch(item['id']) and isinstance(item.get('path'), str),
+                'invalid affected repository identity')
+        require(Path(item['path']).is_absolute(), 'affected repository path must be absolute')
+        try:
+            path = str(Path(item['path']).resolve(strict=True))
+        except OSError:
+            raise Blocked('affected repository path is unavailable') from None
+        require(item['id'] not in ids and path not in paths,
+                'duplicate repository identity or canonical path')
+        ids.add(item['id'])
+        paths.add(path)
+        result.append(dict(item, path=path))
+    return sorted(result, key=lambda item: item['id'])
+
+
+def inventory_identity(items):
+    return [dict(id=i['id'], path=i['path']) for i in canonical_inventory(items)]
+
+
+
+def admission_binding(request):
+    return digest(dict(repositories=canonical_inventory(request['repositories']),
+                       session=request.get('session'), expected_branch=request.get('expected_branch'),
+                       source_heads=request.get('source_heads'), launch_context=request.get('launch_context'),
+                       dispatch_context=request.get('dispatch_context'),
+                       require_dispatch_context=request.get('require_dispatch_context', False)))
+
+
+def readiness_block(request, code, action, reason, human=False):
+    return dict(version=VERSION, state='blocked', readiness_version=1,
+                workspace=request.get('workspace'), turn=request.get('turn'),
+                code=code, action=action, reason=reason, human_needed=human,
+                provider_started=False, coverage_verified=False)
+
+
 def run(args, cwd=None, env=None, data=None):
     budget = 60 if CHECKPOINT_DEADLINE is None else min(60, CHECKPOINT_DEADLINE - time.monotonic())
     require(budget > 0, 'checkpoint time budget exhausted; retry remains pending')
@@ -352,6 +397,116 @@ class Engine:
                     (not entry.get('receipt') or entry['receipt']['commit'] in obligation['commits']),
                     'original preservation obligations are missing or inconsistent')
 
+    def preflight(self, request):
+        """Read-only Git-domain admission, not quota/provider or publication proof.
+
+        Dispatch facts are supplied only by the trusted server after its own
+        effective permission/toolchain checks, never as public caller authority.
+        """
+        try:
+            inventory = canonical_inventory(request['repositories'])
+            context = request.get('dispatch_context')
+            if request.get('require_dispatch_context'):
+                if not isinstance(context, dict) or context.get('permissions') != 'granted':
+                    return readiness_block(request, 'permissions_required', 'human_permission_decision',
+                                           'effective allowed-action permission is missing', True)
+                if context.get('toolchain_ready') is not True:
+                    return readiness_block(request, 'toolchain_unavailable', 'restore_reviewed_toolchain',
+                                           'required deterministic toolchain check did not pass')
+                allowed = context.get('allowed_actions', [])
+                required = context.get('required_actions', [])
+                if not isinstance(required, list) or not isinstance(allowed, list) or not required or not all(isinstance(a, str) for a in required + allowed) or not set(required).issubset(set(allowed)):
+                    return readiness_block(request, 'permissions_required', 'human_permission_decision',
+                                           'required actions are outside effective permissions', True)
+                for key in ['permissions_digest', 'toolchain_digest', 'checkpoint_digest', 'profile_digest', 'ownership_fence']:
+                    require(isinstance(context.get(key), str) and bool(context[key]),
+                            'dispatch checkpoint or effective context is unbound')
+            sources = []
+            for item in inventory:
+                repo, policy = self.policy(item)
+                eligible(item.get('required_files', []), policy)
+                for original in item.get('required_commits', []):
+                    require(isinstance(original, str) and re.fullmatch(r'[0-9a-f]{40}|[0-9a-f]{64}', original),
+                            'required original commit must be a full ID')
+                    git(repo, 'rev-parse', '--verify', original + '^{commit}')
+                eligible([os.fsdecode(p) for p in git(repo, 'ls-files', '--others', '--exclude-standard', '-z').split(b'\0') if p], policy)
+                before = snapshot(repo, policy)
+                require(not request.get('expected_branch') or before['branch'] == request['expected_branch'],
+                        'repository branch differs from admitted owner')
+                expected = request.get('source_heads', {}).get(item['id'])
+                require(not expected or before['head'] == expected,
+                        'repository HEAD changed after native capture')
+                # Preserve the existing literal allowlist/deny boundary before
+                # paying for work that cannot pass the same end/check gate.
+                changed = [os.fsdecode(p[3:]) for p in bytes.fromhex(before['status']).split(b'\0') if p]
+                eligible(changed, policy)
+                require(before['branch'] not in ['main', 'staging'] and
+                        before['branch'] not in policy.get('protected_branches', []),
+                        'protected branch is never automatically published')
+                require(policy.get('publication_review') and policy.get('review_expires', 0) > time.time(),
+                        'publication review missing or expired')
+                sources.append(dict(id=item['id'], path=item['path'], head=before['head'],
+                                    branch=before['branch'], snapshot_digest=digest(before)))
+            for item, source in zip(inventory, sources):
+                require(digest(snapshot(*self.policy(item))) == source['snapshot_digest'],
+                        'repository changed during readiness capture')
+            binding = dict(workspace=request['workspace'], turn=request['turn'],
+                           session=request.get('session'), config=digest(self.config),
+                           launch_context=digest(request.get('launch_context')),
+                           inventory_version=INVENTORY_VERSION, repositories=sources,
+                           requested_inventory=inventory, source_heads=request.get('source_heads'),
+                           context=context, expected_branch=request.get('expected_branch'))
+            cached = request.get('readiness_receipt')
+            now = time.time()
+            if cached is not None:
+                issued = cached.get('issued_at') if isinstance(cached, dict) else None
+                expires = cached.get('valid_until') if isinstance(cached, dict) else None
+                require(isinstance(cached, dict) and cached.get('readiness_version') == 1 and cached.get('binding') == digest(binding)
+                        and type(issued) in (int, float) and type(expires) in (int, float)
+                        and issued <= now < expires and 0 < expires - issued <= READINESS_TTL,
+                        'readiness receipt is stale or its binding changed')
+            return dict(version=VERSION, state='pending', readiness_version=1,
+                        workspace=request['workspace'], turn=request['turn'], code='git_ready',
+                        action='revalidate_under_admission_before_spawn', provider_started=False,
+                        coverage_verified=False, scope='git_ownership_only',
+                        provider_availability_checked=False, inventory_version=INVENTORY_VERSION,
+                        inventory=inventory_identity(inventory), binding=digest(binding),
+                        issued_at=now, valid_until=now + READINESS_TTL,
+                        reusable=bool(request.get('require_dispatch_context')))
+        except (Blocked, OSError, KeyError, ValueError) as error:
+            reason = str(error) if isinstance(error, Blocked) else 'readiness IO or contract failure'
+            code, action = 'git_admission_blocked', 'review_exact_admission_failure'
+            if reason == 'affected repository path is unavailable':
+                code, action = 'repository_unavailable', 'restore_reviewed_repository_binding'
+            elif reason == 'repository has no approved publication policy':
+                code, action = 'publication_policy_missing', 'review_repository_publication_policy'
+            elif 'inventory' in reason or 'canonical path' in reason or 'identity' in reason:
+                code, action = 'inventory_invalid', 'reconcile_exact_repository_binding'
+            elif 'HEAD changed' in reason or 'branch differs' in reason:
+                code, action = 'source_binding_changed', 'refresh_native_checkpoint'
+            elif 'readiness receipt' in reason:
+                code, action = 'readiness_stale', 'refresh_readiness_at_idle_checkpoint'
+            return readiness_block(request, code, action, reason,
+                                   code == 'publication_policy_missing' or 'review missing or expired' in reason)
+
+    def validate_admission(self, request):
+        record = read_json(self.state_path(request))
+        require(record.get('inventory_version') == INVENTORY_VERSION and
+                record.get('admitted_inventory') == inventory_identity(request['repositories']) and
+                record.get('admission_binding') == admission_binding(request) and
+                record['workspace'] == request['workspace'] and record['turn'] == request['turn'] and
+                record.get('session') == request.get('session') and
+                record.get('launch_context_digest') == digest(request.get('launch_context')) and
+                record.get('config') == digest(self.config) and not record.get('admission_failure'),
+                'exact versioned admission or owner binding is missing')
+        self.require_obligations(record)
+        for entry in record['repositories']:
+            require(snapshot(*self.policy(entry)) == entry['before'],
+                    'repository changed between admission and provider launch')
+        return dict(version=VERSION, state='pending', workspace=request['workspace'], turn=request['turn'],
+                    admission_validated=True, inventory_version=INVENTORY_VERSION,
+                    admitted_inventory=record['admitted_inventory'], provider_started=False)
+
     def begin(self, request):
         path = self.state_path(request)
         require(not path.exists(), 'turn already registered; do not overwrite prior evidence')
@@ -364,11 +519,14 @@ class Engine:
         record = dict(version=VERSION, workspace=request['workspace'], turn=request['turn'],
                       state='pending', reason='turn has not reached verified preservation',
                       config=digest(self.config), repositories=[],
+                      inventory_version=INVENTORY_VERSION, session=request.get('session'),
+                      launch_context_digest=digest(request.get('launch_context')),
                       obligations=previous['obligations'] if previous else {})
         atomic_json(path.parent / 'latest.json', dict(turn=request['turn']))
         atomic_json(path, record)
         try:
             require(bool(request['repositories']), 'empty affected repository inventory')
+            request = dict(request, repositories=canonical_inventory(request['repositories']))
             require(len({i['id'] for i in request['repositories']}) == len(request['repositories']),
                     'duplicate repository inventory')
             # Capture authority is the exact requested inventory, not the subset
@@ -393,6 +551,11 @@ class Engine:
                 repo, policy = self.policy(item)
                 with repo_lock(repo):
                     before = snapshot(repo, policy)
+                    require(not request.get('expected_branch') or before['branch'] == request['expected_branch'],
+                            'repository branch differs from admitted owner')
+                    expected = request.get('source_heads', {}).get(item['id'])
+                    require(not expected or expected == before['head'],
+                            'repository HEAD changed after native capture')
                     originals = self.observe(record, item)
                     require(before['head'] in originals, 'head changed during admission')
                     record['repositories'].append(dict(id=item['id'], path=str(repo),
@@ -401,6 +564,9 @@ class Engine:
                                                        required_files=item.get('required_files', [])))
                     atomic_json(path, record)
             self.require_obligations(record)
+            record['admitted_inventory'] = inventory_identity(request['repositories'])
+            record['admission_binding'] = admission_binding(request)
+            atomic_json(path, record)
         except (Blocked, OSError, KeyError, ValueError) as error:
             record.update(state='blocked', reason=str(error) if isinstance(error, Blocked)
                           else 'preservation IO or contract failure')
@@ -738,7 +904,13 @@ class Engine:
         record = read_json(path)
         require(record['version'] == VERSION and record['workspace'] == request['workspace'] and
                 record['turn'] == request['turn'], 'completion observation owner differs from admitted turn')
-        inventory = record.get('observation_inventory', record['repositories'])
+        try:
+            request = dict(request, repositories=canonical_inventory(request['repositories']))
+        except (Blocked, OSError):
+            raise Blocked('affected repository inventory differs from admitted turn') from None
+        inventory = sorted(record.get('observation_inventory', record['repositories']), key=lambda i: i['id'])
+        require('session' not in record or record['session'] == request.get('session'),
+                'completion owner session changed')
         require(inventory and [(e['id'], e['path']) for e in inventory] ==
                 [(i['id'], str(Path(i['path']).resolve())) for i in request['repositories']],
                 'affected repository inventory differs from admitted turn')
@@ -749,9 +921,15 @@ class Engine:
                     record['obligations'][entry['id']]['path'] == entry['path'],
                     'completion observation has no matching original obligation')
         record['observation_complete'] = False
+        record['terminal_inventory_version'] = INVENTORY_VERSION
+        record['terminal_inventory'] = inventory_identity(request['repositories'])
+        record['terminal_sources'] = []
         try:
             for entry in inventory:
-                originals = self.observe(record, entry)
+                head = line(Path(entry['path']), 'rev-parse', '--verify', 'HEAD^{commit}')
+                originals = self.observe(record, entry, head)
+                record['terminal_sources'].append(dict(id=entry['id'], path=entry['path'], head=head,
+                    branch=line(Path(entry['path']), 'symbolic-ref', '--short', 'HEAD')))
                 for admitted in record['repositories']:
                     if admitted['id'] == entry['id']:
                         admitted['original_commits'] = list(originals)
@@ -784,12 +962,13 @@ class Engine:
             CHECKPOINT_DEADLINE = None
 
     def end(self, request, checkpoint=False):
+        request = dict(request, repositories=canonical_inventory(request['repositories']))
         path = self.state_path(request)
         record = read_json(path)
         if record.get('admission_failure') == 'repository has no approved publication policy' and record.get('observation_complete') is True:
             capture = record.get('observation_inventory') or record.get('reconciled_observation_inventory')
             require(record['version'] == VERSION and record['workspace'] == request['workspace'] and
-                    record['turn'] == request['turn'] and capture and capture ==
+                    record['turn'] == request['turn'] and capture and sorted(capture, key=lambda i: i['id']) ==
                     [dict(id=i['id'], path=str(Path(i['path']).resolve())) for i in request['repositories']],
                     'awaiting-policy owner or inventory differs from registered capture')
             return dict(version=VERSION, workspace=record['workspace'], turn=record['turn'],
@@ -804,7 +983,7 @@ class Engine:
         require(checkpoint or read_json(path.parent / 'latest.json')['turn'] == request['turn'],
                 'a newer turn is pending; earlier turn cannot certify the workspace')
         require(record['config'] == digest(self.config), 'policy changed after turn admission')
-        require([(e['id'], e['path'], e.get('required_commits', []), e.get('required_files', [])) for e in record['repositories']] ==
+        require([(e['id'], e['path'], e.get('required_commits', []), e.get('required_files', [])) for e in sorted(record['repositories'], key=lambda i: i['id'])] ==
                 [(i['id'], str(Path(i['path']).resolve()), i.get('required_commits', []), i.get('required_files', [])) for i in request['repositories']],
                 'affected repository inventory differs from admitted turn')
         record.update(state='pending', reason='preservation in progress', checkpoint_only=checkpoint)
@@ -885,6 +1064,7 @@ class Engine:
         require(snapshot(repo, policy) == receipt['after'], 'workspace changed during fresh verification')
 
     def check(self, request):
+        request = dict(request, repositories=canonical_inventory(request['repositories']))
         # Never repairs or publishes. Caller supplies the full expected affected-work inventory.
         require(request.get('writers_fenced') is True, 'writers are not fenced')
         require(request.get('repositories'), 'empty affected repository inventory')
@@ -897,7 +1077,7 @@ class Engine:
                 'turn preservation is pending, blocked or unsupported')
         self.require_obligations(record)
         require(record['config'] == digest(self.config), 'policy differs from preservation receipt')
-        require([(e['id'], e['path'], e.get('required_commits', []), e.get('required_files', [])) for e in record['repositories']] ==
+        require([(e['id'], e['path'], e.get('required_commits', []), e.get('required_files', [])) for e in sorted(record['repositories'], key=lambda i: i['id'])] ==
                 [(i['id'], str(Path(i['path']).resolve()), i.get('required_commits', []), i.get('required_files', [])) for i in request['repositories']],
                 'affected repository inventory differs from receipt')
         for entry in record['repositories']:
@@ -950,7 +1130,7 @@ class Engine:
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('action', choices=['begin', 'end', 'checkpoint', 'observe-finished', 'check', 'check-all', 'block'])
+    parser.add_argument('action', choices=['begin', 'end', 'checkpoint', 'observe-finished', 'check', 'check-all', 'block', 'preflight', 'validate-admission'])
     parser.add_argument('--config', required=True)
     args = parser.parse_args()
     request = {}
@@ -967,7 +1147,9 @@ def main():
                       turn=request.get('turn'), repositories=request.get('repositories', []), reason=str(error) if isinstance(error, Blocked)
                       else 'preservation IO or contract failure')
     print(json.dumps(result, sort_keys=True))
-    return 0 if ((args.action == 'observe-finished' and result.get('observation_complete') is True)
+    return 0 if ((args.action == 'preflight' and result.get('code') == 'git_ready')
+                 or (args.action == 'validate-admission' and result.get('admission_validated') is True)
+                 or (args.action == 'observe-finished' and result.get('observation_complete') is True)
                  or (result['state'] in ['verified', 'pending'] and args.action == 'begin')
                  or (result['state'] == 'pending' and result.get('publication_pending') is True)
                  or result['state'] == 'verified') else 2

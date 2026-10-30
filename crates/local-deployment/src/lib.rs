@@ -181,6 +181,8 @@ struct PendingHandoff {
 impl Deployment for LocalDeployment {
     async fn new(shutdown: CancellationToken) -> Result<Self, DeploymentError> {
         validate_startup_identity().await?;
+        let fixed_holds = services::services::fixed_baseline::startup_holds()
+            .map_err(|e| DeploymentError::Other(anyhow::anyhow!(e)))?;
         // Run one-time process logs migration from DB to filesystem
         services::services::execution_process::migrate_execution_logs_to_files()
             .await
@@ -240,6 +242,9 @@ impl Deployment for LocalDeployment {
             DBService::new_with_after_connect(hook).await?
         };
 
+        services::services::fixed_baseline::verify_startup_holds(&db.pool, &fixed_holds)
+            .await
+            .map_err(|e| DeploymentError::Other(anyhow::anyhow!(e)))?;
         let file = FileService::new(db.clone().pool)?;
         if !AUTOMATIC_ATTACHMENT_CLEANUP
             || attachment_cleanup_disabled(

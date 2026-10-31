@@ -23,6 +23,7 @@ export function IssueReviewFlagButton({
         onToggle(event);
       }}
       onMouseDown={(event) => event.stopPropagation()}
+      onMouseUp={(event) => event.stopPropagation()}
       className={cn(
         'flex shrink-0 items-center gap-half rounded-sm p-half transition-colors hover:bg-secondary',
         flagged ? 'text-brand' : 'text-low hover:text-normal',

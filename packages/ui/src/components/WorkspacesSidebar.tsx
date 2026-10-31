@@ -89,8 +89,8 @@ export interface WorkspacesSidebarProps {
   hasMoreWorkspaces?: boolean;
   /** Controls rendered beside the search input */
   searchControls?: ReactNode;
-  /** Direct project filter rendered above the phone workspace list. */
-  mobileProjectFilter?: ReactNode;
+  /** Direct project controls rendered above the workspace list. */
+  projectFilter?: ReactNode;
   assignmentControls?: ReactNode;
   /** Callback for opening workspace actions */
   onOpenWorkspaceActions?: (workspaceId: string) => void;
@@ -209,7 +209,7 @@ export function WorkspacesSidebar({
   onLoadMore,
   hasMoreWorkspaces = false,
   searchControls,
-  mobileProjectFilter,
+  projectFilter,
   assignmentControls,
   onOpenWorkspaceActions,
   persistKeys = DEFAULT_PERSIST_KEYS,
@@ -327,9 +327,9 @@ export function WorkspacesSidebar({
             placeholder={t('common:workspaces.searchPlaceholder')}
           />
         </div>
-        {(mobileProjectFilter || searchControls) && (
+        {(projectFilter || searchControls) && (
           <div className="phone-workspace-filters">
-            {mobileProjectFilter}
+            {projectFilter}
             {searchControls}
           </div>
         )}
@@ -474,6 +474,10 @@ export function WorkspacesSidebar({
             </div>
             {searchControls}
           </div>
+        )}
+
+        {projectFilter && (
+          <div className="px-base min-w-0">{projectFilter}</div>
         )}
 
         {activeRemoteHost && (

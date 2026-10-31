@@ -2134,3 +2134,21 @@ no physical-device UI QA, commit, push or PR is claimed.
 The operator requested a local commit of the validated mobile filter stream.
 Source, browser acceptance and continuity notes are committed together.
 Push, PR, promotion and deployment remain separate.
+
+
+## 2026-10-31 — Desktop project filter bubble toggles
+
+The operator approved the mobile dropdown and requested equivalent desktop access,
+then specified bubble toggles in a row. `WorkspaceProjectFilterChips` now appears
+below Search on desktop. Chips support multi-select, No project, All projects
+reset, selected checkmarks/pressed states, full-name titles and keyboard access.
+One horizontal row scrolls when needed within the workspace sidebar. Mobile keeps
+its accepted dropdown; both layouts share existing filter state and persistence.
+
+All four frontend type checks, focused UI lint, formatting, ops/path guards and
+diff checks passed. Browser acceptance passed at 360/412/767/768/1440 px, including
+desktop filtering, persistence, resizing, keyboard toggles and a constrained 300 px
+column. Public HTTPS desktop review showed the row without page overflow, and
+frontend/API probes returned HTTP 200. Validation writes stayed local. The review
+preview remains running; the desktop extension is committed locally. No push, PR,
+production deployment, backend or schema change is included.

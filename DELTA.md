@@ -2199,3 +2199,12 @@ Public HTTPS hashes and old assets pass; all live services/DB identities unchang
 Both roots retain 507 assets and the 37,762,844-byte software package is independently
 Desktop-B verified. No backend restart or push/PR/merge occurred. Updated live
 manifest and pickup docs identify exact evidence and remaining Git validation gaps.
+
+## 2026-10-31 — operator rejects second publication; reproduce actual reselect bug
+
+Operator reports "no change". Reproduced actual nested workspace same-route click:
+initial real 200 clears unread, reseed becomes true, repeat nested click sends zero
+seen requests and leaves true. Prior reselect test clicked parent issue card and
+changed routes. Claims of full resolution withdrawn; scoped older proofs retained.
+Shared explicit project workspace selection/read correction and exact browser
+regression prepared. No push/PR/merge; candidate publication pending validation.

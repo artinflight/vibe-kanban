@@ -6,6 +6,7 @@ import assert from "node:assert/strict";
 import { after, afterEach, beforeEach, test } from "node:test";
 import { ProjectRightSidebarContainer } from "../../packages/web-core/src/pages/kanban/ProjectRightSidebarContainer";
 import { useMarkWorkspaceSeen } from "../../packages/web-core/src/shared/hooks/useMarkWorkspaceSeen";
+import { useOpenProjectWorkspace } from "../../packages/web-core/src/shared/hooks/useOpenProjectWorkspace";
 import { state } from "./workspace-seen.fixture";
 
 const dom = new JSDOM("<!doctype html><html><body></body></html>");
@@ -52,6 +53,7 @@ beforeEach(() => {
     createWorkspace: false,
     calls: [],
     fail: false,
+    navigations: [],
   });
   visibility = "visible";
   invalidations = [];
@@ -157,4 +159,61 @@ test("failed seen request leaves badges intact and can retry when returning", as
   } finally {
     console.warn = warn;
   }
+});
+
+function WorkspaceLink({ projectId = "p", issueId = "issue", id = "a" }) {
+  const open = useOpenProjectWorkspace();
+  return (
+    <button onClick={() => open(projectId, issueId, id)}>
+      Open conversation
+    </button>
+  );
+}
+async function clickWorkspace() {
+  await act(async () => {
+    element.querySelector("button")!.click();
+  });
+}
+
+test("reselecting the displayed project workspace reads again without requiring a route change", async () => {
+  await render(<WorkspaceLink />);
+  assert.deepEqual(state.calls, []);
+  await clickWorkspace();
+  await clickWorkspace();
+  assert.deepEqual(state.calls, ["a", "a"]);
+  assert.deepEqual(state.navigations, [
+    ["p", "issue", "a"],
+    ["p", "issue", "a"],
+  ]);
+  assert.equal(invalidations.length, 2);
+  await render(<WorkspaceLink />);
+  assert.deepEqual(
+    state.calls,
+    ["a", "a"],
+    "Polling must not consume another completion",
+  );
+});
+
+for (const props of [
+  { id: "sibling" },
+  { issueId: "other" },
+  { projectId: "other" },
+]) {
+  test(`navigation to ${JSON.stringify(props)} waits for destination chat visibility`, async () => {
+    await render(<WorkspaceLink {...props} />);
+    await clickWorkspace();
+    assert.deepEqual(state.calls, []);
+    assert.equal(state.navigations.length, 1);
+  });
+}
+
+test("background or issue-create state does not clear the previously selected workspace", async () => {
+  visibility = "hidden";
+  await render(<WorkspaceLink />);
+  await clickWorkspace();
+  visibility = "visible";
+  state.createIssue = true;
+  await render(<WorkspaceLink />);
+  await clickWorkspace();
+  assert.deepEqual(state.calls, []);
 });

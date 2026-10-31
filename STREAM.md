@@ -16,8 +16,8 @@ parent desktop cards also opened the issue on mouse-up before nested controls
 received clicks. Separate manual flags from workspace attention; provide shared
 clear controls; ignore interactive children in parent mouse-up navigation.
 
-The complete correction is live from `3366b015155bfa1857b898e263a6d966aabbe452`,
-accepted 11:15:55 UTC. No backend, schema, generated types or Dot unread changes.
+The previous corrective candidate is live from `3366b015155bfa1857b898e263a6d966aabbe452`,
+published 11:15:55 UTC; the operator subsequently reported "no change". No backend, schema, generated types or Dot unread changes.
 Fifteen mounted regressions, type/lint checks, production build, actual desktop/
 mobile UI persistence/reload and bounded real backend acceptance pass. Only this
 task's own issue/workspace was used for live writes; original flags/body restored.
@@ -29,3 +29,13 @@ Git promotion is separate; do not alter the live backend for this frontend fix.
 
 Prior stream history: [previous record](deployment-history/20261030-before-reconciliation/STREAM.md)
 and [STREAM history](STREAM_HISTORY_20261017.md).
+
+Current unresolved path: actual nested workspace reselection with its conversation
+already open does not change routes and never reruns the visible-chat effect.
+Live proof shows unread remains true with zero extra seen requests. The old
+"reselect" browser test clicked the parent issue card; it did not exercise this.
+A shared project navigation helper now explicitly reads the selected destination
+on deliberate reselection. Initial navigation still waits for loaded chat. The
+new exact nested-card browser regression must fail on the old bundle and pass
+against candidate/live before claiming that path is corrected. Operator acceptance
+and Git promotion remain pending.

@@ -1,8 +1,26 @@
-# Unread/review correction pickup — 2026-10-31
+# Unread correction remains unresolved — 2026-10-31
+
+Operator reports "no change" after the 11:15 frontend. Hold push/PR/merge.
+A fresh real live reproduction now identifies a missed path: click the nested
+workspace card while its conversation is already open, seed another unread event,
+and click that same nested card again. Unread remains true; zero extra seen
+requests. Previous reselect coverage clicked the parent issue card, which changed
+routes and masked the failure. Receipt:
+`/mnt/vk-storage/vk-unread-reselect-20261031-c097/same-workspace-reproduction.json`.
+
+The new shared project workspace-navigation helper explicitly marks the already
+selected destination read on user clicks. Different destinations wait for loaded
+chat; background tabs and polling preserve unread. Thirteen mounted regressions
+pass; type/lint pass. Exact real-browser before/after and frontend publication
+are still pending. No device actions, backend restart or unrelated data changes.
+The latest operator URL/workspace clarification is pending; do not assume the
+headless-owned-workspace proof establishes every operator path.
+
+Previous release evidence (scoped automated checks, not operator acceptance):
 
 The corrected frontend is live at `https://vibe.local`, version 0.1.42, from
 `3366b015155bfa1857b898e263a6d966aabbe452`. Public JS: `index-9ssuLQsW.js`;
-CSS: unchanged `index-CUBB2mA2.css`. Accepted 11:15:55 UTC with a roughly 15 ms
+CSS: unchanged `index-CUBB2mA2.css`. Published 11:15:55 UTC with a roughly 15 ms
 atomic frontend pointer replacement. Backend/history reader/proxy/gateway/static
 service identities and database identity/migrations are unchanged.
 

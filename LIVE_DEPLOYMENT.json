@@ -185,7 +185,7 @@
     "Desktop_B_recovery_receipt": "/mnt/vk-storage/vk-unread-reselect-20261031-c097/final/Desktop-B-recovery-verified.json",
     "backend_unchanged": true,
     "database_restore": false,
-    "feature_resolution_verified": true,
+    "feature_resolution_verified": false,
     "prior_release_reported_unresolved": true,
     "integration_on_hold": true,
     "browser_live_receipt": "/mnt/vk-storage/vk-unread-reselect-20261031-c097/final/browser-live-review/results.json",
@@ -195,6 +195,9 @@
     "desktop_mobile_browser_passed": true,
     "source_application_commit": "3366b015155bfa1857b898e263a6d966aabbe452",
     "test_harness_commit": "8b01da837",
-    "git_push_performed": false
+    "git_push_performed": false,
+    "operator_reported_unresolved": true,
+    "operator_feedback": "no change after 11:15:55 UTC publication",
+    "remaining_failure": "Actual same-route nested workspace reselection leaves unread true and sends zero seen requests; previous parent-card test changed routes."
   }
 }

@@ -34,7 +34,10 @@ await build({
           }),
         );
         builder.onResolve({ filter: /^@\// }, (args) => {
-          if (args.path.endsWith("/useMarkWorkspaceSeen")) return;
+          if (
+            /\/(useMarkWorkspaceSeen|useOpenProjectWorkspace)$/.test(args.path)
+          )
+            return;
           return { path: fixture };
         });
         builder.onResolve(

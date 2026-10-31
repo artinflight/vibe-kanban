@@ -1,10 +1,30 @@
-# Mobile workspace filters pickup — 2026-10-31
+# Workspace project filters pickup — 2026-10-31
 
 Current branch: `vk/311d-vk-mobile-filter`; see STREAM.md for scope.
-The mobile workspace list now shows its project selector and sort/filter controls
-directly. `WorkspaceProjectFilter` shares the existing project selection state
-with `WorkspacesFilterDialog`; switching projects never changes the PR filter.
-All projects clears only project selection. Desktop controls retain their layout.
+The phone workspace list retains its accepted project dropdown and direct
+sort/filter controls (`03d5f308e`). Desktop now uses `WorkspaceProjectFilterChips`:
+one row of multi-select bubble toggles below Search, horizontally scrollable when
+needed, including within the 300 px workspace sidebar. Selected chips show a
+checkmark and pressed state; long labels retain their full title. Both controls
+share existing project state and persistence with `WorkspacesFilterDialog`.
+All projects clears only project selection; the PR filter is preserved.
+
+Desktop extension validation passed: all four frontend TypeScript checks with a
+bounded 2 GiB heap, focused UI ESLint, root formatting plus explicit UI/test
+Prettier, ops governance, path guard and whitespace checks. Responsive browser
+acceptance passed again at 360/412/767/768/1440 px, with application writes kept
+local. Desktop coverage includes actual project row filtering, multi-select,
+No project, All projects reset, deselecting the final chip, reload persistence,
+shared dialog badge, selection retention across mobile/desktop resizing, Space
+key toggling, focus-driven horizontal scrolling, and one-row fit with a 300 px
+width constraint. The phone dropdown retains its previous acceptance coverage.
+
+Results and screenshots are in ignored `.vk-preview/desktop-chip-tests/` on SSD.
+A separate 1440 px browser check through the public URL showed 13 chips with no
+page overflow. Public frontend and green API probes returned HTTP 200. The public
+review preview remains running at
+`https://mcp-server.tail744c4.ts.net:8443/workspaces`; production has not been
+updated. The desktop extension is included in a separate local feature commit.
 
 Validation passed: UI, web-core, local-web and remote-web TypeScript checks;
 focused UI ESLint; `pnpm run format` plus explicit UI/test Prettier; ops governance,
@@ -19,8 +39,10 @@ green gateway. It verified actual workspace rows match the selected project,
 locally emulated save/reload, search/archive access, keyboard focus return and
 viewport fit. All application writes were intercepted; subscription bridges only
 forwarded backend-to-client frames. Sanitized results and screenshots remain in
-the ignored `.vk-preview/mobile-filter-tests/` on SSD. The temporary preview was
-stopped after acceptance; no public preview route was changed.
+the ignored `.vk-preview/mobile-filter-tests/` on SSD. That initial preview was
+stopped after mobile acceptance, then restored for operator review. The current
+preview includes desktop chips and remains running; the existing public root
+route and unrelated preview routes were preserved.
 
 Known inherited limitation: Escape from the old dialog's nested project dropdown
 can dismiss both layers and leave pointer events blocked. The new direct selector

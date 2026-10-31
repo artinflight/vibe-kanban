@@ -141,12 +141,149 @@ try {
         .waitFor({ timeout: 180000 });
       if (!mobile) {
         assert.equal(await page.locator('.phone-project-filter').count(), 0);
+        const chips = page.getByRole('group', { name: 'Project', exact: true });
+        await chips.waitFor();
+        const all = chips.getByRole('button', {
+          name: 'All projects',
+          exact: true,
+        });
+        const noProject = chips.getByRole('button', {
+          name: 'No project',
+          exact: true,
+        });
+        assert.equal(await all.getAttribute('aria-pressed'), 'true');
+        await page.getByRole('button', { name: 'All', exact: true }).click();
+        await page.waitForFunction(
+          () =>
+            document.querySelectorAll('.workspace-project-filter-chip').length >
+            2
+        );
+        const projectName = await chips
+          .getByRole('button')
+          .nth(2)
+          .getAttribute('title');
+        // Options populate independently; keep the chosen project stable when
+        // an earlier alphabetic option arrives between actions.
+        const project = chips.getByRole('button', {
+          name: projectName,
+          exact: true,
+        });
+        await project.click();
+        assert.equal(await project.getAttribute('aria-pressed'), 'true');
+        assert.equal(await all.getAttribute('aria-pressed'), 'false');
+        const projects = (
+          await (await context.request.get(`${backend}/api/projects`)).json()
+        ).data;
+        const selectedProject = projects.find(
+          (item) => item.name === projectName
+        );
+        assert(selectedProject);
+        const linkedResponse = await (
+          await context.request.get(
+            `${backend}/v1/fallback/project_workspaces?project_id=${selectedProject.id}`
+          )
+        ).json();
+        const linkedIds = new Set(
+          (linkedResponse.workspaces ?? linkedResponse.data.workspaces).map(
+            (item) => item.local_workspace_id
+          )
+        );
+        const workspaces = (
+          await (await context.request.get(`${backend}/api/workspaces`)).json()
+        ).data;
+        const expectedNames = workspaces
+          .filter((item) => !item.archived && linkedIds.has(item.id))
+          .map((item) => item.name);
+        await page.waitForFunction((names) => {
+          const rows = [
+            ...document.querySelectorAll(
+              '.mobile-workspace-card > button > div:first-child'
+            ),
+          ];
+          return (
+            (names.length === 0 || rows.length > 0) &&
+            rows.every((row) => names.includes(row.textContent.trim()))
+          );
+        }, expectedNames);
+        await noProject.click();
+        assert.equal(await noProject.getAttribute('aria-pressed'), 'true');
+        assert.equal(await project.getAttribute('aria-pressed'), 'true');
+        const deadline = Date.now() + 15000;
+        while (
+          savedPreferences.data?.workspace_filters?.project_ids?.length !== 2 &&
+          Date.now() < deadline
+        )
+          await page.waitForTimeout(100);
+        assert.equal(
+          savedPreferences.data.workspace_filters.project_ids.length,
+          2
+        );
+        await page.reload({ waitUntil: 'domcontentloaded' });
+        await chips.waitFor();
+        await page.waitForFunction(
+          () =>
+            [
+              ...document.querySelectorAll(
+                '.workspace-project-filter-chip[aria-pressed="true"]'
+              ),
+            ].length === 2
+        );
         await page
           .getByRole('button', { name: 'Filter workspaces', exact: true })
           .click();
-        await page.getByRole('dialog', { name: 'Filter workspaces' }).waitFor();
-        await page.getByRole('button', { name: 'Close', exact: true }).click();
+        const dialog = page.getByRole('dialog', { name: 'Filter workspaces' });
+        await dialog
+          .getByRole('button', { name: /Project/ })
+          .getByText('2', { exact: true })
+          .waitFor();
+        await dialog
+          .getByRole('button', { name: 'Close', exact: true })
+          .click();
+        // Resizing preserves state while swapping between desktop chips and the
+        // approved phone dropdown.
+        await page.setViewportSize({ width: 412, height: 915 });
+        const mobileSelector = page.locator('.phone-project-filter');
+        await mobileSelector.waitFor();
+        assert.match(await mobileSelector.innerText(), /2/);
+        await page.setViewportSize({ width, height: 1000 });
+        await chips.waitFor();
+        assert.equal(await project.getAttribute('aria-pressed'), 'true');
+        await project.focus();
+        await page.keyboard.press('Space');
+        assert.equal(await project.getAttribute('aria-pressed'), 'false');
+        assert.equal(await noProject.getAttribute('aria-pressed'), 'true');
+        await noProject.click();
+        assert.equal(await all.getAttribute('aria-pressed'), 'true');
+        await project.click();
+        await all.click();
+        assert.equal(await project.getAttribute('aria-pressed'), 'false');
+        assert.equal(await all.getAttribute('aria-pressed'), 'true');
+        // Constrain the landing list to the actual desktop sidebar width and
+        // verify that chips scroll in one row without widening their parent.
+        await chips.evaluate((element) => {
+          element.parentElement.parentElement.parentElement.style.width =
+            '300px';
+        });
+        const layout = await chips.evaluate((element) => ({
+          width: element.clientWidth,
+          scrollWidth: element.scrollWidth,
+          tops: [...element.querySelectorAll('button')].map(
+            (button) => button.offsetTop
+          ),
+        }));
+        assert(layout.width <= 300);
+        assert(layout.scrollWidth > layout.width);
+        assert.equal(new Set(layout.tops).size, 1);
+        const last = chips.getByRole('button').last();
+        await last.focus();
+        assert(await chips.evaluate((element) => element.scrollLeft > 0));
         await assertFits();
+        await page.screenshot({
+          path: resolve(output, `desktop-project-chips-${width}.png`),
+        });
+        console.log(
+          `${width}px desktop chips: filtering, multi-select, persistence, resize, keyboard and sidebar fit passed`
+        );
       } else {
         const selector = page.locator('.phone-project-filter');
         const toolbar = page.locator('.phone-workspace-filters');

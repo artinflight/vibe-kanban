@@ -1,14 +1,17 @@
-# Mobile workspace filters — 2026-10-31
+# Workspace project filters — 2026-10-31
 
 Branch `vk/311d-vk-mobile-filter`, based on fork/staging
 `7b64a69bc34d418b31c1f902c7714122a20783a3` (remote head verified October 31).
 
-Scope: make project filters directly accessible from the phone workspace list.
-The toolbar now exposes a project selector plus sort/filter buttons without the
-Options gate. Project selection uses the existing project options, workspace
-filters and scratch persistence; desktop keeps its existing filter dialog.
-The selector supports multiple projects, No project, All projects reset, current
-selection text and 48 px targets. New labels cover all seven existing locales.
+Scope: make project filters directly accessible from workspace lists. The accepted
+phone toolbar exposes a project dropdown plus sort/filter buttons without the
+Options gate (commit `03d5f308e`). The operator-requested desktop extension uses
+bubble toggles in one horizontally scrollable row directly below Search. Both
+layouts use the existing project options, multi-project/No project filtering,
+All projects reset and scratch persistence. Desktop chips expose pressed states,
+selected checkmarks and keyboard focus; long names truncate with full titles.
+Phone selection text and 48 px targets remain unchanged. The existing filter
+dialog remains available. Labels cover all seven locales with no new keys.
 No API, Rust, schema, production deployment or device setting change is included.
 
 Validation and remaining gates are recorded in HANDOFF.md. Browser acceptance

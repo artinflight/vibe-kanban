@@ -41,6 +41,7 @@ import { PropertyDropdown } from '@vibe/ui/components/PropertyDropdown';
 import { PrimaryButton } from '@vibe/ui/components/PrimaryButton';
 import { IconButton } from '@vibe/ui/components/IconButton';
 import { WorkspaceProjectFilter } from '@vibe/ui/components/WorkspaceProjectFilter';
+import { WorkspaceProjectFilterChips } from '@vibe/ui/components/WorkspaceProjectFilterChips';
 import {
   ButtonGroup,
   ButtonGroupItem,
@@ -907,12 +908,20 @@ export function WorkspacesSidebarContainer({
       onLoadMore={handleLoadMore}
       hasMoreWorkspaces={hasMoreWorkspaces && !isSearching}
       searchControls={searchControls}
-      mobileProjectFilter={
-        <WorkspaceProjectFilter
-          options={projectOptions}
-          projectIds={workspaceFilters.projectIds}
-          onChange={setWorkspaceProjectFilter}
-        />
+      projectFilter={
+        isMobile ? (
+          <WorkspaceProjectFilter
+            options={projectOptions}
+            projectIds={workspaceFilters.projectIds}
+            onChange={setWorkspaceProjectFilter}
+          />
+        ) : (
+          <WorkspaceProjectFilterChips
+            options={projectOptions}
+            projectIds={workspaceFilters.projectIds}
+            onChange={setWorkspaceProjectFilter}
+          />
+        )
       }
       assignmentControls={assignmentControls}
       onOpenWorkspaceActions={handleOpenWorkspaceActions}

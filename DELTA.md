@@ -2197,3 +2197,156 @@ All four frontend TypeScript checks also passed with a bounded 2 GiB heap.
 - Evidence and immediate paired frontend fallback:
   `/mnt/vk-storage/vk-mobile-filters-20261031-311d`; see
   `VK_WORKSPACE_FILTER_DEPLOYMENT.md` and `LIVE_DEPLOYMENT.json`.
+
+
+## 2026-10-31 — Project workspace unread clearing
+
+On `vk/c097-vk-can-t-clear-u` from freshly confirmed fork/staging `7b64a69bc`,
+fixed the missing project workspace conversation read effect. Both project and
+Workspaces views now call `useMarkWorkspaceSeen`, retaining loaded destination,
+visibility, summary invalidation and listener cleanup behavior. Summary/session
+rerenders never auto-clear newly arriving completions. Create/issue views do not
+mark workspaces read. No backend or generated type changes.
+
+Eight mounted React regressions pass. Removing the project hook call reproduces
+five failures, restoring it passes all eight. Shared/local frontend TypeScript,
+focused source ESLint, full required formatting, ops check, legacy frontend path
+guard and diff whitespace check pass. Type checks needed bounded 3 GiB Node heaps;
+third-party dependencies reuse existing SSD packages with workspace links pointing
+at this checkout. Full Rust/PR baseline, hosted CI and live browser/API readback
+remain unrun; no production deploy or restart was performed. Scope and pickup are
+in STREAM.md and HANDOFF.md.
+
+
+## 2026-10-31 — Unread fix frontend deployed
+
+Operator-authorized live update completed at 10:38:31 UTC from `f95bab83836d467f972e904710220eee09406d5b`.
+Public JS is `index-hKvj8yI6.js`; CSS/version 0.1.42 unchanged. Exact-source local
+production build, eight regressions, format/ops, candidate/live desktop and mobile
+browser checks, public HTTPS hashes, old asset retrieval and stable service/DB
+identities passed. Browser seen/config writes were intercepted; no live unread
+repair or provider execution was used. The pointer changed in about 6 ms; no
+service restart or database restore occurred. Both new roots retain 455 assets;
+Desktop B independently restored the paired frontend and fix bundle. Hosted build
+and source push were rejected by automatic approval review; neither occurred.
+Live provenance, rollback and validation limits are recorded in LIVE_DEPLOYMENT.json,
+STATE.md, HANDOFF.md and VK_PROJECT_UNREAD_DEPLOYMENT.md. Full PR baseline/CI and Git
+integration remain separate. Temporary task previews/browsers are closed.
+
+
+## 2026-10-31 — Operator reports unread still unresolved; integration held
+
+The operator stopped the requested push/PR/rebase merge before any of those
+mutations occurred, reporting that the defect is not resolved. The earlier
+candidate/live browser checks intercepted seen requests and cannot prove persisted
+clearing. Read-only investigation confirmed unchanged live identities, shared
+summary-backed unread indicators, independent explicit issue Needs review flags,
+and possible sibling unread aggregation. No root cause or new fix is claimed.
+An operator clarification is pending; no live flags or services were modified.
+STATE/STREAM/HANDOFF and live manifest now record the unresolved acceptance.
+
+
+## 2026-10-31 — Real read-state proof and mobile manual-flag correction
+
+A bounded real project-card test on this task's own workspace confirmed HTTP 200,
+unread true→false on opening and after reselect, and cleanup through Workspaces.
+No unrelated workspace flags were touched. The actual old mobile project UI
+reproduces a separate defect: manual issue review flags show "Needs review" when
+native replies are already read, and have no mobile clear control. Separate
+workspace attention aggregation from explicit flags and share an accessible clear
+control across desktop/mobile. Mounted UI and seen regressions pass; persistent
+browser acceptance and frontend rollout are in progress. Push/PR/merge remain held.
+
+
+## 2026-10-31 — Nested desktop actions also opened the issue
+
+Production-browser flag acceptance caught the parent Kanban card opening its issue
+on mouse-up before the nested control click. A real IssueWorkspaceCard/KanbanCard
+mouse sequence reproduces the unwanted parent open on the old code; the new guard
+passes on desktop and phone, while card-background navigation stays functional.
+Skip parent activation for nested interactive targets and stop review-flag mouse-up
+propagation. Seven mounted UI tests pass. The original native unread endpoint also
+passes bounded real project-board opening/reopening on this task's own workspace.
+No push, PR or merge occurred; candidate persistence acceptance is continuing.
+
+
+## 2026-10-31 — Corrected live release with real persistence verification
+
+Published source `3366b015155bfa1857b898e263a6d966aabbe452` at 11:15:55 UTC;
+public JS `index-9ssuLQsW.js`, CSS/version unchanged. Real old mobile UI reproduces
+false Needs review/missing-clear controls; old desktop mouse-up fails nested-card
+regression. Correction separates explicit flags, adds mobile clearing, and avoids
+parent issue navigation from nested controls. Fifteen regressions and targeted
+static/production-build checks pass. Candidate/live 393/1440 px fixture persistence,
+reload, unrelated flag preservation and no navigation all pass. Actual live mobile
+writes were bounded to this task's own issue/workspace: flag clearing persists,
+native unread survives that clear and clears on conversation opening. Original
+flags and task body restored; backend-managed metadata formatting was separated.
+Public HTTPS hashes and old assets pass; all live services/DB identities unchanged.
+Both roots retain 507 assets and the 37,762,844-byte software package is independently
+Desktop-B verified. No backend restart or push/PR/merge occurred. Updated live
+manifest and pickup docs identify exact evidence and remaining Git validation gaps.
+
+## 2026-10-31 — operator rejects second publication; reproduce actual reselect bug
+
+Operator reports "no change". Reproduced actual nested workspace same-route click:
+initial real 200 clears unread, reseed becomes true, repeat nested click sends zero
+seen requests and leaves true. Prior reselect test clicked parent issue card and
+changed routes. Claims of full resolution withdrawn; scoped older proofs retained.
+Shared explicit project workspace selection/read correction and exact browser
+regression prepared. No push/PR/merge; candidate publication pending validation.
+
+## 2026-10-31 — publish same-workspace reselection correction at 12:04:09 UTC
+
+Source b990b5939642b1ac7e744a9290840a731fa3f550, JS index-Cy2e9ltd.js,
+version 0.1.42. Explicit selected-workspace click now reads without route change.
+Exact nested-click browser regression fails before and passes candidate/live;
+desktop same-route and mobile close/reopen persist after reload, polling preserves
+new unread. Thirteen mounted tests, types/lint/format/ops/build pass. Existing
+candidate gates retained and pass; owned flags/body restored. All service/data
+identities unchanged, atomic frontend switch 5.6 ms; 559 assets retained and
+43,244,856-byte software recovery independently verified on Desktop B. Operator's
+exact URL/workspace flow remains unconfirmed; no push/PR/merge/full PR baseline.
+
+## 2026-10-31 — operator accepts live fix and authorizes integration
+
+Operator: "Good, open PR, sync, rebase merge". Prior integration hold lifted.
+Fresh fork/staging remains 7b64a69bc34d418b31c1f902c7714122a20783a3 and is already
+an ancestor of this stream. Canonical main/staging references are clean. Full
+required PR baseline is running using the dedicated shared SSD Cargo target with
+incremental compilation disabled. Live frontend/backend remain unchanged.
+
+## 2026-10-31 — prepare hosted baseline before PR
+
+Local frontend type checks, local/UI lint, UI/workflow formatting, ops and 20
+mounted regressions pass. Stopped only the owned full-check process group during
+fresh Cargo dependency compilation to avoid additional registry downloads on the
+system disk; full pnpm check/lint and cargo workspace tests are not claimed local
+passes. Use the existing Test workflow's validation-only dispatch on this exact
+pushed head for full backend/remote/tauri coverage before PR creation. Wire the
+13 seen and 7 nested-card regressions into that workflow. Live release unchanged.
+
+## 2026-10-31 — PR #287 and passing full hosted baseline
+
+Full hosted Test validation passed on be20b829502e1d24c72a944d3a7a06409cf75fb4:
+https://github.com/artinflight/vibe-kanban/actions/runs/41204050237. Frontend/20 mounted regressions, workspace tests, Rust lint, schema/SQLx,
+Tauri and native storage/watcher/steering/scheduling integrations pass. Fresh
+fork/staging is still an ancestor. Published https://github.com/artinflight/vibe-kanban/pull/287 into staging with requested
+rebase method. The PR merge event records final integration status/rebased IDs;
+keep original deployed b990b5939642b1ac7e744a9290840a731fa3f550 immutable. Main
+promotion is separate. Canonical references will be synchronized after merge;
+preserve the dirty original checkout and the active feature worktree. No runtime
+change is part of Git integration. Local full Rust rebuild was stopped, not passed.
+
+## 2026-10-31 — sync PR #287 onto PR #286 staging without changing deployed code
+
+All final PR checks passed on 054199ec6057a57e22ab0c47d221341de6ca61bb, including
+workspace tests and native integration gates. During CI, PR #286 advanced staging
+to d3d9fa89d45087d1d113f2851d7b2c994c76aec5. Rebased this stream, retained the
+new combined production manifest, all project-filter package files and the entire
+staging ledger. Original validated history is retained in a backup ref/bundle.
+The rebased package tree matches deployed combined source
+02a9a993d8d9118ca703a22baa15efcf0c7cc4c9 exactly; all original unread package bytes
+from b990b5939642b1ac7e744a9290840a731fa3f550 remain preserved. Public assets now
+index-Bgdr6hzC.js / index-DL7rKLPs.css, version 0.1.42. Latest PR checks and merge
+event remain authoritative. No runtime switch or service restart during Git sync.

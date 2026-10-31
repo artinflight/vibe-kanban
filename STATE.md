@@ -1,28 +1,6 @@
 # Current production and protections — 2026-10-31
 
-The same-workspace reselection correction is live at `https://vibe.local`,
-published 2026-10-31 at 12:04:09 UTC from
-`b990b5939642b1ac7e744a9290840a731fa3f550`. Public JS is `index-Cy2e9ltd.js`;
-CSS/version remain `index-CUBB2mA2.css` / 0.1.42. The operator reported "no change"
-after the previous 11:15 frontend. Fresh live reproduction then found actual
-nested-workspace reselection sent zero seen requests and left unread set. The old
-"reselect" test clicked the parent issue card, changed routes and missed that bug.
-
-Deliberate selection of the already displayed project workspace now sends a read
-action; different destinations still wait for loaded chat. Polling and background
-tabs preserve new unread. The new regression fails on the previous frontend and
-passes on candidate/live at 1440/393 px with real read persistence and reload.
-Twenty mounted regressions, focused types/lint, format/ops and production build
-pass. Existing candidate flag/preservation gates also pass, original test flags/
-body restored. All service and database identities remain unchanged; the pointer
-switch took 5.6 ms. Both paired roots retain 559 assets with verified Desktop B
-software recovery. The operator accepted the fix ("Good") and authorized PR, sync and rebase merge.
-[PR #287](https://github.com/artinflight/vibe-kanban/pull/287) integrates the accepted fix into staging using the requested
-rebase method. [Full hosted baseline](https://github.com/artinflight/vibe-kanban/actions/runs/41204050237) passed on
-`be20b829502e1d24c72a944d3a7a06409cf75fb4`. The PR merge event records final
-integration status and rebased IDs; original deployment source stays immutable. See [release evidence](VK_PROJECT_UNREAD_DEPLOYMENT.md).
-
-The Antigravity-enabled backend remains live. It was accepted October 30
+The Antigravity-enabled release is live at `https://vibe.local`. It was accepted
 at 03:18:14 UTC: backend source `9a4179e8bdf38e93d1a81faca6c665cadd6fddc7`,
 executable SHA256 `137d6cd7b6475f47f9b92455a879b5fd23d3b3a5374743c77d0c694f3f1257d2`.
 The 0.1.42 label also identifies older artifacts; use [LIVE_DEPLOYMENT.json](LIVE_DEPLOYMENT.json)
@@ -39,6 +17,17 @@ manifest for build provenance, backup and verified public readback. Source
 integration uses [PR #286](https://github.com/artinflight/vibe-kanban/pull/286)
 into staging with rebase; its merge event records integration and rebased IDs.
 Main promotion remains separate.
+
+The unread/review/reselect correction was operator-accepted from original source
+`b990b5939642b1ac7e744a9290840a731fa3f550`. All 11 affected package files are
+preserved byte-for-byte in the current combined frontend above. [PR #287](https://github.com/artinflight/vibe-kanban/pull/287)
+integrates that correction into staging with the requested rebase method. It was
+rebased onto PR #286's current staging after its previous head passed all checks.
+The rebased package tree matches deployed composition `02a9a993d8d9118ca703a22baa15efcf0c7cc4c9`.
+Twenty mounted regressions run in frontend CI. The PR's latest checks and merge
+event record final validation and rebased integration IDs. Original deployed
+source IDs remain immutable; Git integration does not redeploy or restart services.
+See [unread evidence](VK_PROJECT_UNREAD_DEPLOYMENT.md).
 
 Antigravity is available with the existing personal account, tested
 `gemini-3.8-flash-low` and supervised permissions. Actual native approval, denial,

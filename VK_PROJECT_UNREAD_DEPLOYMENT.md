@@ -1,6 +1,23 @@
 # Project conversation unread/review corrections — live frontend update
 
-## Corrective release accepted October 31, 11:15:55 UTC
+## Actual workspace reselection failure — current investigation
+
+The operator reported "no change" after the second publication. A fresh test
+clicked the actual nested workspace card, including a repeat click while its
+conversation remained open. Initial opening clears native unread, but the repeat
+click sends zero seen requests and leaves unread true. Prior "reselect" coverage
+clicked the parent issue card, changing routes and concealing this failure.
+`same-workspace-reproduction.json` under the investigation root records the live
+200 initial read, unread reseed, zero extra requests and unread still true.
+
+A shared explicit project navigation/read action addresses same-route selection.
+It reads only a deliberate click on the current project/issue/workspace in a visible
+document; ordinary destination loading still gates initial reads. Polling must
+preserve subsequent completions. Thirteen mounted regressions and focused types/
+lint pass. Exact production browser acceptance and publication remain pending.
+The running release below remains unchanged. Push, PR and merge are held.
+
+## Previous corrective release — published 11:15:55 UTC, operator still reports unresolved
 
 The first publication below was reported unresolved by the operator. It proved
 request emission only. Follow-up real project-board tests now prove native read

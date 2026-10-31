@@ -27,3 +27,13 @@ frontend through the existing gateway/static service. Existing routes are preser
 
 Prior stream: [deployment reconciliation](deployment-history/20261030-before-reconciliation/STREAM.md)
 and [STREAM history](STREAM_HISTORY_20261017.md).
+
+Current unresolved path: actual nested workspace reselection with its conversation
+already open does not change routes and never reruns the visible-chat effect.
+Live proof shows unread remains true with zero extra seen requests. The old
+"reselect" browser test clicked the parent issue card; it did not exercise this.
+A shared project navigation helper now explicitly reads the selected destination
+on deliberate reselection. Initial navigation still waits for loaded chat. The
+new exact nested-card browser regression must fail on the old bundle and pass
+against candidate/live before claiming that path is corrected. Operator acceptance
+and Git promotion remain pending.

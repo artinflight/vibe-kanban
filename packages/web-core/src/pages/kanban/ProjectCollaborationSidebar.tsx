@@ -1,3 +1,4 @@
+import { useOpenProjectWorkspace } from '@/shared/hooks/useOpenProjectWorkspace';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useProjectContext } from '@/shared/hooks/useProjectContext';
 import { useOrgContext } from '@/shared/hooks/useOrgContext';
@@ -158,6 +159,7 @@ function ProjectPlan({
   } = useProjectContext();
   const { membersWithProfilesById } = useOrgContext();
   const navigation = useAppNavigation();
+  const navigateToProjectWorkspace = useOpenProjectWorkspace();
   const [entries, setEntries] = useState<PlanningEntry[]>([]);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
@@ -341,7 +343,7 @@ function ProjectPlan({
                 key={workspace.id}
                 onClick={() =>
                   onNavigate(() =>
-                    navigation.goToProjectIssueWorkspace(
+                    navigateToProjectWorkspace(
                       projectId,
                       id,
                       workspace.local_workspace_id!

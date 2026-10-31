@@ -1,19 +1,18 @@
 # Current production and protections — 2026-10-31
 
-The corrected unread/review frontend is live at `https://vibe.local`, published
-2026-10-31 at 11:15:55 UTC from `3366b015155bfa1857b898e263a6d966aabbe452`.
-Public JS is `index-9ssuLQsW.js`; CSS/version remain `index-CUBB2mA2.css` / 0.1.42.
-The initial October 31 publication was reported unresolved by the operator.
-Follow-up found manual issue review flags shown as unread "Needs review" with no
-mobile clear control, plus desktop parent-card mouse-up firing before nested
-workspace/control clicks. The corrected UI separates manual flags, adds mobile
-clearing and prevents premature parent navigation. Fifteen focused regressions,
-production build, desktop/mobile persistence/reload checks and bounded real live
-backend clearing on this task's own workspace all pass. Original test flags and
-task body were restored. Push/PR/merge remain held; nothing was pushed.
-See [release evidence](VK_PROJECT_UNREAD_DEPLOYMENT.md) and the live manifest.
-The frontend pointer changed atomically; all live service identities stayed the
-same. Candidate and fallback retain 507 assets and verified Desktop B recovery.
+The operator reported "no change" after the 11:15:55 UTC frontend publication.
+The task remains unresolved and push/PR/merge are held. Fresh live reproduction
+found an untested path: clicking the nested workspace card again while its chat
+is already open leaves native unread true and emits zero seen requests. The
+previous "reselect" test clicked the parent issue card and changed routes, so it
+did not validate actual same-route workspace reselection. Existing browser proofs
+remain valid only for their recorded initial-open/manual-flag paths.
+
+Current public frontend is still `3366b015155bfa1857b898e263a6d966aabbe452`,
+JS `index-9ssuLQsW.js`, CSS `index-CUBB2mA2.css`, version 0.1.42. The next correction
+adds an explicit read action for deliberate selection of the displayed workspace;
+background tabs, different destinations and polling retain their existing gates.
+Validation/publication are in progress. See [release evidence](VK_PROJECT_UNREAD_DEPLOYMENT.md).
 
 The Antigravity-enabled backend remains live. It was accepted October 30
 at 03:18:14 UTC: backend source `9a4179e8bdf38e93d1a81faca6c665cadd6fddc7`,

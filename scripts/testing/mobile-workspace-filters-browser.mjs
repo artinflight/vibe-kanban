@@ -183,6 +183,20 @@ try {
           name: projectName,
           exact: true,
         });
+        if (width === 1440) {
+          // Preferences hydrate after the initial matching default appearance.
+          await page.waitForFunction(
+            (name) =>
+              [
+                ...document.querySelectorAll('.workspace-project-filter-chip'),
+              ].some(
+                (item) =>
+                  item.getAttribute('aria-label') === name &&
+                  /^X[0-9A-Z]+$/.test(item.textContent.trim())
+              ),
+            projectName
+          );
+        }
         await page.waitForFunction((name) => {
           const chip = [
             ...document.querySelectorAll('.workspace-project-filter-chip'),
@@ -368,9 +382,29 @@ try {
               '.phone-project-filter-menu [role="menuitemcheckbox"]'
             ).length > 2
         );
-        const project = menu.getByRole('menuitemcheckbox').nth(2);
-        const projectName = (await project.innerText()).trim();
+        const projectName = (
+          await menu.getByRole('menuitemcheckbox').nth(2).innerText()
+        ).trim();
+        // Keep the target stable while project subscriptions finish loading.
+        const project = menu.getByRole('menuitemcheckbox', {
+          name: projectName,
+          exact: true,
+        });
+        await touchTarget(project);
         await project.tap();
+        await page.waitForFunction(
+          (name) =>
+            [
+              ...document.querySelectorAll(
+                '.phone-project-filter-menu [role="menuitemcheckbox"]'
+              ),
+            ].some(
+              (item) =>
+                item.textContent.trim() === name &&
+                item.getAttribute('aria-checked') === 'true'
+            ),
+          projectName
+        );
         assert.equal(await project.getAttribute('aria-checked'), 'true');
         assert.equal(await selector.innerText(), projectName);
         // Verify the selected project actually narrows the workspace rows.

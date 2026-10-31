@@ -2171,3 +2171,29 @@ Formatting, focused lint and path/whitespace checks passed. Source and validatio
 notes are committed locally; push, PR and production deployment remain pending.
 
 All four frontend TypeScript checks also passed with a bounded 2 GiB heap.
+
+
+## 2026-10-31 — Workspace project filters production publication
+
+- Operator approved mobile and compact desktop filters, then requested PR, sync,
+  rebase merge and deployment. PR #286 targets staging; its merge event records
+  integration/rebased IDs. Main promotion remains separate.
+- Built combined frontend `02a9a993d` from live `b990b5939` plus exact filter
+  package files from `d83e7587a`. Preserved all 11 live unread/review/reselect files
+  and pushed the deployment composition branch. No backend/API/schema change.
+- Production candidate passed browser acceptance at 360/412/767/768/1440 px and
+  existing review-flag acceptance at 393/1440 px, with application writes local
+  to fixtures. Stabilized test target/animation/preference hydration waits.
+- Verified Desktop B source and paired frontend recovery independently, then
+  published atomically at 13:07:50 UTC. Public JS `index-Bgdr6hzC.js`; public
+  mobile/desktop readback passed, with 54 workspace cards and no page errors.
+  Existing old assets retain identical public hashes; five services, executable,
+  database identity and 99 migrations unchanged. Version remains 0.1.42.
+- Four frontend TypeScript checks, frontend lint, format, explicit UI/test
+  Prettier, ops and unused-i18n checks passed. Hosted application-head frontend
+  checks/artifact build passed; final-head PR checks remain GitHub authority.
+  Local Rust baseline stops at missing serde in the offline Cargo registry.
+  Physical-phone UI QA and paid-provider execution were not performed.
+- Evidence and immediate paired frontend fallback:
+  `/mnt/vk-storage/vk-mobile-filters-20261031-311d`; see
+  `VK_WORKSPACE_FILTER_DEPLOYMENT.md` and `LIVE_DEPLOYMENT.json`.

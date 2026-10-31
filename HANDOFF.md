@@ -1,80 +1,51 @@
 # Workspace project filters pickup — 2026-10-31
 
-Current branch: `vk/311d-vk-mobile-filter`; see STREAM.md for scope.
-The phone workspace list retains its accepted project dropdown and direct
-sort/filter controls (`03d5f308e`). Desktop now uses `WorkspaceProjectFilterChips`:
-one row of multi-select bubble toggles below Search, horizontally scrollable when
-needed, including within the 300 px workspace sidebar. The compact 28 px chips
-show the left project menu's abbreviations and pastel colors, honoring saved
-custom labels/colors. Full names remain in hover titles and accessible names.
-Selected chips retain checkmarks, pressed states and keyboard focus outlines.
-Both controls share existing state/persistence with `WorkspacesFilterDialog`.
-All projects clears only project selection; the PR filter is preserved.
+The accepted mobile dropdown and compact desktop abbreviation/color bubbles are
+published at `https://vibe.local/workspaces`, version 0.1.42. Production source is
+`02a9a993d8d9118ca703a22baa15efcf0c7cc4c9`, public JS `index-Bgdr6hzC.js`.
+Read [STATE](STATE.md), [manifest](LIVE_DEPLOYMENT.json) and
+[deployment evidence](VK_WORKSPACE_FILTER_DEPLOYMENT.md) before another deployment.
 
-The canonical project appearance helpers now live in
-`packages/ui/src/lib/projectAppearance.ts`. AppBar, SharedAppLayout and workspace
-filter options reuse them, so default initials, local color hashing, saved
-abbreviations and active/inactive colors stay aligned. Compact-style browser
-acceptance passed at 360/412/767/768/1440 px, including exact computed abbreviation,
-background and text color parity with the left menu, saved customizations, compact
-project chip dimensions (at most 28 px tall / 60 px wide), filtering, persistence,
-keyboard toggles, resizing and the 300 px sidebar constraint. Results are in
-ignored `.vk-preview/compact-chip-tests/` on SSD. A fresh public desktop screenshot
-shows the abbreviated row with no page overflow. Root formatting, focused UI lint,
-path and whitespace checks passed. All four frontend TypeScript checks passed
-with a bounded 2 GiB heap; logs use `.vk-preview/compact-*-check.log`. The compact
-styling is included in its own local commit. The public preview remains running.
+[PR #286](https://github.com/artinflight/vibe-kanban/pull/286) targets staging
+using the requested rebase method. Its merge event is authoritative for integration
+status and rebased IDs; the original application build IDs remain independent.
+The deployment composition is pushed as `deploy/workspace-filters-20261031-311d`.
+It preserves all 11 live unread/review/reselect files byte-for-byte and includes
+all 15 filter package files byte-for-byte. Main promotion remains separate.
 
-Desktop extension validation passed: all four frontend TypeScript checks with a
-bounded 2 GiB heap, focused UI ESLint, root formatting plus explicit UI/test
-Prettier, ops governance, path guard and whitespace checks. Responsive browser
-acceptance passed again at 360/412/767/768/1440 px, with application writes kept
-local. Desktop coverage includes actual project row filtering, multi-select,
-No project, All projects reset, deselecting the final chip, reload persistence,
-shared dialog badge, selection retention across mobile/desktop resizing, Space
-key toggling, focus-driven horizontal scrolling, and one-row fit with a 300 px
-width constraint. The phone dropdown retains its previous acceptance coverage.
+Candidate production browser acceptance passed at 360/412/767/768/1440 px,
+including filtering, multi-select/No project/reset, local save/reload, shared
+dialog state, resizing, keyboard focus, compact dimensions and exact sidebar
+color/abbreviation parity with saved customizations. The harness now waits for
+stable named project targets, menu animation completion and preference hydration.
+Existing review-flag regression acceptance passed at 393/1440 px. All writes
+stayed in disposable browser fixtures. Public mobile/desktop readback passed
+through normal WebSockets with 54 workspace cards in each viewport and no page
+errors. Old public asset hashes still match. All five service identities,
+backend executable, database inode and 99 migrations were preserved.
 
-Results and screenshots are in ignored `.vk-preview/desktop-chip-tests/` on SSD.
-A separate 1440 px browser check through the public URL showed 13 chips with no
-page overflow. Public frontend and green API probes returned HTTP 200. The public
-review preview remains running at
-`https://mcp-server.tail744c4.ts.net:8443/workspaces`; production has not been
-updated. The desktop extension is included in a separate local feature commit.
-
-Validation passed: UI, web-core, local-web and remote-web TypeScript checks;
-focused UI ESLint; `pnpm run format` plus explicit UI/test Prettier; ops governance,
-legacy frontend path guard, diff whitespace, and nine existing workspace
-assignment/pagination regressions. Large type checks used a bounded 2 GiB Node
-heap after the inherited 768 MiB limit failed.
-
-Browser acceptance (`scripts/testing/mobile-workspace-filters-browser.mjs`) passed
-at 360, 412, 767, 768 and 1440 px against the branch-only frontend and existing
-green gateway. It verified actual workspace rows match the selected project,
-48 px targets, multi-select/No project, All projects reset, shared dialog badge,
-locally emulated save/reload, search/archive access, keyboard focus return and
-viewport fit. All application writes were intercepted; subscription bridges only
-forwarded backend-to-client frames. Sanitized results and screenshots remain in
-the ignored `.vk-preview/mobile-filter-tests/` on SSD. That initial preview was
-stopped after mobile acceptance, then restored for operator review. The current
-preview includes desktop chips and remains running; the existing public root
-route and unrelated preview routes were preserved.
+All four frontend TypeScript checks, frontend ESLint, root formatting, explicit
+UI/test Prettier, ops checks and unused-i18n checks passed. Hosted frontend checks
+and the deployment artifact build passed on application head `d83e7587a`.
+The final PR head must satisfy its own required checks before merge; the GitHub
+checks and merge event are the integration evidence. Local aggregate check/lint
+and `cargo test --workspace` stop because the offline Cargo registry lacks serde.
+No physical-phone UI QA or new provider inference was performed.
 
 Known inherited limitation: Escape from the old dialog's nested project dropdown
-can dismiss both layers and leave pointer events blocked. The new direct selector
-passes Escape/focus acceptance without that nesting. The shared-state check reads
-the old dialog badge and closes with its normal button; it does not certify that
-old nested Escape path. Rust/full-workspace lint tests and physical-phone UI QA
-were not run for this frontend-only stream.
+can dismiss both layers and leave pointer events blocked. The direct selector
+passes Escape/focus acceptance; the old nested path is outside this change.
 
-Dependencies reuse the identical-lockfile SSD installation at
-`/mnt/vk-storage/vk-t63-release-20261018/candidate-source` through ignored local
-links. Workspace package links and Vite caches belong to this worktree.
-The lightweight preview targets existing gateway 4720; no backend was started.
-S25 read-only status verified exact identity and Tailscale transport on October 31;
-Wi-Fi is enabled, so no cellular or physical-phone UI acceptance is claimed.
-The local feature commit includes source, browser acceptance and continuity notes.
-No push, PR, promotion or deployment has been performed for this stream.
+Fresh deployment evidence is on mounted SSD at
+`/mnt/vk-storage/vk-mobile-filters-20261031-311d`. Desktop B independently verified
+the source bundle and paired frontend recovery archive before activation. The
+atomic frontend pointer switched in 0.033 seconds; no service or data switch
+occurred. Keep the paired fallback and all old assets. Preview remains available
+at `https://mcp-server.tail744c4.ts.net:8443/workspaces`; preserve its routes.
+
+Dependencies reuse the identical-lockfile SSD installation; workspace package
+links and Vite caches belong to each worktree. Both task and deployment source
+worktrees remain preserved. The unrelated dirty canonical checkout is untouched.
 
 Prior backend owner pickup (historical record follows):
 

@@ -1,12 +1,22 @@
-# Current production and protections — 2026-10-30
+# Current production and protections — 2026-10-31
 
 The Antigravity-enabled release is live at `https://vibe.local`. It was accepted
 at 03:18:14 UTC: backend source `9a4179e8bdf38e93d1a81faca6c665cadd6fddc7`,
 executable SHA256 `137d6cd7b6475f47f9b92455a879b5fd23d3b3a5374743c77d0c694f3f1257d2`.
 The 0.1.42 label also identifies older artifacts; use [LIVE_DEPLOYMENT.json](LIVE_DEPLOYMENT.json)
 and fresh readback. Public gateway 4720 routes API through history proxy 5640 to
-backend 5621. All frontend roots now use the matched bundle; both release pairs
-retain old/new hashed assets for open tabs. Blue remains retired.
+backend 5621. Public frontend publication at 13:07:50 UTC adds workspace project
+filters while preserving the October 31 unread/review/reselect fixes exactly.
+Combined frontend source is `02a9a993d8d9118ca703a22baa15efcf0c7cc4c9`;
+public JS is `index-Bgdr6hzC.js`. Backend/history-proxy direct frontend roots
+retain October 30 assets. The new public release retains all previous hashed
+assets, with an immediate paired frontend fallback. All five services, the backend
+executable and the database identity were unchanged. Blue remains retired.
+See [filter deployment evidence](VK_WORKSPACE_FILTER_DEPLOYMENT.md) and the
+manifest for build provenance, backup and verified public readback. Source
+integration uses [PR #286](https://github.com/artinflight/vibe-kanban/pull/286)
+into staging with rebase; its merge event records integration and rebased IDs.
+Main promotion remains separate.
 
 Antigravity is available with the existing personal account, tested
 `gemini-3.8-flash-low` and supervised permissions. Actual native approval, denial,

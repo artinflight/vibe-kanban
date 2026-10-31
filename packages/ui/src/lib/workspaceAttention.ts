@@ -22,3 +22,15 @@ export function getWorkspaceAttentionLabel(
     return 'Needs review';
   return undefined;
 }
+
+/** Aggregate unread/approval activity only; manual issue flags are separate. */
+export function getWorkspacesAttentionLabel(
+  workspaces: ReadonlyArray<WorkspaceReviewState | undefined>
+): 'Needs approval' | 'Needs review' | undefined {
+  const labels = workspaces.map((workspace) =>
+    workspace ? getWorkspaceAttentionLabel(workspace) : undefined
+  );
+  if (labels.includes('Needs approval')) return 'Needs approval';
+  if (labels.includes('Needs review')) return 'Needs review';
+  return undefined;
+}

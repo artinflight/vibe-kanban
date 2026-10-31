@@ -146,3 +146,88 @@ test('issues without workspaces retain the title in both states', async () => {
     await act(async () => root.unmount());
   }
 });
+
+test('manual review flag is clearable without navigation or read side effects', async () => {
+  const { IssueReviewFlagButton } = await import(
+    '../../packages/ui/src/components/IssueReviewFlagButton'
+  );
+  let opens = 0;
+  let drags = 0;
+  let toggles = 0;
+  function Host() {
+    const [flagged, setFlagged] = useState(true);
+    return (
+      <div onClick={() => opens++} onMouseDown={() => drags++}>
+        <IssueReviewFlagButton
+          flagged={flagged}
+          displayId="VK-1"
+          showLabel
+          onToggle={() => {
+            toggles++;
+            setFlagged((value) => !value);
+          }}
+        />
+      </div>
+    );
+  }
+  const host = document.createElement('div');
+  const root = createRoot(host);
+  try {
+    await act(async () => root.render(<Host />));
+    const button = host.querySelector('button')!;
+    assert.equal(
+      button.getAttribute('aria-label'),
+      'Clear review flag for VK-1'
+    );
+    assert.equal(button.getAttribute('aria-pressed'), 'true');
+    assert.match(button.textContent!, /Flagged for review/);
+    assert.doesNotMatch(button.textContent!, /Needs review/);
+    await act(async () => {
+      button.dispatchEvent(
+        new window.MouseEvent('mousedown', { bubbles: true })
+      );
+      button.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    });
+    assert.equal(toggles, 1);
+    assert.equal(opens, 0, 'clearing a flag must not open the issue or chat');
+    assert.equal(drags, 0, 'clearing a flag must not start a drag');
+    assert.equal(button.getAttribute('aria-pressed'), 'false');
+    assert.equal(button.getAttribute('aria-label'), 'Add review flag for VK-1');
+  } finally {
+    await act(async () => root.unmount());
+  }
+});
+
+test('issue unread labels track workspace replies independently from manual flags', async () => {
+  const { getWorkspacesAttentionLabel } = await import(
+    '../../packages/ui/src/lib/workspaceAttention'
+  );
+  const readWorkspace = {
+    hasUnseenActivity: false,
+    isRunning: false,
+    latestProcessStatus: 'completed',
+    needsReviewFlag: true,
+  };
+  assert.equal(getWorkspacesAttentionLabel([readWorkspace]), undefined);
+  assert.equal(getWorkspacesAttentionLabel([]), undefined);
+  assert.equal(getWorkspacesAttentionLabel([undefined]), undefined);
+  const unread = { ...readWorkspace, hasUnseenActivity: true };
+  assert.equal(getWorkspacesAttentionLabel([unread]), 'Needs review');
+  assert.equal(
+    getWorkspacesAttentionLabel([readWorkspace, unread]),
+    'Needs review',
+    'an unread sibling remains actionable'
+  );
+  assert.equal(
+    getWorkspacesAttentionLabel([{ ...unread, isRunning: true }]),
+    undefined
+  );
+  assert.equal(
+    getWorkspacesAttentionLabel([{ ...unread, latestProcessStatus: 'failed' }]),
+    undefined
+  );
+  assert.equal(
+    getWorkspacesAttentionLabel([unread, { hasPendingApproval: true }]),
+    'Needs approval'
+  );
+});

@@ -8,7 +8,6 @@ import {
   CaretRightIcon,
   CircleDashedIcon,
   DotsThreeIcon,
-  FlagIcon,
   PlusIcon,
 } from '@phosphor-icons/react';
 import { cn } from '../lib/cn';
@@ -17,6 +16,7 @@ import { KanbanBadge } from './KanbanBadge';
 import { KanbanAssignee, type KanbanAssigneeUser } from './KanbanAssignee';
 import { RunningDots } from './RunningDots';
 import { PrBadge, type PrBadgeStatus } from './PrBadge';
+import { IssueReviewFlagButton } from './IssueReviewFlagButton';
 import {
   RelationshipBadge,
   type RelationshipDisplayType,
@@ -305,29 +305,10 @@ export function KanbanCardContent<TTag extends KanbanTag = KanbanTag>({
               <PriorityIcon priority={priority} />
             ))}
           {onNeedsReviewFlagToggle && (
-            <button
-              type="button"
-              onClick={onNeedsReviewFlagToggle}
-              onMouseDown={(e) => e.stopPropagation()}
-              className={cn(
-                'shrink-0 rounded-sm p-half transition-colors hover:bg-secondary',
-                needsReviewFlag
-                  ? 'text-warning hover:text-warning'
-                  : 'text-low hover:text-normal'
-              )}
-              aria-pressed={needsReviewFlag}
-              aria-label={
-                needsReviewFlag ? 'Clear needs review' : 'Mark needs review'
-              }
-              title={
-                needsReviewFlag ? 'Clear needs review' : 'Mark needs review'
-              }
-            >
-              <FlagIcon
-                className="size-icon-xs"
-                weight={needsReviewFlag ? 'fill' : 'regular'}
-              />
-            </button>
+            <IssueReviewFlagButton
+              flagged={needsReviewFlag}
+              onToggle={onNeedsReviewFlagToggle}
+            />
           )}
           {!isMobile &&
             (onAssigneeClick ? (

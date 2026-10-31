@@ -59,7 +59,11 @@ import {
   KanbanHeader,
   type DropResult,
 } from '@vibe/ui/components/KanbanBoard';
-import { getWorkspaceAttentionLabel } from '@vibe/ui/lib/workspaceAttention';
+import {
+  getWorkspaceAttentionLabel,
+  getWorkspacesAttentionLabel,
+} from '@vibe/ui/lib/workspaceAttention';
+import { IssueReviewFlagButton } from '@vibe/ui/components/IssueReviewFlagButton';
 import { KanbanCardContent } from '@vibe/ui/components/KanbanCardContent';
 import {
   IssueWorkspaceCard,
@@ -1635,26 +1639,16 @@ export function KanbanContainer() {
     setPhoneProjectStatus(projectId, statusId);
   };
 
-  const getIssueAttentionLabel = (issueId: string) => {
-    const labels = getWorkspacesForIssue(issueId)
-      .filter(
-        (workspace) => !workspace.archived && workspace.local_workspace_id
-      )
-      .map((workspace) => {
-        const local = localWorkspacesById.get(workspace.local_workspace_id!);
-        return local ? getWorkspaceAttentionLabel(local) : undefined;
-      });
-    if (labels.includes('Needs approval')) return 'Needs approval';
-    if (
-      labels.includes('Needs review') ||
-      issueHasFlag(
-        issueMap[issueId]?.extension_metadata,
-        NEEDS_REVIEW_ISSUE_FLAG
-      )
-    )
-      return 'Needs review';
-    return undefined;
-  };
+  const getIssueAttentionLabel = (issueId: string) =>
+    getWorkspacesAttentionLabel(
+      getWorkspacesForIssue(issueId)
+        .filter(
+          (workspace) => !workspace.archived && workspace.local_workspace_id
+        )
+        .map((workspace) =>
+          localWorkspacesById.get(workspace.local_workspace_id!)
+        )
+    );
 
   const isLoading = projectLoading || orgLoading;
 
@@ -1945,6 +1939,19 @@ export function KanbanContainer() {
                           <DotsThreeIcon size={22} weight="bold" />
                         </button>
                       </div>
+                      {issueHasFlag(
+                        issue.extension_metadata,
+                        NEEDS_REVIEW_ISSUE_FLAG
+                      ) && (
+                        <div className="px-base pb-half">
+                          <IssueReviewFlagButton
+                            flagged
+                            showLabel
+                            displayId={issue.simple_id}
+                            onToggle={() => handleNeedsReviewFlagToggle(id)}
+                          />
+                        </div>
+                      )}
                       {isExpanded && showWorkspaces && workspace && (
                         <button
                           type="button"

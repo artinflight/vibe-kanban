@@ -1,6 +1,13 @@
 # Current production and protections — 2026-10-31
 
-The Antigravity-enabled release is live at `https://vibe.local`. It was accepted
+The project-workspace unread fix is live at `https://vibe.local`, published
+2026-10-31 at 10:38:31 UTC from `f95bab83836d467f972e904710220eee09406d5b`.
+Public JS is `index-hKvj8yI6.js`; CSS remains `index-CUBB2mA2.css`. The frontend
+pointer changed atomically; backend, proxy and static service identities did not.
+Desktop/mobile browser checks and public asset hashes pass. See
+[frontend release evidence](VK_PROJECT_UNREAD_DEPLOYMENT.md) and the live manifest.
+
+The Antigravity-enabled backend remains live. It was accepted October 30
 at 03:18:14 UTC: backend source `9a4179e8bdf38e93d1a81faca6c665cadd6fddc7`,
 executable SHA256 `137d6cd7b6475f47f9b92455a879b5fd23d3b3a5374743c77d0c694f3f1257d2`.
 The 0.1.42 label also identifies older artifacts; use [LIVE_DEPLOYMENT.json](LIVE_DEPLOYMENT.json)

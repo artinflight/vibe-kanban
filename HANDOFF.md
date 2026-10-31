@@ -72,10 +72,26 @@ regressions; restoring it passes all eight. Initial default-heap checks exhauste
 Node's heap; final checks use this checkout's workspace package sources with
 shared SSD third-party dependencies. No duplicate dependency install was needed.
 
-No live/backend/device/provider mutation or deployment was done. Full workspace
-Rust tests, full check/lint, hosted CI and live browser/API badge readback were not
-run for this frontend-only fix. Before integration, run the full PR baseline from
-AGENTS and validate a branch frontend against the existing live backend.
+The operator-authorized live frontend update is complete at `https://vibe.local`.
+Public JS `index-hKvj8yI6.js` was built from `f95bab83836d467f972e904710220eee09406d5b`;
+version remains 0.1.42 and CSS is unchanged. The atomic pointer switch took about
+6 ms at 2026-10-31 10:38:31 UTC. Backend, history reader/proxy, gateway and static
+server PIDs/invocations stayed unchanged. Public HTTPS byte checks and both old
+entry assets pass. Built-candidate and live desktop/mobile browser checks pass:
+project opening/reopening sends read requests; issue-only views and summary
+polling do not. Browser mutations were intercepted; actual persisted unread
+transitions were not performed against live data.
+
+Software recovery was independently read back from Desktop B. The old frontend
+remains intact; a new paired fallback retains all old/new hashed assets. No
+backend restart, DB restore, new inference or device action occurred. Temporary
+frontends/browsers are closed. See [deployment evidence](VK_PROJECT_UNREAD_DEPLOYMENT.md)
+for exact rollback and evidence paths. Reload existing browser tabs to load the fix.
+
+Full workspace Rust tests, full check/lint and hosted CI were not run. Automatic
+approval review rejected the source push and hosted workflow launch as an external
+export; no push happened. The exact-source local production build and targeted
+validation passed. Before a staging PR, run the full PR baseline from AGENTS.
 
 Current production remains documented in [STATE](STATE.md),
 [LIVE_DEPLOYMENT.json](LIVE_DEPLOYMENT.json) and

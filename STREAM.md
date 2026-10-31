@@ -2,7 +2,11 @@
 
 The operator reports the defect is still present. Hold push, PR creation and
 merge until the actual failing workspace/click path is reproduced and fixed.
-Existing browser evidence verifies request emission only, not persisted clearing.
+The initial browser evidence verified request emission only; follow-up real
+backend acceptance on this task's workspace confirms persisted unread clearing.
+The remaining reproduced failure is a manual issue review flag displayed as an
+unread "Needs review" badge with no mobile clear action. Keep explicit flags
+separate from unread state, add mobile clearing, and verify persistence/reload.
 
 Branch `vk/c097-vk-can-t-clear-u`, based on current fork/staging
 `7b64a69bc34d418b31c1f902c7714122a20783a3` (fresh fetch confirmed).

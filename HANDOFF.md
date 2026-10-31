@@ -1,5 +1,15 @@
 # Project workspace unread fix pickup — 2026-10-31
 
+Current investigation: real project-card opening and reopening on this task's own
+workspace returned HTTP 200 and persisted `has_unseen_turns=false`. The prior
+request-only test gap is now closed for that path. A second failure was reproduced
+in the actual mobile project UI: explicit manual review flags appeared as "Needs
+review" even when all linked workspaces were read, with no mobile clear control.
+The branch separates manual flags from unread activity and adds a shared desktop/
+mobile clear action. Five mounted UI tests and eight seen regressions pass; the
+production build and persistent browser acceptance are being completed. No push,
+PR or merge is authorized until this correction is verified.
+
 Current status: the operator reports unread clearing remains unresolved. The
 requested push/PR/rebase merge was held before any of those mutations occurred.
 Do not treat the published change as an accepted resolution. Read-only follow-up

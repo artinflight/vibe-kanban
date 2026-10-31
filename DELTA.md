@@ -2157,3 +2157,15 @@ summary-backed unread indicators, independent explicit issue Needs review flags,
 and possible sibling unread aggregation. No root cause or new fix is claimed.
 An operator clarification is pending; no live flags or services were modified.
 STATE/STREAM/HANDOFF and live manifest now record the unresolved acceptance.
+
+
+## 2026-10-31 — Real read-state proof and mobile manual-flag correction
+
+A bounded real project-card test on this task's own workspace confirmed HTTP 200,
+unread true→false on opening and after reselect, and cleanup through Workspaces.
+No unrelated workspace flags were touched. The actual old mobile project UI
+reproduces a separate defect: manual issue review flags show "Needs review" when
+native replies are already read, and have no mobile clear control. Separate
+workspace attention aggregation from explicit flags and share an accessible clear
+control across desktop/mobile. Mounted UI and seen regressions pass; persistent
+browser acceptance and frontend rollout are in progress. Push/PR/merge remain held.

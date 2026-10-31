@@ -1,5 +1,6 @@
 pub mod queue;
 pub mod review;
+pub mod steering;
 
 use axum::{
     Extension, Json, Router,
@@ -111,7 +112,7 @@ pub async fn update_session(
     Ok(ResponseJson(ApiResponse::success(updated)))
 }
 
-#[derive(Debug, Deserialize, TS)]
+#[derive(Debug, serde::Serialize, Deserialize, TS)]
 pub struct CreateFollowUpAttempt {
     pub prompt: String,
     pub executor_config: ExecutorConfig,
@@ -132,6 +133,54 @@ pub async fn follow_up(
     State(deployment): State<DeploymentImpl>,
     Json(payload): Json<CreateFollowUpAttempt>,
 ) -> Result<ResponseJson<ApiResponse<ExecutionProcess, QueueStatus>>, ApiError> {
+    services::services::provider_admission::before_start(
+        deployment.container(),
+        session.workspace_id,
+        session.id,
+    )
+    .await?;
+    let pool = deployment.db().pool.clone();
+    let received = services::services::queued_message::QueuedMessageService::receive(
+        &pool,
+        session.id,
+        serde_json::json!({"kind": "follow_up", "payload": &payload}),
+    )
+    .await?;
+    let result = services::services::admission::run(services::services::admission::owner(
+        session.workspace_id,
+        follow_up_admitted(Extension(session), State(deployment), Json(payload)),
+    ))
+    .await;
+    if result.is_ok() {
+        services::services::queued_message::QueuedMessageService::acknowledge(&pool, received)
+            .await?;
+    }
+    result
+}
+
+pub(crate) async fn follow_up_admitted<D: Deployment>(
+    Extension(session): Extension<Session>,
+    State(deployment): State<D>,
+    Json(payload): Json<CreateFollowUpAttempt>,
+) -> Result<ResponseJson<ApiResponse<ExecutionProcess, QueueStatus>>, ApiError> {
+    services::services::provider_admission::before_start(
+        deployment.container(),
+        session.workspace_id,
+        session.id,
+    )
+    .await?;
+    services::services::original_worker::record_input(
+        &deployment.db().pool,
+        session.id,
+        payload.prompt.trim() == "/goal resume"
+            && payload.retry_process_id.is_none()
+            && payload.perform_git_reset != Some(true),
+    )
+    .await
+    .map_err(|e| ApiError::Conflict(e.to_string()))?;
+    services::services::original_worker::ordinary_input(session.id, &payload.prompt)
+        .await
+        .map_err(|e| ApiError::Conflict(e.to_string()))?;
     let pool = &deployment.db().pool;
 
     // Load workspace from session
@@ -183,7 +232,11 @@ pub async fn follow_up(
     }
     // Give an explicit owner message priority before acquiring an executor slot
     // or resetting files. This can stop an active scheduled run of this session.
-    executors::capacity::controller::before_launch(session.id, false).await?;
+    if services::services::original_worker::in_dispatch() {
+        executors::capacity::controller::before_bounded_worker_launch().await?;
+    } else {
+        executors::capacity::controller::before_launch(session.id, false).await?;
+    }
 
     if let Some(proc_id) = payload.retry_process_id {
         let force_when_dirty = payload.force_when_dirty.unwrap_or(false);
@@ -258,6 +311,11 @@ pub async fn follow_up(
     {
         Ok(execution_process) => execution_process,
         Err(error) if error.is_execution_limit_reached() => {
+            if services::services::original_worker::in_dispatch() {
+                return Err(ApiError::Conflict(
+                    "Bounded continuation cannot be queued after failed admission".into(),
+                ));
+            }
             let queued = deployment.queued_message_service().queue_for_capacity(
                 session.id,
                 DraftFollowUpData {
@@ -265,6 +323,12 @@ pub async fn follow_up(
                     executor_config: payload.executor_config.clone(),
                 },
             );
+            if services::services::admission::automatic_git_sync() {
+                deployment
+                    .queued_message_service()
+                    .persist(pool, session.id)
+                    .await?;
+            }
 
             deployment
                 .track_if_analytics_allowed(
@@ -320,6 +384,25 @@ pub async fn reset_process(
     State(deployment): State<DeploymentImpl>,
     Json(payload): Json<ResetProcessRequest>,
 ) -> Result<ResponseJson<ApiResponse<()>>, ApiError> {
+    services::services::admission::locked(reset_process_admitted(
+        Extension(session),
+        State(deployment),
+        Json(payload),
+    ))
+    .await
+}
+
+async fn reset_process_admitted(
+    Extension(session): Extension<Session>,
+    State(deployment): State<DeploymentImpl>,
+    Json(payload): Json<ResetProcessRequest>,
+) -> Result<ResponseJson<ApiResponse<()>>, ApiError> {
+    services::services::provider_admission::before_start(
+        deployment.container(),
+        session.workspace_id,
+        session.id,
+    )
+    .await?;
     let force_when_dirty = payload.force_when_dirty.unwrap_or(false);
     let perform_git_reset = payload.perform_git_reset.unwrap_or(true);
 
@@ -411,6 +494,7 @@ pub fn router(deployment: &DeploymentImpl) -> Router<DeploymentImpl> {
     let sessions_router = Router::new()
         .route("/", get(get_sessions).post(create_session))
         .nest("/{session_id}", session_id_router)
+        .nest("/{session_id}/steer", steering::router(deployment))
         .nest("/{session_id}/queue", queue::router(deployment));
 
     Router::new().nest("/sessions", sessions_router)

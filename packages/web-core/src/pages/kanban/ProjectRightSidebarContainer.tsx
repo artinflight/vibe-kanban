@@ -1,3 +1,4 @@
+import { useOpenProjectWorkspace } from '@/shared/hooks/useOpenProjectWorkspace';
 import {
   useCallback,
   useEffect,
@@ -18,6 +19,7 @@ import { MessageEditProvider } from '@/features/workspace-chat/model/contexts/Me
 import { CreateModeProvider } from '@/features/create-mode/model/CreateModeProvider';
 import { useWorkspaceSessions } from '@/shared/hooks/useWorkspaceSessions';
 import { useWorkspaceRecord } from '@/shared/hooks/useWorkspaceRecord';
+import { useMarkWorkspaceSeen } from '@/shared/hooks/useMarkWorkspaceSeen';
 import { SessionChatBoxContainer } from '@/features/workspace-chat/ui/SessionChatBoxContainer';
 import { CreateChatBoxContainer } from '@/shared/components/CreateChatBoxContainer';
 import { KanbanIssuePanelContainer } from './KanbanIssuePanelContainer';
@@ -57,44 +59,6 @@ type RightPanelState =
   | { kind: 'issue'; issueId: string; resolution: IssuePanelResolution }
   | { kind: 'issue-workspace'; workspaceId: string }
   | { kind: 'workspace-create'; draftId: string; issueId: string | null };
-
-type LocalWorkspaceSummary = {
-  id: string;
-  name: string;
-  branch: string;
-};
-
-function resolveLocalWorkspaceFromRemoteLink(
-  remoteWorkspace: {
-    local_workspace_id: string | null;
-    name: string | null;
-  } | null,
-  localWorkspaces: LocalWorkspaceSummary[]
-): LocalWorkspaceSummary | null {
-  if (!remoteWorkspace) {
-    return null;
-  }
-
-  if (remoteWorkspace.local_workspace_id) {
-    const directMatch = localWorkspaces.find(
-      (workspace) => workspace.id === remoteWorkspace.local_workspace_id
-    );
-    if (directMatch) {
-      return directMatch;
-    }
-  }
-
-  const normalizedName = remoteWorkspace.name?.trim().toLowerCase() ?? '';
-  if (!normalizedName) {
-    return null;
-  }
-
-  const nameMatches = localWorkspaces.filter(
-    (workspace) => workspace.name.trim().toLowerCase() === normalizedName
-  );
-
-  return nameMatches.length === 1 ? nameMatches[0] : null;
-}
 
 function resolveIssuePanelResolution({
   issueId,
@@ -200,6 +164,12 @@ function WorkspaceSessionPanel({
     startNewSession,
   } = useWorkspaceSessions(workspaceId, { enabled: !!workspaceId });
 
+  useMarkWorkspaceSeen(
+    !isWorkspaceLoading && workspace?.id === workspaceId
+      ? workspaceId
+      : undefined
+  );
+
   const workspaceSummary = useMemo(
     () =>
       [...activeWorkspaces, ...archivedWorkspaces].find(
@@ -217,65 +187,8 @@ function WorkspaceSessionPanel({
     [remoteWorkspaces, workspaceId, projectId]
   );
 
-  const allLocalWorkspaces = useMemo<LocalWorkspaceSummary[]>(
-    () =>
-      [...activeWorkspaces, ...archivedWorkspaces].map((workspace) => ({
-        id: workspace.id,
-        name: workspace.name,
-        branch: workspace.branch,
-      })),
-    [activeWorkspaces, archivedWorkspaces]
-  );
-
-  const localWorkspaceIds = useMemo(
-    () => new Set(allLocalWorkspaces.map((workspace) => workspace.id)),
-    [allLocalWorkspaces]
-  );
-
-  const fallbackLinkedWorkspace = useMemo(() => {
-    if (!routeState.issueId) {
-      return null;
-    }
-
-    const issueLinkedWorkspace = remoteWorkspaces.find(
-      (ws) => ws.issue_id === routeState.issueId && ws.project_id === projectId
-    );
-
-    return resolveLocalWorkspaceFromRemoteLink(
-      issueLinkedWorkspace ?? linkedWorkspace,
-      allLocalWorkspaces
-    );
-  }, [
-    routeState.issueId,
-    remoteWorkspaces,
-    projectId,
-    linkedWorkspace,
-    allLocalWorkspaces,
-  ]);
-
-  useEffect(() => {
-    if (localWorkspaceIds.has(workspaceId)) {
-      return;
-    }
-
-    if (!routeState.issueId || !projectId || !fallbackLinkedWorkspace) {
-      return;
-    }
-
-    appNavigation.goToProjectIssueWorkspace(
-      projectId,
-      routeState.issueId,
-      fallbackLinkedWorkspace.id,
-      { replace: true }
-    );
-  }, [
-    localWorkspaceIds,
-    workspaceId,
-    routeState.issueId,
-    projectId,
-    fallbackLinkedWorkspace,
-    appNavigation,
-  ]);
+  // The requested workspace ID is authoritative. A sidebar snapshot can be
+  // loading, filtered or stale; absence never authorizes choosing a sibling.
 
   const linkedIssueId = linkedWorkspace?.issue_id ?? null;
   const breadcrumbIssueId = routeState.issueId ?? linkedIssueId;
@@ -286,6 +199,8 @@ function WorkspaceSessionPanel({
   }, [breadcrumbIssueId, getIssue]);
 
   const workspaceBranch = workspace?.branch ?? workspaceSummary?.branch ?? null;
+  const workspaceName =
+    workspace?.name || workspaceSummary?.name || workspaceBranch || 'Workspace';
 
   const handleOpenIssuePanel = useCallback(() => {
     if (projectId && breadcrumbIssueId) {
@@ -365,10 +280,11 @@ function WorkspaceSessionPanel({
                   <button
                     type="button"
                     onClick={handleOpenWorkspaceView}
-                    className={breadcrumbButtonClass}
+                    className={`${breadcrumbButtonClass} text-xl font-semibold text-high font-ibm-plex-sans`}
+                    title={workspaceName}
                     aria-label="Open workspace"
                   >
-                    {workspaceBranch ?? 'Workspace'}
+                    {workspaceName}
                   </button>
                 </div>
 
@@ -431,7 +347,7 @@ function WorkspaceSessionPanel({
                 data-chatbox-container="true"
               >
                 <SessionChatBoxContainer
-                  {...(isSessionsLoading || isWorkspaceLoading
+                  {...(isSessionsLoading || isWorkspaceLoading || !workspace
                     ? {
                         mode: 'placeholder' as const,
                       }
@@ -471,7 +387,13 @@ function WorkspaceSessionPanel({
   );
 }
 
-export function ProjectRightSidebarContainer() {
+export function ProjectRightSidebarContainer({
+  expectedIssueId,
+  onExpectIssueOpen,
+}: {
+  expectedIssueId: string | null;
+  onExpectIssueOpen: (issueId: string) => void;
+}) {
   const appNavigation = useAppNavigation();
   const {
     projectId,
@@ -505,19 +427,16 @@ export function ProjectRightSidebarContainer() {
     },
     [projectId, isCreateMode, issueComposerKey, appNavigation]
   );
+  const navigateToProjectWorkspace = useOpenProjectWorkspace();
   const openIssueWorkspace = useCallback(
     (targetIssueId: string, targetWorkspaceId: string) => {
       if (!projectId) {
         return;
       }
 
-      appNavigation.goToProjectIssueWorkspace(
-        projectId,
-        targetIssueId,
-        targetWorkspaceId
-      );
+      navigateToProjectWorkspace(projectId, targetIssueId, targetWorkspaceId);
     },
-    [projectId, appNavigation]
+    [projectId, navigateToProjectWorkspace]
   );
   const closePanel = useCallback(() => {
     if (!projectId) {
@@ -530,28 +449,6 @@ export function ProjectRightSidebarContainer() {
 
     appNavigation.goToProject(projectId);
   }, [projectId, isCreateMode, issueComposerKey, appNavigation]);
-  const [expectedIssueId, setExpectedIssueId] = useState<string | null>(null);
-
-  const markExpectedIssue = useCallback((nextIssueId: string) => {
-    setExpectedIssueId(nextIssueId);
-  }, []);
-
-  // Keep transient create expectations scoped to the current issue route only.
-  useEffect(() => {
-    if (!expectedIssueId) {
-      return;
-    }
-
-    if (!issueId || issueId !== expectedIssueId) {
-      setExpectedIssueId(null);
-      return;
-    }
-
-    if (issuesById.has(expectedIssueId)) {
-      setExpectedIssueId(null);
-    }
-  }, [expectedIssueId, issueId, issuesById]);
-
   const issuePanelResolution = useMemo<IssuePanelResolution | null>(() => {
     if (!issueId || isCreateMode || workspaceId || isWorkspaceCreateMode) {
       return null;
@@ -693,7 +590,7 @@ export function ProjectRightSidebarContainer() {
       issueResolution={
         rightPanelState.kind === 'issue' ? rightPanelState.resolution : null
       }
-      onExpectIssueOpen={markExpectedIssue}
+      onExpectIssueOpen={onExpectIssueOpen}
     />
   );
 }

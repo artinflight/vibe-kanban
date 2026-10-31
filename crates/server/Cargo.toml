@@ -72,8 +72,12 @@ tokio-tungstenite = { version = "0.26", features = ["rustls-tls-native-roots"] }
 dotenv = "0.15"
 
 [dev-dependencies]
+tower = { version = "0.5", features = ["util"] }
+client-info = { path = "../client-info" }
+remote-info = { path = "../remote-info" }
 tempfile = "3"
 
 [features]
 default = []
+scheduled-goal-initialization-disabled = ["executors/scheduled-goal-initialization-disabled"]
 qa-mode = ["services/qa-mode", "executors/qa-mode"]

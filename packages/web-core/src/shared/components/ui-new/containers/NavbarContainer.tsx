@@ -1,4 +1,6 @@
 import { useMemo, useCallback } from 'react';
+import { useLocation, useNavigate } from '@tanstack/react-router';
+import { isDotSidechatEnabled } from '@/shared/lib/dotSidechat';
 import { useTranslation } from 'react-i18next';
 import { useMobileSheet } from '@/shared/hooks/useMobileSheet';
 import { useWorkspaceContext } from '@/shared/hooks/useWorkspaceContext';
@@ -9,6 +11,8 @@ import { useUserOrganizations } from '@/shared/hooks/useUserOrganizations';
 import { useOrganizationStore } from '@/shared/stores/useOrganizationStore';
 import {
   Navbar,
+  MOBILE_TABS,
+  DOT_MOBILE_TAB,
   type NavbarSectionItem,
   type NavbarBreadcrumbItem,
   type MobileTabId,
@@ -36,7 +40,10 @@ import { useActionVisibilityContext } from '@/shared/hooks/useActionVisibilityCo
 import { useMobileActiveTab } from '@/shared/stores/useUiPreferencesStore';
 import { CommandBarDialog } from '@/shared/dialogs/command-bar/CommandBarDialog';
 import { SettingsDialog } from '@/shared/dialogs/settings/SettingsDialog';
-import { getProjectDestination } from '@/shared/lib/routes/appNavigation';
+import {
+  getDestinationHostId,
+  getProjectDestination,
+} from '@/shared/lib/routes/appNavigation';
 import { useAppNavigation } from '@/shared/hooks/useAppNavigation';
 import { useCurrentAppDestination } from '@/shared/hooks/useCurrentAppDestination';
 import { getRemoteAuthDegradedMessage } from '@/shared/lib/auth/remoteAuthDegraded';
@@ -137,6 +144,8 @@ export function NavbarContainer({
   const isLocalOnlySession =
     loginStatus?.status === 'loggedin' && !loginStatus.profile;
   const appNavigation = useAppNavigation();
+  const navigate = useNavigate();
+  const hash = useLocation({ select: (location) => location.hash });
   const destination = useCurrentAppDestination();
   const projectDestination = useMemo(
     () => getProjectDestination(destination),
@@ -146,7 +155,11 @@ export function NavbarContainer({
   const projectId = projectDestination?.projectId ?? null;
   const isOnProjectSubRoute =
     projectDestination !== null && projectDestination.kind !== 'project';
-  const [mobileActiveTab, setMobileActiveTab] = useMobileActiveTab();
+  const [storedMobileActiveTab, setMobileActiveTab] = useMobileActiveTab();
+  const mobileActiveTab =
+    isDotSidechatEnabled && selectedWorkspace && hash === 'dot'
+      ? 'dot'
+      : storedMobileActiveTab;
 
   // Find remote workspace linked to current local workspace
   const linkedRemoteWorkspace = useMemo(() => {
@@ -205,9 +218,9 @@ export function NavbarContainer({
         : orgName
       : mobileMode
         ? mobileActiveTab === 'workspaces'
-          ? 'Vibe Kanban'
+          ? 'Workspaces'
           : selectedWorkspace?.name
-        : selectedWorkspace?.branch;
+        : selectedWorkspace?.name || selectedWorkspace?.branch || 'Workspaces';
 
   // Breadcrumbs: Project / Issue / Workspace (only on workspace pages with linked project)
   const linkedProjectId = linkedRemoteWorkspace?.project_id ?? null;
@@ -362,12 +375,39 @@ export function NavbarContainer({
       onOpenSettings={handleOpenSettings}
       onNavigateBack={handleNavigateBack}
       onNavigateToBoard={handleNavigateToBoard}
+      onNavigateToDot={
+        isDotSidechatEnabled &&
+        selectedWorkspace &&
+        !isCreateMode &&
+        !getDestinationHostId(destination)
+          ? () => {
+              void navigate({
+                to: '/workspaces/$workspaceId',
+                params: { workspaceId: selectedWorkspace.id },
+                hash: 'dot',
+              });
+            }
+          : undefined
+      }
       onOpenDrawer={onOpenDrawer}
+      mobileTabs={
+        selectedWorkspace || isCreateMode
+          ? MOBILE_TABS.flatMap((tab) =>
+              tab.id === 'chat' && isDotSidechatEnabled && !isCreateMode
+                ? [tab, DOT_MOBILE_TAB]
+                : [tab]
+            )
+          : MOBILE_TABS.filter((tab) => tab.id === 'workspaces')
+      }
       mobileActiveTab={mobileActiveTab as MobileTabId}
       mobileShowBack={!isOnProjectPage && mobileActiveTab !== 'workspaces'}
       onMobileTabChange={(tab) => {
         setMobileActiveTab(tab);
-        if (isOnProjectPage) appNavigation.goToWorkspaces();
+        if (isOnProjectPage || (tab === 'workspaces' && isCreateMode)) {
+          appNavigation.goToWorkspaces();
+        } else if (isDotSidechatEnabled) {
+          void navigate({ hash: tab === 'dot' ? 'dot' : '', replace: true });
+        }
       }}
       leftSlot={
         !breadcrumbs &&

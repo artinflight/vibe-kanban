@@ -1,0 +1,54 @@
+"""Mirror immutable recovery package and detached SQL point through guarded Desktop B objects."""
+import copy,hashlib,json,os,sqlite3,sys,tarfile,time
+from pathlib import Path
+D=Path(__file__).resolve().parent
+
+def sha(p):
+ with Path(p).open('rb')as f:return hashlib.file_digest(f,'sha256').hexdigest()
+def guard():
+ assert os.path.ismount('/mnt/vk-storage')
+ for root in ['/', '/mnt/vk-storage']:
+  fs=os.statvfs(root);assert fs.f_bavail*fs.f_frsize>2*1024**3
+ available=int(next(x.split()[1]for x in Path('/proc/meminfo').read_text().splitlines()if x.startswith('MemAvailable:')))*1024
+ assert available>4*1024**3
+
+def save(name,value):
+ p=D/name;temp=p.with_name(p.name+'.next');temp.write_text(json.dumps(value,indent=2)+'\n');temp.chmod(0o600);temp.replace(p)
+
+def main():
+ guard()
+ cfgpath=Path('/mnt/vk-storage/vk-staging-catchup-20261028/cutover-v5-20261029/MANIFEST.private.json')
+ assert sha(cfgpath)=='703488c3caa16d48336049e9be23e60967cccb95c4a48b10466b896200d0c961'
+ cfg=json.loads(cfgpath.read_text());assert sha(cfg['plan']['path'])==cfg['plan']['sha256']
+ plan=json.loads(Path(cfg['plan']['path']).read_text())
+ sys.path.insert(0,plan['source_folder'])
+ from vk_nightly_desktop_objects import DesktopObjects
+ control=copy.deepcopy(plan['workers']['files']['desktop']);control.pop('whole_cycle_deadline_UTC',None)
+ assert json.loads((D/'RESULT.private.json').read_text())['passed'] is True
+ assert json.loads((D/'PREFLIGHT.private.json').read_text())['current_data_compatible'] is True
+ archive=D/'verified-cutback-kit.tar.gz'
+ assert not archive.exists()
+ with tarfile.open(archive,'x:gz',compresslevel=3)as tar:
+  for name in ['bundle','CUTBACK.md','preflight.py','rehearse.py','mirror.py','RESULT.private.json','PREFLIGHT.private.json','BEFORE.private.json','RECENT_BOUND.private.json','fallback-AFTER.private.json','candidate_return-AFTER.private.json','fallback-BUILD.json','candidate_return-BUILD.json']:
+   tar.add(D/name,arcname=name,recursive=True)
+ archive.chmod(0o600)
+ receipts=[]
+ with DesktopObjects(control,guard=guard)as remote:
+  for file in [archive,D/'fresh-current.sqlite']:
+   expected=sha(file);restored=hashlib.sha256();segments=[]
+   class Sink:
+    def write(self,raw):restored.update(raw);return len(raw)
+   with file.open('rb')as source:
+    while block:=source.read(control['maximum_object_bytes']):
+     guard();segments.append(remote.client.ensure(block,readback_sink=Sink()))
+     print(json.dumps(dict(file=file.name,verified_bytes=sum(s['bytes']for s in segments))),flush=True)
+   assert restored.hexdigest()==expected
+   descriptor=dict(format='vk-cutback-retained-file-v1',name=file.name,bytes=file.stat().st_size,sha256=expected,segments=segments,independent_native_readback_verified=True,never_restore_over_live_database=True)
+   descriptor_bytes=(json.dumps(descriptor,sort_keys=True)+'\n').encode()
+   ref=remote.client.ensure(descriptor_bytes)
+   save(file.name+'.DESCRIPTOR.private.json',descriptor)
+   receipts.append(dict(name=file.name,sha256=expected,bytes=file.stat().st_size,descriptor=ref,independent_native_readback_verified=True))
+   save('DESKTOP_B.private.json',dict(root=control['B_root'],files=receipts,complete=False))
+ save('DESKTOP_B.private.json',dict(root=control['B_root'],files=receipts,complete=True,UTC=time.strftime('%Y-%m-%dT%H:%M:%SZ',time.gmtime()),production_changed=False))
+ print('Cutback kit and fresh SQL snapshot mirrored and independently read back',flush=True)
+if __name__=='__main__':main()

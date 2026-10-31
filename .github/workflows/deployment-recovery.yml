@@ -1,0 +1,51 @@
+name: Deployment recovery contracts
+on:
+  pull_request:
+    branches: [staging, main]
+    paths:
+      - "scripts/deployment/**"
+      - "scripts/antigravity/**"
+      - "scripts/dot-connector/**"
+      - ".github/workflows/deployment-recovery.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: deployment-recovery-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  offline-contracts:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Recovery and source-custody contracts
+        run: |
+          python3 -B - <<'PYTEST'
+          import pathlib, sys, unittest
+          root = pathlib.Path('scripts/deployment').resolve()
+          sys.path.insert(0, str(root))
+          loader, suite = unittest.TestLoader(), unittest.TestSuite()
+          for path in sorted(root.glob('test_*.py')):
+              if path.name.startswith('test_vk_restart_') or path.name in (
+                  'test_restart_queue_boundary.py', 'test_vk_reconcile_orphaned_subagents.py',
+                  'test_incident_cu_fence.py', 'test_source_custody.py', 'test_native_stream_backup.py',
+                  'test_activation_recovery.py', 'test_frontend_pair.py'):
+                  suite.addTests(loader.loadTestsFromName(path.stem))
+          result = unittest.TextTestRunner(verbosity=2).run(suite)
+          raise SystemExit(not result.wasSuccessful())
+          PYTEST
+      - name: ACP readiness privacy and bounds
+        run: python3 -B -m unittest discover -s scripts/antigravity -v
+      - name: Connector control and deployed-source contracts
+        run: |
+          python3 -B -m unittest discover -s scripts/dot-connector -p 'test_*.py' -v
+          python3 -B scripts/dot-connector/verify_deployed_snapshot.py
+      - name: Published source inventories
+        run: |
+          python3 -B scripts/deployment/source_custody.py --root . --catalog scripts/deployment/releases/20261029-source.json
+          python3 -B scripts/deployment/source_custody.py --root scripts/deployment/incidents/20261029 --catalog scripts/deployment/incidents/20261029/sources.json
+          python3 -B scripts/deployment/source_custody.py --root scripts/dot-connector/deployed-20261029 --catalog scripts/dot-connector/deployed-20261029/sources.json

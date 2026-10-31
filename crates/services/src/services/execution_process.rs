@@ -1,7 +1,7 @@
 use std::{
-    collections::HashMap,
+    collections::HashSet,
     io::{IsTerminal, Write},
-    sync::Arc,
+    sync::{Arc, Mutex, OnceLock},
 };
 
 use anyhow::{Context, Result};
@@ -18,12 +18,12 @@ use executors::logs::{
     ActionType, NormalizedEntryType, ToolResult, ToolStatus,
     utils::patch::extract_normalized_entry_from_patch,
 };
-use futures::{StreamExt, TryStreamExt, future, stream::BoxStream};
+use futures::{FutureExt, StreamExt, TryStreamExt, future, stream::BoxStream};
 use indicatif::{ProgressBar, ProgressStyle};
 use json_patch::Patch;
 use serde_json::Value;
 use sqlx::SqlitePool;
-use tokio::{io::AsyncWriteExt, sync::RwLock, task::JoinHandle};
+use tokio::{io::AsyncWriteExt, task::JoinHandle};
 use utils::{
     assets::prod_asset_dir_path,
     execution_logs::{
@@ -261,13 +261,124 @@ pub async fn append_log_message(session_id: Uuid, execution_id: Uuid, msg: &LogM
     Ok(())
 }
 
+/// EOF is valid only after the raw pipe AND execution metadata have drained.
+/// UI broadcast lag cannot remove raw bytes from the dedicated bounded channel.
+fn merge_capture_streams(
+    raw: BoxStream<'static, std::io::Result<LogMsg>>,
+    metadata: BoxStream<'static, std::io::Result<LogMsg>>,
+    store: Arc<MsgStore>,
+) -> BoxStream<'static, std::io::Result<LogMsg>> {
+    futures::stream::unfold(
+        (raw, metadata, false, false, store),
+        |(mut raw, mut metadata, mut raw_done, mut meta_done, store)| async move {
+            loop {
+                if raw_done && meta_done {
+                    return None;
+                }
+                if raw_done && !meta_done && store.is_finished() {
+                    // Drain already queued metadata. A real lifecycle Finished
+                    // may have been evicted from the lossy UI subscriber; the
+                    // monotonic marker cannot be lost. It never replaces raw EOF.
+                    match metadata.next().now_or_never() {
+                        Some(Some(Ok(LogMsg::Finished))) | Some(None) | None => {
+                            return Some((
+                                Ok(LogMsg::Finished),
+                                (raw, metadata, true, true, store),
+                            ));
+                        }
+                        Some(Some(message)) => {
+                            return Some((message, (raw, metadata, raw_done, meta_done, store)));
+                        }
+                    }
+                }
+                let (is_raw, next) = tokio::select! {
+                    msg = raw.next(), if !raw_done => (true, msg),
+                    msg = metadata.next(), if !meta_done => (false, msg),
+                };
+                match next {
+                    Some(Ok(LogMsg::Finished)) => {
+                        if is_raw {
+                            raw_done = true;
+                        } else {
+                            meta_done = true;
+                        }
+                        if raw_done && meta_done {
+                            return Some((
+                                Ok(LogMsg::Finished),
+                                (raw, metadata, true, true, store),
+                            ));
+                        }
+                    }
+                    None => {
+                        // Disconnection is NOT successful producer closure.
+                        return Some((
+                            Err(std::io::Error::other(
+                                "Raw capture or metadata closed without Finished",
+                            )),
+                            (raw, metadata, true, true, store),
+                        ));
+                    }
+                    Some(msg) => return Some((msg, (raw, metadata, raw_done, meta_done, store))),
+                }
+            }
+        },
+    )
+    .boxed()
+}
+
+// Presentation liveness only, never a closure/review proof. Claim before spawn
+// and keep ownership until the task exits, even after MsgStore map removal.
+fn active_captures() -> &'static Mutex<HashSet<Uuid>> {
+    static ACTIVE: OnceLock<Mutex<HashSet<Uuid>>> = OnceLock::new();
+    ACTIVE.get_or_init(|| Mutex::new(HashSet::new()))
+}
+pub fn capture_in_progress(execution_id: Uuid) -> bool {
+    active_captures().lock().unwrap().contains(&execution_id)
+}
+struct CaptureOwner(Uuid);
+impl Drop for CaptureOwner {
+    fn drop(&mut self) {
+        active_captures().lock().unwrap().remove(&self.0);
+    }
+}
+
 pub fn spawn_stream_raw_logs_to_storage(
-    msg_stores: Arc<RwLock<HashMap<Uuid, Arc<MsgStore>>>>,
+    store: Arc<MsgStore>,
     db: DBService,
     execution_id: Uuid,
     session_id: Uuid,
 ) -> JoinHandle<()> {
+    if !active_captures().lock().unwrap().insert(execution_id) {
+        return tokio::spawn(async move {
+            tracing::error!("Raw capture already owned for execution {}", execution_id);
+        });
+    }
+    let owner = CaptureOwner(execution_id);
+    // Ownership and metadata subscription are synchronous: the exit monitor
+    // cannot win by removing the map entry before this task's first poll.
+    let durable = store.take_durable_capture();
+    if store.has_durable_capture() && durable.is_none() {
+        drop(owner);
+        return tokio::spawn(async move {
+            tracing::error!("Raw capture already claimed for execution {}", execution_id);
+        });
+    }
+    let mut stream: BoxStream<'static, std::io::Result<LogMsg>> = if let Some(raw) = durable {
+        let metadata = store
+            .history_plus_stream()
+            .filter_map(|msg| async move {
+                match msg {
+                    Ok(LogMsg::Stdout(_) | LogMsg::Stderr(_) | LogMsg::Ready) => None,
+                    other => Some(other),
+                }
+            })
+            .boxed();
+        merge_capture_streams(raw.boxed(), metadata, store.clone())
+    } else {
+        store.history_plus_stream_strict()
+    };
     tokio::spawn(async move {
+        let _capture_owner = owner;
         let mut log_writer =
             match ExecutionLogWriter::new_for_execution(session_id, execution_id).await {
                 Ok(w) => w,
@@ -281,15 +392,19 @@ pub fn spawn_stream_raw_logs_to_storage(
                 }
             };
 
-        let store = {
-            let map = msg_stores.read().await;
-            map.get(&execution_id).cloned()
-        };
-
-        if let Some(store) = store {
-            let mut stream = store.history_plus_stream();
-
-            while let Some(Ok(msg)) = stream.next().await {
+        {
+            let mut review_log_valid = true;
+            while let Some(next) = stream.next().await {
+                let msg = match next {
+                    Ok(msg) => msg,
+                    Err(error) => {
+                        tracing::warn!(
+                            "Incomplete raw capture; no review closure proof: {}",
+                            error
+                        );
+                        break;
+                    }
+                };
                 match &msg {
                     LogMsg::Stdout(stdout) => {
                         if let Err(e) = update_subagent_jobs_from_stdout(
@@ -300,6 +415,7 @@ pub fn spawn_stream_raw_logs_to_storage(
                         )
                         .await
                         {
+                            review_log_valid = false;
                             tracing::warn!(
                                 "Failed to update sub-agent jobs from stdout for execution {}: {}",
                                 execution_id,
@@ -315,6 +431,7 @@ pub fn spawn_stream_raw_logs_to_storage(
                                 if let Err(e) =
                                     log_writer.append_jsonl_line(&jsonl_line_with_newline).await
                                 {
+                                    review_log_valid = false;
                                     tracing::error!(
                                         "Failed to append log line for execution {}: {}",
                                         execution_id,
@@ -323,6 +440,7 @@ pub fn spawn_stream_raw_logs_to_storage(
                                 }
                             }
                             Err(e) => {
+                                review_log_valid = false;
                                 tracing::error!(
                                     "Failed to serialize log message for execution {}: {}",
                                     execution_id,
@@ -339,6 +457,7 @@ pub fn spawn_stream_raw_logs_to_storage(
                             if let Err(e) =
                                 log_writer.append_jsonl_line(&jsonl_line_with_newline).await
                             {
+                                review_log_valid = false;
                                 tracing::error!(
                                     "Failed to append log line for execution {}: {}",
                                     execution_id,
@@ -347,6 +466,7 @@ pub fn spawn_stream_raw_logs_to_storage(
                             }
                         }
                         Err(e) => {
+                            review_log_valid = false;
                             tracing::error!(
                                 "Failed to serialize log message for execution {}: {}",
                                 execution_id,
@@ -362,6 +482,7 @@ pub fn spawn_stream_raw_logs_to_storage(
                         )
                         .await
                         {
+                            review_log_valid = false;
                             tracing::error!(
                                 "Failed to update agent_session_id {} for execution process {}: {}",
                                 agent_session_id,
@@ -378,6 +499,7 @@ pub fn spawn_stream_raw_logs_to_storage(
                         )
                         .await
                         {
+                            review_log_valid = false;
                             tracing::error!(
                                 "Failed to update agent_message_id {} for execution process {}: {}",
                                 agent_message_id,
@@ -387,6 +509,24 @@ pub fn spawn_stream_raw_logs_to_storage(
                         }
                     }
                     LogMsg::Finished => {
+                        if review_log_valid && log_writer.finish_for_review().await.is_ok() {
+                            // No producer writes this file after Finished. Bind closure
+                            // to the actual bytes, not status or a synthetic UI EOF.
+                            if let Ok((bytes, _)) =
+                                utils::execution_logs::read_execution_log_strict(
+                                    log_writer.path(),
+                                    super::report_review::MAX_RAW_BYTES,
+                                )
+                                .await
+                            {
+                                use sha2::{Digest, Sha256};
+                                let digest = format!("{:x}", Sha256::digest(&bytes));
+                                if let Err(error) = sqlx::query("INSERT INTO workspace_review_log_finalized(execution_id,finalized_at,raw_bytes,raw_sha256) VALUES (?,?,?,?) ON CONFLICT(execution_id) DO NOTHING")
+                                    .bind(execution_id).bind(chrono::Utc::now()).bind(bytes.len() as i64).bind(digest).execute(&db.pool).await {
+                                    tracing::warn!("Could not publish closed-log review proof: {}", error);
+                                }
+                            }
+                        }
                         break;
                     }
                     LogMsg::JsonPatch(patch) => {
@@ -398,6 +538,7 @@ pub fn spawn_stream_raw_logs_to_storage(
                         )
                         .await
                         {
+                            review_log_valid = false;
                             tracing::warn!(
                                 "Failed to update sub-agent jobs for execution {}: {}",
                                 execution_id,
@@ -655,7 +796,7 @@ async fn read_execution_logs_for_execution(
     }
 }
 
-async fn execution_log_file_path_for_execution(
+pub async fn execution_log_file_path_for_execution(
     pool: &SqlitePool,
     execution_id: Uuid,
 ) -> Result<Option<std::path::PathBuf>> {

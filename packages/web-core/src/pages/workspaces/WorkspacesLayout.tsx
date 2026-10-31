@@ -6,9 +6,8 @@ import {
   useSyncExternalStore,
 } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useQueryClient } from '@tanstack/react-query';
-import { workspacesApi } from '@/shared/lib/api';
-import { workspaceSummaryKeys } from '@/shared/hooks/workspaceSummaryKeys';
+import { useLocation } from '@tanstack/react-router';
+import { useMarkWorkspaceSeen } from '@/shared/hooks/useMarkWorkspaceSeen';
 import { Group, Layout, Panel, Separator } from 'react-resizable-panels';
 import type { CreateModeInitialState } from '@/shared/types/createMode';
 import { useWorkspaceContext } from '@/shared/hooks/useWorkspaceContext';
@@ -31,6 +30,9 @@ import {
   type WorkspacesMainContainerHandle,
 } from './WorkspacesMainContainer';
 import { RightSidebar } from './RightSidebar';
+import { DotSidechat } from './DotSidechat';
+import { isDotSidechatEnabled } from '@/shared/lib/dotSidechat';
+import { ResizableSidePane } from '@vibe/ui/components/ResizableSidePane';
 import { ChangesPanelContainer } from './ChangesPanelContainer';
 import { CreateChatBoxContainer } from '@/shared/components/CreateChatBoxContainer';
 import { PreviewBrowserContainer } from './PreviewBrowserContainer';
@@ -111,7 +113,12 @@ export function WorkspacesLayout() {
       : 'create-mode-seed-default';
 
   const isMobile = useIsMobile();
-  const [mobileTab, setMobileTab] = useMobileActiveTab();
+  const hash = useLocation({ select: (location) => location.hash });
+  const [storedMobileTab, setMobileTab] = useMobileActiveTab();
+  const mobileTab =
+    isDotSidechatEnabled && workspaceId && !isCreateMode && hash === 'dot'
+      ? 'dot'
+      : storedMobileTab;
   useEffect(() => {
     if (isMobile)
       setMobileTab(workspaceId || isCreateMode ? 'chat' : 'workspaces');
@@ -142,7 +149,6 @@ export function WorkspacesLayout() {
     setLeftMainPanelVisible,
   } = useWorkspacePanelState(isCreateMode ? undefined : workspaceId);
 
-  const queryClient = useQueryClient();
   const visibleWorkspaceId =
     !isCreateMode &&
     !isLoading &&
@@ -151,30 +157,7 @@ export function WorkspacesLayout() {
       ? workspaceId
       : undefined;
 
-  useEffect(() => {
-    if (!visibleWorkspaceId) return;
-
-    const markVisibleChatSeen = () => {
-      if (document.visibilityState !== 'visible') return;
-      void workspacesApi
-        .markSeen(visibleWorkspaceId)
-        .then(() => {
-          void queryClient.invalidateQueries({
-            queryKey: workspaceSummaryKeys.all,
-          });
-        })
-        .catch((error) => {
-          console.warn('Failed to mark workspace as seen:', error);
-        });
-    };
-
-    // Clear when the chat is opened, not when polling reports a new completion.
-    markVisibleChatSeen();
-    document.addEventListener('visibilitychange', markVisibleChatSeen);
-    return () => {
-      document.removeEventListener('visibilitychange', markVisibleChatSeen);
-    };
-  }, [visibleWorkspaceId, queryClient]);
+  useMarkWorkspaceSeen(visibleWorkspaceId);
 
   const {
     config,
@@ -333,6 +316,17 @@ export function WorkspacesLayout() {
               )}
             </div>
 
+            {isDotSidechatEnabled && selectedWorkspace && !isCreateMode && (
+              <div
+                className={cn(
+                  'flex-1 min-h-0 overflow-hidden',
+                  mobileTab !== 'dot' && 'hidden'
+                )}
+              >
+                <DotSidechat workspaceId={selectedWorkspace.id} />
+              </div>
+            )}
+
             {/* Git tab */}
             <div
               className={cn(
@@ -345,6 +339,7 @@ export function WorkspacesLayout() {
                   rightMainPanelMode={rightMainPanelMode}
                   selectedWorkspace={selectedWorkspace}
                   repos={repos}
+                  showDot={false}
                 />
               )}
             </div>
@@ -444,13 +439,13 @@ export function WorkspacesLayout() {
           </Group>
 
           {isRightSidebarVisible && !isCreateMode && (
-            <div className="w-[300px] shrink-0 h-full overflow-hidden">
+            <ResizableSidePane enabled={isDotSidechatEnabled}>
               <RightSidebar
                 rightMainPanelMode={rightMainPanelMode}
                 selectedWorkspace={selectedWorkspace}
                 repos={repos}
               />
-            </div>
+            </ResizableSidePane>
           )}
         </div>
       </ChangesViewProvider>

@@ -1,0 +1,108 @@
+{
+  "version": 1,
+  "activation_approved": false,
+  "state_volume": {
+    "path": "/mnt/vk-storage",
+    "uuid": "REPLACE_SSD_UUID",
+    "source": "/dev/example-ssd",
+    "fstype": "ext4"
+  },
+  "state_root": "/mnt/vk-storage/watcher-events",
+  "sources": {
+    "mcp-disk": {
+      "enabled": true,
+      "driver": "disk-existing-v1",
+      "max_age_seconds": 300
+    },
+    "printer-status": {
+      "enabled": true,
+      "driver": "events-v1",
+      "max_age_seconds": 120
+    }
+  },
+  "targets": {
+    "disk-space": {
+      "enabled": false,
+      "workspace_id": "00000000-0000-4000-8000-000000000001",
+      "session_id": "00000000-0000-4000-8000-000000000002",
+      "executor_config_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "max_validation_age_seconds": 60,
+      "cooldown_seconds": 1800,
+      "vibe_db": "/private/existing-vibe-db.sqlite",
+      "owner_roots": [
+        "/private/existing-owner-worktree"
+      ]
+    },
+    "printer-owner": {
+      "enabled": false,
+      "workspace_id": "00000000-0000-4000-8000-000000000003",
+      "session_id": "00000000-0000-4000-8000-000000000004",
+      "executor_config_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "max_validation_age_seconds": 60,
+      "cooldown_seconds": 1800,
+      "vibe_db": "/private/existing-vibe-db.sqlite",
+      "owner_roots": [
+        "/private/existing-owner-worktree"
+      ]
+    }
+  },
+  "rules": {
+    "os-low": {
+      "source": "mcp-disk",
+      "target": "disk-space",
+      "resource": "os",
+      "trigger": {
+        "field": "available",
+        "op": "lt",
+        "value": 10000000000
+      },
+      "recover": {
+        "field": "available",
+        "op": "ge",
+        "value": 12000000000
+      },
+      "recovery_samples": 3,
+      "min_sample_seconds": 60,
+      "max_gap_seconds": 150,
+      "instruction": "Use existing Disk Space cleanup authority and per-action approval rules; preserve active work and protected data."
+    },
+    "ssd-low": {
+      "source": "mcp-disk",
+      "target": "disk-space",
+      "resource": "ssd",
+      "trigger": {
+        "field": "available",
+        "op": "lt",
+        "value": 25000000000
+      },
+      "recover": {
+        "field": "available",
+        "op": "ge",
+        "value": 27000000000
+      },
+      "recovery_samples": 3,
+      "min_sample_seconds": 60,
+      "max_gap_seconds": 150,
+      "instruction": "Use existing Disk Space cleanup authority and per-action approval rules; preserve active work and protected data."
+    },
+    "printer-error": {
+      "source": "printer-status",
+      "target": "printer-owner",
+      "resource": "mk4",
+      "trigger": {
+        "field": "state",
+        "op": "eq",
+        "value": "error"
+      },
+      "recover": {
+        "field": "state",
+        "op": "eq",
+        "value": "operational"
+      },
+      "recovery_samples": 3,
+      "min_sample_seconds": 60,
+      "max_gap_seconds": 150,
+      "instruction": "Report the printer status only. Do not heat, move, start, resume, pause or cancel anything."
+    }
+  }
+}

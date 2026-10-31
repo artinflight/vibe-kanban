@@ -4,8 +4,6 @@ use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
-#[cfg(not(feature = "qa-mode"))]
-use crate::profile::ExecutorConfigs;
 use crate::{
     actions::Executable,
     approvals::ExecutorApprovalService,
@@ -71,6 +69,41 @@ impl Executable for CodingAgentFollowUpRequest {
             // not race a previously queued launch into creating fresh authority.
             if let Some(controller) = crate::capacity::controller::configured()? {
                 let mut controller = controller.lock().await;
+                let goal = controller
+                    .state
+                    .goals
+                    .values()
+                    .find(|g| {
+                        g.grant
+                            .as_ref()
+                            .is_some_and(|grant| grant.id.to_string() == capacity.id)
+                    })
+                    .ok_or_else(|| std::io::Error::other("No durable launch identity"))?;
+                if let Some(binding) = &goal.binding
+                    && (env.get("VK_SESSION_ID").map(String::as_str)
+                        != Some(goal.session_id.to_string().as_str())
+                        || env.get("VK_WORKSPACE_ID").map(String::as_str)
+                            != Some(binding.workspace_id.to_string().as_str())
+                        || env
+                            .repo_context
+                            .workspace_root
+                            .canonicalize()?
+                            .to_string_lossy()
+                            != binding.workspace_root
+                        || self.working_dir != binding.agent_working_dir
+                        || !effective_dir
+                            .canonicalize()?
+                            .starts_with(&binding.workspace_root))
+                {
+                    return Err(ExecutorError::Io(std::io::Error::other(
+                        "Launcher session/workspace binding changed",
+                    )));
+                }
+                goal.revalidate(
+                    Some(uuid::Uuid::parse_str(execution_id).map_err(std::io::Error::other)?),
+                    false,
+                )
+                .await?;
                 controller.bind(
                     capacity,
                     &self.session_id,
@@ -79,7 +112,9 @@ impl Executable for CodingAgentFollowUpRequest {
                 )?;
                 execution_env.capacity = Some(capacity.prepare(execution_id)?);
             } else {
-                execution_env.capacity = Some(capacity.prepare(execution_id)?);
+                return Err(ExecutorError::Io(std::io::Error::other(
+                    "Scheduled launch requires its durable controller",
+                )));
             }
         }
         let env = &execution_env;
@@ -101,14 +136,8 @@ impl Executable for CodingAgentFollowUpRequest {
 
         #[cfg(not(feature = "qa-mode"))]
         {
-            let profile_id = self.executor_config.profile_id();
-            let mut agent = ExecutorConfigs::get_cached()
-                .get_coding_agent(&profile_id)
-                .ok_or(ExecutorError::UnknownExecutorType(profile_id.to_string()))?;
-
-            if self.executor_config.has_overrides() {
-                agent.apply_overrides(&self.executor_config);
-            }
+            let mut agent =
+                crate::original_worker::resolve_for_launch(&self.executor_config, env).await?;
             agent.use_approvals(approvals.clone());
 
             agent

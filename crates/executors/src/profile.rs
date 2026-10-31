@@ -273,6 +273,11 @@ impl ExecutorConfigs {
         EXECUTOR_PROFILES_CACHE.read().unwrap().clone()
     }
 
+    #[cfg(test)]
+    pub(crate) fn replace_cache_for_test(configs: Self) -> Self {
+        std::mem::replace(&mut *EXECUTOR_PROFILES_CACHE.write().unwrap(), configs)
+    }
+
     /// Reload executor profiles cache
     pub fn reload() {
         let mut cache = EXECUTOR_PROFILES_CACHE.write().unwrap();

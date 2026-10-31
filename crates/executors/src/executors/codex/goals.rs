@@ -16,6 +16,8 @@ pub const INSTRUCTIONS: &str = include_str!("goal_instructions.md");
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct NativeGoal {
+    #[serde(default, rename = "id", alias = "goalId")]
+    pub goal_id: String,
     pub thread_id: String,
     pub objective: String,
     pub status: String,
@@ -300,7 +302,12 @@ pub async fn save(thread_id: &str, progress: &Progress) -> io::Result<()> {
     tokio::fs::create_dir_all(path.parent().expect("progress parent")).await?;
     let temporary = path.with_extension(format!("{}.tmp", uuid::Uuid::new_v4()));
     tokio::fs::write(&temporary, serde_json::to_vec(progress)?).await?;
-    tokio::fs::rename(temporary, path).await
+    tokio::fs::File::open(&temporary).await?.sync_all().await?;
+    tokio::fs::rename(temporary, &path).await?;
+    tokio::fs::File::open(path.parent().expect("progress parent"))
+        .await?
+        .sync_all()
+        .await
 }
 
 #[cfg(test)]

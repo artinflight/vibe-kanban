@@ -8,7 +8,6 @@ import {
   CaretRightIcon,
   CircleDashedIcon,
   DotsThreeIcon,
-  FlagIcon,
   PlusIcon,
 } from '@phosphor-icons/react';
 import { cn } from '../lib/cn';
@@ -17,6 +16,7 @@ import { KanbanBadge } from './KanbanBadge';
 import { KanbanAssignee, type KanbanAssigneeUser } from './KanbanAssignee';
 import { RunningDots } from './RunningDots';
 import { PrBadge, type PrBadgeStatus } from './PrBadge';
+import { IssueReviewFlagButton } from './IssueReviewFlagButton';
 import {
   RelationshipBadge,
   type RelationshipDisplayType,
@@ -128,6 +128,8 @@ export type KanbanCardContentProps<TTag extends KanbanTag = KanbanTag> = {
   displayId: string;
   title: string;
   primaryContent?: ReactNode;
+  isExpanded?: boolean;
+  onToggleExpanded?: () => void;
   description?: string | null;
   priority: PriorityLevel | null;
   tags: KanbanTag[];
@@ -150,6 +152,8 @@ export function KanbanCardContent<TTag extends KanbanTag = KanbanTag>({
   displayId,
   title,
   primaryContent,
+  isExpanded = true,
+  onToggleExpanded,
   description,
   priority,
   tags,
@@ -229,12 +233,41 @@ export function KanbanCardContent<TTag extends KanbanTag = KanbanTag>({
     <div
       className={cn(
         'mobile-task-content flex flex-col gap-half min-w-0',
+        !isExpanded && 'pb-6',
         className
       )}
     >
       {/* Row 1: Task ID + compact issue controls */}
       <div className="mobile-task-metadata flex items-center justify-between gap-half">
         <div className="flex items-center gap-half min-w-0">
+          {onToggleExpanded && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleExpanded();
+              }}
+              onMouseDown={(e) => e.stopPropagation()}
+              onMouseUp={(e) => e.stopPropagation()}
+              onKeyDown={(e) => e.stopPropagation()}
+              className="shrink-0 rounded-sm p-half -m-half text-low transition-colors hover:bg-secondary hover:text-normal focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brand"
+              aria-expanded={isExpanded}
+              aria-label={t(
+                isExpanded ? 'kanban.collapseIssue' : 'kanban.expandIssue',
+                { displayId }
+              )}
+              title={t(
+                isExpanded ? 'kanban.collapseIssue' : 'kanban.expandIssue',
+                { displayId }
+              )}
+            >
+              {isExpanded ? (
+                <CaretDownIcon className="size-icon-xs" weight="bold" />
+              ) : (
+                <CaretRightIcon className="size-icon-xs" weight="bold" />
+              )}
+            </button>
+          )}
           {isSubIssue && (
             <span className="text-sm text-low">
               {t('kanban.subIssueIndicator')}
@@ -272,29 +305,10 @@ export function KanbanCardContent<TTag extends KanbanTag = KanbanTag>({
               <PriorityIcon priority={priority} />
             ))}
           {onNeedsReviewFlagToggle && (
-            <button
-              type="button"
-              onClick={onNeedsReviewFlagToggle}
-              onMouseDown={(e) => e.stopPropagation()}
-              className={cn(
-                'shrink-0 rounded-sm p-half transition-colors hover:bg-secondary',
-                needsReviewFlag
-                  ? 'text-warning hover:text-warning'
-                  : 'text-low hover:text-normal'
-              )}
-              aria-pressed={needsReviewFlag}
-              aria-label={
-                needsReviewFlag ? 'Clear needs review' : 'Mark needs review'
-              }
-              title={
-                needsReviewFlag ? 'Clear needs review' : 'Mark needs review'
-              }
-            >
-              <FlagIcon
-                className="size-icon-xs"
-                weight={needsReviewFlag ? 'fill' : 'regular'}
-              />
-            </button>
+            <IssueReviewFlagButton
+              flagged={needsReviewFlag}
+              onToggle={onNeedsReviewFlagToggle}
+            />
           )}
           {!isMobile &&
             (onAssigneeClick ? (
@@ -334,13 +348,13 @@ export function KanbanCardContent<TTag extends KanbanTag = KanbanTag>({
         </div>
       </div>
 
-      {/* Row 2: Visible workspace content, or the issue title as a fallback. */}
-      {primaryContent ?? (
+      {/* Collapsed cards reveal the issue title instead of workspace content. */}
+      {(isExpanded ? primaryContent : null) ?? (
         <div className="flex items-start justify-between gap-half">
           <span className="min-w-0 flex-1 whitespace-normal break-words text-base leading-tight text-normal">
             {title}
           </span>
-          {previewDescription && (
+          {isExpanded && previewDescription && (
             <button
               type="button"
               onClick={(e) => {
@@ -369,21 +383,24 @@ export function KanbanCardContent<TTag extends KanbanTag = KanbanTag>({
       )}
 
       {/* Row 3: Description (optional, collapsed by default) */}
-      {!primaryContent && previewDescription && isDescriptionExpanded && (
-        <p
-          className={cn(
-            'text-sm text-low m-0',
-            isMobile
-              ? 'leading-tight line-clamp-2'
-              : 'leading-relaxed line-clamp-4'
-          )}
-        >
-          {previewDescription}
-        </p>
-      )}
+      {isExpanded &&
+        !primaryContent &&
+        previewDescription &&
+        isDescriptionExpanded && (
+          <p
+            className={cn(
+              'text-sm text-low m-0',
+              isMobile
+                ? 'leading-tight line-clamp-2'
+                : 'leading-relaxed line-clamp-4'
+            )}
+          >
+            {previewDescription}
+          </p>
+        )}
 
       {/* Row 4: PRs and relationships */}
-      {(pullRequests.length > 0 || relationships.length > 0) && (
+      {isExpanded && (pullRequests.length > 0 || relationships.length > 0) && (
         <div className="flex items-center gap-half flex-wrap min-w-0">
           {pullRequests.slice(0, 2).map((pr) => (
             <PrBadge

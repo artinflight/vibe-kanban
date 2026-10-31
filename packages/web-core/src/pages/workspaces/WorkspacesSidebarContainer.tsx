@@ -3,6 +3,12 @@ import { useQueries, useQuery } from '@tanstack/react-query';
 import { useParams } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { useWorkspaceContext } from '@/shared/hooks/useWorkspaceContext';
+import { useAppNavigation } from '@/shared/hooks/useAppNavigation';
+import { useDotProjectNotifications } from '@/shared/hooks/useDotNotifications';
+import {
+  projectDotNotices,
+  openProjectDotChat,
+} from '@/shared/lib/dotProjectNotices';
 import { useUserContext } from '@/shared/hooks/useUserContext';
 import { useScratch } from '@/shared/hooks/useScratch';
 import { useAllOrganizationProjects } from '@/shared/hooks/useAllOrganizationProjects';
@@ -34,6 +40,15 @@ import {
 import { PropertyDropdown } from '@vibe/ui/components/PropertyDropdown';
 import { PrimaryButton } from '@vibe/ui/components/PrimaryButton';
 import { IconButton } from '@vibe/ui/components/IconButton';
+import { WorkspaceProjectFilter } from '@vibe/ui/components/WorkspaceProjectFilter';
+import {
+  WorkspaceProjectFilterChips,
+  type WorkspaceProjectFilterChipOption,
+} from '@vibe/ui/components/WorkspaceProjectFilterChips';
+import {
+  getLocalProjectColor,
+  getProjectAbbreviation,
+} from '@vibe/ui/lib/projectAppearance';
 import {
   ButtonGroup,
   ButtonGroupItem,
@@ -57,6 +72,13 @@ import { useRemoteCloudHostsAppBarModel } from '@/shared/hooks/useRemoteCloudHos
 import { useUserSystem } from '@/shared/hooks/useUserSystem';
 import { projectsApi } from '@/shared/lib/api';
 import { paginateWorkspaceSidebar } from './workspaceSidebarPagination';
+import { useLocalParticipants } from '@/shared/hooks/useLocalParticipants';
+import {
+  filterWorkspaceAssignments,
+  workspaceAssigneesById,
+  type WorkspaceAssignmentFilter,
+  type WorkspaceAssignmentLink,
+} from './workspaceAssignmentFilter';
 
 export type WorkspaceLayoutMode = 'flat' | 'accordion';
 
@@ -269,8 +291,70 @@ export function WorkspacesSidebarContainer({
   } = useWorkspaceContext();
 
   const isMobile = useIsMobile();
+  const navigation = useAppNavigation();
+  const projectNotifications = useDotProjectNotifications();
   const { hosts: remoteCloudHosts } = useRemoteCloudHostsAppBarModel();
-  const { hostId: routeHostId } = useParams({ strict: false });
+  const {
+    hostId: routeHostId,
+    projectId: routeProjectId,
+    issueId: routeIssueId,
+    workspaceId: routeWorkspaceId,
+  } = useParams({ strict: false });
+  const participants = useLocalParticipants();
+  const localAssignmentView = participants.isLocalOnlySession && !routeHostId;
+  const [assignmentFilter, setAssignmentFilter] =
+    useState<WorkspaceAssignmentFilter>(() => {
+      try {
+        return localStorage.getItem('vk-workspace-assignment-filter') === 'all'
+          ? 'all'
+          : 'mine';
+      } catch {
+        return 'mine';
+      }
+    });
+  const assignmentQuery = useQuery({
+    queryKey: ['local-workspace-assignments'],
+    queryFn: async () => {
+      const response = await fetch('/v1/fallback/workspace_assignments', {
+        cache: 'no-store',
+      });
+      if (!response.ok) throw new Error('Unable to load workspace assignments');
+      const data = (await response.json()) as {
+        workspace_assignments: WorkspaceAssignmentLink[];
+      };
+      return data.workspace_assignments;
+    },
+    enabled: localAssignmentView,
+    staleTime: 1000,
+    refetchInterval: 3000,
+  });
+  const assigneesById = useMemo(
+    () => workspaceAssigneesById(assignmentQuery.data ?? []),
+    [assignmentQuery.data]
+  );
+  const assignmentUserId = localAssignmentView
+    ? (participants.data?.current_user_id ?? null)
+    : null;
+  const assignmentActiveWorkspaces = useMemo(
+    () =>
+      filterWorkspaceAssignments(
+        activeWorkspaces,
+        assignmentFilter,
+        assignmentUserId,
+        assigneesById
+      ),
+    [activeWorkspaces, assignmentFilter, assignmentUserId, assigneesById]
+  );
+  const assignmentArchivedWorkspaces = useMemo(
+    () =>
+      filterWorkspaceAssignments(
+        archivedWorkspaces,
+        assignmentFilter,
+        assignmentUserId,
+        assigneesById
+      ),
+    [archivedWorkspaces, assignmentFilter, assignmentUserId, assigneesById]
+  );
   const setMobileActiveTab = useUiPreferencesStore((s) => s.setMobileActiveTab);
   const [searchQuery, setSearchQuery] = useState('');
   const [showArchive, setShowArchive] = usePersistedExpanded(
@@ -291,6 +375,10 @@ export function WorkspacesSidebarContainer({
     ? 'accordion'
     : 'flat';
   const toggleLayoutMode = () => setAccordionLayout(!isAccordionLayout);
+
+  const localProjectCustomizations = useUiPreferencesStore(
+    (s) => s.localProjectCustomizations
+  );
 
   // Workspace sidebar filters + sort
   const workspaceFilters = useUiPreferencesStore((s) => s.workspaceFilters);
@@ -327,6 +415,16 @@ export function WorkspacesSidebarContainer({
     enabled: isLocalAuthBypassed,
     staleTime: 60_000,
   });
+  const projectNotices = useMemo(
+    () =>
+      routeHostId
+        ? []
+        : projectDotNotices(projectNotifications, [
+            ...localProjects,
+            ...(allRemoteProjects ?? []),
+          ]),
+    [routeHostId, projectNotifications, localProjects, allRemoteProjects]
+  );
   const localProjectWorkspaceQueries = useQueries({
     queries: localProjects.map((project) => ({
       queryKey: ['project-workspaces', project.id],
@@ -397,7 +495,7 @@ export function WorkspacesSidebarContainer({
   }, [allRemoteProjects, remoteProjectByLocalId, orgNameById]);
 
   // Build flat project options for MultiSelectDropdown
-  const projectOptions = useMemo<MultiSelectDropdownOption<string>[]>(() => {
+  const projectOptions = useMemo<WorkspaceProjectFilterChipOption[]>(() => {
     const linkedLocalProjectIds = new Set(localProjectByLocalId.values());
 
     return [
@@ -415,11 +513,24 @@ export function WorkspacesSidebarContainer({
             .map((project) => ({
               value: project.id,
               label: project.name,
+              abbreviation: getProjectAbbreviation({
+                name: project.name,
+                abbreviation:
+                  localProjectCustomizations[project.id]?.abbreviation,
+              }),
+              color:
+                localProjectCustomizations[project.id]?.color ??
+                getLocalProjectColor(project.id),
             }))
         : projectGroups.flatMap((g) =>
             g.projects.map((p) => ({
               value: p.id,
               label: p.name,
+              abbreviation: getProjectAbbreviation({
+                name: p.name,
+                abbreviation: localProjectCustomizations[p.id]?.abbreviation,
+              }),
+              color: localProjectCustomizations[p.id]?.color ?? p.color,
               renderOption: () => (
                 <div className="flex items-center gap-base">
                   <span
@@ -436,6 +547,7 @@ export function WorkspacesSidebarContainer({
     isLocalAuthBypassed,
     localProjectByLocalId,
     localProjects,
+    localProjectCustomizations,
     projectGroups,
     t,
   ]);
@@ -453,14 +565,20 @@ export function WorkspacesSidebarContainer({
   // Reset display limit when search, filter, or sort state changes
   useEffect(() => {
     setDisplayLimit(PAGE_SIZE);
-  }, [searchQuery, showArchive, workspaceFilters, workspaceSort]);
+  }, [
+    searchQuery,
+    showArchive,
+    workspaceFilters,
+    workspaceSort,
+    assignmentFilter,
+  ]);
 
   const searchLower = searchQuery.toLowerCase();
   const isSearching = searchQuery.length > 0;
 
   // Apply sidebar filters (project + PR), then search
   const filteredActiveWorkspaces = useMemo(() => {
-    let result = activeWorkspaces;
+    let result = assignmentActiveWorkspaces;
 
     // Project filter
     if (workspaceFilters.projectIds.length > 0) {
@@ -493,10 +611,15 @@ export function WorkspacesSidebarContainer({
     }
 
     return result;
-  }, [activeWorkspaces, workspaceFilters, projectByLocalId, searchLower]);
+  }, [
+    assignmentActiveWorkspaces,
+    workspaceFilters,
+    projectByLocalId,
+    searchLower,
+  ]);
 
   const filteredArchivedWorkspaces = useMemo(() => {
-    let result = archivedWorkspaces;
+    let result = assignmentArchivedWorkspaces;
 
     if (workspaceFilters.projectIds.length > 0) {
       const includeNoProject =
@@ -526,7 +649,12 @@ export function WorkspacesSidebarContainer({
     }
 
     return result;
-  }, [archivedWorkspaces, workspaceFilters, projectByLocalId, searchLower]);
+  }, [
+    assignmentArchivedWorkspaces,
+    workspaceFilters,
+    projectByLocalId,
+    searchLower,
+  ]);
 
   const sortWorkspaces = useCallback(
     (workspaces: Workspace[]) =>
@@ -664,6 +792,44 @@ export function WorkspacesSidebarContainer({
     running: PERSIST_KEYS.workspacesSidebarRunning,
   };
 
+  const assignmentControls = localAssignmentView ? (
+    <div className="flex flex-col gap-half">
+      <ButtonGroup>
+        {(['mine', 'all'] as const).map((filter) => (
+          <button
+            type="button"
+            aria-pressed={assignmentFilter === filter}
+            className={cn(
+              'px-base py-half text-sm transition-colors',
+              isMobile && 'min-h-12 min-w-16',
+              assignmentFilter === filter
+                ? 'bg-secondary text-normal'
+                : 'text-low hover:text-normal'
+            )}
+            key={filter}
+            onClick={() => {
+              setAssignmentFilter(filter);
+              try {
+                localStorage.setItem('vk-workspace-assignment-filter', filter);
+              } catch {
+                /* Keep the current choice in memory. */
+              }
+            }}
+          >
+            {filter === 'mine'
+              ? t('kanban.workspaceSidebar.assignmentMine')
+              : t('kanban.workspaceSidebar.assignmentAll')}
+          </button>
+        ))}
+      </ButtonGroup>
+      {(assignmentQuery.isError || participants.isError) && (
+        <span role="status" className="text-xs text-low">
+          {t('kanban.workspaceSidebar.assignmentsUnavailable')}
+        </span>
+      )}
+    </div>
+  ) : null;
+
   const searchControls = (
     <>
       <div className="shrink-0">
@@ -678,7 +844,7 @@ export function WorkspacesSidebarContainer({
             aria-label={sortDialogTitle}
             title={sortDialogTitle}
             className={cn(
-              '!h-cta !px-half !py-0',
+              isMobile ? '!h-12 !w-12 !p-0' : '!h-cta !px-half !py-0',
               hasNonDefaultSort && 'text-brand hover:text-brand'
             )}
             iconClassName="size-icon-lg"
@@ -688,7 +854,7 @@ export function WorkspacesSidebarContainer({
             onClick={() => setIsFilterDialogOpen(true)}
             aria-label={filterDialogTitle}
             title={filterDialogTitle}
-            className="!h-cta !px-half !py-0"
+            className={isMobile ? '!h-12 !w-12 !p-0' : '!h-cta !px-half !py-0'}
             iconClassName={cn('size-icon-lg', hasActiveFilters && 'text-brand')}
           />
         </div>
@@ -734,11 +900,24 @@ export function WorkspacesSidebarContainer({
 
   return (
     <WorkspacesSidebar
+      projectDotNotices={projectNotices}
+      onOpenProjectChat={(projectId) => {
+        if (isMobile) setMobileActiveTab('chat');
+        openProjectDotChat(
+          projectId,
+          navigation.goToProject,
+          !routeIssueId && !routeWorkspaceId ? routeProjectId : null
+        );
+      }}
       workspaces={paginatedActiveWorkspaces}
       activityWorkspaces={sortedActiveWorkspaces}
-      totalWorkspacesCount={activeWorkspaces.length}
+      totalWorkspacesCount={sortedActiveWorkspaces.length}
       archivedWorkspaces={paginatedArchivedWorkspaces}
-      isLoading={isWorkspacesListLoading}
+      isLoading={
+        isWorkspacesListLoading ||
+        (localAssignmentView &&
+          (assignmentQuery.isLoading || participants.isLoading))
+      }
       selectedWorkspaceId={selectedWorkspaceId ?? null}
       onSelectWorkspace={handleSelectWorkspace}
       searchQuery={searchQuery}
@@ -754,6 +933,22 @@ export function WorkspacesSidebarContainer({
       onLoadMore={handleLoadMore}
       hasMoreWorkspaces={hasMoreWorkspaces && !isSearching}
       searchControls={searchControls}
+      projectFilter={
+        isMobile ? (
+          <WorkspaceProjectFilter
+            options={projectOptions}
+            projectIds={workspaceFilters.projectIds}
+            onChange={setWorkspaceProjectFilter}
+          />
+        ) : (
+          <WorkspaceProjectFilterChips
+            options={projectOptions}
+            projectIds={workspaceFilters.projectIds}
+            onChange={setWorkspaceProjectFilter}
+          />
+        )
+      }
+      assignmentControls={assignmentControls}
       onOpenWorkspaceActions={handleOpenWorkspaceActions}
       persistKeys={sidebarPersistKeys}
       activeRemoteHost={activeRemoteHost}

@@ -1,0 +1,29 @@
+import ast,json,tempfile,unittest
+from pathlib import Path
+from types import SimpleNamespace
+D=Path(__file__).resolve().parent
+nodes=[n for n in ast.parse((D/'promote.py').read_text()).body if isinstance(n,ast.FunctionDef) and n.name in ('freeze_cu','resume_cu')]
+class FenceTests(unittest.TestCase):
+ def setUp(self):
+  self.temp=tempfile.TemporaryDirectory(dir=D/'test-tmp');self.path=Path(self.temp.name);self.calls=[];self.state={'MainPID':'11','InvocationID':'same','FreezerState':'running'}
+  def ctl(action,name):
+   self.calls.append(action);self.state['FreezerState']='frozen'if action=='freeze'else'running'
+  def save(name,value):(self.path/name).write_text(json.dumps(value))
+  self.g=dict(D=self.path,json=json,unit=lambda name:self.state.copy(),save=save,progress=lambda *a,**k:None,exact_owner=lambda *a:None,cu_idle=lambda:dict(runningCount=0))
+  exec(compile(ast.Module(body=nodes,type_ignores=[]),'fresh-fence','exec'),self.g)
+  self.ops=SimpleNamespace(h=SimpleNamespace(ctl=ctl));self.initial={'units':{'codexusage-preview.service':self.state.copy()}}
+ def tearDown(self):self.temp.cleanup()
+ def test_freeze_records_original_owner_before_action_and_resumes_same_process(self):
+  self.g['freeze_cu'](self.ops,self.initial);self.assertTrue((self.path/'CU_FENCE.private.json').exists());self.g['resume_cu'](self.ops);self.assertEqual(self.calls,['freeze','thaw']);self.assertEqual(self.state['MainPID'],'11')
+ def test_unowned_monitor_is_never_thawed(self):
+  self.g['resume_cu'](self.ops);self.assertEqual(self.calls,[])
+ def test_changed_owner_is_preserved(self):
+  self.g['freeze_cu'](self.ops,self.initial);self.state['InvocationID']='new'
+  with self.assertRaises(AssertionError):self.g['resume_cu'](self.ops)
+  self.assertEqual(self.calls,['freeze'])
+ def test_busy_monitor_refuses_before_any_action(self):
+  def busy():raise AssertionError('automation active')
+  self.g['cu_idle']=busy
+  with self.assertRaises(AssertionError):self.g['freeze_cu'](self.ops,self.initial)
+  self.assertFalse((self.path/'CU_FENCE.private.json').exists());self.assertEqual(self.calls,[])
+if __name__=='__main__':unittest.main()

@@ -47,6 +47,62 @@ mod command;
 pub mod container;
 mod copy;
 pub mod pty;
+mod turn_preservation;
+
+/// Validate operator-pinned identity before any migration, config write or writable DB open.
+/// This also protects callers that construct a deployment without the server CLI.
+pub async fn validate_startup_identity() -> Result<(), std::io::Error> {
+    let assets = utils::assets::asset_dir_path();
+    let config_path = assets.join("config.json");
+    let workspace_root = match std::fs::read(&config_path) {
+        Ok(bytes) => {
+            let config: serde_json::Value = serde_json::from_slice(&bytes)
+                .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
+            let raw = String::from_utf8(bytes)
+                .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
+            let effective = Config::from(raw);
+            let requested = config.get("workspace_dir").and_then(|p| p.as_str());
+            if requested != effective.workspace_dir.as_deref() {
+                return Err(std::io::Error::new(
+                    std::io::ErrorKind::InvalidData,
+                    "configuration migration changed workspace identity",
+                ));
+            }
+            match config.get("workspace_dir") {
+                None | Some(serde_json::Value::Null) => {
+                    WorktreeManager::get_default_worktree_base_dir()
+                }
+                Some(serde_json::Value::String(path)) if !path.trim().is_empty() => {
+                    utils::path::expand_tilde(path)
+                }
+                _ => {
+                    return Err(std::io::Error::new(
+                        std::io::ErrorKind::InvalidData,
+                        "invalid workspace_dir",
+                    ));
+                }
+            }
+        }
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+            WorktreeManager::get_default_worktree_base_dir()
+        }
+        Err(e) => return Err(e),
+    };
+    let pin = std::env::var_os("VK_RUNTIME_IDENTITY_FILE")
+        .filter(|p| !p.is_empty())
+        .ok_or_else(|| {
+            std::io::Error::new(
+                std::io::ErrorKind::PermissionDenied,
+                "VK_RUNTIME_IDENTITY_FILE is required; runtime identity is not established",
+            )
+        })?;
+    let identity = utils::runtime_safety::validate_runtime_identity(
+        std::path::Path::new(&pin),
+        &assets.join("db.v2.sqlite"),
+        &workspace_root,
+    )?;
+    DBService::verify_dataset_identity(&identity.database, &identity.dataset_id).await
+}
 
 const EVENT_HISTORY_BYTES: usize = 1024 * 1024;
 const EVENT_CHANNEL_CAPACITY: usize = 1024;
@@ -68,6 +124,9 @@ fn is_pr_monitor_disabled() -> bool {
     let normalized = value.trim().to_ascii_lowercase();
     matches!(normalized.as_str(), "1" | "true" | "yes" | "on")
 }
+
+// This recovery release cannot enable automatic attachment deletion at runtime.
+pub const AUTOMATIC_ATTACHMENT_CLEANUP: bool = false;
 
 fn attachment_cleanup_disabled(value: Option<&str>) -> bool {
     value.is_some_and(|value| {
@@ -109,6 +168,7 @@ pub struct LocalDeployment {
     ssh_config: Arc<russh::server::Config>,
     pty: PtyService,
     pr_sync_notify: Arc<Notify>,
+    background_started: Arc<OnceLock<()>>,
 }
 
 #[derive(Debug, Clone)]
@@ -120,6 +180,9 @@ struct PendingHandoff {
 #[async_trait]
 impl Deployment for LocalDeployment {
     async fn new(shutdown: CancellationToken) -> Result<Self, DeploymentError> {
+        validate_startup_identity().await?;
+        let fixed_holds = services::services::fixed_baseline::startup_holds()
+            .map_err(|e| DeploymentError::Other(anyhow::anyhow!(e)))?;
         // Run one-time process logs migration from DB to filesystem
         services::services::execution_process::migrate_execution_logs_to_files()
             .await
@@ -179,10 +242,16 @@ impl Deployment for LocalDeployment {
             DBService::new_with_after_connect(hook).await?
         };
 
+        services::services::fixed_baseline::verify_startup_holds(&db.pool, &fixed_holds)
+            .await
+            .map_err(|e| DeploymentError::Other(anyhow::anyhow!(e)))?;
         let file = FileService::new(db.clone().pool)?;
-        if attachment_cleanup_disabled(std::env::var("DISABLE_ATTACHMENT_CLEANUP").ok().as_deref())
+        if !AUTOMATIC_ATTACHMENT_CLEANUP
+            || attachment_cleanup_disabled(
+                std::env::var("DISABLE_ATTACHMENT_CLEANUP").ok().as_deref(),
+            )
         {
-            tracing::info!("Startup attachment cleanup disabled by DISABLE_ATTACHMENT_CLEANUP");
+            tracing::info!("Automatic attachment cleanup disabled pending human QA");
         } else {
             let file_service = file.clone();
             tokio::spawn(async move {
@@ -195,6 +264,7 @@ impl Deployment for LocalDeployment {
 
         let approvals = Approvals::new();
         let queued_message_service = QueuedMessageService::new();
+        queued_message_service.restore(&db.pool).await?;
 
         let oauth_credentials = Arc::new(OAuthCredentials::new(credentials_path()));
         if let Err(e) = oauth_credentials.load().await {
@@ -258,7 +328,6 @@ impl Deployment for LocalDeployment {
         let workspace_manager = WorkspaceManager::new(db.clone());
         let container = LocalContainerService::new(
             db.clone(),
-            workspace_manager.clone(),
             msg_stores.clone(),
             config.clone(),
             git.clone(),
@@ -288,18 +357,6 @@ impl Deployment for LocalDeployment {
             None => None,
         };
         let pr_sync_notify = Arc::new(Notify::new());
-        if is_pr_monitor_disabled() {
-            tracing::info!("PR monitor disabled by VK_DISABLE_PR_MONITOR");
-        } else {
-            let db = db.clone();
-            let analytics = analytics.as_ref().map(|s| AnalyticsContext {
-                user_id: user_id.clone(),
-                analytics_service: s.clone(),
-            });
-            let container = container.clone();
-            let rc = remote_client.clone().ok();
-            PrMonitorService::spawn(db, analytics, container, rc, pr_sync_notify.clone()).await;
-        }
 
         let deployment = Self {
             config,
@@ -331,9 +388,35 @@ impl Deployment for LocalDeployment {
             ssh_config,
             pty,
             pr_sync_notify,
+            background_started: Arc::new(OnceLock::new()),
         };
 
         Ok(deployment)
+    }
+
+    async fn start_background_services(&self) -> Result<(), DeploymentError> {
+        if self.background_started.set(()).is_err() {
+            return Ok(());
+        }
+        self.container
+            .spawn_github_sync_worker(self.shutdown.clone());
+        if is_pr_monitor_disabled() {
+            tracing::info!("PR monitor disabled by VK_DISABLE_PR_MONITOR");
+        } else {
+            let analytics = self.analytics.as_ref().map(|s| AnalyticsContext {
+                user_id: self.user_id.clone(),
+                analytics_service: s.clone(),
+            });
+            PrMonitorService::spawn(
+                self.db.clone(),
+                analytics,
+                self.container.clone(),
+                self.remote_client.clone().ok(),
+                self.pr_sync_notify.clone(),
+            )
+            .await;
+        }
+        Ok(())
     }
 
     fn user_id(&self) -> &str {

@@ -39,6 +39,8 @@ tokio = { workspace = true }
 globwalk = "0.9"
 portable-pty = "0.8"
 
+sqlx = { version = "0.8.6", features = ["runtime-tokio", "sqlite", "uuid"] }
+
 [build-dependencies]
 dotenv = "0.15"
 

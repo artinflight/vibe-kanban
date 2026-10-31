@@ -1,3 +1,4 @@
+import type { DotActivityState } from './DotActivityIndicators';
 import type { ReactNode } from 'react';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import {
@@ -14,6 +15,7 @@ import { usePhoneLayout } from '../lib/usePhoneLayout';
 import { cn } from '../lib/cn';
 import { InputField } from './InputField';
 import { WorkspaceSummary } from './WorkspaceSummary';
+import { ProjectDotNotices, type ProjectDotNotice } from './ProjectDotNotices';
 import type { AppBarHostStatus } from './AppBar';
 import {
   CollapsibleSectionHeader,
@@ -22,9 +24,10 @@ import {
 
 export type WorkspaceLayoutMode = 'flat' | 'accordion';
 
-export interface WorkspacesSidebarWorkspace {
+export interface WorkspacesSidebarWorkspace extends DotActivityState {
   id: string;
   name: string;
+  dotManaged?: boolean;
   filesChanged?: number;
   linesAdded?: number;
   linesRemoved?: number;
@@ -53,6 +56,8 @@ const DEFAULT_PERSIST_KEYS: WorkspacesSidebarPersistKeys = {
 };
 
 export interface WorkspacesSidebarProps {
+  projectDotNotices?: ProjectDotNotice[];
+  onOpenProjectChat?: (projectId: string) => void;
   workspaces: WorkspacesSidebarWorkspace[];
   /** Complete filtered collection for phone activity counts before pagination. */
   activityWorkspaces?: WorkspacesSidebarWorkspace[];
@@ -84,6 +89,9 @@ export interface WorkspacesSidebarProps {
   hasMoreWorkspaces?: boolean;
   /** Controls rendered beside the search input */
   searchControls?: ReactNode;
+  /** Direct project controls rendered above the workspace list. */
+  projectFilter?: ReactNode;
+  assignmentControls?: ReactNode;
   /** Callback for opening workspace actions */
   onOpenWorkspaceActions?: (workspaceId: string) => void;
   /** Persist keys for collapsible sections */
@@ -162,6 +170,9 @@ function WorkspaceList({
           hasPendingApproval={workspace.hasPendingApproval}
           hasRunningDevServer={workspace.hasRunningDevServer}
           hasUnseenActivity={workspace.hasUnseenActivity}
+          dotManaged={workspace.dotManaged}
+          dotUnreadCount={workspace.dotUnreadCount}
+          dotNeedsAttentionCount={workspace.dotNeedsAttentionCount}
           activeSubagentCount={workspace.activeSubagentCount}
           unresolvedSubagentCount={workspace.unresolvedSubagentCount}
           latestProcessCompletedAt={workspace.latestProcessCompletedAt}
@@ -176,6 +187,8 @@ function WorkspaceList({
 }
 
 export function WorkspacesSidebar({
+  projectDotNotices = [],
+  onOpenProjectChat,
   workspaces,
   activityWorkspaces,
   totalWorkspacesCount,
@@ -196,6 +209,8 @@ export function WorkspacesSidebar({
   onLoadMore,
   hasMoreWorkspaces = false,
   searchControls,
+  projectFilter,
+  assignmentControls,
   onOpenWorkspaceActions,
   persistKeys = DEFAULT_PERSIST_KEYS,
   activeRemoteHost = null,
@@ -204,8 +219,13 @@ export function WorkspacesSidebar({
   const { t } = useTranslation(['tasks', 'common']);
   const phone = usePhoneLayout();
   const [phoneCategory, setPhoneCategory] = useState('all');
-  const [listOptionsOpen, setListOptionsOpen] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const projectNotices = onOpenProjectChat
+    ? projectDotNotices.filter((item) => item.unreadCount > 0)
+    : [];
+  const projectRows = (
+    <ProjectDotNotices notices={projectNotices} onOpen={onOpenProjectChat} />
+  );
   const handleOpenWorkspaceActions = useCallback(
     (workspaceId: string) => {
       onOpenWorkspaceActions?.(workspaceId);
@@ -233,23 +253,23 @@ export function WorkspacesSidebar({
       const collection = phone
         ? (activityWorkspaces ?? workspaces)
         : workspaces;
-      // Running workspaces should stay in the "Running" section even if unseen.
-      const hasSubagentActivity = (ws: WorkspacesSidebarWorkspace) =>
+      // Running is an activity view, independent of explicit actions/approvals.
+      // Ordinary unread stays a badge while active; idle unread is actionable.
+      const isActive = (ws: WorkspacesSidebarWorkspace) =>
+        !!ws.isRunning ||
         (ws.activeSubagentCount ?? 0) + (ws.unresolvedSubagentCount ?? 0) > 0;
       const needsAttention = (ws: WorkspacesSidebarWorkspace) =>
+        (ws.dotNeedsAttentionCount ?? 0) > 0 ||
         ws.hasPendingApproval ||
-        (ws.hasUnseenActivity && !ws.isRunning && !hasSubagentActivity(ws));
+        (!isActive(ws) &&
+          (ws.hasUnseenActivity || (ws.dotUnreadCount ?? 0) > 0));
 
       return {
         raisedHandWorkspaces: collection.filter((ws) => needsAttention(ws)),
         idleWorkspaces: collection.filter(
-          (ws) =>
-            !ws.isRunning && !hasSubagentActivity(ws) && !needsAttention(ws)
+          (ws) => !isActive(ws) && !needsAttention(ws)
         ),
-        runningWorkspaces: collection.filter(
-          (ws) =>
-            (ws.isRunning || hasSubagentActivity(ws)) && !needsAttention(ws)
-        ),
+        runningWorkspaces: collection.filter(isActive),
       };
     }, [workspaces, activityWorkspaces, phone]);
 
@@ -306,17 +326,12 @@ export function WorkspacesSidebar({
             onAction={() => onSearchChange('')}
             placeholder={t('common:workspaces.searchPlaceholder')}
           />
-          <button
-            type="button"
-            aria-label="List options"
-            aria-expanded={listOptionsOpen}
-            onClick={() => setListOptionsOpen(!listOptionsOpen)}
-          >
-            Options
-          </button>
         </div>
-        {listOptionsOpen && (
-          <div className="phone-list-options">{searchControls}</div>
+        {(projectFilter || searchControls) && (
+          <div className="phone-workspace-filters">
+            {projectFilter}
+            {searchControls}
+          </div>
         )}
         {activeRemoteHost && (
           <button
@@ -327,6 +342,9 @@ export function WorkspacesSidebar({
             {activeRemoteHost.name} · {activeRemoteHost.status}
           </button>
         )}
+        {assignmentControls && (
+          <div className="px-base pb-half">{assignmentControls}</div>
+        )}
         {!showArchive && (
           <div
             className="phone-filter-chips phone-workspace-tabs"
@@ -334,7 +352,11 @@ export function WorkspacesSidebar({
           >
             {[
               ['all', 'All', (activityWorkspaces ?? workspaces).length],
-              ['attention', 'Attention', raisedHandWorkspaces.length],
+              [
+                'attention',
+                'Attention',
+                raisedHandWorkspaces.length + projectNotices.length,
+              ],
               ['running', 'Running', runningWorkspaces.length],
               ['ready', 'Ready', idleWorkspaces.length],
             ].map(([id, label, count]) => (
@@ -367,38 +389,44 @@ export function WorkspacesSidebar({
                   onClick={onSelectCreate}
                 />
               )}
+              {!showArchive && phoneCategory === 'attention' && projectRows}
               <WorkspaceList
                 workspaces={rows}
                 selectedWorkspaceId={selectedWorkspaceId}
                 onSelectWorkspace={onSelectWorkspace}
                 onOpenWorkspaceActions={handleOpenWorkspaceActions}
               />
-              {!rows.length && (
-                <div className="phone-empty-state">
-                  <StackIcon size={32} />
-                  <h3>
-                    {searchQuery
-                      ? 'No matching workspaces'
-                      : showArchive
-                        ? 'Your archive is empty'
-                        : phoneCategory === 'attention'
-                          ? 'You’re all caught up'
-                          : phoneCategory === 'running'
-                            ? 'No agents running'
-                            : 'No workspaces here yet'}
-                  </h3>
-                  <p>
-                    {searchQuery
-                      ? 'Try a different name or clear your search.'
-                      : 'Conversations and agent activity appear here.'}
-                  </p>
-                  {searchQuery && (
-                    <button type="button" onClick={() => onSearchChange('')}>
-                      Clear search
-                    </button>
-                  )}
-                </div>
-              )}
+              {!rows.length &&
+                !(
+                  phoneCategory === 'attention' &&
+                  !showArchive &&
+                  projectNotices.length
+                ) && (
+                  <div className="phone-empty-state">
+                    <StackIcon size={32} />
+                    <h3>
+                      {searchQuery
+                        ? 'No matching workspaces'
+                        : showArchive
+                          ? 'Your archive is empty'
+                          : phoneCategory === 'attention'
+                            ? 'You’re all caught up'
+                            : phoneCategory === 'running'
+                              ? 'No agents running'
+                              : 'No workspaces here yet'}
+                    </h3>
+                    <p>
+                      {searchQuery
+                        ? 'Try a different name or clear your search.'
+                        : 'Conversations and agent activity appear here.'}
+                    </p>
+                    {searchQuery && (
+                      <button type="button" onClick={() => onSearchChange('')}>
+                        Clear search
+                      </button>
+                    )}
+                  </div>
+                )}
             </>
           )}
         </div>
@@ -430,11 +458,15 @@ export function WorkspacesSidebar({
           actions={headerActions}
           className="border-b"
         />
+        {assignmentControls && (
+          <div className="px-base">{assignmentControls}</div>
+        )}
         {!isLoading && (
           <div className="px-base flex items-stretch gap-half">
             <div className="flex-1 min-w-0">
               <InputField
                 variant="search"
+                ariaLabel="Search workspaces"
                 value={searchQuery}
                 onChange={onSearchChange}
                 placeholder={t('common:workspaces.searchPlaceholder')}
@@ -442,6 +474,10 @@ export function WorkspacesSidebar({
             </div>
             {searchControls}
           </div>
+        )}
+
+        {projectFilter && (
+          <div className="px-base min-w-0">{projectFilter}</div>
         )}
 
         {activeRemoteHost && (
@@ -524,6 +560,9 @@ export function WorkspacesSidebar({
                   hasPendingApproval={workspace.hasPendingApproval}
                   hasRunningDevServer={workspace.hasRunningDevServer}
                   hasUnseenActivity={workspace.hasUnseenActivity}
+                  dotManaged={workspace.dotManaged}
+                  dotUnreadCount={workspace.dotUnreadCount}
+                  dotNeedsAttentionCount={workspace.dotNeedsAttentionCount}
                   latestProcessCompletedAt={workspace.latestProcessCompletedAt}
                   latestProcessStatus={workspace.latestProcessStatus}
                   prStatus={workspace.prStatus}
@@ -543,6 +582,7 @@ export function WorkspacesSidebar({
               defaultExpanded={true}
             >
               <div className="flex flex-col gap-base py-half">
+                {projectRows}
                 {draftTitle && (
                   <WorkspaceSummary
                     name={draftTitle}
@@ -551,7 +591,9 @@ export function WorkspacesSidebar({
                     onClick={onSelectCreate}
                   />
                 )}
-                {raisedHandWorkspaces.length === 0 && !draftTitle ? (
+                {raisedHandWorkspaces.length === 0 &&
+                !draftTitle &&
+                !projectNotices.length ? (
                   <span className="text-sm text-low opacity-60 pl-base">
                     {t('common:workspaces.noWorkspaces')}
                   </span>
@@ -613,6 +655,14 @@ export function WorkspacesSidebar({
         ) : (
           /* Active workspaces flat view */
           <div className="flex flex-col gap-base">
+            {projectNotices.length > 0 && (
+              <CollapsibleSectionHeader
+                title={t('common:workspaces.needsAttention')}
+                defaultExpanded
+              >
+                <div className="py-half">{projectRows}</div>
+              </CollapsibleSectionHeader>
+            )}
             <div className="flex items-center justify-between px-base">
               <span className="text-sm font-medium text-low">
                 {t('common:workspaces.active')}
@@ -641,6 +691,9 @@ export function WorkspacesSidebar({
                 hasPendingApproval={workspace.hasPendingApproval}
                 hasRunningDevServer={workspace.hasRunningDevServer}
                 hasUnseenActivity={workspace.hasUnseenActivity}
+                dotManaged={workspace.dotManaged}
+                dotUnreadCount={workspace.dotUnreadCount}
+                dotNeedsAttentionCount={workspace.dotNeedsAttentionCount}
                 latestProcessCompletedAt={workspace.latestProcessCompletedAt}
                 latestProcessStatus={workspace.latestProcessStatus}
                 prStatus={workspace.prStatus}

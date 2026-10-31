@@ -132,12 +132,13 @@ export default defineConfig({
     proxy: {
       '/api': {
         target: `http://localhost:${process.env.BACKEND_PORT || '3001'}`,
-        changeOrigin: true,
+        // Keep Host aligned with Origin for backend same-origin validation.
+        changeOrigin: false,
         ws: true,
       },
       '/v1': {
         target: `http://localhost:${process.env.BACKEND_PORT || '3001'}`,
-        changeOrigin: true,
+        changeOrigin: false,
         ws: true,
       },
     },
@@ -153,5 +154,5 @@ export default defineConfig({
   optimizeDeps: {
     exclude: ['wa-sqlite'],
   },
-  build: { sourcemap: true },
+  build: { sourcemap: false },
 });

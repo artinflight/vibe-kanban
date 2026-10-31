@@ -1,7 +1,9 @@
 pub mod client;
 pub mod delegation;
+pub mod elicitation;
 pub mod goals;
 pub mod jsonrpc;
+mod native_review;
 pub mod normalize_logs;
 #[cfg(any(target_os = "linux", test))]
 mod process_capacity;
@@ -28,6 +30,26 @@ pub fn codex_home() -> Option<PathBuf> {
     dirs::home_dir().map(|home| home.join(".codex"))
 }
 
+fn stable_app_server_process_cwd(current_dir: &Path) -> PathBuf {
+    stable_app_server_process_cwd_with_home(current_dir, dirs::home_dir())
+}
+
+fn stable_app_server_process_cwd_with_home(
+    current_dir: &Path,
+    home_dir: Option<PathBuf>,
+) -> PathBuf {
+    home_dir
+        .filter(|home| home.is_absolute())
+        .unwrap_or_else(|| {
+            current_dir
+                .ancestors()
+                .last()
+                .filter(|root| root.is_absolute())
+                .unwrap_or_else(|| Path::new("/"))
+                .to_path_buf()
+        })
+}
+
 pub(crate) fn resolve_model(model: Option<&str>) -> (Option<&str>, bool) {
     match model.and_then(|m| m.strip_suffix("-fast")) {
         Some(base) => (Some(base), true),
@@ -35,38 +57,13 @@ pub(crate) fn resolve_model(model: Option<&str>) -> (Option<&str>, bool) {
     }
 }
 
-fn host_blocks_unprivileged_userns() -> bool {
-    if let Ok(value) = env::var("VK_ASSUME_USERNS_BLOCKED") {
-        let value = value.trim().to_ascii_lowercase();
-        if matches!(value.as_str(), "1" | "true" | "yes" | "on") {
-            return true;
-        }
-        if matches!(value.as_str(), "0" | "false" | "no" | "off") {
-            return false;
-        }
-    }
-
-    std::fs::read_to_string("/proc/sys/kernel/apparmor_restrict_unprivileged_userns")
-        .map(|value| value.trim() == "1")
-        .unwrap_or(false)
-}
-
+// Never turn a sandbox setup problem into full access. Native Codex must fail
+// closed if the requested boundary cannot be established on this host.
 fn effective_sandbox_mode(requested: Option<&SandboxMode>) -> Option<V2SandboxMode> {
-    let requested = match requested {
-        None | Some(SandboxMode::Auto) => V2SandboxMode::WorkspaceWrite,
+    Some(match requested {
         Some(SandboxMode::ReadOnly) => V2SandboxMode::ReadOnly,
-        Some(SandboxMode::WorkspaceWrite) => V2SandboxMode::WorkspaceWrite,
-        Some(SandboxMode::DangerFullAccess) => V2SandboxMode::DangerFullAccess,
-    };
-
-    if host_blocks_unprivileged_userns() && requested != V2SandboxMode::DangerFullAccess {
-        tracing::warn!(
-            "Host blocks unprivileged user namespaces; forcing Codex sandbox to danger-full-access"
-        );
-        Some(V2SandboxMode::DangerFullAccess)
-    } else {
-        Some(requested)
-    }
+        _ => V2SandboxMode::WorkspaceWrite,
+    })
 }
 
 pub(crate) fn fork_params_from(thread_id: String, params: ThreadStartParams) -> ThreadForkParams {
@@ -201,14 +198,146 @@ pub fn codex_execution_limit_error() -> Option<ExecutorError> {
     }
 }
 
+pub fn original_worker_capacity_available() -> bool {
+    active_codex_execution_count().saturating_add(delegation::active_count()) < 7
+        && codex_execution_limit_error().is_none()
+}
+
 #[cfg(test)]
 mod tests {
+
+    #[test]
+    fn pr18_stable_process_cwd_preserves_workspace_rpc() {
+        let cwd = Path::new("/synthetic/worktree");
+        assert_eq!(
+            stable_app_server_process_cwd_with_home(cwd, Some("/synthetic/home".into())),
+            PathBuf::from("/synthetic/home")
+        );
+        let codex: Codex = serde_json::from_value(serde_json::json!({})).unwrap();
+        let request = serde_json::to_value(codex.build_thread_start_params(cwd)).unwrap();
+        assert_eq!(request["cwd"], "/synthetic/worktree");
+        assert_eq!(request["approvalPolicy"], "on-request");
+    }
+    #[test]
+    fn pr18_missing_or_relative_home_uses_absolute_root() {
+        for home in [None, Some(PathBuf::from("relative-home"))] {
+            assert_eq!(
+                stable_app_server_process_cwd_with_home(Path::new("/synthetic/worktree"), home),
+                PathBuf::from("/")
+            );
+        }
+        assert_eq!(
+            stable_app_server_process_cwd_with_home(Path::new("relative/worktree"), None),
+            PathBuf::from("/")
+        );
+    }
+    #[tokio::test]
+    async fn pr18_actual_direct_process_and_thread_rpc_keep_distinct_cwds() {
+        struct Restore(Option<std::ffi::OsString>);
+        impl Drop for Restore {
+            fn drop(&mut self) {
+                unsafe {
+                    if let Some(v) = &self.0 {
+                        std::env::set_var("VK_USE_SYSTEMD_RUN", v)
+                    } else {
+                        std::env::remove_var("VK_USE_SYSTEMD_RUN")
+                    }
+                }
+            }
+        }
+        let _restore = Restore(std::env::var_os("VK_USE_SYSTEMD_RUN"));
+        unsafe { std::env::set_var("VK_USE_SYSTEMD_RUN", "0") };
+        let work = tempfile::tempdir().unwrap();
+        let workspace = work.path().to_path_buf();
+        let expected = stable_app_server_process_cwd(&workspace);
+        std::fs::create_dir_all(&expected).unwrap();
+        let codex: Codex = serde_json::from_value(serde_json::json!({})).unwrap();
+        let params = codex.build_thread_start_params(&workspace);
+        let fixture = include_str!("codex/fixtures/new-error-resume.json");
+        let command=CommandParts::new("python3".into(),vec!["-u".into(),"-c".into(),r#"
+import json,os,sys
+fixture=json.loads(sys.argv[1])
+for line in sys.stdin:
+ q=json.loads(line)
+ if 'id' not in q: continue
+ method=q.get('method')
+ if method=='initialize': result={'userAgent':'codex_cli_rs/0.159.2 (synthetic)','platformFamily':'unix','platformOs':'linux'}
+ elif method=='config/read': result={'config':{}}
+ elif method=='thread/start':
+  result=dict(fixture);result['cwd']=q['params']['cwd'];result['thread']=dict(fixture['thread']);result['thread']['turns']=[]
+ elif method=='synthetic/process-cwd': result={'cwd':os.getcwd()}
+ elif method=='thread/goal/get': result={'goal':None}
+ else: result={}
+ print(json.dumps({'id':q['id'],'result':result}),flush=True)
+"#.into(),fixture.into()]);
+        let env = ExecutionEnv::new(crate::env::RepoContext::default(), false, String::new());
+        let (done, receipt) = tokio::sync::oneshot::channel();
+        let expected_workspace = workspace.clone();
+        let mut child = codex
+            .spawn_app_server(&workspace, command, &env, move |client, _| async move {
+                let reply = client.thread_start(params).await?;
+                assert_eq!(reply.cwd, expected_workspace);
+                let actual = client
+                    .delegation_request("synthetic/process-cwd", serde_json::json!({}))
+                    .await?;
+                assert_eq!(actual["cwd"], expected.to_string_lossy().as_ref());
+                let _ = done.send(());
+                Ok(())
+            })
+            .await
+            .unwrap();
+        let outcome = tokio::time::timeout(std::time::Duration::from_secs(15), receipt).await;
+        if let Some(cancel) = child.cancel.take() {
+            cancel.cancel();
+        }
+        let _ = child.child.kill().await;
+        let _ = child.child.wait().await;
+        outcome.unwrap().unwrap();
+    }
     use super::*;
     use crate::{
         executors::{BaseCodingAgent, StandardCodingAgentExecutor},
         model_selector::PermissionPolicy,
         profile::ExecutorConfig,
     };
+
+    #[tokio::test]
+    async fn uncertain_native_setup_does_not_emit_an_automatic_stop_signal() {
+        let dir = tempfile::tempdir().unwrap();
+        unsafe {
+            std::env::set_var("VK_USE_SYSTEMD_RUN", "0");
+        }
+        let codex: Codex = serde_json::from_value(serde_json::json!({})).unwrap();
+        let (entered, receipt) = tokio::sync::oneshot::channel();
+        let command = CommandParts::new("python3".into(), vec!["-u".into(), "-c".into(), r#"
+import json,sys
+for line in sys.stdin:
+    q=json.loads(line)
+    if q.get('method')=='initialize':
+        print(json.dumps({'id':q['id'],'result':{'userAgent':'codex_cli_rs/0.159.2 (synthetic)','platformFamily':'unix','platformOs':'linux'}}),flush=True)
+"#.into()]);
+        let env = ExecutionEnv::new(crate::env::RepoContext::default(), false, String::new());
+        let mut spawned = codex
+            .spawn_app_server(dir.path(), command, &env, move |_, _| async move {
+                let _ = entered.send(());
+                Err(ExecutorError::NativeReceiptUnknown)
+            })
+            .await
+            .unwrap();
+        receipt.await.unwrap();
+        let mut exit = spawned.exit_signal.take().unwrap();
+        assert!(
+            tokio::time::timeout(std::time::Duration::from_millis(100), &mut exit)
+                .await
+                .is_err(),
+            "unknown receipt must not tell the container to kill work"
+        );
+        assert!(spawned.child.inner().try_wait().unwrap().is_none());
+        // Isolated fixture teardown only; production uncertainty performs neither.
+        spawned.cancel.take().unwrap().cancel();
+        spawned.child.kill().await.unwrap();
+        spawned.child.wait().await.unwrap();
+    }
 
     #[test]
     fn codex_max_active_execution_parser_requires_positive_integer() {
@@ -227,6 +356,49 @@ mod tests {
             None
         );
         assert_eq!(parse_codex_max_active_executions(None), None);
+    }
+
+    #[test]
+    fn native_review_covers_stale_profiles_and_never_upgrades_read_only() {
+        for sandbox in ["danger-full-access", "auto", "workspace-write", "read-only"] {
+            for policy in ["never", "on-failure", "on-request", "unless-trusted"] {
+                let codex: Codex = serde_json::from_value(
+                    serde_json::json!({"sandbox":sandbox,"ask_for_approval":policy}),
+                )
+                .unwrap();
+                let params = codex.build_thread_start_params(std::path::Path::new("/workspace"));
+                assert_eq!(params.approval_policy, Some(V2AskForApproval::OnRequest));
+                assert_eq!(
+                    params.sandbox,
+                    Some(if sandbox == "read-only" {
+                        V2SandboxMode::ReadOnly
+                    } else {
+                        V2SandboxMode::WorkspaceWrite
+                    })
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn native_review_permission_overrides_preserve_explicit_on_request() {
+        use crate::{executors::StandardCodingAgentExecutor, model_selector::PermissionPolicy};
+        for (policy, expected) in [
+            (PermissionPolicy::Auto, V2AskForApproval::OnRequest),
+            (PermissionPolicy::Supervised, V2AskForApproval::OnRequest),
+        ] {
+            let mut codex: Codex = serde_json::from_value(serde_json::json!({
+                "ask_for_approval":"on-request", "sandbox":"workspace-write"
+            }))
+            .unwrap();
+            let mut config = ExecutorConfig::new(crate::executors::BaseCodingAgent::Codex);
+            config.permission_policy = Some(policy);
+            codex.apply_overrides(&config);
+            let start = codex.build_thread_start_params(std::path::Path::new("/workspace"));
+            assert_eq!(start.approval_policy, Some(expected));
+            let resume = super::resume_params_from("fixture".into(), start);
+            assert_eq!(resume.approval_policy, Some(expected));
+        }
     }
 
     #[test]
@@ -368,7 +540,7 @@ mod tests {
         });
 
         assert!(!codex.plan);
-        assert_eq!(codex.ask_for_approval, Some(AskForApproval::Never));
+        assert_eq!(codex.ask_for_approval, Some(AskForApproval::OnRequest));
     }
 }
 
@@ -532,7 +704,7 @@ impl StandardCodingAgentExecutor for Codex {
         if let Some(permission_policy) = &executor_config.permission_policy {
             match permission_policy {
                 crate::model_selector::PermissionPolicy::Auto => {
-                    self.ask_for_approval = Some(AskForApproval::Never);
+                    self.ask_for_approval = Some(AskForApproval::OnRequest);
                     self.plan = false;
                 }
                 crate::model_selector::PermissionPolicy::Supervised => {
@@ -840,6 +1012,22 @@ impl StandardCodingAgentExecutor for Codex {
     }
 }
 
+fn resolved_service_tier_label(tier: Option<ServiceTier>) -> &'static str {
+    match tier {
+        Some(ServiceTier::Fast) => "fast",
+        Some(ServiceTier::Flex) => "flex",
+        None => "standard",
+    }
+}
+
+#[cfg(test)]
+#[test]
+fn resolved_service_tier_observer_labels() {
+    assert_eq!(resolved_service_tier_label(Some(ServiceTier::Fast)), "fast");
+    assert_eq!(resolved_service_tier_label(Some(ServiceTier::Flex)), "flex");
+    assert_eq!(resolved_service_tier_label(None), "standard");
+}
+
 impl Codex {
     pub fn base_command() -> String {
         std::env::var("VK_CODEX_BASE_COMMAND")
@@ -859,19 +1047,15 @@ impl Codex {
     }
 
     fn build_thread_start_params(&self, cwd: &Path) -> ThreadStartParams {
-        let sandbox = effective_sandbox_mode(self.sandbox.as_ref());
+        let sandbox = effective_sandbox_mode(if self.plan {
+            Some(&SandboxMode::ReadOnly)
+        } else {
+            self.sandbox.as_ref()
+        });
 
-        let approval_policy = match self.ask_for_approval.as_ref() {
-            None if matches!(self.sandbox.as_ref(), None | Some(SandboxMode::Auto)) => {
-                // match the Auto preset in codex
-                Some(V2AskForApproval::OnRequest)
-            }
-            None => None,
-            Some(AskForApproval::UnlessTrusted) => Some(V2AskForApproval::UnlessTrusted),
-            Some(AskForApproval::OnFailure) => Some(V2AskForApproval::OnFailure),
-            Some(AskForApproval::OnRequest) => Some(V2AskForApproval::OnRequest),
-            Some(AskForApproval::Never) => Some(V2AskForApproval::Never),
-        };
+        // Auto means native review, never unconditional acceptance. This also
+        // replaces stale Never/OnFailure selections in old profiles/sessions.
+        let approval_policy = Some(V2AskForApproval::OnRequest);
 
         let mut config = self.build_config_overrides();
         // V1 top-level params that moved into config overrides in v2
@@ -1091,6 +1275,14 @@ impl Codex {
                 }
             };
 
+        crate::original_worker::native_started(
+            telemetry_env,
+            &thread_id,
+            &resolved_model,
+            &serde_json::to_value(resolved_effort)?,
+        )
+        .await?;
+
         if let Some(decision) = &routing
             && decision.mode == crate::routing::RoutingMode::Auto
         {
@@ -1178,6 +1370,23 @@ impl Codex {
                 }
             }
         }
+        if let Some(execution) = telemetry_env.get("VK_EXECUTION_PROCESS_ID")
+            && crate::provider_failover::observer::provider_launch(execution)?
+        {
+            if resolved_provider != "openai" {
+                return Err(ExecutorError::Io(std::io::Error::other(
+                    "Provider return requires native OpenAI route",
+                )));
+            }
+            let native_effort = serde_json::to_value(resolved_effort)?;
+            crate::provider_failover::observer::codex_started(
+                execution,
+                &thread_id,
+                &resolved_model,
+                native_effort.as_str(),
+                resolved_service_tier_label(resolved_tier),
+            )?;
+        }
         client.set_resolved_model(resolved_model);
         client.register_session(&thread_id).await?;
         client.refresh_goal().await?;
@@ -1221,6 +1430,26 @@ impl Codex {
         }
 
         let (program_path, mut args) = command_parts.into_resolved().await?;
+        let continuation = crate::original_worker::bind(env).await?;
+        if let Some(binding) = &continuation {
+            let command = serde_json::to_string(&std::env::current_exe()?.to_string_lossy())?;
+            let tool_args = serde_json::to_string(&[
+                "--bounded-worker-stdio",
+                binding
+                    .socket
+                    .to_str()
+                    .ok_or_else(|| std::io::Error::other("Invalid capability path"))?,
+            ])?;
+            args.extend([
+                "-c".into(),
+                format!("mcp_servers.vk_fixed_original_worker.command={command}"),
+                "-c".into(),
+                format!("mcp_servers.vk_fixed_original_worker.args={tool_args}"),
+                "-c".into(),
+                "mcp_servers.vk_fixed_original_worker.env_vars=[\"VK_BOUNDED_SOCKET_TOKEN\"]"
+                    .into(),
+            ]);
+        }
         if env
             .get("VK_ROUTING_DECISION")
             .and_then(|v| serde_json::from_str::<crate::routing::RoutingDecision>(v).ok())
@@ -1246,9 +1475,17 @@ impl Codex {
                 "-c".into(),
                 "agents.max_concurrent_threads_per_session=1".into(),
             ]);
+            if env.capacity.as_ref().is_some_and(|c| c.first_run.is_some()) {
+                for key in crate::capacity::policy::first_run_retry_keys()? {
+                    args.extend(["-c".into(), format!("{key}=0")]);
+                }
+            }
         }
 
         let mut effective_env = env.clone().with_profile(&self.cmd);
+        if let Some(binding) = continuation {
+            effective_env.insert("VK_BOUNDED_SOCKET_TOKEN", binding.token);
+        }
         if let Some(capacity) = effective_env.capacity.clone() {
             if let Some(root) = crate::capacity::policy::configured_build_roots(&capacity)?.first()
             {
@@ -1276,6 +1513,7 @@ impl Codex {
                 )));
             }
         }
+        let process_cwd = stable_app_server_process_cwd(current_dir);
         let mut transient_unit_name = None;
         let mut child = if systemd_run::enabled() {
             let mut env_vars = effective_env.vars.clone();
@@ -1308,7 +1546,7 @@ impl Codex {
             if let Some(capacity) = &effective_env.capacity {
                 systemd_run::spawn_capacity_unit(
                     &unit_name,
-                    current_dir,
+                    &process_cwd,
                     &program_path,
                     &args,
                     &env_vars,
@@ -1318,7 +1556,7 @@ impl Codex {
                 systemd_run::spawn_transient_unit(
                     &unit_name,
                     "VK Codex execution",
-                    current_dir,
+                    &process_cwd,
                     &program_path,
                     &args,
                     &env_vars,
@@ -1337,7 +1575,7 @@ impl Codex {
                 .stdin(std::process::Stdio::piped())
                 .stdout(std::process::Stdio::piped())
                 .stderr(std::process::Stdio::piped())
-                .current_dir(current_dir)
+                .current_dir(&process_cwd)
                 .env("NPM_CONFIG_LOGLEVEL", "error")
                 .env("NODE_NO_WARNINGS", "1")
                 .env("NO_COLOR", "1")
@@ -1360,10 +1598,9 @@ impl Codex {
         let (exit_signal_tx, exit_signal_rx) = tokio::sync::oneshot::channel();
         let cancel = tokio_util::sync::CancellationToken::new();
 
-        let auto_approve = matches!(
-            (&self.sandbox, &self.ask_for_approval),
-            (Some(SandboxMode::DangerFullAccess), None)
-        );
+        // Native reviewer decisions and mandatory human requests must never
+        // be replaced by Vibe's historical full-access approval shortcut.
+        let auto_approve = false;
         let plan_mode = self.plan;
         let approvals = self.approvals.clone();
         let repo_context = env.repo_context.clone();
@@ -1374,6 +1611,7 @@ impl Codex {
             .and_then(|value| Uuid::parse_str(value).ok());
         let cancel_for_task = cancel.clone();
         let capacity_for_task = effective_env.capacity.clone();
+        let original_worker_guard = env.original_worker.clone();
 
         tokio::spawn(async move {
             let exit_signal_tx = ExitSignalSender::new(exit_signal_tx);
@@ -1390,6 +1628,10 @@ impl Codex {
                 commit_reminder_prompt,
                 cancel_for_task.clone(),
             );
+            client.enable_native_review();
+            if let Some(guard) = original_worker_guard {
+                client.set_original_worker_guard(guard);
+            }
             let rpc_peer = JsonRpcPeer::spawn(
                 child_stdin,
                 child_stdout,
@@ -1413,6 +1655,7 @@ impl Codex {
             }
             .await;
             if result.is_err()
+                && !matches!(result, Err(ExecutorError::NativeReceiptUnknown))
                 && let Some(execution_process_id) = execution_process_id
             {
                 AppServerClient::unregister_active_execution(execution_process_id);
@@ -1424,6 +1667,17 @@ impl Codex {
                         .await;
                 }
                 match &err {
+                    ExecutorError::NativeReceiptUnknown => {
+                        // The container interprets an exit signal (including a
+                        // dropped sender) as permission to kill the group. Keep
+                        // the RPC reader and active execution registered until
+                        // actual completion/disconnect or an explicit owner stop.
+                        log_writer
+                            .log_raw(&Error::launch_error(err.to_string()).raw())
+                            .await
+                            .ok();
+                        return;
+                    }
                     ExecutorError::Io(io_err)
                         if io_err.kind() == std::io::ErrorKind::BrokenPipe =>
                     {

@@ -8,7 +8,6 @@ See [VK_CAPACITY_CONCURRENCY.md](VK_CAPACITY_CONCURRENCY.md) for API semantics,
 real two-native-goal acceptance and deployment requirements. Companion CU changes
 are required; old clients keep one slot. Production deployment remains operator-owned.
 
-
 ## 2026-08-20T00:00:00Z | vk/13c6-vk-multi-line-pa | multiline paste line-ending hardening
 
 - Intent: fix the remaining multiline paste failure in VK prompt fields after
@@ -237,6 +236,7 @@ are required; old clients keep one slot. Production deployment remains operator-
   - backup retention validation was not rerun during the sync cleanup step
   - full test validation was not rerun after the final cleanup behavior adjustments
   - pinned workspaces still keep the existing auto-archive exception
+
 # 2026-04-19 Workspace Polling Hotfix
 
 - A second frontend churn path was identified after the earlier kanban/sidebar fix.
@@ -1125,7 +1125,6 @@ are required; old clients keep one slot. Production deployment remains operator-
 
 2026-09-11: User authorized PR #103 integration into staging for the staging management agent to deploy at the next restart. Fresh fetch and rebase found the branch current with staging; recovery revision CI is green. Deployment handoff explicitly rejects the superseded binary and preserves goal backup requirements.
 
-
 ## 2026-09-12 — Long-thread pagination prepared
 
 - `vk/ab54-vk-long-threads`: latest-40 completed log pages, 50-entry upward
@@ -1133,7 +1132,6 @@ are required; old clients keep one slot. Production deployment remains operator-
 - Bounded revision-keyed finite-replay cache; existing running streams preserved.
 - See `VK_LONG_THREADS.md` and latest handoff for tests and limitations. No live
   runtime change; matching-backend browser validation and latency measurement remain.
-
 
 ## 2026-09-13 — Long-thread staging integration requested
 
@@ -1231,7 +1229,6 @@ Read-only service inventory confirms live Blue 4711/4712 and retained Green
 requires the explicit approval in VK_BACKEND_RESTART_PROTOCOL.md after a concrete
 candidate and rehearsal; preparation is not cutover authorization.
 
-
 ## Scheduled build directories — September 14
 
 `VK_CAPACITY_BUILD_ROOTS` is an optional JSON array of at most eight existing
@@ -1256,7 +1253,6 @@ The full seven-row native suite passes at
 `/mnt/vk-storage/codexusage-capacity/vk-continuation-acceptance-y5tknu8y/results.json`.
 All 64 executor unit tests passed after adding build-root admission coverage.
 Formatting and ops governance passed. The feature remains undeployed.
-
 
 ## Approved launcher/provider binding — September 14
 
@@ -1380,7 +1376,6 @@ protected consequences/context retain Frontier. No classifier model call, regist
 or CU wire changes. Twenty-two routing tests, services check, focused Clippy,
 generated types, web-core checking, format/ops and five offline recommendation
 cases pass. V1 deployment untouched; live V2 Shadow acceptance remains pending.
-
 
 ## 2026-10-01 — bounded semantic fallback for uncertain V2 requests
 
@@ -1547,3 +1542,811 @@ targets. Added phone search icons and clear labels, aligned headings, softened
 card borders and tightened row/action proportions. Extended the existing browser
 acceptance with search sizing/clear-control checks; see VK_MOBILE_UX.md and the
 style SSD evidence directory. Desktop/model/routing and production are unchanged.
+
+## 2026-10-08 — Phone frontend release
+
+The operator reviewed the redesigned/style-refined phone UI and authorized deploy,
+push/PR and rebase merge. PR224 merged into staging; PR226 promoted main 22f09e245.
+A clean build with an identical complete source tree was activated at 17:41 UTC
+through an atomic directory/symlink exchange at the fixed frontend runtime path.
+Backend PID 3027197/binary/configuration and current application data were preserved.
+Candidate/live phone, desktop and dark-mode browser acceptance, HTTPS hashes,
+project counts/order and saved-message visibility passed. The previous frontend
+is preserved and its rollback archive is SHA256-verified on Desktop B:.
+VK_MOBILE_RELEASE_20261008.md records evidence and unverified regression cases.
+The test harness now also intercepts /v1 writes and matches exact visible project
+titles when an accessible needs-review indicator extends the button name.
+
+## October 6, 2026 — scheduled first native goal run (development)
+
+Separate workspace at staging 8b562265d implements identity-bound pending intent,
+explicit firstRun admission, native-root checklist receipts, and fail-closed
+restart/hold behavior. No production, Android, paid inference or live-settings
+operation. See VK_SCHEDULED_FIRST_RUN.md and HANDOFF for validation and the
+CU-first combined acceptance/rollback gate.
+
+## PR147 staging acceptance blockers
+
+CI identified a cold/deadline-sensitive routing-triage assertion. Repair keeps
+the production budget and separately verifies semantic discovery and unknown
+fallback. Added source-fenced hosted HTTP/guard/test artifact builds and a
+compile-time disabled, v2-compatible rollback variant. Own old test binary was
+verified on Desktop B: before exact local removal; all evidence and shared data
+retained. Combined runtime acceptance and final CI are mandatory. No production
+operation or paid inference.
+
+2026-10-06 PR147 stalled graceful stop: added cfg(test) native revocation/expiry regression with actual client mutex held, outstanding private offline request and independent worker/cgroup observations. Local provider TERM/worker exit were +46/+480 ms after revocation and +7/+567 ms after last expiry; one request in each, graceful future still blocked, first-run holds/identity/receipts retained. No production enforcement change; non-test client source is unchanged from 86f62b2. Current immutable CI/build/runtime receipts and staging lcp7ys3k comparison are in /mnt/vk-storage/vk-scheduled-first-run-20261006/stalled-stop-handoff.md. Recommend/default-off/CU-first and no production/Android/paid/live-service boundaries retained.
+
+## 2026-10-06 — PR147 stop-response reliability
+
+Bound the complete graceful attempt, make HTTP one/two-worker OS stop/verification
+concurrent, and reconcile only verified matching grants. Preserve native active
+status and uncertain first-run holds/receipts. Focused offline runner regressions
+plus final source-fenced candidate/disabled-v2 rollback validation receipts belong
+to stop-response-handoff.md on the mounted SSD. No production action or cleanup.
+2026-10-05 AutoSwitch reference-step correction: classify known link collections as presentation using completed context; preserve surrounding protection and explicit floors. Repair oversized native config metadata for restricted classifiers only. See VK_AUTOSWITCH_REFERENCE_STEPS.md and retained private receipts. No backend restart or Auto activation.
+
+2026-10-05 Hot publication receipt: reference-steps-aac5bd457-20261005 active, PID3027197 unchanged, validator unchanged. Native classifier repaired (one real replay:4,711 input/259 output,9,823ms); unknown troubleshooting remains protected. Known-link replay admits Luna6/medium with no inference; Recommend experimental candidate Sol6/low. See private LIVE_PUBLICATION.json.
+
+## 2026-10-07 — AutoSwitch current-step protection
+
+Developed on `fix/autoswitch-current-step-risk` from preserved `bb5fe5f40`.
+Resolved bounded follow-ups can release inferred protection with native scope
+evidence; surrounding protected work still controls generic resumes. Narrow
+operational prohibitions no longer create deployment intent. Fifteen completed
+real assessments replayed without inference: three inappropriate Astra choices
+become Sol6/low recommendations (qualified Auto option Luna6/medium); twelve
+unchanged. No observed savings claimed. Recommend/live deployment unchanged;
+backend guard adoption belongs to VK::Staging before October30 readiness.
+See VK_AUTOSWITCH_CURRENT_STEP_RISK.md and SSD validation receipts.
+
+## 2026-10-07: repair incomplete AutoSwitch no-restart boundary
+
+The earlier module failed the requested scope: backend prompt guesses and
+mirrored history classification could veto a corrected policy. Protocol2 separates
+bounded immutable repo/native/budget/lifecycle facts from worker-owned prompt,
+semantic eligibility and inferred-history interpretation. One-time owner adoption
+removes old vetoes; later ordinary policy changes truly reload. No live action or
+Auto enablement. Implementation 09dcd2cb2 is pushed on the existing PR148 branch.
+
+Same-process sandbox proof kept PID3305974: code updates change negative-wording
+and bounded-followup decisions; 15 saved native assessments replay with three
+cheaper recommendations and 12 unchanged. Safe/manual/child/escalation/rollback/dirty
+state checks pass, including unsafe/old-protocol rejection. Zero paid calls.
+Final unit suite: 156 passed / 7 opt-in ignored; all-target Clippy and formatting/ops/CU
+bytes pass. Full local desktop/workspace checks encounter missing GLib metadata;
+use exact-head CI. A whole-suite timing assumption initially failed and was
+replaced with the directly relevant stalled-helper termination assertion.
+
+Fresh private protocol2 package/validator and receipts are under
+`/mnt/vk-storage/vk-autoswitch-module-boundary-20261007`; prepared stripped dev
+helper is not a deployed server. Old package665d836db is superseded, not deleted.
+Live PID3027197/module protocol1 remain unchanged. VK::Staging owns adoption;
+October30 readiness and separate Auto permission remain requirements.
+
+## October 7 Combined Release Preparation
+
+Reconciled both development histories without dropping their source changes.
+Application files merged automatically; the shared routing-triage test repair
+still requires combined validation. Connector patch, exact combined artifacts,
+fresh backup/full appropriate rehearsal and actual idle checks remain gates.
+No production operation or archive retirement occurred.
+
+2026-10-08: Isolated startup/recovery safety branch from staging8b562265d.
+Strict invocations, explicit identity gate and non-destructive automatic lifecycle;
+content/metadata audit retains journal gaps and post-backup uncertainty. No deploy.
+See VK_STARTUP_RECOVERY_SAFETY.md; independent review/real isolated CI pending.
+
+2026-10-08: PR153 sourcea81d46e92 passes10 checks,405 Cargo tests/7 skipped,
+16 real-binary isolation cases and14 audit regressions. Intrinsic dataset tokens
+close in-place replacement ambiguity; pure debug paths work without source mounts.
+Independent review pending. No production mutation or recovery zero-loss claim.
+
+## 2026-10-08 post-backup content reconciliation
+
+Independently replayed retained owner patches without executing historical code;
+all 11 final contents match. All 15 prior reconstruction files match current Git
+contents. Accounted for 710 mutation candidates and 47 original content differences;
+later shared-work changes remain separately reported. Added exact-context replay
+and evidence-result regressions; 27 focused Python checks pass. No shared writes,
+placement replay, production operation, new loss claim or erased journal gap.
+See VK_POST_BACKUP_RECONCILIATION_20261008.md for receipts and scope.
+
+2026-10-08 bounded recovery-evidence correction: supersedes the earlier blanket
+710-accounted/all-676-retired claim. 34 present content comparisons; 228 baseline
+Hyrox names verified at 08:53 with retained copies; 448 lack baseline contents.
+Strict full-program per-result patch binding proves 14 accepted/1 rejected pairs
+and 11 named file matches but overall fails on retained transcript line 415.
+All 15 recovery files match current maintenance commit; 145 original-history
+rows remain unresolved. Desktop packet hashes/internal manifests checked.
+Separate independent reviewer blocked by AutoSwitch qualification policy; no
+independent sign-off claimed. PR223 remote head/11 CI checks verified; c31a
+absence around 12:40 operator-reported, cause unknown. No production/shared
+writes, restore, workspace recreation, cleanup, restart or cutover. Cleanup
+requires Seamus human QA. See VK_POST_BACKUP_RECONCILIATION_20261008.md.
+
+2026-10-08 tracking-only independent-review receipt: separately authorized Astra
+High review (workspace802f378d, session27d79e0c, executiondd57bdb6) completed
+13:59:52 UTC. Independently supports corrected bounded findings at 984f5ee79 /
+d000ce732; recovery-complete and universal zero loss remain withheld. Consumed
+redacted REVIEW.txt, unresolved-448.csv and source manifest; hashes verified,
+448 unique rows. Copied only these safe tracking artifacts; old receipts remain
+historical. No duplicate reviewer or routing change. Targeted read-only source
+plan in VK_INDEPENDENT_RECOVERY_REVIEW_20261008.md; no investigation/restore/live
+repair/recreation/deletion/restart/cutover performed. No code or test changes.
+
+## 2026-10-08 targeted isolated recovery executed
+
+Executed the published retained-source investigation under the later isolated
+recovery authorization. Recovered 132 exact original commit objects; verified 129
+reachable graphs in declared scope, including the authenticated original VK
+shallow boundary. 26 rows meet original identity plus remote witness; 119 still
+lack a verified witness and 13 original objects remain unfound. All 448 names
+remain unknown, with 59 candidate copies covering 13 basenames. Recovered 14,382
+original metadata headers, authenticated the three source mode bits and initial
+journal, and found the same malformed line in eight archived transcripts.
+Native Desktop Git fetch failed wincredman/disabled prompts; no bypass. Two VK
+bundle imports failed prerequisites; preserved unchanged. Parent verification
+only, completed independent review unchanged. See VK_TARGETED_RECOVERY_FINDINGS_20261008.md.
+Production/shared files, original evidence and stable runtime untouched; no
+workspace recreation/restart/cutover/merge/cleanup/permission changes.
+
+## 2026-10-08 — Turn Git preservation development
+
+Added opt-in completion preservation with reviewed file/privacy/automation policy,
+exact original-history remote witnesses, persistent pending/blocked states and an
+isolated fail-closed controller check. VK Dev T48 is linked to the current feature
+workspace. Tests and limits are in HANDOFF.md / VK_TURN_GIT_PRESERVATION.md. No
+Staging/runtime/controller activation, restart, deployment or routing change.
+
+## 2026-10-08 — PR223 preservation P1 review correction
+
+Reproduced the unsafe `3cb3632897` scanner/retry baseline in isolated fixtures.
+Corrected scans read original raw blobs/commit messages with the approved real
+Gitleaks binary under the publication environment, bypassing refs/replace,
+attributes/drivers and grafts. Schema 2 retains original obligations across retries
+and failed admission, records generated originals before branch CAS, freshly
+rescans receipts, and invalidates any full-record change during a batch check.
+Raw worktree blob IDs/modes must match the original preserved tree; clean status
+alone cannot certify protection. Legacy receipts remain unsupported blockers.
+
+73 distinct isolated tests (72 full-suite cases plus positive real-scanner
+publication/check acceptance) and four focused Rust tests passed. Approved real
+scanner cases were exercised without skips; focused Clippy, format and ops checks
+passed. Frontend types/local-web/UI lint passed. Broad check/lint/workspace tests
+stop at missing host GLib/GObject/GIO libraries; trailing remote/I18n checks and
+full executor/UI acceptance remain open. Review logs and final remote SHA receipt:
+`/mnt/vk-storage/turn-git-preservation-review-20261008/`.
+
+Same isolated `feat/turn-git-preservation` branch, VK Dev T48 and draft PR223.
+No live activation or Staging operations. Recommend-only remains required.
+Seamus owns schema-2 controller/package integration, explicit reconciliation of
+old original-history evidence, copied-data acceptance and separately authorized
+Staging/live adoption. This correction does not authorize rollout.
+
+## 2026-10-08 — MCP approval bridge development
+
+Added isolated typed MCP consent bridge and offline UI/service/protocol regressions.
+See VK_MCP_APPROVAL_BRIDGE.md and HANDOFF.md. No activation or permission changes.
+
+## 2026-10-08 — PR225 P1 consent correction
+
+Bound MCP composer controls to individual requests/executions; gated reconnect
+consent on fresh snapshots/Ready. Added complete bounded redacted invocation
+context and fail-closed diagnostics. Mounted composer/card and real patch-hook
+fixtures replace the initial hook-only UI evidence. Configured Codex 0.159.2
+schema verified offline. See HANDOFF.md; source remains isolated and undeployed.
+
+## 2026-10-08 — PR225 nested redaction-only context P2
+
+Independent re-review closed both P1 findings at da07a5c3b. Added a recursive
+post-sanitization meaningful-value gate for the remaining P2, with compiled
+nested-object/array negative cases using matching display metadata, a positive
+mixed-target case, and offline typed-cancel/no-dispatch service coverage.
+See HANDOFF.md and PR225's P2 receipt. Isolated and undeployed; no broader redesign.
+
+## 2026-10-08 authorized safe restart preparation
+
+Four exact requested PR inputs combined with current accepted phone baseline.
+Historical exceptions remain explicit. SSD ENOSPC and proven8GiB floor block
+host backup/rehearsal/cutover; no deletion or bypass. Local incomplete source is
+Desktop-hash-preserved. Hosted combined checks/artifacts are being prepared;
+no production effect or readiness claim. See VK_SAFE_RESTART_PREPARATION_20261008.md.
+
+- 2026-10-09: Incorporated current staging e8c450fb in the scoped combined release
+  after owner-authorized final66 frontend inclusion. Preserved all twelve final
+  frontend changes and six newer consent/chat repairs; no pinned backend, guard,
+  module, schema or dependency input changed. Retained newer combined continuity
+  documents; staging originals remain preserved by its immutable commit.
+
+## 2026-10-10 — bounded same-UID original-final recovery continuation
+
+Codeae263d47 adds exact-two-target verify-only/default CLI and authoritative
+server capture status while preserving signed HTTP auth and PR241 validators.
+Hosted38057745525 passes8 new tests/build/Clippy/format; source tree equals
+hosted63d76b91. Prior51 Rust/20 conversation/type/lint/native checks retained.
+Compiled same-UID live verify-only probes refuse absent JSON status protocol;
+no apply, sidecar, prompt, restart, badge/database rewrite or policy change.
+Sealed minimal c3-backend/cdad-frontend patches are in LOCAL_REPAIR_DELIVERY.safe.json.
+Matching Staging-owned publication and both genuine normal API/UI restorations
+remain required. This is source delivery, not conversation restoration.
+
+## 2026-10-13 — automatic GitHub sync source preparation
+
+Verified/reused the existing same-name local issue/workspace linkage. Extended
+corrected PR223 preservation, completion/admission and user queues; direct durable
+checkpoints avoid extra agent turns.76 real-scanner helper fixtures passed. Compiled
+integration, independent review and exact-head combined PR245 build remain pending.
+Operating/rollback guidance is VK_AUTOMATIC_GITHUB_SYNC.md. No live activation,
+Staging message/start, restart/cutover, forced stop, media operation or cleanup.
+## 2026-10-13 — large native-history verification repair
+
+Prepared streaming native-input verification and synthetic large-history/integrity
+regressions from staging d786124a1. Hosted compiled and private read-only acceptance
+remain pending. No production, grant, target-history or continuation changes.
+
+## 2026-10-13 — large-history compiled and private-data acceptance
+
+PR #245 code/test head df717cf8e passed 548 hosted Rust tests (13 skipped), normal
+schema/lint/frontend/Tauri checks and 8 optimized focused tests. Both private
+original histories and stable snapshots passed read-only native-index/prefix
+verification in under 3 seconds and 24 MiB peak RSS each. Private operational
+receipts stay outside Git. Capability remains default-off; review/adoption/live
+acceptance are separate. No live grant/history/continuation/restart action.
+
+## 2026-10-13 — recovered automatic-sync validation and integration
+
+Recovered draft PR246 and verified exact native issue/workspace association.
+Combined e26f5945 includes exact PR245 c37f3623 and automatic-sync7e83dbfe;
+Test38396831309 passes552 Rust tests (13 skipped), four enabled-mode fixtures,
+applicable lint/schema/frontend/desktop checks and the source-bound backend build.
+Downloaded artifact SHA matches its manifest;18 local masked-namespace startup
+cases pass. Reconciled current Staging ancestry while retaining executable source.
+Final head-bound evidence is tracked in the private release handoff. Independent
+review permission, release-owner acceptance and live enforcement remain open.
+No restart, Staging prompt, live setting, media operation or cleanup occurred.
+
+## 2026-10-13 — durable queue cancellation during rollback
+
+Explicit cancellation now deletes its durable batch before retiring the visible
+queue, regardless of scheduling mode. A failed database deletion preserves the
+visible batch and recovery hold. The restored-batch regression exercises failure
+and another restart in both enabled and disabled configurations. Fresh exact-head
+checks and source-bound paired build supersede the prior candidate for nomination;
+private handoff records their result. No production operation occurred.
+
+## 2026-10-13 — session reset checkpoint admission
+
+The session reset endpoint now uses the existing shared admission boundary,
+matching follow-up retries and workspace Git routes. Explicit user resets retain
+their existing behavior and cannot race checkpoint verification. Final exact-head
+compiled validation and paired artifact are recorded in the private handoff.
+
+## Combined release-owner preparation
+
+Prepared exact PR245/PR246 baseline plus selected reviewed PR247 native paths and
+the disposable-runner bwrap profile correction. Independent review and private
+actual-authority/runtime-overlay acceptance remain gates; no activation claimed.
+
+- Combined release preparation refreshed with independently reviewed PR24664c3e25d and passing exact-head CI, retaining PR245/247 and the approved runner profile. Combined/private acceptance and authority/storage/idle remain held; no live activation.
+
+## 2026-10-14 — PR249 system-wide native review preparation
+
+Code/test9afe687c9 passes Full Test38640253559 (572 tests/13 skips plus12 scheduling tests), native38640253455 (14 typed/history plus12 policy tests), and source-fenced artifacts38640258375. Actual DEFAULT start, genuine legacy-user resume/MCP and corrected stdin with stale CLI flags pass;17 root turns cover seven native review variants, denial and mandatory-human preservation. All779 artifacts/2527 source hashes independently verified. Private source retains three live reader files; exact fenced build exception is pending. No live settings, credentials, merge/restart/deploy or other-agent operation. Read VK_SYSTEM_NATIVE_REVIEW.md and PR249; Recommend/PR245/246 remain intact.
+
+## 2026-10-15 — Dot steering and queue diagnosis
+
+Traced exact running-session refusal to external Dot `adapter.py:session_configs`;
+mocked `local_followup` reproduced it with zero POSTs. Nine configuration-policy
+tests passed. VK already supports native Codex steering, but explicit deferred
+Codex prompts need a public queue-only mode. Recorded connector override, API,
+selection policy, receipt/race/recovery requirements in VK_DOT_SESSION_STEERING.md.
+Documentation only; no prompt, executable change, restart or deployment.
+
+## 2026-10-15 — explicit Dot steering development
+
+Added isolated connector overlay and backend steering path with exact target
+identity, durable request receipts and no launch/stop/queue fallback. Preserves
+ca3fe817 capacity correction.13 new and14 existing connector tests pass against
+current source; compiled Rust and isolated HTTP/native acceptance are pending.
+No live connector installation, service restart or access-policy change.
+
+Initial implementation99e5778db passed579 Rust tests/13 skips and 12 enabled
+checkpoint tests in Test38812713572, including real HTTP/SQLite/synthetic-native
+steering and replay. Two lint findings are corrected; final safety refinements
+and an ignored single-turn account-backed acceptance test are prepared.14 new
+connector tests and14 unchanged capacity/Recommend regressions pass locally.
+
+d8906243f passed full Test38815715507 (580 Rust/14 skips,14 connector and 12
+enabled persistence cases) and native artifacts38815715510. A real isolated
+attempt exposed the harness's immediate readiness assumption before any steering
+call. Added bounded notification readiness waiting and focused executor artifact
+export; no native correction was blindly retried and the private auth copy was
+removed. Account-backed final-answer acceptance remains pending.
+
+9f5825ce3 passes full Test run 38819080520 and focused artifact run 38819080321. All 2538
+source hashes and its executor binary were verified. A real isolated native
+session completed its sole turn with one correction and the exact final marker;
+original history verifies read-only/on-request policy. The harness's later
+thread/read hung because ordinary completion closes the peer reader. Retained
+history independently reconciled the result without another model request or
+correction; original timeout evidence is preserved. Both private auth copies were
+removed. A test-only completion-notification collector and offline open-stream/
+identity regression replace that terminal RPC. Runtime source is unchanged;
+the paid harness was not rerun. No live connector edit, restart or deployment.
+
+## 2026-10-16 — Automatic child-turn activity correction
+
+- Ported the focused status fix from `2315ff268` onto current staging. Latest
+  durable child turns replace the open-edge/parent-time heuristic for both
+  session listings and workspace counts; new turns remain visible.
+- Bounded cached reads preserve history; uncertain evidence remains unresolved.
+- Regression coverage includes AutoSwitch's resumed-parent failure and child
+  reuse. This source merge is for the next backend restart, not live activation.
+
+
+## 2026-10-16 — Preserve existing Dot sidechat integration
+
+Reconciled eight API and three UI commits in the dedicated preservation workspace;
+original worktrees remain intact. Public copies sanitize historical operational
+details and retain Original-Commit provenance. DOT_INTEGRATION_HANDOFF.md records
+live source, unfinished mobile/actual-Dot acceptance and ownership. No deployment.
+
+Publication receipt: [draft PR #254](https://github.com/artinflight/vibe-kanban/pull/254) targets staging;
+Vibe T61 links the preserved source and mobile owner. Original worktrees remain clean.
+
+
+## 2026-10-16 — Correct desktop Dot acceptance boundary for PR254
+
+Recorded Seamus's confirmation of the first successful desktop message/webhook/
+persisted-reply exchange and screenshot. The integration task's paired connector
+provided the reply route; direct root connector access remains unresolved. Real
+phone acceptance remains separately owned. No private conversation, screenshot,
+pairing data or receipt identifiers are published, and no live test is replayed.
+
+
+## 2026-10-16 — Dot context recovery and explicit all-project planning
+
+Investigated the accepted phone event without exposing private content or IDs;
+stored/signed context is complete. Added read-only unanswered-context recovery,
+non-replay cursor compatibility, explicit project authorization and a stale-plan-
+fenced browser-scope planner with CI regressions. Prepared 43-current/17-active
+snapshots for both existing indefinite sessions; access/subscriptions are unchanged.
+The desktop result was a manual relay. Root catalog/context is a platform boundary;
+a natural real phone reply is not yet verified. Mobile owner files/browser retained.
+
+Staging receipt: source d8ceceb8f and verified Desktop B mirror are prepared.
+Automatic approval review denied the exact live install/restarts for missing
+specific authorization and disruption risk; no live change or workaround occurred.
+
+
+## 2026-10-16 — Approved connector activation and automatic complete project scope
+
+Exact owner approval resolved the earlier review block. The single authorized
+retry succeeded, then validated source d2c79543e activated the complete policy:
+both existing sessions now cover all 43 current projects, including 26 archived;
+future projects are reconciled automatically every five seconds. Private current
+SQLite backup and Desktop B mirror were verified before application. Only the
+connector and publisher restarted. Original subscription metadata and accepted
+attempts, browser PID, frontend and mobile owner work were preserved.
+
+49 sidechat tests and 28 existing connector regressions pass. New broad event
+arguments exclude the already subscribed project to avoid duplicate delivery.
+That actual platform subscription and root metadata/tool-context verification
+remain blocked on capabilities unavailable to this coding execution. One real
+phone message remains unanswered; no manual relay is claimed as phone acceptance.
+Owner approval and scope decisions are settled; no pairing/UI debugging remains.
+
+
+## 2026-10-16 — Trace refreshed Dot discovery discrepancy
+
+The updated service received server/discover, tools/list and events/list at
+17:53:53 UTC in the reported refresh window. Its configured facade advertises
+four sidechat tools and current/all/future event filters. A registered pending
+recovery call succeeded at 18:00:50–51 on the same adapter child; this coding
+execution now exposes the new recovery tool. Root and earlier worker metadata
+still differ. No duplicate local tunnel, wrong release or binary mismatch found.
+
+DOT_DISCOVERY_TRACE.md contains exact public schema fingerprints, timestamped
+comparisons, measurement limits and a supported platform escalation packet.
+Method-only logs cannot reconstruct historical response bodies or independently
+verify the root's stored connection/catalog record. No exact cache component or
+review hold is claimed. No repeated refresh, permissions/credential/subscription
+change, service restart, reply relay or mobile work occurred. Root phone reply
+and complete notification registration remain acceptance gaps.
+
+
+## 2026-10-16 — Root reply and complete notification registration verified
+
+Root's owner reports its view caught up at 18:07 UTC without another refresh.
+Root directly read the retained phone message, checked no reply existed, wrote
+one and verified reply_persisted=true. The enabled Reply to Vibe chats automation
+was updated through the supported platform flow with original VK Dev plus
+all-projects-excluding-VK-Dev triggers. The earlier root reply/broad-registration
+blockers are superseded.
+
+Independent read-only server inspection at 18:23 UTC confirms exactly two active,
+unexpired, non-overlapping subscriptions for the owner; original identity/filter
+preserved; all 43 current projects including 26 archived match one destination;
+future policy enabled; existing message-thread bindings valid. Exactly one phone
+reply is persisted in the original thread/workspace, without accepted-event replay.
+Root pending discovery remains absent. A fresh automatic roundtrip without a
+workspace hint and user-visible receipt remain unverified; Seamus was already
+asked for the new message. No new refresh/pairing/activation/runtime changes or
+mobile work occurred during reconciliation. Private IDs/content remain excluded.
+
+
+## 2026-10-16 — independent Dot unread and Needs Attention
+
+Added owner/issue-scoped persistent Dot read/attention state and separate violet
+indicators on desktop/mobile workspace and issue surfaces. Visible focused replies
+acknowledge explicit IDs; resolution is independent and explicit. Synthetic Python,
+DOM and Chromium cases cover persistence, shared issues, read races and coding-agent
+isolation. Release coordinated with Sent Steering; notification backend/frontend
+remain undeployed. See DOT_NOTIFICATION_HANDOFF.md for source, validation and the
+backend-first combined Mobile+Steering release procedure.
+
+
+## 2026-10-16 — Sent steering draft correction
+
+- Created and linked local issue `e662a94d-0fff-428b-9f43-9d771ebcc8e1`.
+- Queue hook returns delivery status; composer deletes only immediately delivered drafts.
+- Final source browser regression passes at 390/412/1440 pixels; queued and failed recovery remain intact.
+- Type checks, frontend/shared lint, formatting and ops pass. Production bundling remains unverified; no deployment occurred.
+- Evidence and commands: `VK_SENT_STEERING_DRAFT.md`.
+
+## 2026-10-16 — Steering fix published as PR257
+
+- Pushed source `ca9911225` and opened https://github.com/artinflight/vibe-kanban/pull/257 into staging.
+- Fresh format/ops/frontend type checks and lint pass. Full check/lint/workspace Rust commands were attempted but blocked by missing GLib/GObject desktop dependencies.
+- Applicable CI, review, staging acceptance, package/QA and authorized rollout remain; production is unchanged.
+
+
+## 2026-10-16 — approved Dot notification deployment
+
+Activated Python Dot source7222b127c and combined frontend aebe6a442 at22:37/22:38UTC.
+App0.1.42 serves index-CrPmgoRY.js. Desktop/mobile-viewport live API/UI acceptance
+and nine served Steering cases pass; owner access, two subscriptions,43 projects
+(26 archived), future policy and prior messages are preserved. Dot-only readiness
+interruption1.38s; no Vibe/agent restart. Desktop backups restored/read back.
+Physical phone DevTools was rejected by automatic approval review for its shared
+authenticated-tab boundary; no retry/alternate route. Seamus's fresh paired-phone
+question/reply/notification confirmation remains. PR254 merged into staging28fdcfddf.
+See DOT_NOTIFICATION_ROLLOUT.md and the bounded live QA scripts for receipts.
+
+## 2026-10-17 — Project sidebar preparation
+
+Implemented private project Dot Chat/shared planning with canonical task links,
+revision/idempotency protection, separate project attention and responsive UI.
+Coordinated Preserve Dot/CU1.6 and Staging. No production adoption.
+See VK_PROJECT_COLLABORATION.md for validation and release requirements.
+
+## 2026-10-18 — source-only storage admission
+
+Prepared the narrow durable storage response admission contract and native
+implementation from staging5b43524ea, following Operations PR21582805b7.
+Exact batch/intent/owner receipts, queue-preserving owner serialization,
+execution insertion binding and cancellation tombstones keep uncertain sends
+from becoming unsafe retries. No live dispatch, release or activation.
+Validation/compatibility remains explicitly source-bound; shared capacity
+coordination holds additional compiler jobs while the original service test
+reaches its natural terminal checkpoint. See VK_STORAGE_ALERT_ADMISSION.md.
+
+
+## Storage admission continuity correction (2026-10-18)
+
+Resume source/tests from af7b35d with sanitized publication authorized; host
+Cargo/build growth remains held. Correct the queued-user race assertion to
+require normal recovery context; apply the same native recovery to alert turns
+and test ordered failed/killed instructions, partial text, persisted action and
+immutable-intent replay. Hosted nextest uses no-fail-fast for complete evidence.
+See STORAGE_ADMISSION_VALIDATION.md for exact prior CI failure and new results.
+No activation or live dispatch is included.
+
+
+## Coordinated storage v2 adapter seam (2026-10-18)
+
+T90 reviewed unchanged native v2 at45cffa379 for source integration and published
+Operations42bc9ce. Add a cfg(test)-only real loopback router/control fixture and
+exact six-file client/Store/driver snapshot with byte-hash provenance. Normal
+hosted CI explicitly runs initial/client-reopen and native-WAL-reopen phases;
+missing driver cannot silently pass. Host Cargo/build growth stays held.
+See the native contract/checkpoint for evidence and synthetic I/O boundaries.
+
+
+## Actual paired driver failure and coordinated correction (2026-10-18)
+
+Native18456f017 passed633main tests; its explicit paired case failed before
+HTTP due a driver/module name collision. T90 published corrected driver source
+a345ca8dc1c5f50eab3afdc7db214ff3b923e7fd (75client fixtures reported). Repin
+all six exact files; preserve assertions and first/reopen evidence. Hosted
+ignored selection now reuses the main workspace feature graph; scheduling
+subset executes even after failure. New paired hosted success remains required.
+
+
+## Final client exact-pair closure (2026-10-18)
+
+Preserve the existing717c337 repin, add exact published5c2ee7f Python regression
+modules/status helper with twelve-file provenance and hosted76-test invocation.
+Previous native59/clienta345 result stays historical; final native/client CI
+is required. Against nominated PR276/366cfd243, native crate and additive test
+workflow patches pass isolated index checks; shared paths are workflow/continuity
+only. Combined runtime and forward/latest-data rollback remain unaccepted and
+Staging-owned. No host Cargo/build or live service/binding/activation.
+
+## 2026-10-18 Prepared disabled storage transport
+
+Repinned fourteen exact Operations PR215 files at7a02102d6ccf55f2c91223c5128599cefa6492fc,
+including production Bridge/bounded HTTP wiring and87regressions. Hosted paired
+validation is required; predecessor6c658d1/5c2ee7f remains source-bound history.
+Corrected direct-request authentication/gateway exposure claims. Native ABI and
+admission/migration source unchanged; Staging owns its existing combined release/
+copied-data/receipt-safe rollback preparation. All production gates disabled;
+no host compiler, endpoint probe, security change or activation.
+
+## 2026-10-18 Frozen physical-policy pairing
+
+Reviewed/repinned Operations81887d38d238ce3b0665092bf38a482284441062: fifteen
+Python files plus the exact disabled example config required by new regressions.
+Hosted evidence pending for103tests/mixed OS+physical SSD Bridge/HTTP/native WAL
+scenarios. No native/migration change. Physical rollout needs no allocation
+producer; normal Disk allocation protection remains. Staging20copied-data SQL
+checks acknowledged, private runtime/receipt-safe rollback remains separate.
+Corrected predecessor b249/7a Python87run to86pass/1optional connector skip.
+No activation/host build/shared-target growth or live changes.
+
+## 2026-10-30 — recovered deployment source custody
+
+Reconciled the October29 deployed build and ordinary-send repair with current staging, recovered deployment/recovery and connector source/tests, and replaced stale live-runtime records with verified identities. Antigravity initializes but requires authentication; gate remains disabled. See BACKEND_DEPLOYMENT_HANDOFF.md and DEPLOYMENT_CHECKLIST_20261030.md. No production change during reconciliation.
+
+## 2026-10-30 — Antigravity activation and integration handoff
+
+The later activation supersedes the initial authentication-blocked entry above.
+The authenticated native Vibe adapter passed approval, denial, native resume and
+cancellation within four model turns. Release 9a4179e8b / 137d6cd7b647… was accepted
+03:18:14 UTC; read-only public verification passed again at 09:20:33 UTC. Current
+history and latest-data cutback were preserved; actual pre-switch failure recovery
+and the strict empty-reader-WAL correction are documented. All eight hosted
+workflows passed at a421381321. PR #284 records requested rebase integration into
+staging; original build IDs/branch remain retained and main promotion is separate.
+See BACKEND_DEPLOYMENT_HANDOFF.md for exact runs, recovery mirrors and remaining limits.
+
+
+## 2026-10-31 — Direct mobile workspace project filters
+
+Branch `vk/311d-vk-mobile-filter` exposes a project selector and sort/filter buttons
+above the phone workspace list, removing the Options gate. The selector shares
+existing project options, filter state and scratch persistence; supports multiple
+projects, No project and All projects reset; and displays current selection with
+48 px touch targets. Desktop controls retain their existing layout. New labels
+cover all seven locales. No backend, schema or production deployment change.
+
+All four frontend type checks, focused UI lint, formatting, ops/path guards and
+nine workspace regressions passed. Read-only browser acceptance passed at
+360/412/767/768/1440 px, including actual row filtering, locally emulated reload
+persistence, clearing, archive/search and focus return. See HANDOFF.md for evidence
+and the inherited nested-dialog Escape limitation. Temporary preview stopped;
+no physical-device UI QA, commit, push or PR is claimed.
+
+
+## 2026-10-31 — Mobile filter commit requested
+
+The operator requested a local commit of the validated mobile filter stream.
+Source, browser acceptance and continuity notes are committed together.
+Push, PR, promotion and deployment remain separate.
+
+
+## 2026-10-31 — Desktop project filter bubble toggles
+
+The operator approved the mobile dropdown and requested equivalent desktop access,
+then specified bubble toggles in a row. `WorkspaceProjectFilterChips` now appears
+below Search on desktop. Chips support multi-select, No project, All projects
+reset, selected checkmarks/pressed states, full-name titles and keyboard access.
+One horizontal row scrolls when needed within the workspace sidebar. Mobile keeps
+its accepted dropdown; both layouts share existing filter state and persistence.
+
+All four frontend type checks, focused UI lint, formatting, ops/path guards and
+diff checks passed. Browser acceptance passed at 360/412/767/768/1440 px, including
+desktop filtering, persistence, resizing, keyboard toggles and a constrained 300 px
+column. Public HTTPS desktop review showed the row without page overflow, and
+frontend/API probes returned HTTP 200. Validation writes stayed local. The review
+preview remains running; the desktop extension is committed locally. No push, PR,
+production deployment, backend or schema change is included.
+
+
+## 2026-10-31 — Compact project abbreviations and menu colors
+
+The operator requested smaller desktop bubbles using the left menu's abbreviations
+and colors. Chips are now 28 px tall, show the same up-to-three-character labels,
+and use the same pastel colors and active-state styling. Full names remain in
+hover titles and accessible labels; All is compact and No project uses a folder
+icon. Existing selection, reset, persistence and phone dropdown behavior remain.
+
+Project appearance helpers were moved unchanged into the shared UI library and
+reused by AppBar, SharedAppLayout and workspace filter metadata, including saved
+abbreviations/colors. Browser acceptance passed all five widths and checked exact
+menu/chip appearance parity, saved customizations, sizing and previous behavior.
+The public preview shows the compact row without overflow; it remains running.
+Formatting, focused lint and path/whitespace checks passed. Source and validation
+notes are committed locally; push, PR and production deployment remain pending.
+
+All four frontend TypeScript checks also passed with a bounded 2 GiB heap.
+
+
+## 2026-10-31 — Workspace project filters production publication
+
+- Operator approved mobile and compact desktop filters, then requested PR, sync,
+  rebase merge and deployment. PR #286 targets staging; its merge event records
+  integration/rebased IDs. Main promotion remains separate.
+- Built combined frontend `02a9a993d` from live `b990b5939` plus exact filter
+  package files from `d83e7587a`. Preserved all 11 live unread/review/reselect files
+  and pushed the deployment composition branch. No backend/API/schema change.
+- Production candidate passed browser acceptance at 360/412/767/768/1440 px and
+  existing review-flag acceptance at 393/1440 px, with application writes local
+  to fixtures. Stabilized test target/animation/preference hydration waits.
+- Verified Desktop B source and paired frontend recovery independently, then
+  published atomically at 13:07:50 UTC. Public JS `index-Bgdr6hzC.js`; public
+  mobile/desktop readback passed, with 54 workspace cards and no page errors.
+  Existing old assets retain identical public hashes; five services, executable,
+  database identity and 99 migrations unchanged. Version remains 0.1.42.
+- Four frontend TypeScript checks, frontend lint, format, explicit UI/test
+  Prettier, ops and unused-i18n checks passed. Hosted application-head frontend
+  checks/artifact build passed; final-head PR checks remain GitHub authority.
+  Local Rust baseline stops at missing serde in the offline Cargo registry.
+  Physical-phone UI QA and paid-provider execution were not performed.
+- Evidence and immediate paired frontend fallback:
+  `/mnt/vk-storage/vk-mobile-filters-20261031-311d`; see
+  `VK_WORKSPACE_FILTER_DEPLOYMENT.md` and `LIVE_DEPLOYMENT.json`.
+
+
+## 2026-10-31 — Project workspace unread clearing
+
+On `vk/c097-vk-can-t-clear-u` from freshly confirmed fork/staging `7b64a69bc`,
+fixed the missing project workspace conversation read effect. Both project and
+Workspaces views now call `useMarkWorkspaceSeen`, retaining loaded destination,
+visibility, summary invalidation and listener cleanup behavior. Summary/session
+rerenders never auto-clear newly arriving completions. Create/issue views do not
+mark workspaces read. No backend or generated type changes.
+
+Eight mounted React regressions pass. Removing the project hook call reproduces
+five failures, restoring it passes all eight. Shared/local frontend TypeScript,
+focused source ESLint, full required formatting, ops check, legacy frontend path
+guard and diff whitespace check pass. Type checks needed bounded 3 GiB Node heaps;
+third-party dependencies reuse existing SSD packages with workspace links pointing
+at this checkout. Full Rust/PR baseline, hosted CI and live browser/API readback
+remain unrun; no production deploy or restart was performed. Scope and pickup are
+in STREAM.md and HANDOFF.md.
+
+
+## 2026-10-31 — Unread fix frontend deployed
+
+Operator-authorized live update completed at 10:38:31 UTC from `f95bab83836d467f972e904710220eee09406d5b`.
+Public JS is `index-hKvj8yI6.js`; CSS/version 0.1.42 unchanged. Exact-source local
+production build, eight regressions, format/ops, candidate/live desktop and mobile
+browser checks, public HTTPS hashes, old asset retrieval and stable service/DB
+identities passed. Browser seen/config writes were intercepted; no live unread
+repair or provider execution was used. The pointer changed in about 6 ms; no
+service restart or database restore occurred. Both new roots retain 455 assets;
+Desktop B independently restored the paired frontend and fix bundle. Hosted build
+and source push were rejected by automatic approval review; neither occurred.
+Live provenance, rollback and validation limits are recorded in LIVE_DEPLOYMENT.json,
+STATE.md, HANDOFF.md and VK_PROJECT_UNREAD_DEPLOYMENT.md. Full PR baseline/CI and Git
+integration remain separate. Temporary task previews/browsers are closed.
+
+
+## 2026-10-31 — Operator reports unread still unresolved; integration held
+
+The operator stopped the requested push/PR/rebase merge before any of those
+mutations occurred, reporting that the defect is not resolved. The earlier
+candidate/live browser checks intercepted seen requests and cannot prove persisted
+clearing. Read-only investigation confirmed unchanged live identities, shared
+summary-backed unread indicators, independent explicit issue Needs review flags,
+and possible sibling unread aggregation. No root cause or new fix is claimed.
+An operator clarification is pending; no live flags or services were modified.
+STATE/STREAM/HANDOFF and live manifest now record the unresolved acceptance.
+
+
+## 2026-10-31 — Real read-state proof and mobile manual-flag correction
+
+A bounded real project-card test on this task's own workspace confirmed HTTP 200,
+unread true→false on opening and after reselect, and cleanup through Workspaces.
+No unrelated workspace flags were touched. The actual old mobile project UI
+reproduces a separate defect: manual issue review flags show "Needs review" when
+native replies are already read, and have no mobile clear control. Separate
+workspace attention aggregation from explicit flags and share an accessible clear
+control across desktop/mobile. Mounted UI and seen regressions pass; persistent
+browser acceptance and frontend rollout are in progress. Push/PR/merge remain held.
+
+
+## 2026-10-31 — Nested desktop actions also opened the issue
+
+Production-browser flag acceptance caught the parent Kanban card opening its issue
+on mouse-up before the nested control click. A real IssueWorkspaceCard/KanbanCard
+mouse sequence reproduces the unwanted parent open on the old code; the new guard
+passes on desktop and phone, while card-background navigation stays functional.
+Skip parent activation for nested interactive targets and stop review-flag mouse-up
+propagation. Seven mounted UI tests pass. The original native unread endpoint also
+passes bounded real project-board opening/reopening on this task's own workspace.
+No push, PR or merge occurred; candidate persistence acceptance is continuing.
+
+
+## 2026-10-31 — Corrected live release with real persistence verification
+
+Published source `3366b015155bfa1857b898e263a6d966aabbe452` at 11:15:55 UTC;
+public JS `index-9ssuLQsW.js`, CSS/version unchanged. Real old mobile UI reproduces
+false Needs review/missing-clear controls; old desktop mouse-up fails nested-card
+regression. Correction separates explicit flags, adds mobile clearing, and avoids
+parent issue navigation from nested controls. Fifteen regressions and targeted
+static/production-build checks pass. Candidate/live 393/1440 px fixture persistence,
+reload, unrelated flag preservation and no navigation all pass. Actual live mobile
+writes were bounded to this task's own issue/workspace: flag clearing persists,
+native unread survives that clear and clears on conversation opening. Original
+flags and task body restored; backend-managed metadata formatting was separated.
+Public HTTPS hashes and old assets pass; all live services/DB identities unchanged.
+Both roots retain 507 assets and the 37,762,844-byte software package is independently
+Desktop-B verified. No backend restart or push/PR/merge occurred. Updated live
+manifest and pickup docs identify exact evidence and remaining Git validation gaps.
+
+## 2026-10-31 — operator rejects second publication; reproduce actual reselect bug
+
+Operator reports "no change". Reproduced actual nested workspace same-route click:
+initial real 200 clears unread, reseed becomes true, repeat nested click sends zero
+seen requests and leaves true. Prior reselect test clicked parent issue card and
+changed routes. Claims of full resolution withdrawn; scoped older proofs retained.
+Shared explicit project workspace selection/read correction and exact browser
+regression prepared. No push/PR/merge; candidate publication pending validation.
+
+## 2026-10-31 — publish same-workspace reselection correction at 12:04:09 UTC
+
+Source b990b5939642b1ac7e744a9290840a731fa3f550, JS index-Cy2e9ltd.js,
+version 0.1.42. Explicit selected-workspace click now reads without route change.
+Exact nested-click browser regression fails before and passes candidate/live;
+desktop same-route and mobile close/reopen persist after reload, polling preserves
+new unread. Thirteen mounted tests, types/lint/format/ops/build pass. Existing
+candidate gates retained and pass; owned flags/body restored. All service/data
+identities unchanged, atomic frontend switch 5.6 ms; 559 assets retained and
+43,244,856-byte software recovery independently verified on Desktop B. Operator's
+exact URL/workspace flow remains unconfirmed; no push/PR/merge/full PR baseline.
+
+## 2026-10-31 — operator accepts live fix and authorizes integration
+
+Operator: "Good, open PR, sync, rebase merge". Prior integration hold lifted.
+Fresh fork/staging remains 7b64a69bc34d418b31c1f902c7714122a20783a3 and is already
+an ancestor of this stream. Canonical main/staging references are clean. Full
+required PR baseline is running using the dedicated shared SSD Cargo target with
+incremental compilation disabled. Live frontend/backend remain unchanged.
+
+## 2026-10-31 — prepare hosted baseline before PR
+
+Local frontend type checks, local/UI lint, UI/workflow formatting, ops and 20
+mounted regressions pass. Stopped only the owned full-check process group during
+fresh Cargo dependency compilation to avoid additional registry downloads on the
+system disk; full pnpm check/lint and cargo workspace tests are not claimed local
+passes. Use the existing Test workflow's validation-only dispatch on this exact
+pushed head for full backend/remote/tauri coverage before PR creation. Wire the
+13 seen and 7 nested-card regressions into that workflow. Live release unchanged.
+
+## 2026-10-31 — PR #287 and passing full hosted baseline
+
+Full hosted Test validation passed on be20b829502e1d24c72a944d3a7a06409cf75fb4:
+https://github.com/artinflight/vibe-kanban/actions/runs/41204050237. Frontend/20 mounted regressions, workspace tests, Rust lint, schema/SQLx,
+Tauri and native storage/watcher/steering/scheduling integrations pass. Fresh
+fork/staging is still an ancestor. Published https://github.com/artinflight/vibe-kanban/pull/287 into staging with requested
+rebase method. The PR merge event records final integration status/rebased IDs;
+keep original deployed b990b5939642b1ac7e744a9290840a731fa3f550 immutable. Main
+promotion is separate. Canonical references will be synchronized after merge;
+preserve the dirty original checkout and the active feature worktree. No runtime
+change is part of Git integration. Local full Rust rebuild was stopped, not passed.
+
+## 2026-10-31 — sync PR #287 onto PR #286 staging without changing deployed code
+
+All final PR checks passed on 054199ec6057a57e22ab0c47d221341de6ca61bb, including
+workspace tests and native integration gates. During CI, PR #286 advanced staging
+to d3d9fa89d45087d1d113f2851d7b2c994c76aec5. Rebased this stream, retained the
+new combined production manifest, all project-filter package files and the entire
+staging ledger. Original validated history is retained in a backup ref/bundle.
+The rebased package tree matches deployed combined source
+02a9a993d8d9118ca703a22baa15efcf0c7cc4c9 exactly; all original unread package bytes
+from b990b5939642b1ac7e744a9290840a731fa3f550 remain preserved. Public assets now
+index-Bgdr6hzC.js / index-DL7rKLPs.css, version 0.1.42. Latest PR checks and merge
+event remain authoritative. No runtime switch or service restart during Git sync.

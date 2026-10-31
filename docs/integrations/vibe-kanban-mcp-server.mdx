@@ -155,6 +155,15 @@ The `repositories` parameter is an array of objects with:
 
 When `issue_id` is provided, the workspace is automatically linked to the remote issue. If `prompt` is omitted, the linked issue's title and description are used as the workspace prompt.
 
+### Sub-agent activity
+
+Completed Codex child turns automatically leave the active count, even when
+threads remain open for follow-up work. A later turn on the same child appears
+as active again. Session status and workspace indicators use the same
+calculation. If recent child history is missing, incomplete or unreadable, VK
+keeps the status unresolved unless tracked status is available. Status checks
+preserve the thread and its transcript.
+
 ### Supported Executors
 
 When using `start_workspace`, the following executors are supported (case-insensitive, accepts hyphens or underscores):

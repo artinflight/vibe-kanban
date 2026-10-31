@@ -2319,6 +2319,7 @@ async fn get_project(
 
 pub fn router() -> Router<DeploymentImpl> {
     Router::new()
+        .merge(super::local_assignments::router())
         .route("/projects/{project_id}", get(get_project))
         .route("/fallback/projects", get(list_fallback_projects))
         .route(
@@ -2331,10 +2332,6 @@ pub fn router() -> Router<DeploymentImpl> {
             get(list_fallback_project_workspaces),
         )
         .route("/fallback/tags", get(list_fallback_tags))
-        .route(
-            "/fallback/issue_assignees",
-            get(|| async { list_fallback_empty("issue_assignees").await }),
-        )
         .route(
             "/fallback/issue_followers",
             get(|| async { list_fallback_empty("issue_followers").await }),
@@ -2362,6 +2359,27 @@ pub fn router() -> Router<DeploymentImpl> {
             "/issues/{issue_id}",
             patch(update_issue).delete(delete_issue),
         )
+}
+
+/// The dedicated workflow uses the same configured local statuses and metadata
+/// as the existing issue API; unknown status IDs do not silently become To do.
+pub(crate) async fn workflow_issue_fields(
+    deployment: &DeploymentImpl,
+    project: Uuid,
+    status_id: &str,
+    description: &str,
+) -> Result<(TaskStatus, String), ApiError> {
+    let tasks = load_project_tasks(deployment, project).await?;
+    let configured = load_project_status_configs(deployment, project).await?;
+    let statuses = compat_statuses(project, &tasks, &configured);
+    let status = statuses
+        .iter()
+        .find(|s| s.id == status_id)
+        .ok_or_else(|| ApiError::BadRequest("Status unavailable in project".into()))?;
+    Ok((
+        parse_task_status(&status.name),
+        ensure_status_metadata(Some(description.into()), &status.name).unwrap_or_default(),
+    ))
 }
 
 #[cfg(test)]

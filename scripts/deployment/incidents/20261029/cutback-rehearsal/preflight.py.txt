@@ -1,0 +1,41 @@
+"""Read-only admission evidence for a future current-data cutback.
+This never switches services, acquires capacity, edits queues, or restores data.
+"""
+import hashlib,importlib.util,json,os,sqlite3,subprocess
+from pathlib import Path
+D=Path(__file__).resolve().parent
+B=D/'bundle'
+def sha(p):
+ with Path(p).open('rb')as f:return hashlib.file_digest(f,'sha256').hexdigest()
+def main():
+ assert os.path.ismount('/mnt/vk-storage'),'Secondary SSD not mounted'
+ m=json.loads((B/'MANIFEST.private.json').read_text())
+ for n,r in m['files'].items():
+  assert sha(B/n)==r['sha256'],'Retained recovery artifact changed: '+n
+  assert sha(r['original'])==r['sha256'],'Original artifact changed: '+n
+ spec=importlib.util.spec_from_file_location('cutback_catalog',B/'guards/verify-enrolled-99.py')
+ guard=importlib.util.module_from_spec(spec);spec.loader.exec_module(guard)
+ with sqlite3.connect(Path(m['database']).resolve().as_uri()+'?mode=ro',uri=True,timeout=2)as db:
+  db.execute('BEGIN')
+  rows=db.execute('select version,hex(checksum),success from _sqlx_migrations order by version').fetchall()
+  guard.verify_rows(rows,guard.read_catalog());assert len(rows)==99,'Rehearsal covers the exact 99 migration database'
+  assert db.execute('select dataset_id from vk_runtime_identity where singleton=1').fetchone()[0]=='bff82094108b49f5959cf206b560bc47'
+  running=db.execute("select count(*) from execution_processes where status='running'").fetchone()[0]
+ unit='vibe-kanban-native-review-20261015.service'
+ fields=dict(x.split('=',1)for x in subprocess.check_output(['systemctl','--user','show',unit,'-p','MainPID','-p','InvocationID','-p','ActiveState','-p','FreezerState'],text=True).splitlines())
+ variant=None
+ if fields['MainPID']!='0':
+  actual=sha('/proc/'+fields['MainPID']+'/exe')
+  variant=next((v for v in ('candidate','fallback') if m['pair'][v]['sha256']==actual),None)
+  assert variant,'Unknown running executable; preserve external owner'
+  pointer=Path('/home/mcp/.local/share/vibe-kanban/frontend-dist/current')
+  assert str(pointer.resolve())==m['frontend_roots'][variant],'Frontend/backend pair mismatch'
+ for name in ['adapter.py','issue_workflow.py','steering.py']:
+  actual=Path('/home/mcp/code/vibe-dot-connector')/name
+  key=('fallback'if variant=='fallback'and name=='adapter.py'else'candidate')+'/connector/'+name
+  assert sha(actual)==m['files'][key]['sha256'],'Connector baseline changed'
+ subprocess.run(['/usr/bin/python3','-B',m['files']['guards/verify-enrolled-99.py']['original']],check=True,timeout=20)
+ proof=json.loads((D/'RESULT.private.json').read_text())
+ assert proof.get('passed') is True,'Detached rehearsal has not passed'
+ print(json.dumps(dict(artifacts_verified=len(m['files']),migrations=len(rows),running_variant=variant,service=fields,running_executions=running,current_data_compatible=True,production_changed=False,cutback_executed=False,requires_fresh_writer_and_capacity_boundary=True),indent=2))
+if __name__=='__main__':main()

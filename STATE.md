@@ -1,5 +1,10 @@
 # Current production and protections — 2026-10-31
 
+The operator reports that the unread problem remains unresolved after publication.
+The published frontend is still active, but the prior browser checks intercepted
+read writes and do not establish persisted unread clearing. PR/push/merge are on
+hold pending reproduction and verification.
+
 The project-workspace unread fix is live at `https://vibe.local`, published
 2026-10-31 at 10:38:31 UTC from `f95bab83836d467f972e904710220eee09406d5b`.
 Public JS is `index-hKvj8yI6.js`; CSS remains `index-CUBB2mA2.css`. The frontend

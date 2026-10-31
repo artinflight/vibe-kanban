@@ -51,6 +51,15 @@ Prior backend owner pickup (historical record follows):
 
 # Backend owner pickup — 2026-10-30
 
+Current status: the operator reports unread clearing remains unresolved. The
+requested push/PR/rebase merge was held before any of those mutations occurred.
+Do not treat the published change as an accepted resolution. Read-only follow-up
+confirmed the same frontend/backend, two independent sources of project Needs
+review (workspace unread and explicit issue flag), and possible sibling workspace
+aggregation. No cause is confirmed yet. The operator was asked where the
+indicator remains; an exact workspace and click path are still needed. No live
+read/unread flags were changed by this investigation.
+
 The project workspace session panel now uses the same `useMarkWorkspaceSeen`
 hook as Workspaces. It waits for a loaded record matching the requested workspace
 ID. A successful seen request invalidates workspace-summary queries; opening an

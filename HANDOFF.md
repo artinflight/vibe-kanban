@@ -51,38 +51,36 @@ Prior backend owner pickup (historical record follows):
 
 # Backend owner pickup — 2026-10-30
 
-Start with [STATE](STATE.md), [live manifest](LIVE_DEPLOYMENT.json),
-[backend handoff](BACKEND_DEPLOYMENT_HANDOFF.md), [activation recipe](ACTIVATION_RECOVERY_20261030.md)
-and [validation checklist](DEPLOYMENT_CHECKLIST_20261030.md).
+The project workspace session panel now uses the same `useMarkWorkspaceSeen`
+hook as Workspaces. It waits for a loaded record matching the requested workspace
+ID. A successful seen request invalidates workspace-summary queries; opening an
+issue or create panel does not clear workspace activity. Visibility and polling
+semantics are unchanged from Workspaces.
 
-Antigravity is deployed and available. Live binary `137d6cd7b647…`, source
-`9a4179e8b`, accepted 03:18:14 UTC; observed PID 645213. The matched public JS is
-`index-DNMY17oB.js`. These are observations, never authority to stop a future owner.
-Existing-account native approval/denial/resume/cancel passed; no further login or
-provider call is needed to complete this release. Four-turn test budget is spent.
+Focused test command (reuse existing SSD dependencies; do not duplicate installs):
+`VK_TEST_OUTPUT=<mounted-SSD-directory> node scripts/testing/run-workspace-seen-tests.mjs`.
+The suite mounts the actual project sidebar with unrelated providers/UI stubbed,
+using real React, React DOM, jsdom and React Query. The API is stubbed. Eight cases
+cover opening/invalidation, loading/missing/wrong records, switching, background
+visibility/closing, both create modes, shared hook reopening and request failure.
 
-Successful package: `/mnt/vk-storage/vk-deployment-reconcile-20261030/activation-release-2`.
-It retained current DB/history, 17 uncertain inputs without replay and the original
-protected reader/CU process. Six native DBs plus nine changed rollouts (15 files,
-3,607,837,269 bytes) and application SQLite were verified on Desktop B. Large-image
-reuse authenticates prior body proofs and fresh native identities, not a fictitious
-new capture. The first package's failure/recovery evidence is retained separately.
+Validation passed: all eight focused regressions; web-core and local-web TypeScript
+checks (bounded 3 GiB Node heaps); ESLint for the three changed source files;
+`pnpm run format`; `pnpm run ops:check`; frontend legacy-path guard and
+`git diff --check`. Removing the project's seen-hook call reproduces five failing
+regressions; restoring it passes all eight. Initial default-heap checks exhausted
+Node's heap; final checks use this checkout's workspace package sources with
+shared SSD third-party dependencies. No duplicate dependency install was needed.
 
-Immediate fallback is October 29 `ddaaf64a`/`a63eb3a68173…` with its paired frontend.
-Fresh roundtrip preserved all 60 tables including later-write probe, 99 migrations,
-18 protected/four recent histories. Both frontend pairs retain both asset sets.
-Future cutback must drain/recheck compatibility and preserve latest data; it disables
-Antigravity execution. Never restore a stale snapshot or rerun a consumed controller.
+No live/backend/device/provider mutation or deployment was done. Full workspace
+Rust tests, full check/lint, hosted CI and live browser/API badge readback were not
+run for this frontend-only fix. Before integration, run the full PR baseline from
+AGENTS and validate a branch frontend against the existing live backend.
 
-Public Git lacks private retained-history bindings; bind the exact retained input
-for production. Canonical checkout is dirty and untouched. Source/docs/tooling sync
-is tracked in [PR #284](https://github.com/artinflight/vibe-kanban/pull/284), targeting
-staging via the requested rebase merge. Its merge event records final integration
-status/IDs; main promotion is separate. All eight workflows passed on `a421381321`;
-see [exact validation runs](BACKEND_DEPLOYMENT_HANDOFF.md#hosted-validation-and-source-integration).
-Read-only live verification passed at 09:20:33 UTC. Retain the original branch and
-build receipts because rebase changes commit IDs without changing the live release.
-Automatic provider failover, AG reset/fork/non-supervised modes remain unqualified/disabled.
+Current production remains documented in [STATE](STATE.md),
+[LIVE_DEPLOYMENT.json](LIVE_DEPLOYMENT.json) and
+[the backend handoff](BACKEND_DEPLOYMENT_HANDOFF.md). Preserve that deployment's
+history, paired assets, settings, queues and existing controls.
 
 Prior pickup: [previous record](deployment-history/20261030-before-reconciliation/HANDOFF.md)
 and [HANDOFF history](HANDOFF_HISTORY_20261017.md).

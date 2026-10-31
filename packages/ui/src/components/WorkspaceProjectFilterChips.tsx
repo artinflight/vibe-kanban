@@ -1,10 +1,17 @@
-import { CheckIcon } from '@phosphor-icons/react';
+import { CheckIcon, FolderIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '../lib/cn';
 import type { MultiSelectDropdownOption } from './MultiSelectDropdown';
+import { getProjectButtonStyle } from '../lib/projectAppearance';
+
+export interface WorkspaceProjectFilterChipOption
+  extends MultiSelectDropdownOption<string> {
+  abbreviation?: string;
+  color?: string;
+}
 
 interface WorkspaceProjectFilterChipsProps {
-  options: MultiSelectDropdownOption<string>[];
+  options: WorkspaceProjectFilterChipOption[];
   projectIds: string[];
   onChange: (projectIds: string[]) => void;
 }
@@ -18,26 +25,45 @@ export function WorkspaceProjectFilterChips({
   const { t } = useTranslation('common');
   const allProjects = t('kanban.workspaceSidebar.allProjects');
 
-  const chip = (label: string, selected: boolean, onClick: () => void) => (
+  const chip = (
+    label: string,
+    selected: boolean,
+    onClick: () => void,
+    option?: WorkspaceProjectFilterChipOption
+  ) => (
     <button
       type="button"
       aria-pressed={selected}
+      aria-label={label}
       title={label}
       onClick={onClick}
+      style={
+        option?.color
+          ? getProjectButtonStyle({ color: option.color }, selected)
+          : undefined
+      }
       className={cn(
-        'workspace-project-filter-chip flex shrink-0 max-w-[16rem] items-center gap-half rounded-full border px-base py-half text-base transition-colors',
-        'focus:outline-none focus-visible:ring-1 focus-visible:ring-brand',
+        'workspace-project-filter-chip flex h-7 min-w-9 shrink-0 max-w-24 items-center justify-center gap-1 rounded-full border px-2 text-[11px] font-medium leading-none transition-colors',
+        'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand',
         selected
           ? 'border-brand bg-brand/10 text-brand'
           : 'border-border bg-panel text-normal hover:bg-secondary'
       )}
     >
-      <CheckIcon
-        aria-hidden="true"
-        className={cn('size-icon-xs shrink-0', !selected && 'invisible')}
-        weight="bold"
-      />
-      <span className="truncate">{label}</span>
+      {selected && (
+        <CheckIcon
+          aria-hidden="true"
+          className="size-icon-2xs shrink-0"
+          weight="bold"
+        />
+      )}
+      <span className="truncate">
+        {option
+          ? (option.abbreviation ?? (
+              <FolderIcon aria-hidden="true" className="size-icon-xs" />
+            ))
+          : t('kanban.workspaceSidebar.assignmentAll')}
+      </span>
     </button>
   );
 
@@ -50,12 +76,16 @@ export function WorkspaceProjectFilterChips({
       {chip(allProjects, projectIds.length === 0, () => onChange([]))}
       {options.map((option) => (
         <div key={option.value} className="shrink-0">
-          {chip(option.label, projectIds.includes(option.value), () =>
-            onChange(
-              projectIds.includes(option.value)
-                ? projectIds.filter((id) => id !== option.value)
-                : [...projectIds, option.value]
-            )
+          {chip(
+            option.label,
+            projectIds.includes(option.value),
+            () =>
+              onChange(
+                projectIds.includes(option.value)
+                  ? projectIds.filter((id) => id !== option.value)
+                  : [...projectIds, option.value]
+              ),
+            option
           )}
         </div>
       ))}

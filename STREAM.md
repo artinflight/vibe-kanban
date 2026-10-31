@@ -8,8 +8,10 @@ phone toolbar exposes a project dropdown plus sort/filter buttons without the
 Options gate (commit `03d5f308e`). The operator-requested desktop extension uses
 bubble toggles in one horizontally scrollable row directly below Search. Both
 layouts use the existing project options, multi-project/No project filtering,
-All projects reset and scratch persistence. Desktop chips expose pressed states,
-selected checkmarks and keyboard focus; long names truncate with full titles.
+All projects reset and scratch persistence. Desktop chips are compact 28 px
+bubbles using the left menu's project abbreviations and pastel colors, including
+saved customizations. Full names remain available through hover titles and
+accessible labels; selected checkmarks, pressed states and keyboard focus remain.
 Phone selection text and 48 px targets remain unchanged. The existing filter
 dialog remains available. Labels cover all seven locales with no new keys.
 No API, Rust, schema, production deployment or device setting change is included.

@@ -39,6 +39,21 @@ try {
     context.setDefaultTimeout(15000);
     const sockets = new Set();
     let savedPreferences = { type: 'UI_PREFERENCES', data: {} };
+    if (width === 1440) {
+      const projects = (
+        await (await context.request.get(`${backend}/api/projects`)).json()
+      ).data;
+      // Saved sidebar customizations must also drive chip abbreviations/colors.
+      savedPreferences.data.local_project_customizations = Object.fromEntries(
+        projects.map((project, index) => [
+          project.id,
+          {
+            abbreviation: `X${index.toString(36).toUpperCase()}`,
+            color: '202 82% 82%',
+          },
+        ])
+      );
+    }
     let closing = false;
     let interceptedWrites = 0;
     const errors = [];
@@ -168,6 +183,35 @@ try {
           name: projectName,
           exact: true,
         });
+        await page.waitForFunction((name) => {
+          const chip = [
+            ...document.querySelectorAll('.workspace-project-filter-chip'),
+          ].find((button) => button.getAttribute('aria-label') === name);
+          const sidebar = [
+            ...document.querySelectorAll('button[aria-label]'),
+          ].find(
+            (button) =>
+              !button.classList.contains('workspace-project-filter-chip') &&
+              [name, `${name} (needs review)`].includes(
+                button.getAttribute('aria-label')
+              )
+          );
+          if (!chip || !sidebar) return false;
+          return (
+            chip.textContent.trim() === sidebar.textContent.trim() &&
+            getComputedStyle(chip).backgroundColor ===
+              getComputedStyle(sidebar).backgroundColor &&
+            getComputedStyle(chip).color === getComputedStyle(sidebar).color
+          );
+        }, projectName);
+        const chipBox = await project.boundingBox();
+        assert(
+          chipBox.height <= 28 && chipBox.width <= 60,
+          'Abbreviated project bubbles must stay compact'
+        );
+        assert((await project.innerText()).trim().length <= 3);
+        if (width === 1440)
+          assert.match((await project.innerText()).trim(), /^X[0-9A-Z]+$/);
         await project.click();
         assert.equal(await project.getAttribute('aria-pressed'), 'true');
         assert.equal(await all.getAttribute('aria-pressed'), 'false');

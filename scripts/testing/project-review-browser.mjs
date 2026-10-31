@@ -81,7 +81,11 @@ try {
       if (['GET', 'HEAD'].includes(method)) return route.continue();
       if (method === 'PATCH' && path === '/v1/issues/' + issueId) {
         const update = req.postDataJSON();
-        assert(update.extension_metadata);
+        // The board may also persist initial sort order. Keep that unrelated
+        // write local; only the explicit flag update belongs to this fixture.
+        if (!update.extension_metadata) {
+          return route.fulfill({ json: { txid: Date.now() } });
+        }
         database
           .prepare('UPDATE fixture SET metadata=? WHERE id=?')
           .run(JSON.stringify(update.extension_metadata), issueId);

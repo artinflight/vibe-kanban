@@ -59,9 +59,10 @@ assets. The 43,244,856-byte frontend/source software recovery package was indepe
 read back from Desktop B. The previous runtime/full-state recovery is preserved.
 Temporary candidate frontends and browsers closed. No backend/device action.
 
-Exact operator URL/workspace confirmation is still pending. No push, PR or merge;
-keep integration held. Full PR baseline, Rust workspace suite, hosted CI and physical
-phone interaction are not claimed. Reload existing operator tabs for the new bundle.
+The operator accepted the live fix ("Good") and requested PR, sync and rebase
+merge into fork/staging. The integration hold is lifted. Fresh fork/staging is
+already an ancestor; full PR validation is running before publication. Hosted CI
+and physical-phone interaction are not yet claimed. Reload existing operator tabs for the new bundle.
 Direct backend/history frontend roots still serve October 30 UI; only the public
 origin is certified. Do not change those entrypoints without identifying usage.
 See [STATE](STATE.md), [manifest](LIVE_DEPLOYMENT.json) and
@@ -69,3 +70,10 @@ See [STATE](STATE.md), [manifest](LIVE_DEPLOYMENT.json) and
 
 Prior pickup: [previous record](deployment-history/20261030-before-reconciliation/HANDOFF.md)
 and [HANDOFF history](HANDOFF_HISTORY_20261017.md).
+
+Integration validation: all frontend type checks, local/UI lint, UI/workflow
+formatting, ops and 20 mounted regressions pass. The local full check was stopped
+during a fresh Cargo dependency rebuild to avoid further system-disk downloads on
+the live host; it is not reported as passed. The established Test workflow will
+supply the full hosted baseline in validation-only mode before PR creation. Both
+regression runners are now wired into frontend CI. No live deployment change.

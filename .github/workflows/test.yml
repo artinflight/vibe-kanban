@@ -100,6 +100,10 @@ jobs:
               - 'shared/**'
               - 'scripts/testing/kanban-issue-panel*'
               - 'scripts/testing/run-kanban-issue-panel-tests.mjs'
+              - 'scripts/testing/workspace-seen*'
+              - 'scripts/testing/run-workspace-seen-tests.mjs'
+              - 'scripts/testing/kanban-collapse*'
+              - 'scripts/testing/run-kanban-collapse-tests.mjs'
               - 'scripts/testing/*read-only-web-links*'
               - 'scripts/vk-publish-artifact.py'
               - 'scripts/testing/*publish-artifact*'
@@ -333,6 +337,13 @@ jobs:
         run: |
           npm install --prefix "${{ runner.temp }}/kanban-issue-panel-tools" --no-save --no-package-lock --ignore-scripts --no-audit --no-fund react-test-renderer@18.3.1
           node scripts/testing/run-kanban-issue-panel-tests.mjs
+
+      - name: Test project workspace reads and nested card controls
+        env:
+          VK_TEST_OUTPUT: ${{ runner.temp }}/workspace-seen-tests
+        run: |
+          node scripts/testing/run-workspace-seen-tests.mjs
+          node scripts/testing/run-kanban-collapse-tests.mjs
 
       - name: Preserve live conversation history fallback
         env:

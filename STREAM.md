@@ -27,3 +27,10 @@ frontend through the existing gateway/static service. Existing routes are preser
 
 Prior stream: [deployment reconciliation](deployment-history/20261030-before-reconciliation/STREAM.md)
 and [STREAM history](STREAM_HISTORY_20261017.md).
+
+Integration validation: all frontend type checks, local/UI lint, UI/workflow
+formatting, ops and 20 mounted regressions pass. The local full check was stopped
+during a fresh Cargo dependency rebuild to avoid further system-disk downloads on
+the live host; it is not reported as passed. The established Test workflow will
+supply the full hosted baseline in validation-only mode before PR creation. Both
+regression runners are now wired into frontend CI. No live deployment change.

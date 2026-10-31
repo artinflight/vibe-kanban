@@ -16,8 +16,8 @@ Thirteen mounted regressions, focused types/lint, format/ops and production buil
 pass. Existing candidate flag/preservation gates also pass, original test flags/
 body restored. All service and database identities remain unchanged; the pointer
 switch took 5.6 ms. Both paired roots retain 559 assets with verified Desktop B
-software recovery. Operator's exact URL/workspace flow remains unconfirmed;
-push/PR/merge stay held. See [release evidence](VK_PROJECT_UNREAD_DEPLOYMENT.md).
+software recovery. The operator accepted the fix ("Good") and authorized PR, sync and rebase merge.
+The full PR baseline is running before integration. See [release evidence](VK_PROJECT_UNREAD_DEPLOYMENT.md).
 
 The Antigravity-enabled backend remains live. It was accepted October 30
 at 03:18:14 UTC: backend source `9a4179e8bdf38e93d1a81faca6c665cadd6fddc7`,

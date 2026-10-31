@@ -30,9 +30,10 @@ Evidence root: `/mnt/vk-storage/vk-unread-reselect-20261031-c097/reselect-releas
 Key files: `browser-candidate-reselect.json`, `browser-live-reselect.json`,
 `own-candidate-verified.json`, `browser-candidate.json`, `activation.json`,
 `after-live-pinned.json`, `Desktop-B-recovery-verified.json`, `frontend-source.json`.
-Temporary frontends/browsers closed. Exact operator URL/workspace flow is still
-unconfirmed; both earlier publications were reported unresolved. Full PR/Rust/
-hosted CI and physical-phone interaction not claimed. Push/PR/merge remain held.
+Temporary frontends/browsers closed. Both earlier publications were reported
+unresolved. The operator accepted this third publication ("Good") and authorized
+PR, sync and rebase merge. Full PR baseline is running before integration; hosted
+CI and physical-phone interaction are not yet claimed.
 Backend/history direct frontend roots retain October 30 UI. Existing browser tabs
 need reload to use this publication. This scoped automated evidence does not claim
 operator acceptance of the full original symptom.

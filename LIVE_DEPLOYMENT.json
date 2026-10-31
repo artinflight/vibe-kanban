@@ -1,6 +1,6 @@
 {
   "schema": 2,
-  "generated_at_utc": "2026-10-30T09:20:33.936466+00:00",
+  "generated_at_utc": "2026-10-31T10:38:45.453526+00:00",
   "canonical_repo": "/home/mcp/_vibe_kanban_repo",
   "canonical_repo_dirty": true,
   "canonical_branch": "vk/land-live-fixes-20260422",
@@ -32,12 +32,12 @@
   "history_proxy_port": 5640,
   "gateway_port": 4720,
   "public_frontend_pointer": "/home/mcp/.local/share/vibe-kanban/frontend-dist/current",
-  "public_frontend_release": "/mnt/vk-storage/vk-deployment-reconcile-20261030/activation-release-1/paired-frontend/candidate",
+  "public_frontend_release": "/mnt/vk-storage/vk-project-unread-deploy-20261031-c097/paired/candidate",
   "public_assets": [
     "/assets/index-CUBB2mA2.css",
-    "/assets/index-DNMY17oB.js"
+    "/assets/index-hKvj8yI6.js"
   ],
-  "frontend_routing_note": "Gateway, backend and history-proxy frontend roots now use the matched release; both paired roots retain old and new hashed assets.",
+  "frontend_routing_note": "Public gateway/static frontend uses the unread-fix paired candidate. Backend/history-proxy direct frontend roots retain October 30 assets. Public API and WebSockets retain the same backend/proxy; no services were restarted.",
   "selected_runtime_environment": {
     "HOST": "127.0.0.1",
     "PORT": "5621",
@@ -145,12 +145,12 @@
   },
   "previous_live_release_evidence": "/mnt/vk-storage/vk-new-build-repair-20261029",
   "frontend_build": {
-    "source_commit": "aaacd278b30021814d04c9d2a9c616ccdae960d7",
-    "workflow_run": 40990973645,
-    "artifact_id": 12949546000,
-    "archive_sha256": "e613e117f139648afdfab58f1997668525604ae947ce67686dab3c87e662b8f0",
+    "source_commit": "f95bab83836d467f972e904710220eee09406d5b",
+    "method": "local tsc && vite production build, bounded 4096 MiB heap",
+    "file_manifest": "/mnt/vk-storage/vk-project-unread-deploy-20261031-c097/frontend-source.json",
     "verified_manifest_files": 417,
-    "retained_both_version_assets": 403
+    "retained_asset_count": 455,
+    "hosted_ci": false
   },
   "recovery": {
     "total_50_minute_cutoff": false,
@@ -162,9 +162,33 @@
     "private_optional_tests_skipped": 22
   },
   "last_readonly_verification": {
-    "at_utc": "2026-10-30T09:20:33.936466+00:00",
-    "receipt": "/mnt/vk-storage/vk-deployment-reconcile-20261030/LIVE_READBACK_PRE_PR284_MERGE.safe.json",
+    "at_utc": "2026-10-31T10:38:45.453526+00:00",
+    "receipt": "/mnt/vk-storage/vk-project-unread-deploy-20261031-c097/after-live-pinned.json",
     "passed": true,
     "mutation": false
+  },
+  "frontend_deployed_at_utc": "2026-10-31T10:38:31.936453+00:00",
+  "previous_frontend_build": {
+    "source_commit": "aaacd278b30021814d04c9d2a9c616ccdae960d7",
+    "workflow_run": 40990973645,
+    "artifact_id": 12949546000,
+    "archive_sha256": "e613e117f139648afdfab58f1997668525604ae947ce67686dab3c87e662b8f0",
+    "verified_manifest_files": 417,
+    "retained_both_version_assets": 403
+  },
+  "frontend_only_deployment": {
+    "source_commit": "f95bab83836d467f972e904710220eee09406d5b",
+    "evidence_root": "/mnt/vk-storage/vk-project-unread-deploy-20261031-c097",
+    "activation_receipt": "/mnt/vk-storage/vk-project-unread-deploy-20261031-c097/activation.json",
+    "rollback_frontend": "/mnt/vk-storage/vk-project-unread-deploy-20261031-c097/paired/fallback",
+    "previous_frontend": "/mnt/vk-storage/vk-deployment-reconcile-20261030/activation-release-1/paired-frontend/candidate",
+    "Desktop_B_recovery_receipt": "/mnt/vk-storage/vk-project-unread-deploy-20261031-c097/Desktop-B-recovery-verified.json",
+    "backend_unchanged": true,
+    "database_restore": false,
+    "browser_mutations_intercepted": true,
+    "pointer_switch_seconds": 0.006452118046581745,
+    "browser_live_receipt": "/mnt/vk-storage/vk-project-unread-deploy-20261031-c097/browser-live.json",
+    "desktop_mobile_browser_passed": true,
+    "hosted_ci": "Not run; source push and workflow launch rejected by automatic approval review; exact-source local production build and focused checks passed"
   }
 }

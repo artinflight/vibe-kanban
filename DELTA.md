@@ -2129,3 +2129,19 @@ third-party dependencies reuse existing SSD packages with workspace links pointi
 at this checkout. Full Rust/PR baseline, hosted CI and live browser/API readback
 remain unrun; no production deploy or restart was performed. Scope and pickup are
 in STREAM.md and HANDOFF.md.
+
+
+## 2026-10-31 — Unread fix frontend deployed
+
+Operator-authorized live update completed at 10:38:31 UTC from `f95bab83836d467f972e904710220eee09406d5b`.
+Public JS is `index-hKvj8yI6.js`; CSS/version 0.1.42 unchanged. Exact-source local
+production build, eight regressions, format/ops, candidate/live desktop and mobile
+browser checks, public HTTPS hashes, old asset retrieval and stable service/DB
+identities passed. Browser seen/config writes were intercepted; no live unread
+repair or provider execution was used. The pointer changed in about 6 ms; no
+service restart or database restore occurred. Both new roots retain 455 assets;
+Desktop B independently restored the paired frontend and fix bundle. Hosted build
+and source push were rejected by automatic approval review; neither occurred.
+Live provenance, rollback and validation limits are recorded in LIVE_DEPLOYMENT.json,
+STATE.md, HANDOFF.md and VK_PROJECT_UNREAD_DEPLOYMENT.md. Full PR baseline/CI and Git
+integration remain separate. Temporary task previews/browsers are closed.

@@ -10,9 +10,12 @@ loaded workspace session panel. Invalidate workspace summaries after success so
 all badges refresh. Keep Workspaces mobile/panel visibility gates, background-tab
 protection, cleanup on navigation and no clearing on summary polling.
 
-Scope: frontend read marking and focused mounted React regressions. No backend,
-schema, generated types, Dot sidechat or production deployment changes. Do not
-restart or replace the live instance for this fix.
+Scope: frontend read marking, focused mounted React regressions and the
+operator-authorized frontend-only live update. No backend, schema, generated
+types or Dot sidechat changes. The public frontend was switched atomically at
+2026-10-31 10:38:31 UTC; all service identities remained unchanged. Both candidate
+and frontend fallback retain old/new hashed assets. See
+[deployment evidence](VK_PROJECT_UNREAD_DEPLOYMENT.md).
 
 Validation and remaining rollout steps are in [HANDOFF](HANDOFF.md). Production
 context remains in [STATE](STATE.md) and [LIVE_DEPLOYMENT.json](LIVE_DEPLOYMENT.json).

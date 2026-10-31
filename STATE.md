@@ -1,16 +1,19 @@
 # Current production and protections — 2026-10-31
 
-The operator reports that the unread problem remains unresolved after publication.
-The published frontend is still active, but the prior browser checks intercepted
-read writes and do not establish persisted unread clearing. PR/push/merge are on
-hold pending reproduction and verification.
-
-The project-workspace unread fix is live at `https://vibe.local`, published
-2026-10-31 at 10:38:31 UTC from `f95bab83836d467f972e904710220eee09406d5b`.
-Public JS is `index-hKvj8yI6.js`; CSS remains `index-CUBB2mA2.css`. The frontend
-pointer changed atomically; backend, proxy and static service identities did not.
-Desktop/mobile browser checks and public asset hashes pass. See
-[frontend release evidence](VK_PROJECT_UNREAD_DEPLOYMENT.md) and the live manifest.
+The corrected unread/review frontend is live at `https://vibe.local`, published
+2026-10-31 at 11:15:55 UTC from `3366b015155bfa1857b898e263a6d966aabbe452`.
+Public JS is `index-9ssuLQsW.js`; CSS/version remain `index-CUBB2mA2.css` / 0.1.42.
+The initial October 31 publication was reported unresolved by the operator.
+Follow-up found manual issue review flags shown as unread "Needs review" with no
+mobile clear control, plus desktop parent-card mouse-up firing before nested
+workspace/control clicks. The corrected UI separates manual flags, adds mobile
+clearing and prevents premature parent navigation. Fifteen focused regressions,
+production build, desktop/mobile persistence/reload checks and bounded real live
+backend clearing on this task's own workspace all pass. Original test flags and
+task body were restored. Push/PR/merge remain held; nothing was pushed.
+See [release evidence](VK_PROJECT_UNREAD_DEPLOYMENT.md) and the live manifest.
+The frontend pointer changed atomically; all live service identities stayed the
+same. Candidate and fallback retain 507 assets and verified Desktop B recovery.
 
 The Antigravity-enabled backend remains live. It was accepted October 30
 at 03:18:14 UTC: backend source `9a4179e8bdf38e93d1a81faca6c665cadd6fddc7`,

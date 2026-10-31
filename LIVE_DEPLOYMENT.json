@@ -1,6 +1,6 @@
 {
   "schema": 2,
-  "generated_at_utc": "2026-10-30T09:20:33.936466+00:00",
+  "generated_at_utc": "2026-10-31T13:07:50.920665+00:00",
   "canonical_repo": "/home/mcp/_vibe_kanban_repo",
   "canonical_repo_dirty": true,
   "canonical_branch": "vk/land-live-fixes-20260422",
@@ -32,12 +32,12 @@
   "history_proxy_port": 5640,
   "gateway_port": 4720,
   "public_frontend_pointer": "/home/mcp/.local/share/vibe-kanban/frontend-dist/current",
-  "public_frontend_release": "/mnt/vk-storage/vk-deployment-reconcile-20261030/activation-release-1/paired-frontend/candidate",
+  "public_frontend_release": "/mnt/vk-storage/vk-mobile-filters-20261031-311d/paired/candidate",
   "public_assets": [
-    "/assets/index-CUBB2mA2.css",
-    "/assets/index-DNMY17oB.js"
+    "/assets/index-Bgdr6hzC.js",
+    "/assets/index-DL7rKLPs.css"
   ],
-  "frontend_routing_note": "Gateway, backend and history-proxy frontend roots now use the matched release; both paired roots retain old and new hashed assets.",
+  "frontend_routing_note": "Public frontend includes workspace filters and exact current unread/review/reselect source. Backend/history-proxy direct frontend roots retain October 30 assets. Public API/WebSockets and all five services unchanged.",
   "selected_runtime_environment": {
     "HOST": "127.0.0.1",
     "PORT": "5621",
@@ -145,12 +145,14 @@
   },
   "previous_live_release_evidence": "/mnt/vk-storage/vk-new-build-repair-20261029",
   "frontend_build": {
-    "source_commit": "aaacd278b30021814d04c9d2a9c616ccdae960d7",
-    "workflow_run": 40990973645,
-    "artifact_id": 12949546000,
-    "archive_sha256": "e613e117f139648afdfab58f1997668525604ae947ce67686dab3c87e662b8f0",
+    "source_commit": "02a9a993d8d9118ca703a22baa15efcf0c7cc4c9",
+    "feature_commit": "d83e7587a13184126f9935cf692e010520354362",
+    "preserved_live_source_commit": "b990b5939642b1ac7e744a9290840a731fa3f550",
+    "method": "local tsc && vite production build, bounded 4096 MiB heap",
+    "file_manifest": "/mnt/vk-storage/vk-mobile-filters-20261031-311d/frontend-source.json",
     "verified_manifest_files": 417,
-    "retained_both_version_assets": 403
+    "retained_asset_count": 612,
+    "hosted_ci": false
   },
   "recovery": {
     "total_50_minute_cutoff": false,
@@ -162,9 +164,62 @@
     "private_optional_tests_skipped": 22
   },
   "last_readonly_verification": {
-    "at_utc": "2026-10-30T09:20:33.936466+00:00",
-    "receipt": "/mnt/vk-storage/vk-deployment-reconcile-20261030/LIVE_READBACK_PRE_PR284_MERGE.safe.json",
-    "passed": true,
-    "mutation": false
+    "status": "passed",
+    "UTC": "2026-10-31T13:08:41.585474+00:00",
+    "receipt": "/mnt/vk-storage/vk-mobile-filters-20261031-311d/final-verification.json",
+    "service_receipt": "/mnt/vk-storage/vk-mobile-filters-20261031-311d/after-live.json",
+    "public_browser": "/mnt/vk-storage/vk-mobile-filters-20261031-311d/public-browser.json",
+    "database_and_backend_identity_preserved": true
+  },
+  "frontend_deployed_at_utc": "2026-10-31T13:07:50.920665+00:00",
+  "previous_frontend_build": {
+    "source_commit": "b990b5939642b1ac7e744a9290840a731fa3f550",
+    "method": "local tsc && vite production build, bounded 4096 MiB heap",
+    "file_manifest": "/mnt/vk-storage/vk-unread-reselect-20261031-c097/reselect-release/frontend-source.json",
+    "verified_manifest_files": 417,
+    "retained_asset_count": 559,
+    "hosted_ci": false
+  },
+  "frontend_only_deployment": {
+    "source_commit": "02a9a993d8d9118ca703a22baa15efcf0c7cc4c9",
+    "feature_commit": "d83e7587a13184126f9935cf692e010520354362",
+    "evidence_root": "/mnt/vk-storage/vk-mobile-filters-20261031-311d",
+    "activation_receipt": "/mnt/vk-storage/vk-mobile-filters-20261031-311d/activation.json",
+    "rollback_frontend": "/mnt/vk-storage/vk-mobile-filters-20261031-311d/paired/fallback",
+    "previous_frontend": "/mnt/vk-storage/vk-unread-reselect-20261031-c097/reselect-release/paired/candidate",
+    "Desktop_B_recovery_receipt": "/mnt/vk-storage/vk-mobile-filters-20261031-311d/Desktop-B-recovery-verified.json",
+    "backend_unchanged": true,
+    "database_restore": false,
+    "browser_mutations_intercepted": true
+  },
+  "previous_frontend_only_deployment": {
+    "source_commit": "3366b015155bfa1857b898e263a6d966aabbe452",
+    "evidence_root": "/mnt/vk-storage/vk-unread-reselect-20261031-c097/final",
+    "activation_receipt": "/mnt/vk-storage/vk-unread-reselect-20261031-c097/final/activation.json",
+    "rollback_frontend": "/mnt/vk-storage/vk-unread-reselect-20261031-c097/final/paired/fallback",
+    "previous_frontend": "/mnt/vk-storage/vk-project-unread-deploy-20261031-c097/paired/candidate",
+    "Desktop_B_recovery_receipt": "/mnt/vk-storage/vk-unread-reselect-20261031-c097/final/Desktop-B-recovery-verified.json",
+    "backend_unchanged": true,
+    "database_restore": false,
+    "feature_resolution_verified": false,
+    "prior_release_reported_unresolved": true,
+    "integration_on_hold": true,
+    "browser_live_receipt": "/mnt/vk-storage/vk-unread-reselect-20261031-c097/final/browser-live-review/results.json",
+    "real_persistence_receipt": "/mnt/vk-storage/vk-unread-reselect-20261031-c097/final/own-live-verified.json",
+    "candidate_persistence_receipt": "/mnt/vk-storage/vk-unread-reselect-20261031-c097/final/own-candidate-verified.json",
+    "live_write_scope": "Only current task issue/workspace; manual flag clear/reload, unrelated flag and unread preservation, then conversation unread clear. Original task flags/body restored. All unrelated writes blocked.",
+    "desktop_mobile_browser_passed": true,
+    "source_application_commit": "3366b015155bfa1857b898e263a6d966aabbe452",
+    "test_harness_commit": "8b01da837",
+    "git_push_performed": false,
+    "operator_reported_unresolved": true,
+    "operator_feedback": "no change after 11:15:55 UTC publication",
+    "remaining_failure": "Actual same-route nested workspace reselection leaves unread true and sends zero seen requests; previous parent-card test changed routes."
+  },
+  "frontend_integration": {
+    "pull_request": "https://github.com/artinflight/vibe-kanban/pull/286",
+    "target": "staging",
+    "requested_merge_method": "rebase",
+    "integration_authority": "GitHub PR merge event; build source IDs are retained independently"
   }
 }

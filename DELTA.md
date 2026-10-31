@@ -2110,3 +2110,22 @@ and the strict empty-reader-WAL correction are documented. All eight hosted
 workflows passed at a421381321. PR #284 records requested rebase integration into
 staging; original build IDs/branch remain retained and main promotion is separate.
 See BACKEND_DEPLOYMENT_HANDOFF.md for exact runs, recovery mirrors and remaining limits.
+
+
+## 2026-10-31 — Project workspace unread clearing
+
+On `vk/c097-vk-can-t-clear-u` from freshly confirmed fork/staging `7b64a69bc`,
+fixed the missing project workspace conversation read effect. Both project and
+Workspaces views now call `useMarkWorkspaceSeen`, retaining loaded destination,
+visibility, summary invalidation and listener cleanup behavior. Summary/session
+rerenders never auto-clear newly arriving completions. Create/issue views do not
+mark workspaces read. No backend or generated type changes.
+
+Eight mounted React regressions pass. Removing the project hook call reproduces
+five failures, restoring it passes all eight. Shared/local frontend TypeScript,
+focused source ESLint, full required formatting, ops check, legacy frontend path
+guard and diff whitespace check pass. Type checks needed bounded 3 GiB Node heaps;
+third-party dependencies reuse existing SSD packages with workspace links pointing
+at this checkout. Full Rust/PR baseline, hosted CI and live browser/API readback
+remain unrun; no production deploy or restart was performed. Scope and pickup are
+in STREAM.md and HANDOFF.md.

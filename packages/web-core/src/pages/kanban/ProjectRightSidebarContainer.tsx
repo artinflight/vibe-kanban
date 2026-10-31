@@ -18,6 +18,7 @@ import { MessageEditProvider } from '@/features/workspace-chat/model/contexts/Me
 import { CreateModeProvider } from '@/features/create-mode/model/CreateModeProvider';
 import { useWorkspaceSessions } from '@/shared/hooks/useWorkspaceSessions';
 import { useWorkspaceRecord } from '@/shared/hooks/useWorkspaceRecord';
+import { useMarkWorkspaceSeen } from '@/shared/hooks/useMarkWorkspaceSeen';
 import { SessionChatBoxContainer } from '@/features/workspace-chat/ui/SessionChatBoxContainer';
 import { CreateChatBoxContainer } from '@/shared/components/CreateChatBoxContainer';
 import { KanbanIssuePanelContainer } from './KanbanIssuePanelContainer';
@@ -161,6 +162,12 @@ function WorkspaceSessionPanel({
     isNewSessionMode,
     startNewSession,
   } = useWorkspaceSessions(workspaceId, { enabled: !!workspaceId });
+
+  useMarkWorkspaceSeen(
+    !isWorkspaceLoading && workspace?.id === workspaceId
+      ? workspaceId
+      : undefined
+  );
 
   const workspaceSummary = useMemo(
     () =>

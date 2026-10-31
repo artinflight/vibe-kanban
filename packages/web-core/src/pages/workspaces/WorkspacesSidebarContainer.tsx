@@ -40,6 +40,7 @@ import {
 import { PropertyDropdown } from '@vibe/ui/components/PropertyDropdown';
 import { PrimaryButton } from '@vibe/ui/components/PrimaryButton';
 import { IconButton } from '@vibe/ui/components/IconButton';
+import { WorkspaceProjectFilter } from '@vibe/ui/components/WorkspaceProjectFilter';
 import {
   ButtonGroup,
   ButtonGroupItem,
@@ -817,7 +818,7 @@ export function WorkspacesSidebarContainer({
             aria-label={sortDialogTitle}
             title={sortDialogTitle}
             className={cn(
-              '!h-cta !px-half !py-0',
+              isMobile ? '!h-12 !w-12 !p-0' : '!h-cta !px-half !py-0',
               hasNonDefaultSort && 'text-brand hover:text-brand'
             )}
             iconClassName="size-icon-lg"
@@ -827,7 +828,7 @@ export function WorkspacesSidebarContainer({
             onClick={() => setIsFilterDialogOpen(true)}
             aria-label={filterDialogTitle}
             title={filterDialogTitle}
-            className="!h-cta !px-half !py-0"
+            className={isMobile ? '!h-12 !w-12 !p-0' : '!h-cta !px-half !py-0'}
             iconClassName={cn('size-icon-lg', hasActiveFilters && 'text-brand')}
           />
         </div>
@@ -906,6 +907,13 @@ export function WorkspacesSidebarContainer({
       onLoadMore={handleLoadMore}
       hasMoreWorkspaces={hasMoreWorkspaces && !isSearching}
       searchControls={searchControls}
+      mobileProjectFilter={
+        <WorkspaceProjectFilter
+          options={projectOptions}
+          projectIds={workspaceFilters.projectIds}
+          onChange={setWorkspaceProjectFilter}
+        />
+      }
       assignmentControls={assignmentControls}
       onOpenWorkspaceActions={handleOpenWorkspaceActions}
       persistKeys={sidebarPersistKeys}

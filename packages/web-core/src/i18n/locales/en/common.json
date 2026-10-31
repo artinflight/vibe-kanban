@@ -447,6 +447,8 @@
       "filterDialogTitle": "Filter workspaces",
       "filterDialogDescription": "Narrow down workspaces by project and PR state.",
       "projectFilterLabel": "Project",
+      "allProjects": "All projects",
+      "projectsSelected": "Selected projects: {{count}}",
       "prFilterLabel": "PR",
       "prFilterAll": "All",
       "prFilterHasPr": "Has PR",

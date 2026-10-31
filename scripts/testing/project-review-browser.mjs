@@ -176,6 +176,7 @@ try {
         navigationUnchanged: true,
       });
     } finally {
+      await page.unrouteAll({ behavior: 'ignoreErrors' });
       await context.close();
       database.close();
     }

@@ -2181,3 +2181,21 @@ Skip parent activation for nested interactive targets and stop review-flag mouse
 propagation. Seven mounted UI tests pass. The original native unread endpoint also
 passes bounded real project-board opening/reopening on this task's own workspace.
 No push, PR or merge occurred; candidate persistence acceptance is continuing.
+
+
+## 2026-10-31 — Corrected live release with real persistence verification
+
+Published source `3366b015155bfa1857b898e263a6d966aabbe452` at 11:15:55 UTC;
+public JS `index-9ssuLQsW.js`, CSS/version unchanged. Real old mobile UI reproduces
+false Needs review/missing-clear controls; old desktop mouse-up fails nested-card
+regression. Correction separates explicit flags, adds mobile clearing, and avoids
+parent issue navigation from nested controls. Fifteen regressions and targeted
+static/production-build checks pass. Candidate/live 393/1440 px fixture persistence,
+reload, unrelated flag preservation and no navigation all pass. Actual live mobile
+writes were bounded to this task's own issue/workspace: flag clearing persists,
+native unread survives that clear and clears on conversation opening. Original
+flags and task body restored; backend-managed metadata formatting was separated.
+Public HTTPS hashes and old assets pass; all live services/DB identities unchanged.
+Both roots retain 507 assets and the 37,762,844-byte software package is independently
+Desktop-B verified. No backend restart or push/PR/merge occurred. Updated live
+manifest and pickup docs identify exact evidence and remaining Git validation gaps.

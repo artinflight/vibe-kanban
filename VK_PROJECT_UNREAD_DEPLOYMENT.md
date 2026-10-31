@@ -1,4 +1,53 @@
-# Project conversation unread fix — live frontend update
+# Project conversation unread/review corrections — live frontend update
+
+## Corrective release accepted October 31, 11:15:55 UTC
+
+The first publication below was reported unresolved by the operator. It proved
+request emission only. Follow-up real project-board tests now prove native read
+persistence. The mobile UI also reproduced manual review flags falsely shown as
+unread "Needs review" with no clear action. A production desktop test caught parent
+card mouse-up navigating before nested control clicks. The correction separates
+manual flags from native activity, adds mobile clearing, and prevents parent
+activation from interactive children.
+
+Current application source: `3366b015155bfa1857b898e263a6d966aabbe452`.
+Public JS: `index-9ssuLQsW.js`; CSS/version remain `index-CUBB2mA2.css` / 0.1.42.
+Current frontend pointer resolves to
+`/mnt/vk-storage/vk-unread-reselect-20261031-c097/final/paired/candidate`.
+The switch took 0.0154 seconds; all five live service identities remained unchanged.
+No backend restart, schema change, provider execution or device action occurred.
+Both paired roots retain 507 assets. Public HTTPS health, identity, exact new entry
+bytes and prior entry assets pass with pinned certificate/hostname verification.
+
+Eight seen and seven mounted UI regressions pass. The nested workspace regression
+fails on the old desktop handler. The exact production build and focused types/
+lint/format/ops checks pass. Persistent SQLite browser fixtures pass at 393/1440 px
+on candidate and live frontend: one clear write, reload persistence, unrelated
+metadata preservation and no navigation side effect. The real live mobile test
+uses ONLY this task's own issue/workspace. It seeds a manual flag and native unread,
+clears the manual flag through the UI, verifies reload and that another flag/native
+unread survive, then opens the conversation and verifies native unread clears.
+Original flags/task body were restored; backend-managed metadata lines were handled
+separately. No unrelated workspace markers were modified. No page errors occurred.
+Physical-phone interaction and full PR/Rust/hosted CI are not claimed.
+
+Recovery: `paired/fallback` under the current evidence root retains the previous
+live index plus all 507 assets. Frontend rollback uses an owned atomic pointer
+replacement; no database restore or service restart is needed. The 37,762,844-byte
+paired frontend/source recovery package was independently restored and hash-verified
+on Desktop B through the existing native object store. Previous backend/full-state
+recovery remains preserved. This is software recovery, not a new mutable-state
+snapshot. Existing backend/history direct frontend roots retain their prior bundle.
+
+Current evidence: `/mnt/vk-storage/vk-unread-reselect-20261031-c097/final`.
+Key files: `frontend-source.json`, `pair-receipt.json`, `activation.json`,
+`own-candidate-verified.json`, `own-live-verified.json`,
+`browser-candidate-review-verified/results.json`, `browser-live-review/results.json`,
+`after-live-pinned.json`, `Desktop-B-recovery-verified.json`.
+Temporary frontend/browser processes were closed. Nothing was pushed; PR and merge
+remain on hold. Reload existing browser tabs to load the correction.
+
+## Initial publication — superseded and reported unresolved
 
 The operator requested the live update on 2026-10-31. It was published at
 10:38:31.936 UTC from `f95bab83836d467f972e904710220eee09406d5b`, version 0.1.42.

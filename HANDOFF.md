@@ -51,71 +51,45 @@ Prior backend owner pickup (historical record follows):
 
 # Backend owner pickup — 2026-10-30
 
-Current investigation: real project-card opening and reopening on this task's own
-workspace returned HTTP 200 and persisted `has_unseen_turns=false`. The prior
-request-only test gap is now closed for that path. A second failure was reproduced
-in the actual mobile project UI: explicit manual review flags appeared as "Needs
-review" even when all linked workspaces were read, with no mobile clear control.
-The branch separates manual flags from unread activity and adds a shared desktop/
-mobile clear action. Five mounted UI tests and eight seen regressions pass; the
-production build and persistent browser acceptance are being completed. No push,
-PR or merge is authorized until this correction is verified.
+The corrected frontend is live at `https://vibe.local`, version 0.1.42, from
+`3366b015155bfa1857b898e263a6d966aabbe452`. Public JS: `index-9ssuLQsW.js`;
+CSS: unchanged `index-CUBB2mA2.css`. Accepted 11:15:55 UTC with a roughly 15 ms
+atomic frontend pointer replacement. Backend/history reader/proxy/gateway/static
+service identities and database identity/migrations are unchanged.
 
-Current status: the operator reports unread clearing remains unresolved. The
-requested push/PR/rebase merge was held before any of those mutations occurred.
-Do not treat the published change as an accepted resolution. Read-only follow-up
-confirmed the same frontend/backend, two independent sources of project Needs
-review (workspace unread and explicit issue flag), and possible sibling workspace
-aggregation. No cause is confirmed yet. The operator was asked where the
-indicator remains; an exact workspace and click path are still needed. No live
-read/unread flags were changed by this investigation.
+The first frontend publication was reported unresolved. Its tests only intercepted
+seen requests. Follow-up real backend tests verified native read persistence, then
+reproduced the remaining misleading manual Needs review marker with no mobile clear
+control and premature parent desktop mouse-up navigation from nested controls.
+Manual issue flags now use a separate accessible clear action on mobile/desktop;
+workspace unread/approval remains independent. Parent cards ignore interactive
+children so workspace navigation and flag actions do not also open the issue.
 
-The project workspace session panel now uses the same `useMarkWorkspaceSeen`
-hook as Workspaces. It waits for a loaded record matching the requested workspace
-ID. A successful seen request invalidates workspace-summary queries; opening an
-issue or create panel does not clear workspace activity. Visibility and polling
-semantics are unchanged from Workspaces.
+Validation: eight seen regressions plus seven mounted UI tests pass. The old parent
+handler fails the nested workspace regression. The old live mobile UI reproduces
+the false Needs review/missing-clear condition. Production build, shared/local/UI
+types, focused ESLint, format/ops and diff checks pass. Final candidate and live
+393/1440 px checks persist clearing to disposable SQLite, preserve unrelated flags,
+retain navigation and verify reload. A separate real live test on ONLY this task's
+own issue/workspace proves manual flag clear persists after reload, preserves a
+second flag and native unread, then opening the conversation clears native unread.
+Original flags and task body were restored. No page errors. Backend-managed task
+metadata formatting is distinct from task body. No unrelated live writes occurred.
 
-Focused test command (reuse existing SSD dependencies; do not duplicate installs):
-`VK_TEST_OUTPUT=<mounted-SSD-directory> node scripts/testing/run-workspace-seen-tests.mjs`.
-The suite mounts the actual project sidebar with unrelated providers/UI stubbed,
-using real React, React DOM, jsdom and React Query. The API is stubbed. Eight cases
-cover opening/invalidation, loading/missing/wrong records, switching, background
-visibility/closing, both create modes, shared hook reopening and request failure.
+Evidence root: `/mnt/vk-storage/vk-unread-reselect-20261031-c097/final`.
+Key receipts: `own-live-verified.json`, `browser-live-review/results.json`,
+`after-live-pinned.json`, `activation.json`, `Desktop-B-recovery-verified.json`.
+Both frontend roots retain 507 assets; software recovery was independently read
+back from Desktop B. Previous frontend and immutable rollback index remain intact.
+Temporary test frontends/browsers are closed. Reload browser tabs to load the fix.
 
-Validation passed: all eight focused regressions; web-core and local-web TypeScript
-checks (bounded 3 GiB Node heaps); ESLint for the three changed source files;
-`pnpm run format`; `pnpm run ops:check`; frontend legacy-path guard and
-`git diff --check`. Removing the project's seen-hook call reproduces five failing
-regressions; restoring it passes all eight. Initial default-heap checks exhausted
-Node's heap; final checks use this checkout's workspace package sources with
-shared SSD third-party dependencies. No duplicate dependency install was needed.
+Nothing was pushed. Push/PR/rebase merge remain held; the operator explicitly asked
+to get behavior working before pushing. Full workspace Rust/full PR baseline and
+hosted CI have not run for these corrections; no PR has been opened. Do not claim
+Git integration from a successful live frontend publication. Preserve original
+source/release commit IDs if later rebase assigns new IDs.
 
-The operator-authorized live frontend update is complete at `https://vibe.local`.
-Public JS `index-hKvj8yI6.js` was built from `f95bab83836d467f972e904710220eee09406d5b`;
-version remains 0.1.42 and CSS is unchanged. The atomic pointer switch took about
-6 ms at 2026-10-31 10:38:31 UTC. Backend, history reader/proxy, gateway and static
-server PIDs/invocations stayed unchanged. Public HTTPS byte checks and both old
-entry assets pass. Built-candidate and live desktop/mobile browser checks pass:
-project opening/reopening sends read requests; issue-only views and summary
-polling do not. Browser mutations were intercepted; actual persisted unread
-transitions were not performed against live data.
-
-Software recovery was independently read back from Desktop B. The old frontend
-remains intact; a new paired fallback retains all old/new hashed assets. No
-backend restart, DB restore, new inference or device action occurred. Temporary
-frontends/browsers are closed. See [deployment evidence](VK_PROJECT_UNREAD_DEPLOYMENT.md)
-for exact rollback and evidence paths. Reload existing browser tabs to load the fix.
-
-Full workspace Rust tests, full check/lint and hosted CI were not run. Automatic
-approval review rejected the source push and hosted workflow launch as an external
-export; no push happened. The exact-source local production build and targeted
-validation passed. Before a staging PR, run the full PR baseline from AGENTS.
-
-Current production remains documented in [STATE](STATE.md),
-[LIVE_DEPLOYMENT.json](LIVE_DEPLOYMENT.json) and
-[the backend handoff](BACKEND_DEPLOYMENT_HANDOFF.md). Preserve that deployment's
-history, paired assets, settings, queues and existing controls.
-
-Prior pickup: [previous record](deployment-history/20261030-before-reconciliation/HANDOFF.md)
+See [release record](VK_PROJECT_UNREAD_DEPLOYMENT.md), [STATE](STATE.md) and
+[LIVE_DEPLOYMENT.json](LIVE_DEPLOYMENT.json). Prior pickup:
+[previous record](deployment-history/20261030-before-reconciliation/HANDOFF.md)
 and [HANDOFF history](HANDOFF_HISTORY_20261017.md).

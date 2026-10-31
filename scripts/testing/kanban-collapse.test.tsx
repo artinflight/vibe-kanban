@@ -231,3 +231,78 @@ test('issue unread labels track workspace replies independently from manual flag
     'Needs approval'
   );
 });
+
+for (const isMobile of [false, true]) {
+  test(`nested workspace click never opens the parent issue (${isMobile ? 'phone' : 'desktop'})`, async () => {
+    const { IssueWorkspaceCard } = await import(
+      '../../packages/ui/src/components/IssueWorkspaceCard'
+    );
+    let issueOpens = 0;
+    let workspaceOpens = 0;
+    const host = document.createElement('div');
+    document.body.append(host);
+    const root = createRoot(host);
+    const click = async (element: Element) => {
+      await act(async () => {
+        for (const type of ['mousedown', 'mouseup', 'click']) {
+          element.dispatchEvent(
+            new window.MouseEvent(type, { bubbles: true, button: 0 })
+          );
+        }
+      });
+    };
+    try {
+      await act(async () =>
+        root.render(
+          <I18nextProvider i18n={i18next}>
+            <KanbanProvider onDragEnd={() => {}}>
+              <KanbanCards id="todo">
+                <KanbanCard
+                  id="issue"
+                  name="Issue"
+                  index={0}
+                  isMobile={isMobile}
+                  onClick={() => issueOpens++}
+                >
+                  <IssueWorkspaceCard
+                    workspace={{
+                      id: 'workspace',
+                      localWorkspaceId: 'workspace',
+                      name: 'Workspace',
+                      archived: false,
+                      filesChanged: 0,
+                      linesAdded: 0,
+                      linesRemoved: 0,
+                      prs: [],
+                      owner: null,
+                      updatedAt: new Date().toISOString(),
+                    }}
+                    onClick={() => workspaceOpens++}
+                  />
+                </KanbanCard>
+              </KanbanCards>
+            </KanbanProvider>
+          </I18nextProvider>
+        )
+      );
+      const parent = host.querySelector('[data-rfd-draggable-id="issue"]')!;
+      const workspace = parent.querySelector('[role="button"]')!;
+      await click(workspace.querySelector('span.text-high')!);
+      assert.equal(workspaceOpens, 1);
+      assert.equal(
+        issueOpens,
+        0,
+        'mouse-up must not open the parent before the workspace click'
+      );
+      await click(parent);
+      assert.equal(
+        issueOpens,
+        1,
+        'the issue card background remains actionable'
+      );
+    } finally {
+      await act(async () => root.unmount());
+      host.remove();
+    }
+  });
+}

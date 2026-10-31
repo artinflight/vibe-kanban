@@ -2169,3 +2169,15 @@ native replies are already read, and have no mobile clear control. Separate
 workspace attention aggregation from explicit flags and share an accessible clear
 control across desktop/mobile. Mounted UI and seen regressions pass; persistent
 browser acceptance and frontend rollout are in progress. Push/PR/merge remain held.
+
+
+## 2026-10-31 — Nested desktop actions also opened the issue
+
+Production-browser flag acceptance caught the parent Kanban card opening its issue
+on mouse-up before the nested control click. A real IssueWorkspaceCard/KanbanCard
+mouse sequence reproduces the unwanted parent open on the old code; the new guard
+passes on desktop and phone, while card-background navigation stays functional.
+Skip parent activation for nested interactive targets and stop review-flag mouse-up
+propagation. Seven mounted UI tests pass. The original native unread endpoint also
+passes bounded real project-board opening/reopening on this task's own workspace.
+No push, PR or merge occurred; candidate persistence acceptance is continuing.

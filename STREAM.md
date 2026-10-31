@@ -1,3 +1,23 @@
+# Mobile workspace filters — 2026-10-31
+
+Branch `vk/311d-vk-mobile-filter`, based on fork/staging
+`7b64a69bc34d418b31c1f902c7714122a20783a3` (remote head verified October 31).
+
+Scope: make project filters directly accessible from the phone workspace list.
+The toolbar now exposes a project selector plus sort/filter buttons without the
+Options gate. Project selection uses the existing project options, workspace
+filters and scratch persistence; desktop keeps its existing filter dialog.
+The selector supports multiple projects, No project, All projects reset, current
+selection text and 48 px targets. New labels cover all seven existing locales.
+No API, Rust, schema, production deployment or device setting change is included.
+
+Validation and remaining gates are recorded in HANDOFF.md. Browser acceptance
+intercepts all application writes and emulates preference snapshots locally.
+The frontend preview uses the existing public gateway on 4720 because the preview
+guide's old 4511 endpoint is absent; current runtime authority remains STATE.md.
+
+Prior deployment stream (historical branch scope follows):
+
 # Deployment reconciliation and Antigravity activation
 
 Branch `fix/deployment-reconciliation-20261030`, based on fork/staging

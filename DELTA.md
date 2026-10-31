@@ -2110,3 +2110,27 @@ and the strict empty-reader-WAL correction are documented. All eight hosted
 workflows passed at a421381321. PR #284 records requested rebase integration into
 staging; original build IDs/branch remain retained and main promotion is separate.
 See BACKEND_DEPLOYMENT_HANDOFF.md for exact runs, recovery mirrors and remaining limits.
+
+
+## 2026-10-31 — Direct mobile workspace project filters
+
+Branch `vk/311d-vk-mobile-filter` exposes a project selector and sort/filter buttons
+above the phone workspace list, removing the Options gate. The selector shares
+existing project options, filter state and scratch persistence; supports multiple
+projects, No project and All projects reset; and displays current selection with
+48 px touch targets. Desktop controls retain their existing layout. New labels
+cover all seven locales. No backend, schema or production deployment change.
+
+All four frontend type checks, focused UI lint, formatting, ops/path guards and
+nine workspace regressions passed. Read-only browser acceptance passed at
+360/412/767/768/1440 px, including actual row filtering, locally emulated reload
+persistence, clearing, archive/search and focus return. See HANDOFF.md for evidence
+and the inherited nested-dialog Escape limitation. Temporary preview stopped;
+no physical-device UI QA, commit, push or PR is claimed.
+
+
+## 2026-10-31 — Mobile filter commit requested
+
+The operator requested a local commit of the validated mobile filter stream.
+Source, browser acceptance and continuity notes are committed together.
+Push, PR, promotion and deployment remain separate.

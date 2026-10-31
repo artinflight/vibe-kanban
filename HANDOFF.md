@@ -1,3 +1,45 @@
+# Mobile workspace filters pickup — 2026-10-31
+
+Current branch: `vk/311d-vk-mobile-filter`; see STREAM.md for scope.
+The mobile workspace list now shows its project selector and sort/filter controls
+directly. `WorkspaceProjectFilter` shares the existing project selection state
+with `WorkspacesFilterDialog`; switching projects never changes the PR filter.
+All projects clears only project selection. Desktop controls retain their layout.
+
+Validation passed: UI, web-core, local-web and remote-web TypeScript checks;
+focused UI ESLint; `pnpm run format` plus explicit UI/test Prettier; ops governance,
+legacy frontend path guard, diff whitespace, and nine existing workspace
+assignment/pagination regressions. Large type checks used a bounded 2 GiB Node
+heap after the inherited 768 MiB limit failed.
+
+Browser acceptance (`scripts/testing/mobile-workspace-filters-browser.mjs`) passed
+at 360, 412, 767, 768 and 1440 px against the branch-only frontend and existing
+green gateway. It verified actual workspace rows match the selected project,
+48 px targets, multi-select/No project, All projects reset, shared dialog badge,
+locally emulated save/reload, search/archive access, keyboard focus return and
+viewport fit. All application writes were intercepted; subscription bridges only
+forwarded backend-to-client frames. Sanitized results and screenshots remain in
+the ignored `.vk-preview/mobile-filter-tests/` on SSD. The temporary preview was
+stopped after acceptance; no public preview route was changed.
+
+Known inherited limitation: Escape from the old dialog's nested project dropdown
+can dismiss both layers and leave pointer events blocked. The new direct selector
+passes Escape/focus acceptance without that nesting. The shared-state check reads
+the old dialog badge and closes with its normal button; it does not certify that
+old nested Escape path. Rust/full-workspace lint tests and physical-phone UI QA
+were not run for this frontend-only stream.
+
+Dependencies reuse the identical-lockfile SSD installation at
+`/mnt/vk-storage/vk-t63-release-20261018/candidate-source` through ignored local
+links. Workspace package links and Vite caches belong to this worktree.
+The lightweight preview targets existing gateway 4720; no backend was started.
+S25 read-only status verified exact identity and Tailscale transport on October 31;
+Wi-Fi is enabled, so no cellular or physical-phone UI acceptance is claimed.
+The local feature commit includes source, browser acceptance and continuity notes.
+No push, PR, promotion or deployment has been performed for this stream.
+
+Prior backend owner pickup (historical record follows):
+
 # Backend owner pickup — 2026-10-30
 
 Start with [STATE](STATE.md), [live manifest](LIVE_DEPLOYMENT.json),

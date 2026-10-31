@@ -89,6 +89,8 @@ export interface WorkspacesSidebarProps {
   hasMoreWorkspaces?: boolean;
   /** Controls rendered beside the search input */
   searchControls?: ReactNode;
+  /** Direct project filter rendered above the phone workspace list. */
+  mobileProjectFilter?: ReactNode;
   assignmentControls?: ReactNode;
   /** Callback for opening workspace actions */
   onOpenWorkspaceActions?: (workspaceId: string) => void;
@@ -207,6 +209,7 @@ export function WorkspacesSidebar({
   onLoadMore,
   hasMoreWorkspaces = false,
   searchControls,
+  mobileProjectFilter,
   assignmentControls,
   onOpenWorkspaceActions,
   persistKeys = DEFAULT_PERSIST_KEYS,
@@ -216,7 +219,6 @@ export function WorkspacesSidebar({
   const { t } = useTranslation(['tasks', 'common']);
   const phone = usePhoneLayout();
   const [phoneCategory, setPhoneCategory] = useState('all');
-  const [listOptionsOpen, setListOptionsOpen] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const projectNotices = onOpenProjectChat
     ? projectDotNotices.filter((item) => item.unreadCount > 0)
@@ -324,17 +326,12 @@ export function WorkspacesSidebar({
             onAction={() => onSearchChange('')}
             placeholder={t('common:workspaces.searchPlaceholder')}
           />
-          <button
-            type="button"
-            aria-label="List options"
-            aria-expanded={listOptionsOpen}
-            onClick={() => setListOptionsOpen(!listOptionsOpen)}
-          >
-            Options
-          </button>
         </div>
-        {listOptionsOpen && (
-          <div className="phone-list-options">{searchControls}</div>
+        {(mobileProjectFilter || searchControls) && (
+          <div className="phone-workspace-filters">
+            {mobileProjectFilter}
+            {searchControls}
+          </div>
         )}
         {activeRemoteHost && (
           <button

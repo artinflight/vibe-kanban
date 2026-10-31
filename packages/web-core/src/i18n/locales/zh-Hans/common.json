@@ -433,6 +433,8 @@
       "filterDialogTitle": "Filter workspaces",
       "filterDialogDescription": "Narrow down workspaces by project and PR state.",
       "projectFilterLabel": "Project",
+      "allProjects": "所有项目",
+      "projectsSelected": "已选项目：{{count}}",
       "prFilterLabel": "PR",
       "prFilterAll": "All",
       "prFilterHasPr": "Has PR",

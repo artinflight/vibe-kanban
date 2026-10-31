@@ -520,7 +520,7 @@ html {
   [role='option'],
   .phone-prompt-options button,
   .phone-prompt-options label:has(input[type='file']),
-  .phone-list-options button {
+  .phone-workspace-filters button {
     min-width: 48px;
     min-height: 48px;
   }
@@ -910,18 +910,37 @@ html {
     flex: 1;
     min-width: 0;
   }
-  .phone-workspace-search > button {
-    flex-shrink: 0;
-    min-height: 48px;
-    font-size: 13px;
-    color: hsl(var(--text-low));
-    padding: 0 8px;
-  }
-  .phone-list-options {
+  .phone-workspace-filters {
     display: flex;
-    justify-content: flex-end;
+    align-items: center;
     gap: 8px;
     padding: 0 16px 8px;
+  }
+  .phone-project-filter {
+    display: flex;
+    flex: 1;
+    min-width: 0;
+    align-items: center;
+    gap: 8px;
+    padding: 0 12px;
+    border: 1px solid hsl(var(--border));
+    border-radius: 12px;
+    background: hsl(var(--bg-panel));
+    font-size: 14px;
+    color: hsl(var(--text-normal));
+  }
+  .phone-project-filter span {
+    flex: 1;
+    text-align: left;
+  }
+  .phone-project-filter-active {
+    border-color: hsl(var(--brand));
+    color: hsl(var(--brand));
+  }
+  .phone-project-filter-menu [role='menuitemcheckbox'] {
+    min-height: 48px;
+    font-size: 14px;
+    overflow-wrap: anywhere;
   }
   .phone-host {
     min-height: 48px;

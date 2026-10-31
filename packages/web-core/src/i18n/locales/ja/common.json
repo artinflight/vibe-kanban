@@ -433,6 +433,8 @@
       "filterDialogTitle": "Filter workspaces",
       "filterDialogDescription": "Narrow down workspaces by project and PR state.",
       "projectFilterLabel": "Project",
+      "allProjects": "すべてのプロジェクト",
+      "projectsSelected": "選択したプロジェクト: {{count}}",
       "prFilterLabel": "PR",
       "prFilterAll": "All",
       "prFilterHasPr": "Has PR",

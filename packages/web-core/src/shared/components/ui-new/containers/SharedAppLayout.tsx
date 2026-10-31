@@ -24,7 +24,6 @@ import {
   type AppBarHostStatus,
   type AppBarProject,
   type AppBarProjectUpdate,
-  PASTEL_PROJECT_COLORS,
 } from '@vibe/ui/components/AppBar';
 import { MobileDrawer } from '@vibe/ui/components/MobileDrawer';
 import { AppBarUserPopoverContainer } from './AppBarUserPopoverContainer';
@@ -61,14 +60,7 @@ import { WorkspacesSidebarContainer } from '@/pages/workspaces/WorkspacesSidebar
 import { WorkspacesSidebarReopenTag } from '@vibe/ui/components/WorkspacesSidebar';
 import { useRemoteCloudHostsAppBarModel } from '@/shared/hooks/useRemoteCloudHosts';
 import { projectsApi, workspacesApi } from '@/shared/lib/api';
-
-function getLocalProjectColor(projectId: string): string {
-  let hash = 0;
-  for (const char of projectId) {
-    hash = (hash * 31 + char.charCodeAt(0)) % PASTEL_PROJECT_COLORS.length;
-  }
-  return PASTEL_PROJECT_COLORS[hash];
-}
+import { getLocalProjectColor } from '@vibe/ui/lib/projectAppearance';
 
 function workspaceNeedsReview(workspace: {
   has_pending_approval?: boolean;

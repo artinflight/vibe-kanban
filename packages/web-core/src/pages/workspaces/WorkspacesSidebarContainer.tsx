@@ -40,6 +40,15 @@ import {
 import { PropertyDropdown } from '@vibe/ui/components/PropertyDropdown';
 import { PrimaryButton } from '@vibe/ui/components/PrimaryButton';
 import { IconButton } from '@vibe/ui/components/IconButton';
+import { WorkspaceProjectFilter } from '@vibe/ui/components/WorkspaceProjectFilter';
+import {
+  WorkspaceProjectFilterChips,
+  type WorkspaceProjectFilterChipOption,
+} from '@vibe/ui/components/WorkspaceProjectFilterChips';
+import {
+  getLocalProjectColor,
+  getProjectAbbreviation,
+} from '@vibe/ui/lib/projectAppearance';
 import {
   ButtonGroup,
   ButtonGroupItem,
@@ -367,6 +376,10 @@ export function WorkspacesSidebarContainer({
     : 'flat';
   const toggleLayoutMode = () => setAccordionLayout(!isAccordionLayout);
 
+  const localProjectCustomizations = useUiPreferencesStore(
+    (s) => s.localProjectCustomizations
+  );
+
   // Workspace sidebar filters + sort
   const workspaceFilters = useUiPreferencesStore((s) => s.workspaceFilters);
   const setWorkspaceProjectFilter = useUiPreferencesStore(
@@ -482,7 +495,7 @@ export function WorkspacesSidebarContainer({
   }, [allRemoteProjects, remoteProjectByLocalId, orgNameById]);
 
   // Build flat project options for MultiSelectDropdown
-  const projectOptions = useMemo<MultiSelectDropdownOption<string>[]>(() => {
+  const projectOptions = useMemo<WorkspaceProjectFilterChipOption[]>(() => {
     const linkedLocalProjectIds = new Set(localProjectByLocalId.values());
 
     return [
@@ -500,11 +513,24 @@ export function WorkspacesSidebarContainer({
             .map((project) => ({
               value: project.id,
               label: project.name,
+              abbreviation: getProjectAbbreviation({
+                name: project.name,
+                abbreviation:
+                  localProjectCustomizations[project.id]?.abbreviation,
+              }),
+              color:
+                localProjectCustomizations[project.id]?.color ??
+                getLocalProjectColor(project.id),
             }))
         : projectGroups.flatMap((g) =>
             g.projects.map((p) => ({
               value: p.id,
               label: p.name,
+              abbreviation: getProjectAbbreviation({
+                name: p.name,
+                abbreviation: localProjectCustomizations[p.id]?.abbreviation,
+              }),
+              color: localProjectCustomizations[p.id]?.color ?? p.color,
               renderOption: () => (
                 <div className="flex items-center gap-base">
                   <span
@@ -521,6 +547,7 @@ export function WorkspacesSidebarContainer({
     isLocalAuthBypassed,
     localProjectByLocalId,
     localProjects,
+    localProjectCustomizations,
     projectGroups,
     t,
   ]);
@@ -817,7 +844,7 @@ export function WorkspacesSidebarContainer({
             aria-label={sortDialogTitle}
             title={sortDialogTitle}
             className={cn(
-              '!h-cta !px-half !py-0',
+              isMobile ? '!h-12 !w-12 !p-0' : '!h-cta !px-half !py-0',
               hasNonDefaultSort && 'text-brand hover:text-brand'
             )}
             iconClassName="size-icon-lg"
@@ -827,7 +854,7 @@ export function WorkspacesSidebarContainer({
             onClick={() => setIsFilterDialogOpen(true)}
             aria-label={filterDialogTitle}
             title={filterDialogTitle}
-            className="!h-cta !px-half !py-0"
+            className={isMobile ? '!h-12 !w-12 !p-0' : '!h-cta !px-half !py-0'}
             iconClassName={cn('size-icon-lg', hasActiveFilters && 'text-brand')}
           />
         </div>
@@ -906,6 +933,21 @@ export function WorkspacesSidebarContainer({
       onLoadMore={handleLoadMore}
       hasMoreWorkspaces={hasMoreWorkspaces && !isSearching}
       searchControls={searchControls}
+      projectFilter={
+        isMobile ? (
+          <WorkspaceProjectFilter
+            options={projectOptions}
+            projectIds={workspaceFilters.projectIds}
+            onChange={setWorkspaceProjectFilter}
+          />
+        ) : (
+          <WorkspaceProjectFilterChips
+            options={projectOptions}
+            projectIds={workspaceFilters.projectIds}
+            onChange={setWorkspaceProjectFilter}
+          />
+        )
+      }
       assignmentControls={assignmentControls}
       onOpenWorkspaceActions={handleOpenWorkspaceActions}
       persistKeys={sidebarPersistKeys}

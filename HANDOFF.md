@@ -4,10 +4,26 @@ Current branch: `vk/311d-vk-mobile-filter`; see STREAM.md for scope.
 The phone workspace list retains its accepted project dropdown and direct
 sort/filter controls (`03d5f308e`). Desktop now uses `WorkspaceProjectFilterChips`:
 one row of multi-select bubble toggles below Search, horizontally scrollable when
-needed, including within the 300 px workspace sidebar. Selected chips show a
-checkmark and pressed state; long labels retain their full title. Both controls
-share existing project state and persistence with `WorkspacesFilterDialog`.
+needed, including within the 300 px workspace sidebar. The compact 28 px chips
+show the left project menu's abbreviations and pastel colors, honoring saved
+custom labels/colors. Full names remain in hover titles and accessible names.
+Selected chips retain checkmarks, pressed states and keyboard focus outlines.
+Both controls share existing state/persistence with `WorkspacesFilterDialog`.
 All projects clears only project selection; the PR filter is preserved.
+
+The canonical project appearance helpers now live in
+`packages/ui/src/lib/projectAppearance.ts`. AppBar, SharedAppLayout and workspace
+filter options reuse them, so default initials, local color hashing, saved
+abbreviations and active/inactive colors stay aligned. Compact-style browser
+acceptance passed at 360/412/767/768/1440 px, including exact computed abbreviation,
+background and text color parity with the left menu, saved customizations, compact
+project chip dimensions (at most 28 px tall / 60 px wide), filtering, persistence,
+keyboard toggles, resizing and the 300 px sidebar constraint. Results are in
+ignored `.vk-preview/compact-chip-tests/` on SSD. A fresh public desktop screenshot
+shows the abbreviated row with no page overflow. Root formatting, focused UI lint,
+path and whitespace checks passed. All four frontend TypeScript checks passed
+with a bounded 2 GiB heap; logs use `.vk-preview/compact-*-check.log`. The compact
+styling is included in its own local commit. The public preview remains running.
 
 Desktop extension validation passed: all four frontend TypeScript checks with a
 bounded 2 GiB heap, focused UI ESLint, root formatting plus explicit UI/test

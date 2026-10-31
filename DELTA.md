@@ -2152,3 +2152,22 @@ column. Public HTTPS desktop review showed the row without page overflow, and
 frontend/API probes returned HTTP 200. Validation writes stayed local. The review
 preview remains running; the desktop extension is committed locally. No push, PR,
 production deployment, backend or schema change is included.
+
+
+## 2026-10-31 — Compact project abbreviations and menu colors
+
+The operator requested smaller desktop bubbles using the left menu's abbreviations
+and colors. Chips are now 28 px tall, show the same up-to-three-character labels,
+and use the same pastel colors and active-state styling. Full names remain in
+hover titles and accessible labels; All is compact and No project uses a folder
+icon. Existing selection, reset, persistence and phone dropdown behavior remain.
+
+Project appearance helpers were moved unchanged into the shared UI library and
+reused by AppBar, SharedAppLayout and workspace filter metadata, including saved
+abbreviations/colors. Browser acceptance passed all five widths and checked exact
+menu/chip appearance parity, saved customizations, sizing and previous behavior.
+The public preview shows the compact row without overflow; it remains running.
+Formatting, focused lint and path/whitespace checks passed. Source and validation
+notes are committed locally; push, PR and production deployment remain pending.
+
+All four frontend TypeScript checks also passed with a bounded 2 GiB heap.

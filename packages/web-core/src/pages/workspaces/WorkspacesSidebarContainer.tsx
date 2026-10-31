@@ -41,7 +41,14 @@ import { PropertyDropdown } from '@vibe/ui/components/PropertyDropdown';
 import { PrimaryButton } from '@vibe/ui/components/PrimaryButton';
 import { IconButton } from '@vibe/ui/components/IconButton';
 import { WorkspaceProjectFilter } from '@vibe/ui/components/WorkspaceProjectFilter';
-import { WorkspaceProjectFilterChips } from '@vibe/ui/components/WorkspaceProjectFilterChips';
+import {
+  WorkspaceProjectFilterChips,
+  type WorkspaceProjectFilterChipOption,
+} from '@vibe/ui/components/WorkspaceProjectFilterChips';
+import {
+  getLocalProjectColor,
+  getProjectAbbreviation,
+} from '@vibe/ui/lib/projectAppearance';
 import {
   ButtonGroup,
   ButtonGroupItem,
@@ -369,6 +376,10 @@ export function WorkspacesSidebarContainer({
     : 'flat';
   const toggleLayoutMode = () => setAccordionLayout(!isAccordionLayout);
 
+  const localProjectCustomizations = useUiPreferencesStore(
+    (s) => s.localProjectCustomizations
+  );
+
   // Workspace sidebar filters + sort
   const workspaceFilters = useUiPreferencesStore((s) => s.workspaceFilters);
   const setWorkspaceProjectFilter = useUiPreferencesStore(
@@ -484,7 +495,7 @@ export function WorkspacesSidebarContainer({
   }, [allRemoteProjects, remoteProjectByLocalId, orgNameById]);
 
   // Build flat project options for MultiSelectDropdown
-  const projectOptions = useMemo<MultiSelectDropdownOption<string>[]>(() => {
+  const projectOptions = useMemo<WorkspaceProjectFilterChipOption[]>(() => {
     const linkedLocalProjectIds = new Set(localProjectByLocalId.values());
 
     return [
@@ -502,11 +513,24 @@ export function WorkspacesSidebarContainer({
             .map((project) => ({
               value: project.id,
               label: project.name,
+              abbreviation: getProjectAbbreviation({
+                name: project.name,
+                abbreviation:
+                  localProjectCustomizations[project.id]?.abbreviation,
+              }),
+              color:
+                localProjectCustomizations[project.id]?.color ??
+                getLocalProjectColor(project.id),
             }))
         : projectGroups.flatMap((g) =>
             g.projects.map((p) => ({
               value: p.id,
               label: p.name,
+              abbreviation: getProjectAbbreviation({
+                name: p.name,
+                abbreviation: localProjectCustomizations[p.id]?.abbreviation,
+              }),
+              color: localProjectCustomizations[p.id]?.color ?? p.color,
               renderOption: () => (
                 <div className="flex items-center gap-base">
                   <span
@@ -523,6 +547,7 @@ export function WorkspacesSidebarContainer({
     isLocalAuthBypassed,
     localProjectByLocalId,
     localProjects,
+    localProjectCustomizations,
     projectGroups,
     t,
   ]);

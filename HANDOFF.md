@@ -59,10 +59,18 @@ assets. The 43,244,856-byte frontend/source software recovery package was indepe
 read back from Desktop B. The previous runtime/full-state recovery is preserved.
 Temporary candidate frontends and browsers closed. No backend/device action.
 
-The operator accepted the live fix ("Good") and requested PR, sync and rebase
-merge into fork/staging. The integration hold is lifted. Fresh fork/staging is
-already an ancestor; full PR validation is running before publication. Hosted CI
-and physical-phone interaction are not yet claimed. Reload existing operator tabs for the new bundle.
+The operator accepted the live fix ("Good") and authorized sync, PR and rebase
+merge. [PR #287](https://github.com/artinflight/vibe-kanban/pull/287) is the staging
+integration record; its merge event gives final status and rebased IDs. Original
+application source b990b5939642b1ac7e744a9290840a731fa3f550 remains immutable.
+Main promotion is separate. Full hosted baseline passed on be20b829502e1d24c72a944d3a7a06409cf75fb4:
+[validation run](https://github.com/artinflight/vibe-kanban/actions/runs/41204050237).
+It includes frontend, workspace tests, Rust lint, schema/SQLx, Tauri and native
+storage/watcher/steering/scheduling checks. Final PR checks remain the integration
+authority. Local full Rust compilation was stopped to avoid fresh registry growth
+on the system disk; it is not claimed passed. All 20 mounted regressions are wired
+into frontend CI. Physical-phone interaction is not claimed. No new deployment
+or backend restart is part of this PR. Reload existing tabs for the accepted UI.
 Direct backend/history frontend roots still serve October 30 UI; only the public
 origin is certified. Do not change those entrypoints without identifying usage.
 See [STATE](STATE.md), [manifest](LIVE_DEPLOYMENT.json) and
@@ -70,10 +78,3 @@ See [STATE](STATE.md), [manifest](LIVE_DEPLOYMENT.json) and
 
 Prior pickup: [previous record](deployment-history/20261030-before-reconciliation/HANDOFF.md)
 and [HANDOFF history](HANDOFF_HISTORY_20261017.md).
-
-Integration validation: all frontend type checks, local/UI lint, UI/workflow
-formatting, ops and 20 mounted regressions pass. The local full check was stopped
-during a fresh Cargo dependency rebuild to avoid further system-disk downloads on
-the live host; it is not reported as passed. The established Test workflow will
-supply the full hosted baseline in validation-only mode before PR creation. Both
-regression runners are now wired into frontend CI. No live deployment change.

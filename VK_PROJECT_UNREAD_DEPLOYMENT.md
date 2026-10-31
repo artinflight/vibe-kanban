@@ -11,7 +11,7 @@ unchanged. Atomic pointer replacement took 0.0056 seconds. No backend restart,
 schema change, provider execution or device action.
 
 The repeat nested workspace click now performs an explicit read without requiring
-a route change. Thirteen mounted regressions, shared TypeScript, focused ESLint,
+a route change. Twenty mounted regressions, shared TypeScript, focused ESLint,
 required format/ops and production build pass. Exact browser regression fails on
 the previous live bundle and passes against both candidate and published live UI.
 At 1440 px, initial opening clears, a reseeded unread survives polling, the actual
@@ -32,8 +32,12 @@ Key files: `browser-candidate-reselect.json`, `browser-live-reselect.json`,
 `after-live-pinned.json`, `Desktop-B-recovery-verified.json`, `frontend-source.json`.
 Temporary frontends/browsers closed. Both earlier publications were reported
 unresolved. The operator accepted this third publication ("Good") and authorized
-PR, sync and rebase merge. Full PR baseline is running before integration; hosted
-CI and physical-phone interaction are not yet claimed.
+PR, sync and rebase merge. [PR #287](https://github.com/artinflight/vibe-kanban/pull/287) targets staging; use its merge event
+for final status and rebased IDs. [Full hosted baseline](https://github.com/artinflight/vibe-kanban/actions/runs/41204050237) passed on
+`be20b829502e1d24c72a944d3a7a06409cf75fb4`, including workspace tests, Rust lint,
+schema/SQLx, Tauri and native integration checks. Twenty mounted regressions now
+run in frontend CI. Local full Rust compilation was stopped to protect host
+storage and is not reported passed. Physical-phone interaction is not claimed.
 Backend/history direct frontend roots retain October 30 UI. Existing browser tabs
 need reload to use this publication. This scoped automated evidence does not claim
 operator acceptance of the full original symptom.

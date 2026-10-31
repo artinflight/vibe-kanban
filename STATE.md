@@ -12,12 +12,15 @@ Deliberate selection of the already displayed project workspace now sends a read
 action; different destinations still wait for loaded chat. Polling and background
 tabs preserve new unread. The new regression fails on the previous frontend and
 passes on candidate/live at 1440/393 px with real read persistence and reload.
-Thirteen mounted regressions, focused types/lint, format/ops and production build
+Twenty mounted regressions, focused types/lint, format/ops and production build
 pass. Existing candidate flag/preservation gates also pass, original test flags/
 body restored. All service and database identities remain unchanged; the pointer
 switch took 5.6 ms. Both paired roots retain 559 assets with verified Desktop B
 software recovery. The operator accepted the fix ("Good") and authorized PR, sync and rebase merge.
-The full PR baseline is running before integration. See [release evidence](VK_PROJECT_UNREAD_DEPLOYMENT.md).
+[PR #287](https://github.com/artinflight/vibe-kanban/pull/287) integrates the accepted fix into staging using the requested
+rebase method. [Full hosted baseline](https://github.com/artinflight/vibe-kanban/actions/runs/41204050237) passed on
+`be20b829502e1d24c72a944d3a7a06409cf75fb4`. The PR merge event records final
+integration status and rebased IDs; original deployment source stays immutable. See [release evidence](VK_PROJECT_UNREAD_DEPLOYMENT.md).
 
 The Antigravity-enabled backend remains live. It was accepted October 30
 at 03:18:14 UTC: backend source `9a4179e8bdf38e93d1a81faca6c665cadd6fddc7`,

@@ -1,9 +1,28 @@
 # Project conversation unread/review corrections — live frontend update
 
-## Same-workspace reselection correction — published 12:04:09 UTC
+## Current preserving release and Git synchronization
+
+The unread correction was accepted at 12:04:09 UTC from original
+`b990b5939642b1ac7e744a9290840a731fa3f550`. At 13:07:50 UTC, the project-filter
+stream published combined source `02a9a993d8d9118ca703a22baa15efcf0c7cc4c9`,
+preserving all 11 unread/review/reselect package files byte-for-byte. Current JS
+is `index-Bgdr6hzC.js`, CSS `index-DL7rKLPs.css`, version 0.1.42. Keep that newer
+release, its paired fallback, all old assets and PR #286's filter source. See
+[filter evidence](VK_WORKSPACE_FILTER_DEPLOYMENT.md) and the live manifest.
+
+All checks passed on PR #287's previous head `054199ec6057a57e22ab0c47d221341de6ca61bb`
+([run](https://github.com/artinflight/vibe-kanban/actions/runs/41205867748)). PR #286
+advanced staging during CI. The unread branch was rebased onto
+`d3d9fa89d45087d1d113f2851d7b2c994c76aec5`; its package tree matches the current
+deployed combined composition exactly. The latest PR checks and merge event
+record final validation/status/rebased IDs. Original application IDs and the
+publication evidence below remain immutable historical records. No deployment,
+backend restart or data change is part of this Git synchronization.
+
+## Original unread publication — 12:04:09 UTC, retained in current composition
 
 Source `b990b5939642b1ac7e744a9290840a731fa3f550`; public JS
-`index-Cy2e9ltd.js`, unchanged CSS `index-CUBB2mA2.css`, version 0.1.42. Live frontend:
+`index-Cy2e9ltd.js`, unchanged CSS `index-CUBB2mA2.css`, version 0.1.42. Frontend at that publication:
 `/mnt/vk-storage/vk-unread-reselect-20261031-c097/reselect-release/paired/candidate`.
 The public HTTPS root/new bytes and prior entry assets verify with pinned TLS.
 All five live service identities and the database identity/99 migrations remain

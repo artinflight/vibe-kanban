@@ -193,6 +193,43 @@
     "browser_mutations_intercepted": true
   },
   "previous_frontend_only_deployment": {
+    "source_commit": "b990b5939642b1ac7e744a9290840a731fa3f550",
+    "evidence_root": "/mnt/vk-storage/vk-unread-reselect-20261031-c097/reselect-release",
+    "activation_receipt": "/mnt/vk-storage/vk-unread-reselect-20261031-c097/reselect-release/activation.json",
+    "rollback_frontend": "/mnt/vk-storage/vk-unread-reselect-20261031-c097/reselect-release/paired/fallback",
+    "previous_frontend": "/mnt/vk-storage/vk-unread-reselect-20261031-c097/final/paired/candidate",
+    "Desktop_B_recovery_receipt": "/mnt/vk-storage/vk-unread-reselect-20261031-c097/reselect-release/Desktop-B-recovery-verified.json",
+    "backend_unchanged": true,
+    "database_restore": false,
+    "feature_resolution_verified": true,
+    "reproduced_same_route_defect_verified": true,
+    "operator_acceptance_pending": false,
+    "prior_release_reported_unresolved": true,
+    "integration_on_hold": false,
+    "git_push_performed": true,
+    "browser_live_receipt": "/mnt/vk-storage/vk-unread-reselect-20261031-c097/reselect-release/browser-live-reselect.json",
+    "browser_candidate_receipt": "/mnt/vk-storage/vk-unread-reselect-20261031-c097/reselect-release/browser-candidate-reselect.json",
+    "real_preservation_receipt": "/mnt/vk-storage/vk-unread-reselect-20261031-c097/reselect-release/own-candidate-verified.json",
+    "live_write_scope": "Only current task workspace native unread/seen state; all unrelated browser mutations blocked. Candidate manual-flag persistence test uses only current task issue/workspace and restores original flags/body.",
+    "validation_scope": "20 mounted regressions now in CI; local frontend types/lint, required format/ops and production build; real candidate/live desktop same-route click, mobile reopening, reload and completion preservation; full hosted baseline with workspace tests, Rust lint, schema/SQLx, Tauri and native integrations.",
+    "not_validated": "Physical-device interaction is not claimed. Full local Rust validation was stopped during dependency rebuilding to protect host storage; full hosted baseline passed instead. Refer to PR #287 checks for final integration validation.",
+    "operator_accepted": true,
+    "operator_acceptance": "Good, open PR, sync, rebase merge",
+    "git_integration_status": "PR #287 is the staging rebase integration record; its merge event is authoritative for final status and rebased IDs. Original deployed source is immutable.",
+    "pull_request": "https://github.com/artinflight/vibe-kanban/pull/287",
+    "requested_merge_method": "rebase",
+    "git_target_branch": "staging",
+    "hosted_baseline_passed": true,
+    "hosted_baseline_source": "be20b829502e1d24c72a944d3a7a06409cf75fb4",
+    "hosted_baseline_run": "https://github.com/artinflight/vibe-kanban/actions/runs/41204050237"
+  },
+  "frontend_integration": {
+    "pull_request": "https://github.com/artinflight/vibe-kanban/pull/286",
+    "target": "staging",
+    "requested_merge_method": "rebase",
+    "integration_authority": "GitHub PR merge event; build source IDs are retained independently"
+  },
+  "earlier_frontend_only_deployment": {
     "source_commit": "3366b015155bfa1857b898e263a6d966aabbe452",
     "evidence_root": "/mnt/vk-storage/vk-unread-reselect-20261031-c097/final",
     "activation_receipt": "/mnt/vk-storage/vk-unread-reselect-20261031-c097/final/activation.json",
@@ -216,10 +253,20 @@
     "operator_feedback": "no change after 11:15:55 UTC publication",
     "remaining_failure": "Actual same-route nested workspace reselection leaves unread true and sends zero seen requests; previous parent-card test changed routes."
   },
-  "frontend_integration": {
-    "pull_request": "https://github.com/artinflight/vibe-kanban/pull/286",
+  "unread_integration": {
+    "pull_request": "https://github.com/artinflight/vibe-kanban/pull/287",
     "target": "staging",
     "requested_merge_method": "rebase",
-    "integration_authority": "GitHub PR merge event; build source IDs are retained independently"
+    "original_deployed_source": "b990b5939642b1ac7e744a9290840a731fa3f550",
+    "preserved_in_current_frontend_source": "02a9a993d8d9118ca703a22baa15efcf0c7cc4c9",
+    "rebased_onto_staging": "d3d9fa89d45087d1d113f2851d7b2c994c76aec5",
+    "operator_accepted": true,
+    "git_push_performed": true,
+    "prior_full_hosted_baseline_run": "https://github.com/artinflight/vibe-kanban/actions/runs/41204050237",
+    "prior_full_pr_checks_run": "https://github.com/artinflight/vibe-kanban/actions/runs/41205867748",
+    "current_validation_authority": "Latest PR #287 checks and merge event",
+    "integration_authority": "PR #287 merge event gives final status and rebased IDs; original deployed IDs remain immutable",
+    "runtime_changed_by_git_integration": false,
+    "package_tree_matches_current_deployed_composition": true
   }
 }

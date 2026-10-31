@@ -1,55 +1,29 @@
-# Workspace project filters pickup — 2026-10-31
+# Project unread reselection pickup — 2026-10-31
 
-The accepted mobile dropdown and compact desktop abbreviation/color bubbles are
-published at `https://vibe.local/workspaces`, version 0.1.42. Production source is
-`02a9a993d8d9118ca703a22baa15efcf0c7cc4c9`, public JS `index-Bgdr6hzC.js`.
-Read [STATE](STATE.md), [manifest](LIVE_DEPLOYMENT.json) and
-[deployment evidence](VK_WORKSPACE_FILTER_DEPLOYMENT.md) before another deployment.
+Current live frontend `https://vibe.local`: combined filter composition
+`02a9a993d8d9118ca703a22baa15efcf0c7cc4c9`, published 13:07:50 UTC,
+JS `index-Bgdr6hzC.js`, CSS `index-DL7rKLPs.css`, version 0.1.42. This preserves
+all 11 unread/review/reselect source files exactly from accepted original
+`b990b5939642b1ac7e744a9290840a731fa3f550` (12:04:09 UTC publication). Backend/
+service/database identities are unchanged. Keep the latest combined release and
+filter deployment records; Git integration does not redeploy either feature.
 
-[PR #286](https://github.com/artinflight/vibe-kanban/pull/286) targets staging
-using the requested rebase method. Its merge event is authoritative for integration
-status and rebased IDs; the original application build IDs remain independent.
-The deployment composition is pushed as `deploy/workspace-filters-20261031-311d`.
-It preserves all 11 live unread/review/reselect files byte-for-byte and includes
-all 15 filter package files byte-for-byte. Main promotion remains separate.
+Operator reported "no change" after both earlier frontend candidates. Fresh real
+live reproduction found same-route nested workspace reselection emits zero seen
+requests and leaves unread true. Earlier reselect test clicked the parent issue
+card, causing a route transition and concealing the missed path. The shared project
+workspace navigation helper now explicitly reads deliberate selection of the
+already displayed workspace. Initial navigation waits for loaded chat; polling and
+background tabs preserve subsequent unread. Manual issue flags and Dot stay separate.
 
-Candidate production browser acceptance passed at 360/412/767/768/1440 px,
-including filtering, multi-select/No project/reset, local save/reload, shared
-dialog state, resizing, keyboard focus, compact dimensions and exact sidebar
-color/abbreviation parity with saved customizations. The harness now waits for
-stable named project targets, menu animation completion and preference hydration.
-Existing review-flag regression acceptance passed at 393/1440 px. All writes
-stayed in disposable browser fixtures. Public mobile/desktop readback passed
-through normal WebSockets with 54 workspace cards in each viewport and no page
-errors. Old public asset hashes still match. All five service identities,
-backend executable, database inode and 99 migrations were preserved.
-
-All four frontend TypeScript checks, frontend ESLint, root formatting, explicit
-UI/test Prettier, ops checks and unused-i18n checks passed. Hosted frontend checks
-and the deployment artifact build passed on application head `d83e7587a`.
-The final PR head must satisfy its own required checks before merge; the GitHub
-checks and merge event are the integration evidence. Local aggregate check/lint
-and `cargo test --workspace` stop because the offline Cargo registry lacks serde.
-No physical-phone UI QA or new provider inference was performed.
-
-Known inherited limitation: Escape from the old dialog's nested project dropdown
-can dismiss both layers and leave pointer events blocked. The direct selector
-passes Escape/focus acceptance; the old nested path is outside this change.
-
-Fresh deployment evidence is on mounted SSD at
-`/mnt/vk-storage/vk-mobile-filters-20261031-311d`. Desktop B independently verified
-the source bundle and paired frontend recovery archive before activation. The
-atomic frontend pointer switched in 0.033 seconds; no service or data switch
-occurred. Keep the paired fallback and all old assets. Preview remains available
-at `https://mcp-server.tail744c4.ts.net:8443/workspaces`; preserve its routes.
-
-Dependencies reuse the identical-lockfile SSD installation; workspace package
-links and Vite caches belong to each worktree. Both task and deployment source
-worktrees remain preserved. The unrelated dirty canonical checkout is untouched.
-
-Prior backend owner pickup (historical record follows):
-
-# Backend owner pickup — 2026-10-30
+Twenty mounted regressions, shared TypeScript, focused ESLint, required format/
+ops and production build pass. Exact real-browser regression fails on previous
+live bundle and passes on candidate and published live frontend: desktop nested
+workspace selection with no URL change, mobile close/reopen, real read persistence,
+reload, and a newly unread completion remaining unread during polling. No page
+errors. Existing candidate desktop/mobile review persistence plus actual backend
+manual-flag/unrelated-flag/unread preservation tests retained and pass. All writes
+bounded to this task's own issue/workspace; original flags/task body restored.
 
 Evidence: `/mnt/vk-storage/vk-unread-reselect-20261031-c097/reselect-release`.
 Key receipts: `browser-candidate-reselect.json`, `browser-live-reselect.json`,
@@ -58,6 +32,10 @@ Key receipts: `browser-candidate-reselect.json`, `browser-live-reselect.json`,
 assets. The 43,244,856-byte frontend/source software recovery package was independently
 read back from Desktop B. The previous runtime/full-state recovery is preserved.
 Temporary candidate frontends and browsers closed. No backend/device action.
+
+PR #286 advanced staging during the passing checks on 054199ec6. This branch
+was rebased onto d3d9fa89d45087d1d113f2851d7b2c994c76aec5; its package tree matches
+the deployed combined composition exactly. Preserve PR #286 code and continuity.
 
 The operator accepted the live fix ("Good") and authorized sync, PR and rebase
 merge. [PR #287](https://github.com/artinflight/vibe-kanban/pull/287) is the staging

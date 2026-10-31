@@ -1,6 +1,43 @@
 # Project conversation unread/review corrections — live frontend update
 
-## Actual workspace reselection failure — current investigation
+## Same-workspace reselection correction — published 12:04:09 UTC
+
+Source `b990b5939642b1ac7e744a9290840a731fa3f550`; public JS
+`index-Cy2e9ltd.js`, unchanged CSS `index-CUBB2mA2.css`, version 0.1.42. Live frontend:
+`/mnt/vk-storage/vk-unread-reselect-20261031-c097/reselect-release/paired/candidate`.
+The public HTTPS root/new bytes and prior entry assets verify with pinned TLS.
+All five live service identities and the database identity/99 migrations remain
+unchanged. Atomic pointer replacement took 0.0056 seconds. No backend restart,
+schema change, provider execution or device action.
+
+The repeat nested workspace click now performs an explicit read without requiring
+a route change. Thirteen mounted regressions, shared TypeScript, focused ESLint,
+required format/ops and production build pass. Exact browser regression fails on
+the previous live bundle and passes against both candidate and published live UI.
+At 1440 px, initial opening clears, a reseeded unread survives polling, the actual
+nested workspace repeat click emits a new 200 and clears persistently without
+changing URL. At 393 px, closing/reopening clears persistently. Both reload checks
+pass with no page errors. Only this task's own workspace unread/seen state is used.
+
+Every existing activation gate was retained. Candidate desktop/mobile SQLite
+review-flag persistence tests and real backend manual-clear/reload, unrelated flag
+and native unread preservation all pass. Original flags and task body restored;
+all unrelated browser mutations blocked. Both paired roots retain 559 assets.
+The 43,244,856-byte frontend/source software recovery package was independently
+read back and hash-verified on Desktop B. Previous full-state recovery retained.
+
+Evidence root: `/mnt/vk-storage/vk-unread-reselect-20261031-c097/reselect-release`.
+Key files: `browser-candidate-reselect.json`, `browser-live-reselect.json`,
+`own-candidate-verified.json`, `browser-candidate.json`, `activation.json`,
+`after-live-pinned.json`, `Desktop-B-recovery-verified.json`, `frontend-source.json`.
+Temporary frontends/browsers closed. Exact operator URL/workspace flow is still
+unconfirmed; both earlier publications were reported unresolved. Full PR/Rust/
+hosted CI and physical-phone interaction not claimed. Push/PR/merge remain held.
+Backend/history direct frontend roots retain October 30 UI. Existing browser tabs
+need reload to use this publication. This scoped automated evidence does not claim
+operator acceptance of the full original symptom.
+
+## Reproduction before the third publication
 
 The operator reported "no change" after the second publication. A fresh test
 clicked the actual nested workspace card, including a repeat click while its
@@ -13,9 +50,9 @@ clicked the parent issue card, changing routes and concealing this failure.
 A shared explicit project navigation/read action addresses same-route selection.
 It reads only a deliberate click on the current project/issue/workspace in a visible
 document; ordinary destination loading still gates initial reads. Polling must
-preserve subsequent completions. Thirteen mounted regressions and focused types/
-lint pass. Exact production browser acceptance and publication remain pending.
-The running release below remains unchanged. Push, PR and merge are held.
+preserve subsequent completions. The exact new browser regression fails on the previous release at the repeat
+nested-workspace click. The corrected release and subsequent proof are above.
+Push, PR and merge remain held for operator confirmation.
 
 ## Previous corrective release — published 11:15:55 UTC, operator still reports unresolved
 
@@ -27,9 +64,9 @@ card mouse-up navigating before nested control clicks. The correction separates
 manual flags from native activity, adds mobile clearing, and prevents parent
 activation from interactive children.
 
-Current application source: `3366b015155bfa1857b898e263a6d966aabbe452`.
+Application source at that publication: `3366b015155bfa1857b898e263a6d966aabbe452`.
 Public JS: `index-9ssuLQsW.js`; CSS/version remain `index-CUBB2mA2.css` / 0.1.42.
-Current frontend pointer resolves to
+Its frontend pointer resolved to
 `/mnt/vk-storage/vk-unread-reselect-20261031-c097/final/paired/candidate`.
 The switch took 0.0154 seconds; all five live service identities remained unchanged.
 No backend restart, schema change, provider execution or device action occurred.
@@ -56,7 +93,7 @@ on Desktop B through the existing native object store. Previous backend/full-sta
 recovery remains preserved. This is software recovery, not a new mutable-state
 snapshot. Existing backend/history direct frontend roots retain their prior bundle.
 
-Current evidence: `/mnt/vk-storage/vk-unread-reselect-20261031-c097/final`.
+Evidence for that publication: `/mnt/vk-storage/vk-unread-reselect-20261031-c097/final`.
 Key files: `frontend-source.json`, `pair-receipt.json`, `activation.json`,
 `own-candidate-verified.json`, `own-live-verified.json`,
 `browser-candidate-review-verified/results.json`, `browser-live-review/results.json`,

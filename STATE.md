@@ -1,18 +1,23 @@
 # Current production and protections — 2026-10-31
 
-The operator reported "no change" after the 11:15:55 UTC frontend publication.
-The task remains unresolved and push/PR/merge are held. Fresh live reproduction
-found an untested path: clicking the nested workspace card again while its chat
-is already open leaves native unread true and emits zero seen requests. The
-previous "reselect" test clicked the parent issue card and changed routes, so it
-did not validate actual same-route workspace reselection. Existing browser proofs
-remain valid only for their recorded initial-open/manual-flag paths.
+The same-workspace reselection correction is live at `https://vibe.local`,
+published 2026-10-31 at 12:04:09 UTC from
+`b990b5939642b1ac7e744a9290840a731fa3f550`. Public JS is `index-Cy2e9ltd.js`;
+CSS/version remain `index-CUBB2mA2.css` / 0.1.42. The operator reported "no change"
+after the previous 11:15 frontend. Fresh live reproduction then found actual
+nested-workspace reselection sent zero seen requests and left unread set. The old
+"reselect" test clicked the parent issue card, changed routes and missed that bug.
 
-Current public frontend is still `3366b015155bfa1857b898e263a6d966aabbe452`,
-JS `index-9ssuLQsW.js`, CSS `index-CUBB2mA2.css`, version 0.1.42. The next correction
-adds an explicit read action for deliberate selection of the displayed workspace;
-background tabs, different destinations and polling retain their existing gates.
-Validation/publication are in progress. See [release evidence](VK_PROJECT_UNREAD_DEPLOYMENT.md).
+Deliberate selection of the already displayed project workspace now sends a read
+action; different destinations still wait for loaded chat. Polling and background
+tabs preserve new unread. The new regression fails on the previous frontend and
+passes on candidate/live at 1440/393 px with real read persistence and reload.
+Thirteen mounted regressions, focused types/lint, format/ops and production build
+pass. Existing candidate flag/preservation gates also pass, original test flags/
+body restored. All service and database identities remain unchanged; the pointer
+switch took 5.6 ms. Both paired roots retain 559 assets with verified Desktop B
+software recovery. Operator's exact URL/workspace flow remains unconfirmed;
+push/PR/merge stay held. See [release evidence](VK_PROJECT_UNREAD_DEPLOYMENT.md).
 
 The Antigravity-enabled backend remains live. It was accepted October 30
 at 03:18:14 UTC: backend source `9a4179e8bdf38e93d1a81faca6c665cadd6fddc7`,

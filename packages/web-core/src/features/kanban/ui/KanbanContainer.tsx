@@ -1,3 +1,4 @@
+import { useOpenProjectWorkspace } from '@/shared/hooks/useOpenProjectWorkspace';
 import { DotActivityIndicators } from '@vibe/ui/components/DotActivityIndicators';
 import { useDotNotifications } from '@/shared/hooks/useDotNotifications';
 import {
@@ -690,6 +691,7 @@ function CollapsedKanbanColumn({
  * Must be rendered within both OrgProvider and ProjectProvider.
  */
 export function KanbanContainer() {
+  const navigateToProjectWorkspace = useOpenProjectWorkspace();
   const isMobile = useIsMobile();
   const phoneStatusByProject = useUiPreferencesStore(
     (s) => s.phoneStatusByProject
@@ -763,13 +765,9 @@ export function KanbanContainer() {
   );
   const openIssueWorkspace = useCallback(
     (issueId: string, workspaceAttemptId: string) => {
-      appNavigation.goToProjectIssueWorkspace(
-        projectId,
-        issueId,
-        workspaceAttemptId
-      );
+      navigateToProjectWorkspace(projectId, issueId, workspaceAttemptId);
     },
-    [appNavigation, projectId]
+    [navigateToProjectWorkspace, projectId]
   );
   const startCreate = useCallback(
     (options?: ProjectIssueCreateOptions) => {

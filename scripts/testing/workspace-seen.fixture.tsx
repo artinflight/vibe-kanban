@@ -8,6 +8,7 @@ export const state = {
   createWorkspace: false,
   calls: [] as string[],
   fail: false,
+  navigations: [] as string[][],
 };
 export const workspacesApi = {
   markSeen: async (id: string) => {
@@ -17,7 +18,12 @@ export const workspacesApi = {
 };
 export const workspaceSummaryKeys = { all: ["workspace-summaries"] };
 export const useTranslation = () => ({ t: (key: string) => key });
-export const useAppNavigation = () => ({ goToProject() {} });
+const navigation = {
+  goToProject() {},
+  goToProjectIssueWorkspace: (...args: string[]) =>
+    state.navigations.push(args),
+};
+export const useAppNavigation = () => navigation;
 export const useProjectContext = () => ({
   projectId: "p",
   getIssue: () => null,
@@ -30,6 +36,8 @@ export const useWorkspaceContext = () => ({
   archivedWorkspaces: [],
 });
 export const useCurrentKanbanRouteState = () => ({
+  projectId: "p",
+  isCreateMode: state.createIssue,
   workspaceId: state.workspaceId,
   issueId: state.workspaceId ? "issue" : null,
   draftId: "draft",

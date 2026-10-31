@@ -53,7 +53,7 @@ Prior backend owner pickup (historical record follows):
 
 The corrected frontend is live at `https://vibe.local`, version 0.1.42, from
 `3366b015155bfa1857b898e263a6d966aabbe452`. Public JS: `index-9ssuLQsW.js`;
-CSS: unchanged `index-CUBB2mA2.css`. Accepted 11:15:55 UTC with a roughly 15 ms
+CSS: unchanged `index-CUBB2mA2.css`. Published 11:15:55 UTC with a roughly 15 ms
 atomic frontend pointer replacement. Backend/history reader/proxy/gateway/static
 service identities and database identity/migrations are unchanged.
 

@@ -1,3 +1,4 @@
+import { useOpenProjectWorkspace } from '@/shared/hooks/useOpenProjectWorkspace';
 import { useMemo, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useParams } from '@tanstack/react-router';
@@ -8,7 +9,6 @@ import { useAuth } from '@/shared/hooks/auth/useAuth';
 import { useOrgContext } from '@/shared/hooks/useOrgContext';
 import { useUserContext } from '@/shared/hooks/useUserContext';
 import { useWorkspaceContext } from '@/shared/hooks/useWorkspaceContext';
-import { useAppNavigation } from '@/shared/hooks/useAppNavigation';
 import { useProjectWorkspaceCreateDraft } from '@/shared/hooks/useProjectWorkspaceCreateDraft';
 import { workspaceSummaryKeys } from '@/shared/hooks/workspaceSummaryKeys';
 import { workspacesApi } from '@/shared/lib/api';
@@ -41,7 +41,7 @@ export function IssueWorkspacesSectionContainer({
   const { t } = useTranslation('common');
   const { projectId } = useParams({ strict: false });
   const queryClient = useQueryClient();
-  const appNavigation = useAppNavigation();
+  const navigateToProjectWorkspace = useOpenProjectWorkspace();
   const { openWorkspaceCreateFromState } = useProjectWorkspaceCreateDraft();
   const { userId } = useAuth();
   const { workspaces } = useUserContext();
@@ -205,14 +205,10 @@ export function IssueWorkspacesSectionContainer({
   const handleWorkspaceClick = useCallback(
     (localWorkspaceId: string | null) => {
       if (projectId && localWorkspaceId) {
-        appNavigation.goToProjectIssueWorkspace(
-          projectId,
-          issueId,
-          localWorkspaceId
-        );
+        navigateToProjectWorkspace(projectId, issueId, localWorkspaceId);
       }
     },
-    [projectId, issueId, appNavigation]
+    [projectId, issueId, navigateToProjectWorkspace]
   );
 
   // Handle renaming a linked local workspace from the issue view

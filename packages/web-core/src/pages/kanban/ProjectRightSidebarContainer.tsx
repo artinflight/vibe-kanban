@@ -1,3 +1,4 @@
+import { useOpenProjectWorkspace } from '@/shared/hooks/useOpenProjectWorkspace';
 import {
   useCallback,
   useEffect,
@@ -426,19 +427,16 @@ export function ProjectRightSidebarContainer({
     },
     [projectId, isCreateMode, issueComposerKey, appNavigation]
   );
+  const navigateToProjectWorkspace = useOpenProjectWorkspace();
   const openIssueWorkspace = useCallback(
     (targetIssueId: string, targetWorkspaceId: string) => {
       if (!projectId) {
         return;
       }
 
-      appNavigation.goToProjectIssueWorkspace(
-        projectId,
-        targetIssueId,
-        targetWorkspaceId
-      );
+      navigateToProjectWorkspace(projectId, targetIssueId, targetWorkspaceId);
     },
-    [projectId, appNavigation]
+    [projectId, navigateToProjectWorkspace]
   );
   const closePanel = useCallback(() => {
     if (!projectId) {

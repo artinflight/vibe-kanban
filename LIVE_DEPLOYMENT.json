@@ -189,6 +189,9 @@
     "pointer_switch_seconds": 0.006452118046581745,
     "browser_live_receipt": "/mnt/vk-storage/vk-project-unread-deploy-20261031-c097/browser-live.json",
     "desktop_mobile_browser_passed": true,
-    "hosted_ci": "Not run; source push and workflow launch rejected by automatic approval review; exact-source local production build and focused checks passed"
+    "hosted_ci": "Not run; source push and workflow launch rejected by automatic approval review; exact-source local production build and focused checks passed",
+    "feature_resolution_verified": false,
+    "operator_reported_unresolved": true,
+    "integration_on_hold": true
   }
 }

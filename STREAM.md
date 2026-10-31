@@ -1,5 +1,9 @@
 # Project workspace unread notifications — 2026-10-31
 
+The operator reports the defect is still present. Hold push, PR creation and
+merge until the actual failing workspace/click path is reproduced and fixed.
+Existing browser evidence verifies request emission only, not persisted clearing.
+
 Branch `vk/c097-vk-can-t-clear-u`, based on current fork/staging
 `7b64a69bc34d418b31c1f902c7714122a20783a3` (fresh fetch confirmed).
 

@@ -2145,3 +2145,15 @@ and source push were rejected by automatic approval review; neither occurred.
 Live provenance, rollback and validation limits are recorded in LIVE_DEPLOYMENT.json,
 STATE.md, HANDOFF.md and VK_PROJECT_UNREAD_DEPLOYMENT.md. Full PR baseline/CI and Git
 integration remain separate. Temporary task previews/browsers are closed.
+
+
+## 2026-10-31 — Operator reports unread still unresolved; integration held
+
+The operator stopped the requested push/PR/rebase merge before any of those
+mutations occurred, reporting that the defect is not resolved. The earlier
+candidate/live browser checks intercepted seen requests and cannot prove persisted
+clearing. Read-only investigation confirmed unchanged live identities, shared
+summary-backed unread indicators, independent explicit issue Needs review flags,
+and possible sibling unread aggregation. No root cause or new fix is claimed.
+An operator clarification is pending; no live flags or services were modified.
+STATE/STREAM/HANDOFF and live manifest now record the unresolved acceptance.

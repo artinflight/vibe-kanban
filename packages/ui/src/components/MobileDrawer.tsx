@@ -1,12 +1,14 @@
 import { useRef, type ReactNode } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import { XIcon } from '@phosphor-icons/react';
+import { cn } from '../lib/cn';
 
 interface MobileDrawerProps {
   open: boolean;
   onClose: () => void;
   children: ReactNode;
   title?: string;
+  contentClassName?: string;
 }
 
 /** Modal sheet: Radix owns focus trapping, Escape and background inertness.
@@ -16,6 +18,7 @@ export function MobileDrawer({
   onClose,
   children,
   title = 'Projects',
+  contentClassName,
 }: MobileDrawerProps) {
   const opener = useRef<HTMLElement | null>(null);
   return (
@@ -54,7 +57,14 @@ export function MobileDrawer({
               <XIcon className="size-icon-lg" />
             </Dialog.Close>
           </div>
-          <div className="min-h-0 flex-1 overflow-y-auto">{children}</div>
+          <div
+            className={cn(
+              'min-h-0 flex-1',
+              contentClassName ?? 'overflow-y-auto'
+            )}
+          >
+            {children}
+          </div>
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>

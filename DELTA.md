@@ -2475,3 +2475,27 @@ rebased integration IDs. Local format/ops, frontend types and frontend lint pass
 full check/lint lack host GLib development metadata, and the workspace-test
 attempt was stopped on that confirmed prerequisite. Hosted PR checks provide
 broad validation. No backend restart/deployment, provider turn or data deletion.
+
+## 2026-11-02 — independently scrolling projects menu
+
+Bound the desktop shell content row and AppBar to the viewport so a long project
+list cannot stretch the page. Hide rail/flyout/mobile list scrollbars with the
+existing Tailwind utility and contain overscroll. Keep footer and creation
+controls outside the scrolling region. The mobile projects drawer opts into a
+flex content layout; other MobileDrawer consumers retain their default scrolling.
+
+Isolated Chromium fixtures use the actual AppBar/MobileDrawer and extracted
+SharedAppLayout markup with 60 synthetic projects. Old desktop layout grows to
+3015 px; old mobile list expands to 3132 px. Candidate passes at 1440×900,
+1024×600, 393×852, 393×600 and 740×393: internal wheel/touch scrolling, hidden
+standard/WebKit scrollbars, fixed document/control positions, final project
+selection, flyout scrolling and desktop keyboard reordering; no page errors.
+Receipts: `.vk-preview/scroll-check/results.json` (ignored worktree evidence).
+Formatting, UI lint/types, shared layout lint, shared/frontend app types and ops check
+passed. Shared type checking required a bounded 3 GiB Node heap after default-heap
+exhaustion. Full Rust/PR baseline and physical-phone testing were not run. No
+backend/device changes, runtime publication, restart, commit, push or PR.
+
+The operator requested a local commit of all six changed files. The scrolling
+implementation and continuity notes are committed together; see Git history for
+the commit identity. No push or deployment was requested.

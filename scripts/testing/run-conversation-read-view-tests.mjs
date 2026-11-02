@@ -35,7 +35,9 @@ await build({
         );
         builder.onResolve({ filter: /^@\// }, (args) => {
           if (
-            /\/(useWorkspaceSeenAction|useOpenProjectWorkspace|WorkspaceReadControls|workspaceReadIntent)$/.test(args.path)
+            /\/(useWorkspaceSeenAction|useOpenProjectWorkspace|WorkspaceReadControls|workspaceReadIntent)$/.test(
+              args.path,
+            )
           )
             return;
           return { path: fixture };

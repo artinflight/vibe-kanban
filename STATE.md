@@ -1,31 +1,38 @@
 # Current public frontend — 2026-11-02
 
-The operator reported that manual-only clearing below is insufficient. A visible-
-conversation correction is in validation; staging integration is held pending
-its frontend publication. The following release remains the serving state.
+The corrective frontend is published at `https://vibe.local`. Opening/reselecting
+and deliberate reading clear unread after the latest loaded reply's end is visible
+in the focused foreground window for 350 ms. Jump to latest clears a conversation
+opened at an older saved position. Background return, passive polling and newly
+arriving output alone preserve unread. The explicit bulk-read fallback remains.
+Reload existing tabs/devices; no historical unread reconstruction was performed.
 
-The frontend-only disappearing-unread correction is published at `https://vibe.local`.
-Opening/returning/reselecting no longer automatically reads workspace replies.
-Use **Mark all replies read** in project chat, Workspaces chat or Workspace Actions.
-Existing tabs/devices must reload; old loaded bundles retain the old behavior.
-No historical unread reconstruction was performed.
+Corrective source `b8bad21792f863bce31c42742f7439cc8539503a` is composed onto
+preserved live base `800011bd573e2869d6ea4c0e5bfba4d9046d9cbe` and initial
+feature `70d7f5b0516a784ca6f27ba9fc6245b441666663`. Newer chat notices remain
+byte-identical. Entry JS `index-C2FVxMt6.js`, CSS `index-C-pTuj_j.css`, version
+`0.1.42`. Both paired roots retain 822 assets. The prior manual-only release is
+superseded after the operator reported it stopped normal clearing.
 
-Feature source `70d7f5b0516a784ca6f27ba9fc6245b441666663` is applied to current live
-frontend base `800011bd573e2869d6ea4c0e5bfba4d9046d9cbe`, preserving the newer
-chat notices exactly. Entry JS `index-CfDh4WtO.js`, CSS `index-C-pTuj_j.css`,
-version `0.1.42`. Both paired roots retain 717 hashed assets. Public TLS/file
-readback, 24 mounted regressions and four candidate plus four served desktop/phone
-browser cases pass; browser application writes are intercepted. Types, focused
-lint, format, import guards, ops and the exact production build pass.
+Thirty-eight mounted read/navigation regressions, shared frontend types, focused
+lint, required format, ops and the preserving production build pass. Four
+candidate browser cases pass at 1440/393 pixels on both chat surfaces. Public
+TLS/asset/health readback, backend hash, five service identities, database inode
+and 99 migrations pass unchanged. Software recovery is independently verified on
+Desktop B; immediate fallback changes only the frontend pointer.
 
-Backend PID/hash, all five service identities, database inode/path and 99 migrations
-are unchanged. No backend/API/schema/config change or restart. Verified software
-recovery is on Desktop B, with immediate frontend-only fallback. The operator
-has authorized source synchronization and rebase integration into staging. The
-branch PR/merge event records integration IDs; main promotion remains separate.
-Git integration does not redeploy or restart services. See
-[fix and acceptance](VK_DISAPPEARING_UNREAD_FIX.md) and [manifest](LIVE_DEPLOYMENT.json).
-The older production records below remain historical provenance.
+The seen API still clears the whole workspace across sessions; its arrival race
+cannot be removed with frontend changes alone. Automatic approval review rejected
+an optional live read-state test because original per-turn bits cannot be exactly
+restored. Browser application writes are intercepted; no live unread mutation
+or exact-reply acknowledgement is claimed. No backend/API/schema/config change,
+restart, provider execution or device work occurred.
+
+The branch is pushed. The operator authorized a staging PR and rebase merge;
+the full hosted Test baseline passes; final PR checks and the merge event record source integration.
+Main promotion remains separate. See [fix evidence](VK_DISAPPEARING_UNREAD_FIX.md)
+and [live manifest](LIVE_DEPLOYMENT.json). Older production records below are
+historical provenance.
 
 # Current production and protections — 2026-10-31
 

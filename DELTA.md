@@ -2412,3 +2412,23 @@ real-layout testing exposed saved Workspaces scroll position, which correctly
 preserves unread until the reader deliberately reaches the latest reply. An
 optional live-state test was rejected by automatic approval review; all browser
 application writes remain intercepted. Exact server scope/race limitations remain.
+
+## 2026-11-02 — guarded read-on-view publication
+
+Corrective source b8bad21792f863bce31c42742f7439cc8539503a is published at 2026-11-02T17:45:07.515775+00:00.
+JS index-C2FVxMt6.js, CSS index-C-pTuj_j.css, version 0.1.42; live git-preservation
+notices are byte-preserved and both paired roots retain 822 assets. Four candidate
+layout cases, 38 mounted regressions, types/focused lint/format/ops and production
+build pass. Backend hash, five services, DB identity and 99 migrations are unchanged.
+95,264,657-byte software recovery passed local restore and independent Desktop B
+readback. Browser writes are intercepted. Reload old tabs. Exact server scope/race
+limitations remain; no live unread mutation or backend restart is claimed.
+
+## 2026-11-02 — full source integration baseline passed
+
+Hosted Test run 41493120165 passes on b8bad21792f863bce31c42742f7439cc8539503a,
+including frontend/regressions, governance, Rust lint, generated types/SQLx,
+workspace tests, Tauri checks, storage/watchers and scheduled persistence. Private
+remote checks skip without a deploy key. The final package source is byte-identical
+to this baseline and the deployed correction; final PR checks/merge event govern
+staging integration. No runtime switch is performed by Git integration.

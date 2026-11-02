@@ -601,7 +601,7 @@ export function SharedAppLayout() {
           'bg-primary',
           isMobile
             ? 'mobile-app-shell flex fixed inset-x-0 top-0 h-dvh'
-            : 'grid grid-cols-[auto_1fr] grid-rows-[auto_1fr] h-screen'
+            : 'grid grid-cols-[auto_1fr] grid-rows-[auto_minmax(0,1fr)] h-screen'
         )}
       >
         {!isMobile && (
@@ -724,8 +724,9 @@ export function SharedAppLayout() {
         <MobileDrawer
           open={projectSheet.isOpen && isMobile}
           onClose={projectSheet.close}
+          contentClassName="flex flex-col overflow-hidden"
         >
-          <div className="flex flex-col min-h-0">
+          <div className="flex min-h-0 flex-1 flex-col">
             {/* Workspaces link */}
             <button
               type="button"
@@ -747,7 +748,7 @@ export function SharedAppLayout() {
             <div className="border-t border-border mx-4" />
 
             {/* Project list */}
-            <div className="flex-1 overflow-y-auto p-2">
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain scrollbar-none p-2">
               {isSignedIn || isLocalAuthBypassed ? (
                 <div className="space-y-3">
                   <div className="space-y-1">
@@ -820,7 +821,7 @@ export function SharedAppLayout() {
 
             {/* Create Project button */}
             {(isSignedIn || isLocalAuthBypassed) && (
-              <div className="space-y-1 p-3 border-t border-border">
+              <div className="shrink-0 space-y-1 p-3 border-t border-border">
                 {archivedProjects.length > 0 && (
                   <button
                     type="button"

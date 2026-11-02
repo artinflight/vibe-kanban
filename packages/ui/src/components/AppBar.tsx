@@ -572,7 +572,7 @@ export function AppBar({
                 <div
                   ref={dropProvided.innerRef}
                   {...dropProvided.droppableProps}
-                  className="flex h-full min-h-0 flex-col items-center gap-half overflow-y-auto overflow-x-hidden py-half"
+                  className="flex h-full min-h-0 flex-col items-center gap-half overflow-y-auto overflow-x-hidden overscroll-contain scrollbar-none py-half"
                 >
                   {item.projects.map((project, index) => (
                     <Draggable
@@ -665,7 +665,7 @@ export function AppBar({
     <div
       onMouseEnter={onHoverStart}
       onMouseLeave={onHoverEnd}
-      className="relative z-30 h-full shrink-0"
+      className="relative z-30 h-full min-h-0 shrink-0"
     >
       <div
         className={cn(
@@ -697,7 +697,7 @@ export function AppBar({
         ))}
 
         {/* Bottom section: Notifications + User popover + GitHub + Discord */}
-        <div className="mt-auto pt-base flex flex-col items-center gap-4">
+        <div className="mt-auto shrink-0 pt-base flex flex-col items-center gap-4">
           {notificationBell}
           {showProfileButton ? userPopover : null}
           {showSocialLinks ? (
@@ -805,7 +805,7 @@ export function AppBar({
               <CaretLeftIcon className="h-4 w-4" weight="bold" />
             </button>
           </div>
-          <div className="min-h-0 flex-1 overflow-y-auto p-base">
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain scrollbar-none p-base">
             <div className="space-y-half">
               {projects.map((project) => (
                 <div

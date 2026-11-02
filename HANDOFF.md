@@ -1,28 +1,31 @@
-# Codex resume history duplication fix — 2026-11-03
+# Scrolling projects menu pickup — 2026-11-02
 
-Current branch: `vk/95c6-vk-duplicate-con`. The only production-code change is
-`narrow_resume_supported` in `crates/executors/src/executors/codex/client.rs`:
-accept the real Vibe initialize identity alongside the qualified CLI identity at
-exact version 0.159.2. The previous guard silently omitted excludeTurns for Vibe.
+The projects menu change is in `vk/9cb7-vk-scrolling-pro`, based on `aceb355e9`.
+Desktop grid tracks now allow the AppBar to shrink within the viewport. The rail,
+expanded names list and mobile projects list have hidden scrollbars and contained
+overscroll. Footer/actions stay outside the scrolling list. MobileDrawer exposes
+an optional content class override used only by project navigation.
 
-The fixture now reproduces a full historical response when the flag is absent;
-actual-client regressions cover both identities. Seven client tests and 26 adjacent
-compatibility/normalization tests pass; one private fixture is ignored. Two
-old/new predicate checks, full format, ops and diff checks pass. Full workspace/CI
-and production acceptance remain pending. See `VK_DUPLICATE_HISTORY_FIX.md`
-for validation, investigation provenance and deployment acceptance requirements.
-Evidence: `/mnt/vk-storage/vk-duplicate-con-20261103-95c6/`.
+Validation passed: required repository format, UI format/lint/type check,
+shared layout ESLint, shared frontend type check (bounded 3 GiB heap), local
+app types, and ops governance. The shared type check first exhausted the default
+heap; the bounded rerun passed. Browser receipts are in
+`.vk-preview/scroll-check/`. The isolated fixtures use
+actual AppBar/MobileDrawer components and extracted SharedAppLayout grid/mobile
+markup with 60 synthetic projects. They do not contact a backend. Before-change
+reproduction: desktop document grows to 3015 px; mobile list expands to 3132 px
+and pushes creation controls beyond the sheet. After-change checks pass at
+1440×900, 1024×600, 393×852, 393×600 and 740×393:
+internal wheel/touch scrolling, hidden standard/WebKit scrollbars, viewport-sized
+document, stationary controls, final-project selection, expanded-name scrolling,
+and keyboard project reordering. No page errors. This is browser emulation, not
+physical-phone QA. Dependencies link to an existing SSD install; no new download.
 
-[PR #290](https://github.com/artinflight/vibe-kanban/pull/290) is the rebase staging
-integration authority through its final checks and merge event. All four frontend
-type checks and frontend lint pass. Local full check/lint lack required GLib
-metadata; the workspace-test attempt was stopped on the same prerequisite.
-Hosted checks govern broad validation. Original source commit: 83b96bc3b.
+Committed locally at the operator’s request; no push, PR or runtime deployment.
+Use `git log -1` for the commit identity. Preserve the current
+public release and all preview routes. Production details remain in [STATE](STATE.md)
+and [LIVE_DEPLOYMENT.json](LIVE_DEPLOYMENT.json). Normal deployment/PR gates still
+apply if requested later.
 
-No backend deployment or deletion occurred. Read `LIVE_DEPLOYMENT.json` and obtain
-fresh live observations before deployment; preserve the latest frontend, private
-history bindings, database and native homes. Do not reuse historical controllers
-or interrupt running agents to force installation. Production verification must
-measure actual persisted resume size, history readability and ordinary send.
-
-Full historical archive: [HANDOFF_HISTORY_20261017.md](HANDOFF_HISTORY_20261017.md).
+Prior pickup: [previous record](deployment-history/20261030-before-reconciliation/HANDOFF.md)
+and [HANDOFF history](HANDOFF_HISTORY_20261017.md).

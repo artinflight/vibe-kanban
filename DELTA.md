@@ -2368,3 +2368,25 @@ restart or deployment. Report and proposed exact-reply/intent-safe fix are in
 `VK_DISAPPEARING_UNREAD_INVESTIGATION.md`; evidence is retained under
 `/mnt/vk-storage/vk-disappearing-unread-20261102-3ad7/`. Specific historical
 incidents remain unattributed; full browser/Rust HTTP/candidate acceptance not run.
+
+
+## 2026-11-02 — frontend-only explicit-read fix published
+
+Operator requested completion with no backend changes. Feature commit
+70d7f5b0516a784ca6f27ba9fc6245b441666663 removes automatic chat/visibility/reselect
+reads; adds explicit “Mark all replies read” controls on both chat surfaces and
+in workspace actions, with pending deduplication and explicit failure retry.
+Applied to current frontend base 800011bd573e2869d6ea4c0e5bfba4d9046d9cbe,
+preserving newer git-preservation notices. Published JS index-CfDh4WtO.js / CSS
+index-C-pTuj_j.css, version 0.1.42. 24 mounted tests, all four frontend type
+checks, focused lint, format, import guards, ops and production build pass.
+Four candidate and four served browser cases pass at 1440/393 px; all application
+writes intercepted and no page errors. Old live UI reproduces an automatic read.
+TLS/public assets/health and five service/DB identities verify; no backend restart
+or code/schema/config change. 717 assets retained per paired root. Desktop B
+independently verifies the 78,181,682-byte software recovery archive; local restore
+verifies 3,293 files and permissions. No live unread repair or physical phone test.
+Reload every existing VK tab/device to remove old loaded code. Exact-reply API
+proposal is historical and intentionally not part of this frontend-only fix.
+No push/PR or main promotion. See VK_DISAPPEARING_UNREAD_FIX.md and the manifest.
+Evidence: /mnt/vk-storage/vk-disappearing-unread-20261102-3ad7/fix-release-1.

@@ -1,37 +1,36 @@
-# Disappearing unread notifications — 2026-11-02
+# Explicit workspace reads — 2026-11-02
 
-Branch `vk/3ad7-vk-disappearing`. Scope: investigate reports that workspace unread
-notifications disappear without reading the update, and propose a fix. This turn
-changes documentation only; implementation and deployment are outside this request.
+Branch `vk/3ad7-vk-disappearing`. The operator requested implementation with a
+strict frontend-only boundary. No backend/API/schema or generated type changes.
 
-Confirmed overly broad automatic read behavior: chat mount, tab return and
-same-route reselection call bodyless workspace-wide `/seen`. Project record
-readiness is insufficient to establish session/transcript readiness. Server SQL
-clears unseen turns across sibling sessions and replies arriving before the read
-transaction, and the same path releases manual unread hold.
+The existing API clears an entire workspace and cannot acknowledge exact reply
+revisions. Therefore all automatic seen calls are removed: opening, polling,
+visibility changes, remounting and project workspace reselection preserve unread.
+An explicit “Mark all replies read” control is available in project conversations,
+Workspaces conversations and workspace actions. It deliberately retains the
+existing workspace-wide API contract. Pending duplicate clicks are blocked;
+errors remain visible and retry requires another explicit action.
 
-Fresh served JS is `index-BvmbFTPN.js`, SHA256
-`fc683d01d272989dffb7ad107f185faaf26d434731b754e48485a7a6786e4e6b`,
-from retained source `800011bd573e2869d6ea4c0e5bfba4d9046d9cbe`. Five affected
-source files match. Backend PID/hash remain the October 30 identity. Existing
-October 31 production manifests in this branch are historical, not fresh live
-frontend truth. Preserve the newer release and all runtime state.
+The original exact-reply proposal remains historical investigation context in
+`VK_DISAPPEARING_UNREAD_INVESTIGATION.md`; it is not the implementation selected
+under the operator’s no-backend-change constraint.
 
-Existing 13 mounted tests pass; four added evidence-only characterizations confirm
-premature read calls (17/17 total). In-memory production SQL reproduces three
-backend defects plus a passing changed-summary/unrelated-workspace control.
-No live unread mutations, device actions, backend restart or deployment occurred.
-No claim attributes a specific historical disappearance to these mechanisms.
+The preserved live base is source `800011bd573e2869d6ea4c0e5bfba4d9046d9cbe`,
+previous JS `index-BvmbFTPN.js`. The published preserving build uses that source
+plus feature commit `70d7f5b0516a784ca6f27ba9fc6245b441666663`; newer chat notices
+are retained exactly. Live JS is `index-CfDh4WtO.js`, CSS `index-C-pTuj_j.css`,
+version `0.1.42`.
+Evidence root: `/mnt/vk-storage/vk-disappearing-unread-20261102-3ad7/`.
 
-Proposal: exact rendered-reply acknowledgements, focus/content visibility gates,
-transactional revision/intent checks, manual unread preservation, and a separate
-explicit bulk action. See `VK_DISAPPEARING_UNREAD_INVESTIGATION.md` for evidence,
-limits and acceptance gates. Raw evidence:
-`/mnt/vk-storage/vk-disappearing-unread-20261102-3ad7/`.
-
-Prior unread integration remains recorded in `DELTA.md`, `STATE.md`,
-`VK_PROJECT_UNREAD_DEPLOYMENT.md` and the historical deployment manifest.
+Seventeen mounted regressions pass. Restoring previous automatic-read project
+code reproduces nine failures. A real-browser negative control observes the old
+frontend issuing a seen request on opening; every write is intercepted.
+Frontend types, focused lint, required format and import guards pass.
+Seven adjacent navigation tests and four candidate plus four served browser
+cases pass at desktop/phone widths with all writes intercepted. Frontend
+publication and public TLS/asset/runtime preservation checks passed. The verified
+paired fallback and Desktop B recovery preserve all 717 hashed assets.
+No backend restart, DB restoration, historical unread repair or physical-device
+operation. Reload all existing tabs/devices. See `VK_DISAPPEARING_UNREAD_FIX.md`.
 
 Full historical archive: [STREAM_HISTORY_20261017.md](STREAM_HISTORY_20261017.md).
-
-Required repository format, ops governance and whitespace checks pass.

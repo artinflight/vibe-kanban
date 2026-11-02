@@ -2350,3 +2350,21 @@ The rebased package tree matches deployed combined source
 from b990b5939642b1ac7e744a9290840a731fa3f550 remain preserved. Public assets now
 index-Bgdr6hzC.js / index-DL7rKLPs.css, version 0.1.42. Latest PR checks and merge
 event remain authoritative. No runtime switch or service restart during Git sync.
+
+
+## 2026-11-02 — disappearing unread investigation and proposal
+
+Branch `vk/3ad7-vk-disappearing`, documentation-only scope. Confirmed automatic
+workspace-wide reads on mount/tab return/reselection without reply visibility;
+server clears sibling sessions, replies arriving before the request transaction,
+and manual unread hold. Existing mounted suite passes 13/13; evidence-only
+extension 17/17 confirms four unwanted call paths. Actual SQL/migration in memory
+reproduces three backend defects plus changed-summary/unrelated-workspace controls.
+Fresh gateway bytes are `index-BvmbFTPN.js`, SHA256 fc683d01d272989dffb7ad107f185faaf26d434731b754e48485a7a6786e4e6b,
+from current retained source 800011bd573e2869d6ea4c0e5bfba4d9046d9cbe. Five
+investigated files match; backend PID/hash unchanged. October 31 branch manifest
+is historical for frontend selection. No live seen/unread writes, device access,
+restart or deployment. Report and proposed exact-reply/intent-safe fix are in
+`VK_DISAPPEARING_UNREAD_INVESTIGATION.md`; evidence is retained under
+`/mnt/vk-storage/vk-disappearing-unread-20261102-3ad7/`. Specific historical
+incidents remain unattributed; full browser/Rust HTTP/candidate acceptance not run.

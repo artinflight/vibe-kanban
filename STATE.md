@@ -28,7 +28,7 @@ restored. Browser application writes are intercepted; no live unread mutation
 or exact-reply acknowledgement is claimed. No backend/API/schema/config change,
 restart, provider execution or device work occurred.
 
-The branch is pushed. The operator authorized a staging PR and rebase merge;
+The branch is pushed. [PR #288](https://github.com/artinflight/vibe-kanban/pull/288) is the staging rebase integration record;
 the full hosted Test baseline passes; final PR checks and the merge event record source integration.
 Main promotion remains separate. See [fix evidence](VK_DISAPPEARING_UNREAD_FIX.md)
 and [live manifest](LIVE_DEPLOYMENT.json). Older production records below are

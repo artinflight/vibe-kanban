@@ -2432,3 +2432,11 @@ workspace tests, Tauri checks, storage/watchers and scheduled persistence. Priva
 remote checks skip without a deploy key. The final package source is byte-identical
 to this baseline and the deployed correction; final PR checks/merge event govern
 staging integration. No runtime switch is performed by Git integration.
+
+## 2026-11-02 — staging rebase integration record
+
+[PR #288](https://github.com/artinflight/vibe-kanban/pull/288) targets staging using
+the operator-requested rebase method. Its final checks and merge event are the
+authority for integration and rebased IDs. The full baseline 41493120165 passed
+on corrective source b8bad21792f863bce31c42742f7439cc8539503a; package bytes
+remain unchanged. Runtime publication is independent and main promotion separate.

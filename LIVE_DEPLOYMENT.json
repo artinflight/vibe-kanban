@@ -317,11 +317,21 @@
     "historical_unread_restored": false,
     "server_scope": "unchanged workspace-wide, including sibling sessions; arrival race remains",
     "live_unread_mutation_test": "not performed; automatic approval review rejected non-restorable original per-turn changes",
-    "pull_request": null,
+    "pull_request": "https://github.com/artinflight/vibe-kanban/pull/288",
     "pushed": true,
     "served_browser_passed": true,
     "hosted_baseline_run": "https://github.com/artinflight/vibe-kanban/actions/runs/41493120165",
     "hosted_baseline_passed": true,
-    "git_integration_status": "Operator-authorized staging PR and rebase integration; final PR checks and merge event are authoritative"
+    "git_integration_status": "PR #288 final checks and rebase merge event are authoritative; original deployed source IDs remain immutable",
+    "git_target_branch": "staging",
+    "requested_merge_method": "rebase"
+  },
+  "conversation_read_integration": {
+    "pull_request": "https://github.com/artinflight/vibe-kanban/pull/288",
+    "target": "staging",
+    "requested_merge_method": "rebase",
+    "original_deployed_source": "b8bad21792f863bce31c42742f7439cc8539503a",
+    "runtime_changed_by_git_integration": false,
+    "integration_authority": "PR #288 checks and merge event; no main promotion"
   }
 }

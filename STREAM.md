@@ -2,7 +2,9 @@
 
 Branch `vk/3ad7-vk-disappearing`. Frontend only; no backend/API/schema or
 generated-type change. The operator reported the manual-only release stopped
-normal clearing, and the corrected frontend is now published; Staging source integration uses the operator-authorized PR/rebase method; final PR checks and merge event are authoritative.
+normal clearing, and the corrected frontend is now published. Source integration uses
+[PR #288](https://github.com/artinflight/vibe-kanban/pull/288) into staging with the
+requested rebase method. Its final checks and merge event are authoritative.
 
 A deliberate conversation opening, reselection, reading gesture or jump to latest
 may acknowledge once the loaded latest assistant reply's end is visible, focused

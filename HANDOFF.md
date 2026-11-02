@@ -10,7 +10,9 @@ unchanged; server-wide scope and arrival races remain limitations.
 The corrected preserving build is published: JS index-C2FVxMt6.js, CSS
 index-C-pTuj_j.css, version 0.1.42. All five services/backend hash/DB identity
 are unchanged; 99 migrations and 822 retained assets pass readback. Desktop B
-recovery is verified. Staging source integration uses the operator-authorized PR/rebase method; final PR checks and merge event are authoritative.
+recovery is verified. Source integration uses [PR
+#288](https://github.com/artinflight/vibe-kanban/pull/288) into staging with the
+requested rebase method. Its final checks and merge event are authoritative.
 The operator authorized push, staging PR and rebase merge after validation.
 Keep main promotion separate and preserve unrelated dirty canonical work.
 

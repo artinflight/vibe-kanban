@@ -8,11 +8,13 @@ export const state = {
   createWorkspace: false,
   calls: [] as string[],
   fail: false,
+  pause: undefined as Promise<void> | undefined,
   navigations: [] as string[][],
 };
 export const workspacesApi = {
   markSeen: async (id: string) => {
     state.calls.push(id);
+    await state.pause;
     if (state.fail) throw new Error("offline");
   },
 };
@@ -73,3 +75,8 @@ export {
   Empty as ArrowsOutIcon,
   Empty as XIcon,
 };
+
+export const useDiffStats = () => ({ files_changed: 0, lines_added: 0, lines_removed: 0 });
+export const forwardWheelToScroller = () => {};
+export const ContextBarContainer = () => null;
+export const WorkspacesMain = ({ conversationContent, chatBoxContent }: { conversationContent?: ReactNode; chatBoxContent?: ReactNode }) => <>{conversationContent}{chatBoxContent}</>;

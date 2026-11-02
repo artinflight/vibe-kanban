@@ -7,7 +7,6 @@ import {
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from '@tanstack/react-router';
-import { useMarkWorkspaceSeen } from '@/shared/hooks/useMarkWorkspaceSeen';
 import { Group, Layout, Panel, Separator } from 'react-resizable-panels';
 import type { CreateModeInitialState } from '@/shared/types/createMode';
 import { useWorkspaceContext } from '@/shared/hooks/useWorkspaceContext';
@@ -148,16 +147,6 @@ export function WorkspacesLayout() {
     setLeftSidebarVisible,
     setLeftMainPanelVisible,
   } = useWorkspacePanelState(isCreateMode ? undefined : workspaceId);
-
-  const visibleWorkspaceId =
-    !isCreateMode &&
-    !isLoading &&
-    selectedWorkspace?.id === workspaceId &&
-    (isMobile ? mobileTab === 'chat' : isLeftMainPanelVisible)
-      ? workspaceId
-      : undefined;
-
-  useMarkWorkspaceSeen(visibleWorkspaceId);
 
   const {
     config,

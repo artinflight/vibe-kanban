@@ -5,7 +5,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import assert from "node:assert/strict";
 import { after, afterEach, beforeEach, test } from "node:test";
 import { ProjectRightSidebarContainer } from "../../packages/web-core/src/pages/kanban/ProjectRightSidebarContainer";
-import { useMarkWorkspaceSeen } from "../../packages/web-core/src/shared/hooks/useMarkWorkspaceSeen";
+import { WorkspaceReadControls } from "../../packages/web-core/src/shared/components/WorkspaceReadControls";
+import { WorkspacesMainContainer } from "../../packages/web-core/src/pages/workspaces/WorkspacesMainContainer";
 import { useOpenProjectWorkspace } from "../../packages/web-core/src/shared/hooks/useOpenProjectWorkspace";
 import { state } from "./workspace-seen.fixture";
 
@@ -27,10 +28,6 @@ const project = () => (
     onExpectIssueOpen={() => {}}
   />
 );
-function Chat({ id }: { id?: string }) {
-  useMarkWorkspaceSeen(id);
-  return null;
-}
 async function render(child: React.ReactNode = project()) {
   await act(async () =>
     root.render(
@@ -53,6 +50,7 @@ beforeEach(() => {
     createWorkspace: false,
     calls: [],
     fail: false,
+    pause: undefined,
     navigations: [],
   });
   visibility = "visible";
@@ -72,134 +70,190 @@ afterEach(async () => {
 });
 after(() => dom.window.close());
 
-test("opening project chat clears that workspace and refreshes summary badges", async () => {
-  await render();
-  assert.deepEqual(state.calls, ["a"]);
-  assert.deepEqual(invalidations, [{ queryKey: ["workspace-summaries"] }]);
-  // A fresh summary/record or session rerender must not consume a new completion.
-  state.workspace = { id: "a" };
-  await render();
-  assert.deepEqual(state.calls, ["a"]);
-});
 
-test("loading, missing and mismatched records do not clear any workspace", async () => {
-  state.loading = true;
-  await render();
-  state.loading = false;
-  state.workspace = undefined;
-  await render();
-  state.workspace = { id: "sibling" };
+const readButton = () => element.querySelector<HTMLButtonElement>('button[title^="Mark all agent replies"]');
+async function clickRead() {
+  assert(readButton(), "Explicit workspace read control must be available");
+  await act(async () => { readButton()!.click(); });
+}
+function WorkspacesChat({ id = "a" }) {
+  return <WorkspacesMainContainer
+    selectedWorkspace={{ id } as never}
+    selectedSession={undefined}
+    selectedSessionId={undefined}
+    sessions={[]}
+    repos={[]}
+    onSelectSession={() => {}}
+    isLoading={false}
+    isSessionsLoading={true}
+    isNewSessionMode={false}
+    onStartNewSession={() => {}}
+  />;
+}
+
+test("opening and polling project chat preserves unread until explicit read", async () => {
   await render();
   assert.deepEqual(state.calls, []);
   state.workspace = { id: "a" };
   await render();
+  await setVisibility("hidden");
+  await setVisibility("visible");
+  assert.deepEqual(state.calls, []);
+  await clickRead();
   assert.deepEqual(state.calls, ["a"]);
+  assert.deepEqual(invalidations, [{ queryKey: ["workspace-summaries"] }]);
 });
 
-test("switching workspaces clears only the loaded destination and removes the old listener", async () => {
+test("loading, missing and mismatched project records cannot expose a read action", async () => {
+  state.loading = true;
+  await render();
+  assert.equal(readButton(), null);
+  state.loading = false;
+  state.workspace = undefined;
+  await render();
+  assert.equal(readButton(), null);
+  state.workspace = { id: "sibling" };
+  await render();
+  assert.equal(readButton(), null);
+  assert.deepEqual(state.calls, []);
+  state.workspace = { id: "a" };
+  await render();
+  assert(readButton());
+  assert.deepEqual(state.calls, []);
+});
+
+test("switching workspaces and returning to a tab never acknowledge either workspace", async () => {
   await render();
   state.workspaceId = "b";
   state.loading = true;
   await render();
   await setVisibility("visible");
-  assert.deepEqual(state.calls, ["a"]);
   state.loading = false;
   state.workspace = { id: "b" };
   await render();
   await setVisibility("hidden");
   await setVisibility("visible");
-  assert.deepEqual(state.calls, ["a", "b", "b"]);
+  assert.deepEqual(state.calls, []);
+  await clickRead();
+  assert.deepEqual(state.calls, ["b"]);
 });
 
-test("background project chat waits for visibility and stops clearing after closing", async () => {
+test("background project chat and closing/reopening preserve unread", async () => {
   visibility = "hidden";
   await render();
-  assert.deepEqual(state.calls, []);
   await setVisibility("visible");
-  assert.deepEqual(state.calls, ["a"]);
   state.workspaceId = null;
   await render();
-  await setVisibility("visible");
-  assert.deepEqual(state.calls, ["a"]);
+  state.workspaceId = "a";
+  await render();
+  assert.deepEqual(state.calls, []);
 });
 
 for (const mode of ["createIssue", "createWorkspace"] as const) {
-  test(`${mode} does not mark a workspace read`, async () => {
+  test(`${mode} does not mark a workspace read or show its read action`, async () => {
     state[mode] = true;
     await render();
     assert.deepEqual(state.calls, []);
+    assert.equal(readButton(), null);
   });
 }
 
-test("shared Workspaces hook preserves panel visibility gating and reopening", async () => {
-  await render(<Chat />);
+test("Workspaces chat stays unread during loading, remounts, visibility and session rerenders", async () => {
+  await render(<WorkspacesChat />);
+  await render(<WorkspacesChat />);
+  await setVisibility("hidden");
   await setVisibility("visible");
+  await render(<div />);
+  await render(<WorkspacesChat />);
   assert.deepEqual(state.calls, []);
-  await render(<Chat id="a" />);
-  await render(<Chat id="a" />);
+  await clickRead();
   assert.deepEqual(state.calls, ["a"]);
-  await render(<Chat />);
-  await render(<Chat id="a" />);
+});
+
+test("a new completion after an explicit read stays unread through rerenders and tab return", async () => {
+  await render();
+  await clickRead();
+  // A subsequent completion changes summaries/records, not user intent.
+  state.workspace = { id: "a" };
+  await render();
+  await setVisibility("hidden");
+  await setVisibility("visible");
+  assert.deepEqual(state.calls, ["a"]);
+});
+
+test("manual unread is preserved on remount/return until another explicit read", async () => {
+  await render(<WorkspaceReadControls key="a" workspaceId="a" />);
+  await clickRead();
+  // The backend may now have a manual unread hold. No automatic follow-up is allowed.
+  await render(<div />);
+  await render(<WorkspaceReadControls key="a" workspaceId="a" />);
+  await setVisibility("hidden");
+  await setVisibility("visible");
+  assert.deepEqual(state.calls, ["a"]);
+  await clickRead();
   assert.deepEqual(state.calls, ["a", "a"]);
 });
 
-test("failed seen request leaves badges intact and can retry when returning", async () => {
-  const warn = console.warn;
-  const warnings: unknown[][] = [];
-  console.warn = (...args) => warnings.push(args);
-  try {
-    state.fail = true;
-    await render();
-    assert.equal(warnings.length, 1);
-    assert.deepEqual(invalidations, []);
-    state.fail = false;
-    await setVisibility("visible");
-    assert.deepEqual(state.calls, ["a", "a"]);
-    assert.equal(invalidations.length, 1);
-  } finally {
-    console.warn = warn;
-  }
+test("failed explicit read shows an error without badge invalidation or automatic retry", async () => {
+  state.fail = true;
+  await render();
+  await clickRead();
+  assert(element.querySelector('[role="alert"]'));
+  assert.deepEqual(invalidations, []);
+  state.fail = false;
+  await setVisibility("hidden");
+  await setVisibility("visible");
+  assert.deepEqual(state.calls, ["a"]);
+  await clickRead();
+  assert.deepEqual(state.calls, ["a", "a"]);
+  assert.equal(element.querySelector('[role="alert"]'), null);
+  assert.equal(invalidations.length, 1);
+});
+
+test("pending explicit read disables duplicate clicks", async () => {
+  let release!: () => void;
+  state.pause = new Promise<void>((resolve) => { release = resolve; });
+  await render();
+  await clickRead();
+  assert.equal(readButton()!.disabled, true);
+  await clickRead();
+  assert.deepEqual(state.calls, ["a"]);
+  await act(async () => { release(); });
+  assert.equal(readButton()!.disabled, false);
+});
+
+test("an old request cannot show its error in a newly selected workspace", async () => {
+  let release!: () => void;
+  state.pause = new Promise<void>((resolve) => { release = resolve; });
+  await render(<WorkspaceReadControls key="a" workspaceId="a" />);
+  await clickRead();
+  await render(<WorkspaceReadControls key="b" workspaceId="b" />);
+  state.fail = true;
+  await act(async () => { release(); });
+  assert.equal(element.querySelector('[role="alert"]'), null);
+  assert.equal(readButton()!.disabled, false);
+  assert.deepEqual(state.calls, ["a"]);
 });
 
 function WorkspaceLink({ projectId = "p", issueId = "issue", id = "a" }) {
   const open = useOpenProjectWorkspace();
-  return (
-    <button onClick={() => open(projectId, issueId, id)}>
-      Open conversation
-    </button>
-  );
+  return <button onClick={() => open(projectId, issueId, id)}>Open conversation</button>;
 }
 async function clickWorkspace() {
-  await act(async () => {
-    element.querySelector("button")!.click();
-  });
+  await act(async () => { element.querySelector("button")!.click(); });
 }
 
-test("reselecting the displayed project workspace reads again without requiring a route change", async () => {
+test("same-route project reselection navigates without reading replies", async () => {
   await render(<WorkspaceLink />);
+  await clickWorkspace();
+  await clickWorkspace();
   assert.deepEqual(state.calls, []);
-  await clickWorkspace();
-  await clickWorkspace();
-  assert.deepEqual(state.calls, ["a", "a"]);
-  assert.deepEqual(state.navigations, [
-    ["p", "issue", "a"],
-    ["p", "issue", "a"],
-  ]);
-  assert.equal(invalidations.length, 2);
-  await render(<WorkspaceLink />);
-  assert.deepEqual(
-    state.calls,
-    ["a", "a"],
-    "Polling must not consume another completion",
-  );
+  assert.deepEqual(state.navigations, [["p", "issue", "a"], ["p", "issue", "a"]]);
+  assert.deepEqual(invalidations, []);
 });
 
-for (const props of [
-  { id: "sibling" },
-  { issueId: "other" },
-  { projectId: "other" },
-]) {
-  test(`navigation to ${JSON.stringify(props)} waits for destination chat visibility`, async () => {
+for (const props of [{ id: "sibling" }, { issueId: "other" }, { projectId: "other" }]) {
+  test(`navigation to ${JSON.stringify(props)} preserves unread`, async () => {
     await render(<WorkspaceLink {...props} />);
     await clickWorkspace();
     assert.deepEqual(state.calls, []);
@@ -207,12 +261,9 @@ for (const props of [
   });
 }
 
-test("background or issue-create state does not clear the previously selected workspace", async () => {
-  visibility = "hidden";
-  await render(<WorkspaceLink />);
-  await clickWorkspace();
-  visibility = "visible";
-  state.createIssue = true;
+test("reselection while the workspace record is loading preserves unread", async () => {
+  state.loading = true;
+  state.workspace = undefined;
   await render(<WorkspaceLink />);
   await clickWorkspace();
   assert.deepEqual(state.calls, []);

@@ -35,7 +35,7 @@ await build({
         );
         builder.onResolve({ filter: /^@\// }, (args) => {
           if (
-            /\/(useMarkWorkspaceSeen|useOpenProjectWorkspace)$/.test(args.path)
+            /\/(useWorkspaceSeenAction|useOpenProjectWorkspace|WorkspaceReadControls)$/.test(args.path)
           )
             return;
           return { path: fixture };
@@ -43,7 +43,7 @@ await build({
         builder.onResolve(
           {
             filter:
-              /^(react-i18next|@phosphor-icons\/react|\.\/KanbanIssuePanelContainer)$/,
+              /^(react-i18next|@phosphor-icons\/react|@vibe\/ui\/components\/WorkspacesMain|\.\/KanbanIssuePanelContainer|\.\/ContextBarContainer)$/,
           },
           () => ({ path: fixture }),
         );

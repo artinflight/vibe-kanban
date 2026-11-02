@@ -1,3 +1,30 @@
+# Current frontend deployment — 2026-11-02
+
+The scrolling projects menu is live at `https://vibe.local`, published at
+17:28:06 UTC. Public JS is `index-CRD24Nkw.js`; CSS is `index-BDlsFLgm.css`.
+Feature commit `d0496eb1d4d6904aa69eb6b087d29c39ece488f0` is applied to the
+actual prior live source: explicit-unread fix `70d7f5b0` with preserved chat-notice
+source `800011bd`. All other live build inputs are byte-identical. The deployment
+snapshot and composition receipt, rather than this branch alone, reproduce the
+published frontend. See [release evidence](VK_SCROLLING_PROJECTS_DEPLOYMENT.md)
+and [manifest](LIVE_DEPLOYMENT.json).
+
+Five candidate and five public-browser cases passed with 60 synthetic projects;
+normal desktop/mobile smoke checks showed all 19 real projects. Scrollbars are
+hidden, the page and controls stay fixed, and wheel/touch scrolling works.
+All application mutations were intercepted. The 27 current unread/chat-notice
+regressions also pass. No physical-device QA is claimed.
+
+The pointer changed atomically in 0.0143 seconds; all 770 old/new hashed assets
+are retained with a paired fallback. The 74,848,460-byte software recovery archive
+was independently restored locally and read back from Desktop B. All five service
+PIDs/invocations, backend binary, database device/inode and 99 migrations stayed
+unchanged. No backend restart, data restoration, provider call or device action.
+Existing backend/history-proxy frontend roots and preview routes are preserved.
+Reload existing browser tabs to receive the new frontend.
+
+# Staging continuity before scrolling publication
+
 # Current public frontend — 2026-11-02
 
 The frontend correction is published at `https://vibe.local`. Deliberate opening,

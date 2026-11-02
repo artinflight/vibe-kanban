@@ -1,3 +1,26 @@
+# Current public frontend — 2026-11-02
+
+The frontend-only disappearing-unread correction is published at `https://vibe.local`.
+Opening/returning/reselecting no longer automatically reads workspace replies.
+Use **Mark all replies read** in project chat, Workspaces chat or Workspace Actions.
+Existing tabs/devices must reload; old loaded bundles retain the old behavior.
+No historical unread reconstruction was performed.
+
+Feature source `70d7f5b0516a784ca6f27ba9fc6245b441666663` is applied to current live
+frontend base `800011bd573e2869d6ea4c0e5bfba4d9046d9cbe`, preserving the newer
+chat notices exactly. Entry JS `index-CfDh4WtO.js`, CSS `index-C-pTuj_j.css`,
+version `0.1.42`. Both paired roots retain 717 hashed assets. Public TLS/file
+readback, 24 mounted regressions and four candidate plus four served desktop/phone
+browser cases pass; browser application writes are intercepted. Types, focused
+lint, format, import guards, ops and the exact production build pass.
+
+Backend PID/hash, all five service identities, database inode/path and 99 migrations
+are unchanged. No backend/API/schema/config change or restart. Verified software
+recovery is on Desktop B, with immediate frontend-only fallback. Source is locally
+committed; no new PR/push or upstream promotion. See
+[fix and acceptance](VK_DISAPPEARING_UNREAD_FIX.md) and [manifest](LIVE_DEPLOYMENT.json).
+The older production records below remain historical provenance.
+
 # Current production and protections — 2026-10-31
 
 The Antigravity-enabled release is live at `https://vibe.local`. It was accepted

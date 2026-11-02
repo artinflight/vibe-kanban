@@ -1,4 +1,10 @@
-# Project conversation unread/review corrections — live frontend update
+# Project conversation unread/review corrections — historical frontend updates
+
+The automatic opening/return/reselection read behavior described below was
+superseded on 2 November by the operator-authorized frontend-only correction.
+Navigation now preserves unread; clearing is explicit. See
+[the current fix](VK_DISAPPEARING_UNREAD_FIX.md) and [STATE](STATE.md).
+The records below preserve their original source and acceptance evidence.
 
 ## Current preserving release and Git synchronization
 

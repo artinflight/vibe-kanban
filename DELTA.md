@@ -2499,3 +2499,18 @@ backend/device changes, runtime publication, restart, commit, push or PR.
 The operator requested a local commit of all six changed files. The scrolling
 implementation and continuity notes are committed together; see Git history for
 the commit identity. No push or deployment was requested.
+
+## 2026-11-02 — publish independently scrolling projects menu
+
+Operator authorized deployment of d0496eb1d. Fresh discovery found newer live
+chat-notice and explicit-unread fixes; built the actual live source snapshot plus
+the exact three scrolling files, preserving every other input. Production build,
+27 preserved-source regressions and five candidate/public desktop-touch browser
+cases pass. Normal public smoke shows all 19 real projects and no errors.
+74,848,460-byte software/source recovery archive independently restored locally
+and read back from Desktop B after respecting another owner's shared backup lock.
+Atomic frontend pointer switch at 17:28:06 UTC took 0.0143 s; 770 old/new assets
+retained with paired fallback. Public JS index-CRD24Nkw.js, CSS index-BDlsFLgm.css.
+Trusted public hashes/capabilities, five service identities, backend hash, DB inode
+and 99 migrations pass unchanged. No backend restart, data restore, provider call
+or device action. See VK_SCROLLING_PROJECTS_DEPLOYMENT.md and LIVE_DEPLOYMENT.json.

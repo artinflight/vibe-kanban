@@ -1,31 +1,32 @@
-# Scrolling projects menu pickup — 2026-11-02
+# Scrolling projects menu deployed — 2026-11-02
 
-The projects menu change is in `vk/9cb7-vk-scrolling-pro`, based on `aceb355e9`.
-Desktop grid tracks now allow the AppBar to shrink within the viewport. The rail,
-expanded names list and mobile projects list have hidden scrollbars and contained
-overscroll. Footer/actions stay outside the scrolling list. MobileDrawer exposes
-an optional content class override used only by project navigation.
+Live URL: `https://vibe.local`, published 17:28:06 UTC. Reload existing tabs.
+JS `index-CRD24Nkw.js`; CSS `index-BDlsFLgm.css`. Feature source is committed at
+`d0496eb1d4d6904aa69eb6b087d29c39ece488f0`, branch `vk/9cb7-vk-scrolling-pro`.
+The deployment source snapshot preserves the newer live explicit-unread and
+chat-notice fixes; rebuilding the older feature branch alone would omit them.
+Use [manifest](LIVE_DEPLOYMENT.json) and [release evidence](VK_SCROLLING_PROJECTS_DEPLOYMENT.md).
 
-Validation passed: required repository format, UI format/lint/type check,
-shared layout ESLint, shared frontend type check (bounded 3 GiB heap), local
-app types, and ops governance. The shared type check first exhausted the default
-heap; the bounded rerun passed. Browser receipts are in
-`.vk-preview/scroll-check/`. The isolated fixtures use
-actual AppBar/MobileDrawer components and extracted SharedAppLayout grid/mobile
-markup with 60 synthetic projects. They do not contact a backend. Before-change
-reproduction: desktop document grows to 3015 px; mobile list expands to 3132 px
-and pushes creation controls beyond the sheet. After-change checks pass at
-1440×900, 1024×600, 393×852, 393×600 and 740×393:
-internal wheel/touch scrolling, hidden standard/WebKit scrollbars, viewport-sized
-document, stationary controls, final-project selection, expanded-name scrolling,
-and keyboard project reordering. No page errors. This is browser emulation, not
-physical-phone QA. Dependencies link to an existing SSD install; no new download.
+Desktop rail, names flyout and mobile project list scroll internally with hidden
+scrollbars and contained overscroll. Project actions/footer remain visible.
+Five candidate and five served-public browser sizes pass with 60 synthetic
+projects. Real-data desktop/mobile smoke checks show 19 projects and no page
+errors; all application writes were intercepted. Current live-source unread and
+chat-notice mounted regressions pass (17 + 10). Production tsc/Vite build, feature
+frontend types/lint, required format and ops checks pass. Full Rust/PR baseline
+and physical-phone QA were not run.
 
-Committed locally at the operator’s request; no push, PR or runtime deployment.
-Use `git log -1` for the commit identity. Preserve the current
-public release and all preview routes. Production details remain in [STATE](STATE.md)
-and [LIVE_DEPLOYMENT.json](LIVE_DEPLOYMENT.json). Normal deployment/PR gates still
-apply if requested later.
+Receipt root: `/mnt/vk-storage/vk-scrolling-projects-20261102-9cb7`.
+Public root: `paired/candidate`; fallback: `paired/fallback` under that root.
+770 old/new assets retained. Software recovery archive independently restored
+and read back from Desktop B. All five service identities, backend hash, DB inode
+and 99 migrations unchanged. No backend restart, DB restore or provider call.
+Only the public frontend pointer changed; direct backend/history-proxy roots and
+preview routes remain untouched. Before any future cutback, recheck exact pointer
+ownership and retained fallback hashes; never restore old data over current writes.
+
+Code and deployment notes are committed locally; no push or PR requested.
+Further Git integration/main promotion remains separate from this publication.
 
 Prior pickup: [previous record](deployment-history/20261030-before-reconciliation/HANDOFF.md)
 and [HANDOFF history](HANDOFF_HISTORY_20261017.md).

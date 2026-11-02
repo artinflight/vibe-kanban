@@ -7,9 +7,11 @@ project actions visible. Apply the same behavior to expanded project names and
 the mobile project drawer; its content layout override preserves other drawers'
 default scrolling. Preserve project selection, drag ordering and activity badges.
 
-No backend, API, generated types, runtime publication, device work or service
-restart. Production truth remains in [STATE](STATE.md) and the live manifest.
-Validation and pickup details: [HANDOFF](HANDOFF.md).
+The operator authorized deployment. The frontend was published at 17:28:06 UTC
+on November 2 using the current live source plus the exact scrolling patch.
+The newer explicit-unread and chat-notice fixes are preserved. No backend, API,
+generated types, device work or service restart. See [release evidence](VK_SCROLLING_PROJECTS_DEPLOYMENT.md),
+[STATE](STATE.md), [manifest](LIVE_DEPLOYMENT.json) and [HANDOFF](HANDOFF.md).
 
 Prior stream history: [previous record](deployment-history/20261030-before-reconciliation/STREAM.md)
 and [STREAM history](STREAM_HISTORY_20261017.md). The preceding unread integration

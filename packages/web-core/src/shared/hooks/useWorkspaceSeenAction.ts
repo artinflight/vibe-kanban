@@ -3,7 +3,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { workspacesApi } from '@/shared/lib/api';
 import { workspaceSummaryKeys } from '@/shared/hooks/workspaceSummaryKeys';
 
-/** Workspace-wide read: call only from an explicit user action. */
+/** Existing workspace-wide read used after a deliberate view or bulk action. */
 export function useWorkspaceSeenAction() {
   const queryClient = useQueryClient();
   return useCallback(

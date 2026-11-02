@@ -102,6 +102,8 @@ jobs:
               - 'scripts/testing/run-kanban-issue-panel-tests.mjs'
               - 'scripts/testing/workspace-seen*'
               - 'scripts/testing/run-workspace-seen-tests.mjs'
+              - 'scripts/testing/conversation-read-view*'
+              - 'scripts/testing/run-conversation-read-view-tests.mjs'
               - 'scripts/testing/kanban-collapse*'
               - 'scripts/testing/run-kanban-collapse-tests.mjs'
               - 'scripts/testing/*read-only-web-links*'
@@ -343,6 +345,7 @@ jobs:
           VK_TEST_OUTPUT: ${{ runner.temp }}/workspace-seen-tests
         run: |
           node scripts/testing/run-workspace-seen-tests.mjs
+          node scripts/testing/run-conversation-read-view-tests.mjs
           node scripts/testing/run-kanban-collapse-tests.mjs
 
       - name: Preserve live conversation history fallback

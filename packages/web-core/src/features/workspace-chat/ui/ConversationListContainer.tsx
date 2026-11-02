@@ -20,6 +20,7 @@ import { deriveConversationEntries } from '../model/deriveConversationEntries';
 import { deriveConversationTimeline } from '../model/deriveConversationTimeline';
 import { useConversationVirtualizer } from '../model/useConversationVirtualizer';
 import { useResumeConversationAtBottom } from '../model/useResumeConversationAtBottom';
+import { useReadOnConversationView } from '../model/useReadOnConversationView';
 import { useScrollCommandExecutor } from '../model/useScrollCommandExecutor';
 
 import DisplayConversationEntry from './DisplayConversationEntry';
@@ -870,6 +871,23 @@ export const ConversationList = forwardRef<
     ]
   );
 
+  const latestReply = conversationRows.findLast(
+    (row) => row.rowFamily === 'assistant_message'
+  );
+  useReadOnConversationView({
+    workspaceId: attempt.id,
+    sessionId: attempt.session?.id,
+    ready: !loading && !historyError,
+    replyKey: latestReply?.semanticKey,
+    revision:
+      latestReply?.entry.type === 'NORMALIZED_ENTRY' &&
+      latestReply.entry.content.content.trim().length > 0
+        ? `${latestReply.semanticKey}:${latestReply.entry.content.content}`
+        : undefined,
+    scrollRef: tanstackScrollRef,
+    revealLatest: () => scrollToBottomAndClearSpacer('auto'),
+  });
+
   const showLoader = loading && conversationRows.length === 0;
   const showEmptyState =
     !loading && !historyError && conversationRows.length === 0;
@@ -1026,6 +1044,11 @@ export const ConversationList = forwardRef<
                       data-index={virtualItem.index}
                       data-row-index={virtualItem.index}
                       data-semantic-key={row.semanticKey}
+                      data-workspace-read-reply={
+                        row.rowFamily === 'assistant_message'
+                          ? row.semanticKey
+                          : undefined
+                      }
                       ref={measureElement}
                       style={{
                         position: 'absolute',
@@ -1049,6 +1072,11 @@ export const ConversationList = forwardRef<
                   key={row.semanticKey}
                   data-row-index={rowIndex}
                   data-semantic-key={row.semanticKey}
+                  data-workspace-read-reply={
+                    row.rowFamily === 'assistant_message'
+                      ? row.semanticKey
+                      : undefined
+                  }
                 >
                   {renderRowContent(row.entry, attempt, resetAction, repos)}
                 </div>

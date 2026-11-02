@@ -2390,3 +2390,25 @@ Reload every existing VK tab/device to remove old loaded code. Exact-reply API
 proposal is historical and intentionally not part of this frontend-only fix.
 No push/PR or main promotion. See VK_DISAPPEARING_UNREAD_FIX.md and the manifest.
 Evidence: /mnt/vk-storage/vk-disappearing-unread-20261102-3ad7/fix-release-1.
+
+
+## 2026-11-02 — operator requested rebase integration of explicit-read fix
+
+Fresh fork/staging remains aceb355e965c27c93e0a83d719bcdbccf84f4bcc and is already
+contained by the branch; rebase is a no-op. Preserve deployed feature source
+70d7f5b0516a784ca6f27ba9fc6245b441666663 and serving JS index-CfDh4WtO.js.
+Source integration targets staging via a PR and the rebase method. Full hosted
+validation-only baseline precedes PR creation; final PR checks/merge event are
+the integration authority. No frontend publication or backend restart is needed.
+
+## 2026-11-02 — restore deliberate reads after manual-only regression
+
+The operator reports nothing clears. Hold staging merge and restore guarded
+read-on-view with latest rendered reply visibility, foreground focus and dwell;
+wire deliberate reselection/jump-to-latest while retaining bulk fallback. Passive
+return/polling/new output do not arm reads. Backend/API remain unchanged. The
+manual-only release is reproduced as a negative control. Mounted regressions pass;
+real-layout testing exposed saved Workspaces scroll position, which correctly
+preserves unread until the reader deliberately reaches the latest reply. An
+optional live-state test was rejected by automatic approval review; all browser
+application writes remain intercepted. Exact server scope/race limitations remain.

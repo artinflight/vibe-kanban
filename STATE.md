@@ -1,5 +1,9 @@
 # Current public frontend — 2026-11-02
 
+The operator reported that manual-only clearing below is insufficient. A visible-
+conversation correction is in validation; staging integration is held pending
+its frontend publication. The following release remains the serving state.
+
 The frontend-only disappearing-unread correction is published at `https://vibe.local`.
 Opening/returning/reselecting no longer automatically reads workspace replies.
 Use **Mark all replies read** in project chat, Workspaces chat or Workspace Actions.
@@ -16,8 +20,10 @@ lint, format, import guards, ops and the exact production build pass.
 
 Backend PID/hash, all five service identities, database inode/path and 99 migrations
 are unchanged. No backend/API/schema/config change or restart. Verified software
-recovery is on Desktop B, with immediate frontend-only fallback. Source is locally
-committed; no new PR/push or upstream promotion. See
+recovery is on Desktop B, with immediate frontend-only fallback. The operator
+has authorized source synchronization and rebase integration into staging. The
+branch PR/merge event records integration IDs; main promotion remains separate.
+Git integration does not redeploy or restart services. See
 [fix and acceptance](VK_DISAPPEARING_UNREAD_FIX.md) and [manifest](LIVE_DEPLOYMENT.json).
 The older production records below remain historical provenance.
 

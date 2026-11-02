@@ -167,6 +167,7 @@ export const ConversationList = forwardRef<
   const [hasSetupScriptRun, setHasSetupScriptRun] = useState(false);
   const [hasCleanupScriptRun, setHasCleanupScriptRun] = useState(false);
   const [hasRunningProcess, setHasRunningProcess] = useState(false);
+  const [hasPendingApproval, setHasPendingApproval] = useState(false);
   const lastSettledTailStartIndexRef = useRef<number | null>(null);
   const { setEntries, reset } = useEntriesActions();
   const setTokenUsageInfo = useSetTokenUsageInfo();
@@ -252,6 +253,7 @@ export const ConversationList = forwardRef<
     setHasSetupScriptRun(false);
     setHasCleanupScriptRun(false);
     setHasRunningProcess(false);
+    setHasPendingApproval(false);
     setFilteredEntries([]);
     setDataVersion(0);
     lastSettledTailStartIndexRef.current = null;
@@ -386,6 +388,7 @@ export const ConversationList = forwardRef<
     setHasSetupScriptRun(derivedEntries.hasSetupScriptRun);
     setHasCleanupScriptRun(derivedEntries.hasCleanupScriptRun);
     setHasRunningProcess(derivedEntries.hasRunningProcess);
+    setHasPendingApproval(derivedEntries.hasPendingApproval);
     setTokenUsageInfo(derivedEntries.latestTokenUsageInfo);
 
     const derivedTimeline = deriveConversationTimeline(
@@ -878,12 +881,8 @@ export const ConversationList = forwardRef<
   useReadOnConversationView({
     workspaceId: attempt.id,
     sessionId: attempt.session?.id,
-    // next_action is emitted only after running/approval turns have settled.
     ready:
-      !loading &&
-      !historyError &&
-      !hasRunningProcess &&
-      conversationRows.some((row) => row.rowFamily === 'next_action'),
+      !loading && !historyError && !hasRunningProcess && !hasPendingApproval,
     replyKey: latestReply?.semanticKey,
     revision:
       latestReply?.entry.type === 'NORMALIZED_ENTRY' &&

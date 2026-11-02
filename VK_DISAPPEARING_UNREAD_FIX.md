@@ -3,7 +3,9 @@
 The operator reported the initial manual-only release stopped normal clearing.
 That release is superseded by the corrective implementation below; the corrected
 frontend is published at 2026-11-02T17:45:07.515775+00:00.
-Staging source integration uses the operator-authorized PR/rebase method; final PR checks and merge event are authoritative.
+Source integration uses [PR #288](https://github.com/artinflight/vibe-kanban/pull/288)
+into staging with the requested rebase method. Its final checks and merge event are
+authoritative.
 
 ## Current behavior
 
@@ -41,7 +43,12 @@ including saved scroll/jump-to-latest, initial clearing, deliberate reselection
 or reopening, background return/polling preservation, failed requests and the
 explicit fallback. All four candidate and all four served cases pass with zero page errors and
 zero live application writes.
-The full hosted validation-only [Test baseline](https://github.com/artinflight/vibe-kanban/actions/runs/41493120165) passes on corrective source b8bad21792f863bce31c42742f7439cc8539503a: frontend builds/lint/types/regressions, governance, Rust lint, generated types/SQLx, workspace tests (excluding Tauri), storage/watchers and scheduled persistence. Tauri fmt/lint/compile checks pass separately.
+The full hosted validation-only [Test
+baseline](https://github.com/artinflight/vibe-kanban/actions/runs/41493120165) passes on
+corrective source b8bad21792f863bce31c42742f7439cc8539503a: frontend
+builds/lint/types/regressions, governance, Rust lint, generated types/SQLx, workspace
+tests (excluding Tauri), storage/watchers and scheduled persistence. Tauri
+fmt/lint/compile checks pass separately.
 
 Private remote backend checks are skipped by the workflow because its deploy key
 is unavailable; that coverage is not claimed. The production build exits zero;

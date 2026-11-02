@@ -234,3 +234,15 @@ test("navigation/unmount during dwell cannot clear the abandoned chat", async ()
   await settle();
   assert.deepEqual(state.calls, []);
 });
+
+test("opening during a running turn waits through streaming for its completed visible reply", async () => {
+  await render(<Chat ready={false} revision="older-reply" />);
+  await settle();
+  assert.deepEqual(state.calls, []);
+  await render(<Chat ready={false} revision="streaming-new-reply" />);
+  await settle();
+  assert.deepEqual(state.calls, []);
+  await render(<Chat ready revision="finished-new-reply" />);
+  await settle();
+  assert.deepEqual(state.calls, ["a"]);
+});

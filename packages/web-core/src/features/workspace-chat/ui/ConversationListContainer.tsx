@@ -872,12 +872,18 @@ export const ConversationList = forwardRef<
   );
 
   const latestReply = conversationRows.findLast(
-    (row) => row.rowFamily === 'assistant_message'
+    (row) =>
+      row.rowFamily === 'assistant_message' || row.rowFamily === 'error_message'
   );
   useReadOnConversationView({
     workspaceId: attempt.id,
     sessionId: attempt.session?.id,
-    ready: !loading && !historyError,
+    // next_action is emitted only after running/approval turns have settled.
+    ready:
+      !loading &&
+      !historyError &&
+      !hasRunningProcess &&
+      conversationRows.some((row) => row.rowFamily === 'next_action'),
     replyKey: latestReply?.semanticKey,
     revision:
       latestReply?.entry.type === 'NORMALIZED_ENTRY' &&
@@ -1045,7 +1051,8 @@ export const ConversationList = forwardRef<
                       data-row-index={virtualItem.index}
                       data-semantic-key={row.semanticKey}
                       data-workspace-read-reply={
-                        row.rowFamily === 'assistant_message'
+                        row.rowFamily === 'assistant_message' ||
+                        row.rowFamily === 'error_message'
                           ? row.semanticKey
                           : undefined
                       }
@@ -1073,7 +1080,8 @@ export const ConversationList = forwardRef<
                   data-row-index={rowIndex}
                   data-semantic-key={row.semanticKey}
                   data-workspace-read-reply={
-                    row.rowFamily === 'assistant_message'
+                    row.rowFamily === 'assistant_message' ||
+                    row.rowFamily === 'error_message'
                       ? row.semanticKey
                       : undefined
                   }

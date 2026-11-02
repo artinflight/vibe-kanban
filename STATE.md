@@ -1,38 +1,40 @@
 # Current public frontend — 2026-11-02
 
-The corrective frontend is published at `https://vibe.local`. Opening/reselecting
-and deliberate reading clear unread after the latest loaded reply's end is visible
-in the focused foreground window for 350 ms. Jump to latest clears a conversation
-opened at an older saved position. Background return, passive polling and newly
-arriving output alone preserve unread. The explicit bulk-read fallback remains.
-Reload existing tabs/devices; no historical unread reconstruction was performed.
+The frontend correction is published at `https://vibe.local`. Deliberate opening,
+reselection, reading gestures and jump to latest clear unread after the newest
+loaded reply/error is visible in the focused foreground window for 350 ms.
+Running and approval turns in the displayed conversation wait until they settle. Background return, passive
+polling and new output alone preserve unread. The explicit bulk fallback remains.
+Reload all existing VK tabs/devices. Historical unread flags are not reconstructed.
 
-Corrective source `b8bad21792f863bce31c42742f7439cc8539503a` is composed onto
-preserved live base `800011bd573e2869d6ea4c0e5bfba4d9046d9cbe` and initial
-feature `70d7f5b0516a784ca6f27ba9fc6245b441666663`. Newer chat notices remain
-byte-identical. Entry JS `index-C2FVxMt6.js`, CSS `index-C-pTuj_j.css`, version
-`0.1.42`. Both paired roots retain 822 assets. The prior manual-only release is
-superseded after the operator reported it stopped normal clearing.
+Corrective source `9a45a3abf2d99eb44c14ef7a744d6f7bf0fbb73e` is composed onto live base
+`800011bd573e2869d6ea4c0e5bfba4d9046d9cbe`, retaining initial feature `70d7f5b0516a784ca6f27ba9fc6245b441666663`
+and view correction `b8bad21792f863bce31c42742f7439cc8539503a`. Newer chat notices
+remain byte-identical. Entry JS `index-DqfYW9pf.js`, CSS `index-C-pTuj_j.css`, version
+`0.1.42`; both paired roots retain 874 assets. Manual-only release-1 and the
+pre-running-guard release-2 are superseded. Rejected candidate-3 was never served.
 
-Thirty-eight mounted read/navigation regressions, shared frontend types, focused
-lint, required format, ops and the preserving production build pass. Four
-candidate browser cases pass at 1440/393 pixels on both chat surfaces. Public
-TLS/asset/health readback, backend hash, five service identities, database inode
-and 99 migrations pass unchanged. Software recovery is independently verified on
-Desktop B; immediate fallback changes only the frontend pointer.
+Fifteen view regressions, seventeen explicit/readiness regressions and seven
+adjacent navigation regressions pass, together with types, focused lint, required
+format, ops and the preserving production build. Four candidate and four served
+layout cases pass at 1440/393 pixels on both chat surfaces. Candidate and served
+running-turn checks verify zero read requests while an API-verified turn runs.
+Every application write is intercepted. Public TLS/assets/health, backend hash,
+five service identities, DB inode/path and 99 migrations pass unchanged. Software
+recovery is independently verified on Desktop B; fallback changes only frontend.
 
-The seen API still clears the whole workspace across sessions; its arrival race
-cannot be removed with frontend changes alone. Automatic approval review rejected
-an optional live read-state test because original per-turn bits cannot be exactly
-restored. Browser application writes are intercepted; no live unread mutation
-or exact-reply acknowledgement is claimed. No backend/API/schema/config change,
-restart, provider execution or device work occurred.
+The unchanged seen API clears the whole workspace across sessions; its server
+arrival race cannot be eliminated by frontend changes. Automatic approval review
+rejected an optional real-server state test because per-turn bits cannot be exactly
+restored. No live unread mutation/persistence acceptance, backend/API/schema/config
+change, restart, provider execution or device work is claimed.
 
-The branch is pushed. [PR #288](https://github.com/artinflight/vibe-kanban/pull/288) is the staging rebase integration record;
-the full hosted Test baseline passes; final PR checks and the merge event record source integration.
-Main promotion remains separate. See [fix evidence](VK_DISAPPEARING_UNREAD_FIX.md)
-and [live manifest](LIVE_DEPLOYMENT.json). Older production records below are
-historical provenance.
+[PR #288](https://github.com/artinflight/vibe-kanban/pull/288) records staging rebase integration;
+its final checks and merge event are authoritative. The prior full hosted Test
+baseline 41493120165 passes; Rust source is unchanged. Private remote checks skip
+without the deploy key. Main promotion is separate. See
+[fix evidence](VK_DISAPPEARING_UNREAD_FIX.md) and [manifest](LIVE_DEPLOYMENT.json).
+Older production records below are historical provenance.
 
 # Current production and protections — 2026-10-31
 

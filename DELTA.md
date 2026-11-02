@@ -2440,3 +2440,16 @@ the operator-requested rebase method. Its final checks and merge event are the
 authority for integration and rebased IDs. The full baseline 41493120165 passed
 on corrective source b8bad21792f863bce31c42742f7439cc8539503a; package bytes
 remain unchanged. Runtime publication is independent and main promotion separate.
+
+## 2026-11-02 — final settled-turn frontend publication
+
+Source 9a45a3abf2d99eb44c14ef7a744d6f7bf0fbb73e published at 2026-11-02T18:28:43.114247+00:00;
+JS index-DqfYW9pf.js, CSS index-C-pTuj_j.css, version 0.1.42; 874 retained assets.
+Running/approval state is derived before render filtering. 39 mounted regressions,
+types/lint/format/ops/build, four candidate/four served layouts and candidate/served
+running guards pass with intercepted writes. Prior premature running reads are
+reproduced; rejected candidate-3 failed completed-view QA and was never served.
+Backend hash/five services/DB identity/99 migrations remain unchanged. Software
+restore and independent Desktop B recovery pass. No live unread mutation, backend
+restart or historical flag restoration. PR #288 final checks/merge event govern
+staging rebase integration; main promotion is separate.

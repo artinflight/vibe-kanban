@@ -7,8 +7,10 @@ reselection and jump-to-latest support, and preserves unread on background retur
 and passive polling. The explicit bulk control remains. Backend/API/schema stay
 unchanged; server-wide scope and arrival races remain limitations.
 
-The corrected preserving build is being validated before publication and staging
-integration. STATE and LIVE_DEPLOYMENT identify the currently serving release.
+The corrected preserving build is published: JS index-C2FVxMt6.js, CSS
+index-C-pTuj_j.css, version 0.1.42. All five services/backend hash/DB identity
+are unchanged; 99 migrations and 822 retained assets pass readback. Desktop B
+recovery is verified. Staging source integration uses the operator-authorized PR/rebase method; final PR checks and merge event are authoritative.
 The operator authorized push, staging PR and rebase merge after validation.
 Keep main promotion separate and preserve unrelated dirty canonical work.
 
@@ -25,3 +27,11 @@ The original manual-only deployment receipts remain historical under release-1.
 Do not reuse consumed activation controllers. No backend restart/device work.
 
 Full historical archive: [HANDOFF_HISTORY_20261017.md](HANDOFF_HISTORY_20261017.md).
+
+Four candidate and four served browser cases now pass on both chat surfaces at
+1440/393 pixels, with zero page errors and all application writes intercepted.
+
+The full hosted Test baseline 41493120165 passes, including workspace tests,
+Rust lint, schema/SQLx, Tauri checks and storage/watchers/scheduled persistence.
+Private remote checks skip without the deploy key. Final PR checks and merge
+event remain the integration authority.

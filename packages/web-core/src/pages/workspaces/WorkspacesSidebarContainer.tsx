@@ -1,3 +1,4 @@
+import { requestWorkspaceRead } from '@/shared/lib/workspaceReadIntent';
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useQueries, useQuery } from '@tanstack/react-query';
 import { useParams } from '@tanstack/react-router';
@@ -762,6 +763,7 @@ export function WorkspacesSidebarContainer({
       if (isMobile) {
         setMobileActiveTab('chat');
       }
+      requestWorkspaceRead(id);
     },
     [
       selectedWorkspaceId,

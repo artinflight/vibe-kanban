@@ -14,6 +14,7 @@ const dom = new JSDOM("<!doctype html><html><body></body></html>");
 Object.assign(globalThis, {
   window: dom.window,
   document: dom.window.document,
+  CustomEvent: dom.window.CustomEvent,
   IS_REACT_ACT_ENVIRONMENT: true,
 });
 let visibility = "visible";
@@ -91,7 +92,7 @@ function WorkspacesChat({ id = "a" }) {
   />;
 }
 
-test("opening and polling project chat preserves unread until explicit read", async () => {
+test("workspace record/polling without a rendered transcript preserves unread", async () => {
   await render();
   assert.deepEqual(state.calls, []);
   state.workspace = { id: "a" };
@@ -243,7 +244,7 @@ async function clickWorkspace() {
   await act(async () => { element.querySelector("button")!.click(); });
 }
 
-test("same-route project reselection navigates without reading replies", async () => {
+test("same-route project reselection defers reading to the displayed transcript", async () => {
   await render(<WorkspaceLink />);
   await clickWorkspace();
   await clickWorkspace();

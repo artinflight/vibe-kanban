@@ -1,36 +1,31 @@
-# Explicit workspace reads — 2026-11-02
+# Visible conversation reads — 2026-11-02
 
-Branch `vk/3ad7-vk-disappearing`. The operator requested implementation with a
-strict frontend-only boundary. No backend/API/schema or generated type changes.
+Branch `vk/3ad7-vk-disappearing`. Frontend only; no backend/API/schema or
+generated-type change. The operator reported the manual-only release stopped
+normal clearing, so staging integration is held until the correction is validated.
 
-The existing API clears an entire workspace and cannot acknowledge exact reply
-revisions. Therefore all automatic seen calls are removed: opening, polling,
-visibility changes, remounting and project workspace reselection preserve unread.
-An explicit “Mark all replies read” control is available in project conversations,
-Workspaces conversations and workspace actions. It deliberately retains the
-existing workspace-wide API contract. Pending duplicate clicks are blocked;
-errors remain visible and retry requires another explicit action.
+A deliberate conversation opening, reselection, reading gesture or jump to latest
+may acknowledge once the loaded latest assistant reply's end is visible, focused
+and unobscured for 350 ms. Hidden panels, background return, passive polling and
+new output alone do not acknowledge. A reply changing during the dwell cancels
+that intent. The explicit workspace-wide bulk control remains available.
 
-The original exact-reply proposal remains historical investigation context in
-`VK_DISAPPEARING_UNREAD_INVESTIGATION.md`; it is not the implementation selected
-under the operator’s no-backend-change constraint.
+The existing bodyless seen API still clears the entire workspace across sessions.
+Exact-reply conditional acknowledgement and the server arrival race cannot be
+fixed within the operator's no-backend-change boundary. Historical unread flags
+are not reconstructed. Browser writes are intercepted: a real-server state test
+was rejected by automatic approval review because the original per-turn state
+cannot be exactly restored. No live unread mutation test is claimed.
 
-The preserved live base is source `800011bd573e2869d6ea4c0e5bfba4d9046d9cbe`,
-previous JS `index-BvmbFTPN.js`. The published preserving build uses that source
-plus feature commit `70d7f5b0516a784ca6f27ba9fc6245b441666663`; newer chat notices
-are retained exactly. Live JS is `index-CfDh4WtO.js`, CSS `index-C-pTuj_j.css`,
-version `0.1.42`.
-Evidence root: `/mnt/vk-storage/vk-disappearing-unread-20261102-3ad7/`.
+The preserving candidate starts from release-1's source (live base
+800011bd573e2869d6ea4c0e5bfba4d9046d9cbe plus feature 70d7f5b0516a784ca6f27ba9fc6245b441666663).
+Newer git-preservation notices must remain byte-identical. Evidence root:
+`/mnt/vk-storage/vk-disappearing-unread-20261102-3ad7/`.
+Current serving truth remains STATE/LIVE_DEPLOYMENT until verified publication.
 
-Seventeen mounted regressions pass. Restoring previous automatic-read project
-code reproduces nine failures. A real-browser negative control observes the old
-frontend issuing a seen request on opening; every write is intercepted.
-Frontend types, focused lint, required format and import guards pass.
-Seven adjacent navigation tests and four candidate plus four served browser
-cases pass at desktop/phone widths with all writes intercepted. Frontend
-publication and public TLS/asset/runtime preservation checks passed. The verified
-paired fallback and Desktop B recovery preserve all 717 hashed assets.
-No backend restart, DB restoration, historical unread repair or physical-device
-operation. Reload all existing tabs/devices. See `VK_DISAPPEARING_UNREAD_FIX.md`.
+The operator authorized push, PR into fork/staging and rebase merge. Fresh staging
+was aceb355e965c27c93e0a83d719bcdbccf84f4bcc; the initial rebase was a no-op.
+Full hosted validation-only baseline and final PR checks precede integration.
+Main promotion is separate. Git integration does not restart the backend.
 
 Full historical archive: [STREAM_HISTORY_20261017.md](STREAM_HISTORY_20261017.md).

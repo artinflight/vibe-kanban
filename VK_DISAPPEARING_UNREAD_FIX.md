@@ -1,85 +1,67 @@
-# Visible conversation reads — frontend-only correction
+# Deliberate visible reply reads — frontend-only correction
 
-The operator reported the initial manual-only release stopped normal clearing.
-That release is superseded by the corrective implementation below; the corrected
-frontend is published at 2026-11-02T17:45:07.515775+00:00.
-Source integration uses [PR #288](https://github.com/artinflight/vibe-kanban/pull/288)
-into staging with the requested rebase method. Its final checks and merge event are
-authoritative.
+Published at 2026-11-02T18:28:43.114247+00:00 on `https://vibe.local`.
+Corrective feature source: `9a45a3abf2d99eb44c14ef7a744d6f7bf0fbb73e`. Version 0.1.42;
+entry `index-DqfYW9pf.js` and `index-C-pTuj_j.css` identify the serving build.
 
-## Current behavior
+## Behavior
 
-Deliberately opening or reselecting a conversation, scrolling while reading, or
-choosing its jump-to-latest button can mark it read once the latest loaded
-assistant reply's end is visible and unobscured in the focused foreground window
-for 350 ms. A restored older scroll position stays unread until the latest reply
-is reached. Hidden panels cannot acknowledge replies. A reply changing during
-the dwell cancels the captured intent. Tab return, passive polling and newly
-arriving output alone do not create read intent.
+Deliberate conversation opening/reselection, reading gestures and jump to latest
+acknowledge after the latest loaded assistant reply/error end is visible and
+unobscured in a focused foreground window for 350 ms. Restored older scroll
+positions stay unread until the reader reaches latest. Running and approval turns in the displayed conversation wait until settled; an older
+reply cannot acknowledge its still-arriving output.
+The existing derivation exposes approval state before render-only filtering.
+A changed captured reply cancels the dwell. Background return, passive polling
+and new output alone do not arm reads. Hidden panels cannot acknowledge replies.
 
-The explicit **Mark all replies read** control remains a fallback in project
-chat, Workspaces chat and Workspace Actions. Pending duplicate bulk clicks are
-blocked; failure leaves unread intact and requires another deliberate attempt.
-No backend/API/schema/generated-type changes are included.
+The explicit **Mark all replies read** control remains in both conversation
+surfaces and Workspace Actions. Duplicate bulk requests are blocked; failures
+preserve unread and require a deliberate retry. No backend/API/schema/generated
+changes are included. The unchanged seen API clears all workspace sessions; its
+server arrival race remains a frontend-only limitation. Exact reply revisions
+and historical unread reconstruction are not implemented. Reload all old tabs.
 
-The unchanged bodyless seen API clears the entire workspace across sessions.
-Frontend visibility checks cannot supply exact server-side reply revisions or
-eliminate the arrival race between the check and server transaction. Those
-limitations remain under the operator's frontend-only boundary. Historical
-cleared unread flags are not reconstructed. Old loaded tabs need to reload.
+## Validation
 
-## Validation boundary
+- 15 mounted view regressions, 17 explicit/readiness and 7 adjacent navigation
+  regressions pass. Types, focused lint, required formatting/ops and preserving
+  production build pass; the renderer's two existing lint warnings are unchanged.
+- Four candidate and four served browser layout cases pass at 1440/393 pixels
+  across project and Workspaces views: completed clearing, saved scroll/jump,
+  reselect/reopen, passive preservation, failure and bulk fallback. No page errors.
+- Candidate and served running-turn checks confirm zero read requests while an
+  API-verified current process runs and its older reply is visible. The prior view
+  bundle reproduces premature read requests in the same isolated browser test.
+- All application writes are intercepted; disposable SQLite models unread state
+  and real metadata/history are read-only. Automatic approval review rejected an
+  optional real-server state test because original per-turn bits cannot be exactly
+  restored. No real database unread mutation or persistence acceptance is claimed.
+- [Prior full Test baseline](https://github.com/artinflight/vibe-kanban/actions/runs/41493120165)
+  passes on b8bad21792f863bce31c42742f7439cc8539503a. Rust source is unchanged.
+  Current source validation is governed by [PR #288](https://github.com/artinflight/vibe-kanban/pull/288)
+  final checks/merge event. Private remote checks skip without the deploy key.
+- Public TLS/index/assets/health, five service identities, backend hash, DB
+  path/device/inode and 99 migrations pass unchanged. No restart or DB restore.
+- 100,295,574-byte software recovery passed local restore of
+  3,566 files and permissions plus independent Desktop B readback.
+  Both paired roots retain 874 assets. Pointer switch: 0.011763 seconds.
+- Optional Sentry upload authentication is unavailable and upload is not certified.
+  Provider execution and physical S25 interaction are not claimed.
 
-Fourteen mounted read-on-view regressions, seventeen existing explicit/readiness
-regressions and seven adjacent navigation regressions pass. Shared frontend types,
-focused ESLint and required formatting pass. The two pre-existing conversation
-renderer lint warnings are unchanged. The manual-only live bundle reproduces
-zero clearing requests when opening a loaded conversation in a phone browser.
-Browser application writes are intercepted; disposable in-memory SQLite supplies
-unread state while real history/metadata use read-only live routes.
+## Source and recovery
 
-Real-layout acceptance checks project and Workspaces views at 1440/393 pixels,
-including saved scroll/jump-to-latest, initial clearing, deliberate reselection
-or reopening, background return/polling preservation, failed requests and the
-explicit fallback. All four candidate and all four served cases pass with zero page errors and
-zero live application writes.
-The full hosted validation-only [Test
-baseline](https://github.com/artinflight/vibe-kanban/actions/runs/41493120165) passes on
-corrective source b8bad21792f863bce31c42742f7439cc8539503a: frontend
-builds/lint/types/regressions, governance, Rust lint, generated types/SQLx, workspace
-tests (excluding Tauri), storage/watchers and scheduled persistence. Tauri
-fmt/lint/compile checks pass separately.
-
-Private remote backend checks are skipped by the workflow because its deploy key
-is unavailable; that coverage is not claimed. The production build exits zero;
-its optional Sentry upload reports unavailable authentication and is not certified.
-
-Automatic approval review rejected an optional real-server read-state test because
-it would change existing per-turn bits without an exact restoration path. No live
-database unread mutation or real persistence acceptance is claimed. No provider
-execution or physical S25 action is part of this task.
-
-## Source and release provenance
-
-Corrective feature source: b8bad21792f863bce31c42742f7439cc8539503a.
-The preserving build starts from live base
-800011bd573e2869d6ea4c0e5bfba4d9046d9cbe plus initial frontend feature
-70d7f5b0516a784ca6f27ba9fc6245b441666663, then overlays the corrective package
-files. Newer git-preservation notices remain byte-identical. Version is 0.1.42;
-asset hashes identify the actual build. Entry assets are index-C2FVxMt6.js /
-index-C-pTuj_j.css; both paired roots
-retain 822 assets. STATE/LIVE_DEPLOYMENT and the fresh activation receipt identify
-the serving build. The pointer switch took 0.013806 seconds; five service identities,
-backend executable hash and DB inode/path/99 migrations are unchanged. Public
-TLS/index/assets/health pass. The 95,264,657-byte software recovery archive passed
-restore checks for 3,460 files and permissions and independent Desktop B readback.
-
+The build preserves live frontend base 800011bd573e2869d6ea4c0e5bfba4d9046d9cbe,
+initial 70d7f5b0516a784ca6f27ba9fc6245b441666663 and b8bad2179 view work, then
+applies the settled-turn correction. Newer git-preservation notices are exact.
 Evidence root: `/mnt/vk-storage/vk-disappearing-unread-20261102-3ad7/`.
-Corrective software source/build, paired frontend/fallback, Desktop B recovery
-and activation evidence use `fix-release-2`. Original manual-only publication
-at 2026-11-02T16:27:39.360218+00:00 is retained under `fix-release-1`; it is not
-acceptance evidence for restored read-on-view. No backend restart or DB restore
-is needed for this frontend pointer publication.
+Serving source/artifact, paired fallback, backup and activation use `fix-release-4`.
+Historical manual-only release-1 was rejected by the operator; release-2 restored
+viewing but lacked the running-turn guard. Candidate-3 failed completed-view QA
+because the renderer filters its metadata marker; it was never served and its
+activation controller is permanently disabled. Only the accepted final build above
+is current. Backend/history direct roots retain prior assets; use the public route.
 
-The operator authorized push, a staging PR and rebase merge. Main promotion is
-separate; Git integration does not republish assets or restart services.
+The operator authorized push, staging PR and rebase merge through PR #288.
+Original deployed source IDs remain immutable. Git integration does not republish
+assets or restart services. Main promotion remains separate.

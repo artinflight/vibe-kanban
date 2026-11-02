@@ -1,6 +1,6 @@
 {
   "schema": 2,
-  "generated_at_utc": "2026-11-02T17:45:07.515775+00:00",
+  "generated_at_utc": "2026-11-02T18:28:43.114247+00:00",
   "canonical_repo": "/home/mcp/_vibe_kanban_repo",
   "canonical_repo_dirty": true,
   "canonical_branch": "vk/land-live-fixes-20260422",
@@ -32,12 +32,12 @@
   "history_proxy_port": 5640,
   "gateway_port": 4720,
   "public_frontend_pointer": "/home/mcp/.local/share/vibe-kanban/frontend-dist/current",
-  "public_frontend_release": "/mnt/vk-storage/vk-disappearing-unread-20261102-3ad7/fix-release-2/paired/candidate",
+  "public_frontend_release": "/mnt/vk-storage/vk-disappearing-unread-20261102-3ad7/fix-release-4/paired/candidate",
   "public_assets": [
     "/assets/index-C-pTuj_j.css",
-    "/assets/index-C2FVxMt6.js"
+    "/assets/index-DqfYW9pf.js"
   ],
-  "frontend_routing_note": "Public frontend acknowledges deliberately viewed latest replies after visibility/focus/dwell checks; tab return and passive polling do not arm reads. Explicit bulk fallback and newer git-preservation notices remain. Backend/history direct frontend roots, API/WebSockets and all five services are unchanged.",
+  "frontend_routing_note": "Public frontend acknowledges a deliberately viewed latest reply/error after its running/approval turn settles and visibility/focus/dwell checks pass. Passive return/polling preserve unread. Explicit bulk fallback and live git-preservation notices remain. Backend/API/DB/services unchanged.",
   "selected_runtime_environment": {
     "HOST": "127.0.0.1",
     "PORT": "5621",
@@ -145,16 +145,17 @@
   },
   "previous_live_release_evidence": "/mnt/vk-storage/vk-new-build-repair-20261029",
   "frontend_build": {
-    "source_commit": "b8bad21792f863bce31c42742f7439cc8539503a",
+    "source_commit": "9a45a3abf2d99eb44c14ef7a744d6f7bf0fbb73e",
     "preserved_live_source_commit": "800011bd573e2869d6ea4c0e5bfba4d9046d9cbe",
-    "previous_feature_source": "70d7f5b0516a784ca6f27ba9fc6245b441666663",
-    "method": "Preserving live frontend source plus byte-verified corrective package files; bounded local tsc && vite build",
-    "file_manifest": "/mnt/vk-storage/vk-disappearing-unread-20261102-3ad7/fix-release-2/frontend-artifact.json",
+    "previous_feature_source": "b8bad21792f863bce31c42742f7439cc8539503a",
+    "method": "Preserving live frontend composition plus verified scoped frontend patch; bounded local production build",
+    "file_manifest": "/mnt/vk-storage/vk-disappearing-unread-20261102-3ad7/fix-release-4/frontend-artifact.json",
     "verified_manifest_files": 417,
-    "retained_asset_count": 822,
-    "hosted_baseline_run": "https://github.com/artinflight/vibe-kanban/actions/runs/41493120165",
-    "hosted_baseline_status": "passed; private remote checks skipped without deploy key",
-    "hosted_ci": true
+    "retained_asset_count": 874,
+    "prior_full_hosted_baseline_source": "b8bad21792f863bce31c42742f7439cc8539503a",
+    "prior_full_hosted_baseline_run": "https://github.com/artinflight/vibe-kanban/actions/runs/41493120165",
+    "backend_tree_unchanged_from_full_baseline": true,
+    "current_ci_authority": "https://github.com/artinflight/vibe-kanban/pull/288"
   },
   "recovery": {
     "total_50_minute_cutoff": false,
@@ -167,13 +168,14 @@
   },
   "last_readonly_verification": {
     "status": "passed",
-    "UTC": "2026-11-02T17:45:07.515775+00:00",
-    "receipt": "/mnt/vk-storage/vk-disappearing-unread-20261102-3ad7/fix-release-2/activation.json",
+    "UTC": "2026-11-02T18:28:43.114247+00:00",
+    "receipt": "/mnt/vk-storage/vk-disappearing-unread-20261102-3ad7/fix-release-4/activation.json",
     "database_and_backend_identity_preserved": true,
-    "validation_scope": "public TLS/assets/health, five service identities, backend hash, DB identity and 99 migrations; four served browser cases with all application writes intercepted",
-    "public_browser": "/mnt/vk-storage/vk-disappearing-unread-20261102-3ad7/integration/browser-view-live/results.json"
+    "public_browser": "/mnt/vk-storage/vk-disappearing-unread-20261102-3ad7/integration/browser-settled-live/results.json",
+    "running_turn_browser": "/mnt/vk-storage/vk-disappearing-unread-20261102-3ad7/integration/browser-pending-live/results.json",
+    "validation_scope": "public TLS/assets/health, five services, backend hash, DB identity/99 migrations; four served layout cases plus API-verified running-turn guard; all writes intercepted"
   },
-  "frontend_deployed_at_utc": "2026-11-02T17:45:07.515775+00:00",
+  "frontend_deployed_at_utc": "2026-11-02T18:28:43.114247+00:00",
   "previous_frontend_build": {
     "source_commit": "800011bd573e2869d6ea4c0e5bfba4d9046d9cbe",
     "feature_commit": "800011bd573e2869d6ea4c0e5bfba4d9046d9cbe",
@@ -186,12 +188,12 @@
     "hosted_ci": false
   },
   "frontend_only_deployment": {
-    "source_commit": "b8bad21792f863bce31c42742f7439cc8539503a",
-    "evidence_root": "/mnt/vk-storage/vk-disappearing-unread-20261102-3ad7/fix-release-2",
-    "activation_receipt": "/mnt/vk-storage/vk-disappearing-unread-20261102-3ad7/fix-release-2/activation.json",
-    "rollback_frontend": "/mnt/vk-storage/vk-disappearing-unread-20261102-3ad7/fix-release-2/paired/fallback",
-    "previous_frontend": "/mnt/vk-storage/vk-scrolling-projects-20261102-9cb7/paired/candidate",
-    "Desktop_B_recovery_receipt": "/mnt/vk-storage/vk-disappearing-unread-20261102-3ad7/fix-release-2/Desktop-B-recovery-verified.json",
+    "source_commit": "9a45a3abf2d99eb44c14ef7a744d6f7bf0fbb73e",
+    "evidence_root": "/mnt/vk-storage/vk-disappearing-unread-20261102-3ad7/fix-release-4",
+    "activation_receipt": "/mnt/vk-storage/vk-disappearing-unread-20261102-3ad7/fix-release-4/activation.json",
+    "rollback_frontend": "/mnt/vk-storage/vk-disappearing-unread-20261102-3ad7/fix-release-4/paired/fallback",
+    "previous_frontend": "/mnt/vk-storage/vk-disappearing-unread-20261102-3ad7/fix-release-2/paired/candidate",
+    "Desktop_B_recovery_receipt": "/mnt/vk-storage/vk-disappearing-unread-20261102-3ad7/fix-release-4/Desktop-B-recovery-verified.json",
     "backend_unchanged": true,
     "database_restore": false,
     "browser_mutations_intercepted": true
@@ -307,7 +309,7 @@
   },
   "conversation_read_fix": {
     "branch": "vk/3ad7-vk-disappearing",
-    "feature_source_commit": "b8bad21792f863bce31c42742f7439cc8539503a",
+    "feature_source_commit": "9a45a3abf2d99eb44c14ef7a744d6f7bf0fbb73e",
     "backend_changes": false,
     "deliberate_visible_reads": true,
     "visibility_dwell_ms": 350,
@@ -318,20 +320,71 @@
     "server_scope": "unchanged workspace-wide, including sibling sessions; arrival race remains",
     "live_unread_mutation_test": "not performed; automatic approval review rejected non-restorable original per-turn changes",
     "pull_request": "https://github.com/artinflight/vibe-kanban/pull/288",
-    "pushed": true,
     "served_browser_passed": true,
     "hosted_baseline_run": "https://github.com/artinflight/vibe-kanban/actions/runs/41493120165",
-    "hosted_baseline_passed": true,
-    "git_integration_status": "PR #288 final checks and rebase merge event are authoritative; original deployed source IDs remain immutable",
+    "git_integration_status": "PR #288 current-head checks and rebase merge event are authoritative; original deployed source IDs are immutable",
     "git_target_branch": "staging",
-    "requested_merge_method": "rebase"
+    "requested_merge_method": "rebase",
+    "waits_for_running_and_approval_turns": true,
+    "visible_error_replies_supported": true,
+    "rendered_state_source": "deriveConversationEntries running/pending approval state before render-only filtering",
+    "running_turn_guard_candidate_and_served_passed": true
   },
   "conversation_read_integration": {
     "pull_request": "https://github.com/artinflight/vibe-kanban/pull/288",
     "target": "staging",
     "requested_merge_method": "rebase",
-    "original_deployed_source": "b8bad21792f863bce31c42742f7439cc8539503a",
+    "original_deployed_source": "9a45a3abf2d99eb44c14ef7a744d6f7bf0fbb73e",
     "runtime_changed_by_git_integration": false,
     "integration_authority": "PR #288 checks and merge event; no main promotion"
+  },
+  "visible_read_before_pending_guard": {
+    "frontend_build": {
+      "source_commit": "b8bad21792f863bce31c42742f7439cc8539503a",
+      "preserved_live_source_commit": "800011bd573e2869d6ea4c0e5bfba4d9046d9cbe",
+      "previous_feature_source": "70d7f5b0516a784ca6f27ba9fc6245b441666663",
+      "method": "Preserving live frontend source plus byte-verified corrective package files; bounded local tsc && vite build",
+      "file_manifest": "/mnt/vk-storage/vk-disappearing-unread-20261102-3ad7/fix-release-2/frontend-artifact.json",
+      "verified_manifest_files": 417,
+      "retained_asset_count": 822,
+      "hosted_baseline_run": "https://github.com/artinflight/vibe-kanban/actions/runs/41493120165",
+      "hosted_baseline_status": "passed; private remote checks skipped without deploy key",
+      "hosted_ci": true
+    },
+    "frontend_only_deployment": {
+      "source_commit": "b8bad21792f863bce31c42742f7439cc8539503a",
+      "evidence_root": "/mnt/vk-storage/vk-disappearing-unread-20261102-3ad7/fix-release-2",
+      "activation_receipt": "/mnt/vk-storage/vk-disappearing-unread-20261102-3ad7/fix-release-2/activation.json",
+      "rollback_frontend": "/mnt/vk-storage/vk-disappearing-unread-20261102-3ad7/fix-release-2/paired/fallback",
+      "previous_frontend": "/mnt/vk-storage/vk-scrolling-projects-20261102-9cb7/paired/candidate",
+      "Desktop_B_recovery_receipt": "/mnt/vk-storage/vk-disappearing-unread-20261102-3ad7/fix-release-2/Desktop-B-recovery-verified.json",
+      "backend_unchanged": true,
+      "database_restore": false,
+      "browser_mutations_intercepted": true
+    },
+    "fix": {
+      "branch": "vk/3ad7-vk-disappearing",
+      "feature_source_commit": "9a45a3abf2d99eb44c14ef7a744d6f7bf0fbb73e",
+      "backend_changes": false,
+      "deliberate_visible_reads": true,
+      "visibility_dwell_ms": 350,
+      "background_return_reads": false,
+      "passive_polling_reads": false,
+      "existing_tabs_must_reload": true,
+      "historical_unread_restored": false,
+      "server_scope": "unchanged workspace-wide, including sibling sessions; arrival race remains",
+      "live_unread_mutation_test": "not performed; automatic approval review rejected non-restorable original per-turn changes",
+      "pull_request": "https://github.com/artinflight/vibe-kanban/pull/288",
+      "served_browser_passed": true,
+      "hosted_baseline_run": "https://github.com/artinflight/vibe-kanban/actions/runs/41493120165",
+      "git_integration_status": "PR #288 current-head checks and rebase merge event are authoritative; original deployed source IDs are immutable",
+      "git_target_branch": "staging",
+      "requested_merge_method": "rebase",
+      "waits_for_running_and_approval_turns": true,
+      "visible_error_replies_supported": true,
+      "rendered_state_source": "deriveConversationEntries running/pending approval state before render-only filtering",
+      "running_turn_guard_candidate_and_served_passed": true
+    },
+    "agent_found_gap": "An older visible reply could acknowledge a newer running turn; reproduced with intercepted requests; superseded by final settled-turn guard"
   }
 }

@@ -1,7 +1,7 @@
 use std::path::{Path, PathBuf};
 
 use futures::{StreamExt, stream::BoxStream};
-use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
+use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio_stream::wrappers::LinesStream;
 use uuid::Uuid;
 
@@ -34,6 +34,11 @@ impl ExecutionLogWriter {
     pub async fn new(path: PathBuf) -> std::io::Result<Self> {
         if let Some(parent) = path.parent() {
             tokio::fs::create_dir_all(parent).await?;
+        }
+        if crate::log_archive::is_archive(&path)? {
+            return Err(std::io::Error::other(
+                "Cannot append to an archived execution log",
+            ));
         }
         let file = tokio::fs::OpenOptions::new()
             .create(true)
@@ -327,8 +332,9 @@ fn validate_native_capture_streaming(path: &Path, maximum_record: usize) -> std:
     use serde::Deserialize;
     let file = std::fs::File::open(path)?;
     let before = file.metadata()?;
+    let version_file = file.try_clone()?;
     let input = NativeCaptureReader {
-        outer: std::io::BufReader::with_capacity(65536, file),
+        outer: std::io::BufReader::with_capacity(65536, crate::log_archive::open_file(path, file)?),
         pending: std::io::Cursor::new(Vec::new()),
         maximum_record,
         records: 0,
@@ -364,7 +370,7 @@ fn validate_native_capture_streaming(path: &Path, maximum_record: usize) -> std:
     if records == 0 {
         return Err(std::io::Error::other("Empty native log capture"));
     }
-    let opened = input.get_ref().outer.get_ref().metadata()?;
+    let opened = version_file.metadata()?;
     let named = std::fs::metadata(path)?;
     if !same_capture_version(&before, &opened) || !same_capture_version(&before, &named) {
         return Err(std::io::Error::other("Capture changed during validation"));
@@ -373,18 +379,58 @@ fn validate_native_capture_streaming(path: &Path, maximum_record: usize) -> std:
 }
 
 pub async fn read_execution_log_file(path: &Path) -> std::io::Result<String> {
-    tokio::fs::read_to_string(path).await
+    let owned = path.to_path_buf();
+    tokio::task::spawn_blocking(move || {
+        let mut text = String::new();
+        std::io::Read::read_to_string(&mut crate::log_archive::open(&owned)?, &mut text)?;
+        Ok(text)
+    })
+    .await
+    .map_err(std::io::Error::other)?
 }
 
 pub async fn stream_execution_log_file(
     path: &Path,
 ) -> std::io::Result<BoxStream<'static, std::io::Result<String>>> {
-    let file = tokio::fs::File::open(path).await?;
-    let reader = BufReader::new(file);
-
-    Ok(LinesStream::new(reader.lines())
-        .map(|line| line.map_err(|err| std::io::Error::new(std::io::ErrorKind::InvalidData, err)))
-        .boxed())
+    if !crate::log_archive::is_archive(path)? {
+        let file = tokio::fs::File::open(path).await?;
+        return Ok(LinesStream::new(BufReader::new(file).lines())
+            .map(|line| {
+                line.map_err(|err| std::io::Error::new(std::io::ErrorKind::InvalidData, err))
+            })
+            .boxed());
+    }
+    let owned = path.to_path_buf();
+    let input = tokio::task::spawn_blocking(move || crate::log_archive::open(&owned))
+        .await
+        .map_err(std::io::Error::other)??;
+    let mut input = std::io::BufReader::new(input);
+    let (sender, receiver) = tokio::sync::mpsc::channel(16);
+    tokio::task::spawn_blocking(move || {
+        use std::io::BufRead;
+        loop {
+            let mut line = String::new();
+            match input.read_line(&mut line) {
+                Ok(0) => break,
+                Ok(_) => {
+                    if line.ends_with('\n') {
+                        line.pop();
+                        if line.ends_with('\r') {
+                            line.pop();
+                        }
+                    }
+                    if sender.blocking_send(Ok(line)).is_err() {
+                        break;
+                    }
+                }
+                Err(e) => {
+                    let _ = sender.blocking_send(Err(e));
+                    break;
+                }
+            }
+        }
+    });
+    Ok(tokio_stream::wrappers::ReceiverStream::new(receiver).boxed())
 }
 
 pub fn parse_log_jsonl_lossy(execution_id: Uuid, jsonl: &str) -> Vec<LogMsg> {
@@ -440,11 +486,17 @@ pub async fn read_execution_log_strict(
     path: &Path,
     max_bytes: usize,
 ) -> std::io::Result<(Vec<u8>, Vec<LogMsg>)> {
-    let file = tokio::fs::File::open(path).await?;
-    let mut bytes = Vec::new();
-    file.take(max_bytes as u64 + 1)
-        .read_to_end(&mut bytes)
-        .await?;
+    let owned = path.to_path_buf();
+    let bytes = tokio::task::spawn_blocking(move || {
+        use std::io::Read;
+        let mut bytes = Vec::new();
+        crate::log_archive::open(&owned)?
+            .take(max_bytes as u64 + 1)
+            .read_to_end(&mut bytes)?;
+        Ok::<_, std::io::Error>(bytes)
+    })
+    .await
+    .map_err(std::io::Error::other)??;
     if bytes.is_empty() || bytes.len() > max_bytes || bytes.last() != Some(&b'\n') {
         return Err(std::io::Error::other(
             "Empty, oversized or unterminated review log",

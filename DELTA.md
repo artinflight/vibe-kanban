@@ -2561,3 +2561,19 @@ historical-custody recovery run 41741243530 passes on a452d74ca. Final PR checks
 and merge event govern integration status and rebased IDs. Original deployed
 source/receipts and the later preserving live frontend remain unchanged. Main
 promotion is separate. Local Rust baseline remains blocked by offline serde.
+
+## 2026-11-03 — lossless completed conversation log deduplication
+
+Implemented session-local content-addressed compressed log manifests, transparent
+backend reconstruction and append refusal; exact-byte offline plan/pack/verify/
+restore tooling preserves sources and sidecars. OP::Disk Space procedure and
+production/rollback requirements: `VK_LOG_DEDUPLICATION.md`. Prevention inherits the
+qualified narrow-resume correction. No live conversion, deletion or deployment.
+
+Validation: 36 utility tests (one pre-existing private probe ignored), ten migration
+tests, server library check, utility clippy, full format and ops pass. Seven
+unchanged prevention tests pass again in their qualified cached binary. Six real
+logs reconstruct/restore byte-exactly: 1,089,056,768 original allocated bytes versus
+237,555,712 archived bytes including metadata; 851,501,056 bytes (812.1 MiB)
+measured recovery potential. No population extrapolation or production reclamation.
+Only generated verified restore copies were retired; originals/archive remain.

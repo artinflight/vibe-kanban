@@ -1,28 +1,25 @@
-# Scrolling projects menu — 2026-11-02
+# Lossless conversation log deduplication — 2026-11-03
 
-Branch `vk/9cb7-vk-scrolling-pro`, original base `aceb355e9`, now rebased onto fork/staging `c3c1dc9d6`.
-Scope: bound the desktop shell's content row and AppBar so long project lists
-scroll internally, hide scrollbars, and contain overscroll. Keep the footer and
-project actions visible. Apply the same behavior to expanded project names and
-the mobile project drawer; its content layout override preserves other drawers'
-default scrolling. Preserve project selection, drag ordering and activity badges.
+Branch `vk/0815-vk-deduplicate-c`. Implement content-addressed, compressed completed
+process-log storage and safe offline preparation following the disk investigation.
+The inherited qualified Codex narrow-resume fix prevents ongoing history replay.
 
-The operator accepted the restored fix ("Good") and authorized PR/rebase merge
-into staging. [PR #292](https://github.com/artinflight/vibe-kanban/pull/292) is the
-integration record; its final checks and merge event govern status/rebased IDs.
-Original deployed identities remain immutable. Preserve the newer live workspace-visibility frontend, which keeps
-all three scrolling source files exactly. Git integration does not redeploy.
+Preserve original reconstructed bytes, hashes, execution paths, review semantics,
+capture/recovered-final sidecars, native homes and attachments. Readers are updated
+for raw/history, strict review, capture framing and recovery hashes. New captures
+remain raw; archived logs reject appends. Objects are session-local. No live
+conversion, deletion, provider turn, backend restart or deployment is included.
 
-The original publication passed on November 2, then a newer unread release
-omitted the three scrolling files. The operator reported no change. The November 3
-restoration preserves every other current live input and passes the exact failing
-public regression plus real-project boundary scrolling. Published at 09:59:20 UTC;
-JS index-BRto7v9M.js, CSS index-BDlsFLgm.css. Added a source-preservation gate and
-five regressions to reject omitted live fixes before publication. No backend,
-API, generated types, device work or service restart. See
-[release evidence](VK_SCROLLING_PROJECTS_DEPLOYMENT.md), [STATE](STATE.md),
-[manifest](LIVE_DEPLOYMENT.json) and [HANDOFF](HANDOFF.md).
+`VK_LOG_DEDUPLICATION.md` contains OP::Disk Space's measurement/preparation,
+consumer audit, deployment and rollback procedure. The CLI builds a separate
+verified tree from a frozen plan; it never replaces originals. Source retirement
+requires reviewed recovery and authorized deployment custody. Old backends cannot
+read manifests; fallback needs compatible readers or reconstructed raw files.
 
-Prior stream history: [previous record](deployment-history/20261030-before-reconciliation/STREAM.md)
-and [STREAM history](STREAM_HISTORY_20261017.md). The preceding unread integration
-is recorded in STATE and DELTA.
+Validation: 36 utility tests, ten migration tests, server library compilation,
+utility clippy, required format and ops pass. The real six-file archive and full
+restore hash-match originals; 851,501,056 bytes (812.1 MiB) recovery potential is
+measured, with zero production bytes reclaimed. See the runbook and HANDOFF. Deployment, provider acceptance, full-population recovery and actual
+reclaimed space remain separate requirements, not inferred from source tests.
+
+Full historical archive: [STREAM_HISTORY_20261017.md](STREAM_HISTORY_20261017.md).

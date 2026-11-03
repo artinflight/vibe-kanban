@@ -1,48 +1,34 @@
-# Accepted scrolling PR integration — 2026-11-03
+# Lossless log deduplication — pickup, 2026-11-03
 
-The operator accepted the fix ("Good") and requested a PR/rebase merge into
-staging. [PR #292](https://github.com/artinflight/vibe-kanban/pull/292) is the
-integration record; its final checks/merge event give final status and rebased IDs.
-Original deployed identities remain immutable. Branch is rebased onto fork/staging c3c1dc9d6 with scrolling source bytes
-unchanged. Current live frontend is the newer workspace-visibility composition:
-JS index-CM79W1F0.js, CSS index-BDlsFLgm.css. Its three scrolling files match the
-accepted release exactly; preserve this runtime. No redeployment during PR work.
+Current branch `vk/0815-vk-deduplicate-c`. Read `VK_LOG_DEDUPLICATION.md` for the
+format, OP::Disk Space procedure and deployment gates. The inherited resume
+prevention fix is documented in `VK_DUPLICATE_HISTORY_FIX.md`; neither is deployed
+by this task.
 
-The accepted scrolling publication was at 09:59:20 UTC with JS index-BRto7v9M.js. The operator
-reported no change because the later unread fix-release-4 omitted all three
-scrolling files. The original November 2 receipt describes a superseded release.
-Fresh reproduction confirmed 2850 px document height with 60 projects, and 1134 px
-with 19 real projects in a 600 px desktop window.
+New code: `crates/utils/src/log_archive.rs` and existing log/recovery readers;
+offline tooling/tests in `scripts/log-dedup`; backend-reader verifier in
+`crates/utils/examples/verify_log_archive.rs`. Frozen source plans, packed objects,
+receipts and test logs are private under
+`/mnt/vk-storage/vk-log-dedup-20261103-0815/`. They contain no source retirement
+permission. No conversation log, sidecar or native history is replaced; no conversation
+rows are rewritten or service changed.
 
-Restored the unchanged d0496eb1d scrolling files onto the actual latest live source
-9a45a3abf2d99eb44c14ef7a744d6f7bf0fbb73e. All other 1314 live inputs are exact.
-Source snapshot: `/mnt/vk-storage/vk-scrolling-projects-20261103-9cb7-correction/source`.
-Never rebuild from the older feature branch alone: it omits newer unread fixes.
-The correction passed five packaged/public desktop-touch browser sizes, 19-project
-public desktop/mobile scrolling through the list boundary, 27 unread/chat-notice
-regressions and five source-preservation tests. Real desktop document now stays
-600 px while its menu scrolls. No page errors or application writes. Physical
-S25 testing and full Rust/PR baseline were not run. Operator accepted; PR integration is authorized.
+Verified sample: six logs, 1,089,056,768 original allocated bytes versus
+237,555,712 archived bytes including metadata; 851,501,056 bytes (812.1 MiB) recovery
+potential, zero live bytes reclaimed. All restored originals/sidecars hash-match
+unchanged sources; only the generated restore copies were then retired. The Rust
+backend reader independently verifies all six packed files. Ten migration tests and 36 utility tests pass (one existing
+private probe ignored), plus utility clippy, full format and ops. Seven unchanged
+prevention tests were rerun in their qualified cached binary. Final server library
+check passes (`cargo check --offline --locked -p server --lib`); no runnable release
+or public UI acceptance is claimed. See the runbook for
+limits and pending broader acceptance.
 
-All receipts are under `/mnt/vk-storage/vk-scrolling-projects-20261103-9cb7-correction`.
-`paired/candidate` is live; `paired/fallback` retains the previous unread frontend.
-926 assets retained; 88,674,581-byte recovery archive fully restored and independently
-read back from Desktop B. All five service identities, backend hash, DB inode and
-99 migrations unchanged. No backend restart, database restore, inference or device
-action; direct backend/history frontend roots and previews preserved.
+Deployment requires current Desktop B recovery, exact inactive-file and consumer
+checks, preserved private inputs/live features, qualified backend build, compatible
+current-data fallback rehearsal and authorized drained custody. Install objects
+before manifests. All rollback consumers need archive readers or restored raw
+JSONL. Reserve reconstruction space. Do not enable object GC or background
+conversion, infer production acceptance from fixtures, or extrapolate sample gains.
 
-Publication must run `scripts/deployment/check_frontend_preservation.py` against
-the resolved current live artifact/source and candidate, with only reviewed paths
-allowed to change. Recheck pointer ownership before activation. The new gate
-rejects the exact stale-source unread publication which dropped scrolling.
-Workflow and runbook include this requirement. See
-[release record](VK_SCROLLING_PROJECTS_DEPLOYMENT.md) and [manifest](LIVE_DEPLOYMENT.json).
-Integration checks: preservation tests pass. Full local check/lint/workspace
-Rust tests cannot complete because the offline registry lacks serde; SSD free
-space is under 2 GiB, so do not download/build around the storage guard. Full
-hosted Test validation is recorded at run 41740959926 (f75c2af9d); source code is
-unchanged by the later recovery-workflow/ledger correction. Recovery contracts
-pass at run 41741243530. Final PR checks must pass before rebase merge. Main promotion is separate.
-
-Prior pickup: [previous record](deployment-history/20261030-before-reconciliation/HANDOFF.md)
-and [HANDOFF history](HANDOFF_HISTORY_20261017.md).
+Full historical archive: [HANDOFF_HISTORY_20261017.md](HANDOFF_HISTORY_20261017.md).

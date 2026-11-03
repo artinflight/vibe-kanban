@@ -1,29 +1,22 @@
-# Visible reply read correction — 2026-11-02
+# Codex resume history duplication fix — 2026-11-03
 
-Live frontend source `9a45a3abf2d99eb44c14ef7a744d6f7bf0fbb73e`; JS `index-DqfYW9pf.js`,
-CSS `index-C-pTuj_j.css`, version 0.1.42. Deliberate opening/reselection/reading and
-jump to latest clear a loaded visible reply/error after 350 ms of foreground focus,
-once running/approval turns settle. Background return/polling/new output alone
-preserve unread. Bulk-read fallback remains. Reload all existing tabs/devices.
+Current branch: `vk/95c6-vk-duplicate-con`. The only production-code change is
+`narrow_resume_supported` in `crates/executors/src/executors/codex/client.rs`:
+accept the real Vibe initialize identity alongside the qualified CLI identity at
+exact version 0.159.2. The previous guard silently omitted excludeTurns for Vibe.
 
-39 mounted regressions, frontend types/focused lint/format/ops and build pass.
-Four candidate/four served layout cases and candidate/served API-verified running
-turn guards pass with zero live writes. Earlier premature running reads were
-reproduced; the rejected filtered-marker candidate was never published.
+The fixture now reproduces a full historical response when the flag is absent;
+actual-client regressions cover both identities. Seven client tests and 26 adjacent
+compatibility/normalization tests pass; one private fixture is ignored. Two
+old/new predicate checks, full format, ops and diff checks pass. Full workspace/CI
+and production acceptance remain pending. See `VK_DUPLICATE_HISTORY_FIX.md`
+for validation, investigation provenance and deployment acceptance requirements.
+Evidence: `/mnt/vk-storage/vk-duplicate-con-20261103-95c6/`.
 
-All five services/backend hash/DB inode and 99 migrations are unchanged; 874
-assets retained in both paired roots. Desktop B recovery/restore pass. Evidence:
-`/mnt/vk-storage/vk-disappearing-unread-20261102-3ad7/fix-release-4/`.
-Never reuse consumed or rejected controllers; no backend restart or data restore.
-
-[PR #288](https://github.com/artinflight/vibe-kanban/pull/288) is the staging rebase integration
-authority through its final checks and merge event. Prior full baseline 41493120165
-passes; Rust source is unchanged. Private remote checks skip without a deploy key.
-Main promotion is separate. Preserve unrelated dirty canonical work.
-
-The unchanged seen endpoint clears all workspace sessions and retains an arrival
-race. Automatic review rejected optional live-state mutation without exact per-turn
-restoration. No live persistence, historical unread reconstruction, provider call
-or physical-device test is claimed. See VK_DISAPPEARING_UNREAD_FIX.md/manifest.
+No backend deployment or deletion occurred. Read `LIVE_DEPLOYMENT.json` and obtain
+fresh live observations before deployment; preserve the latest frontend, private
+history bindings, database and native homes. Do not reuse historical controllers
+or interrupt running agents to force installation. Production verification must
+measure actual persisted resume size, history readability and ordinary send.
 
 Full historical archive: [HANDOFF_HISTORY_20261017.md](HANDOFF_HISTORY_20261017.md).

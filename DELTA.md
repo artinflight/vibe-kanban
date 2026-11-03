@@ -2453,3 +2453,15 @@ Backend hash/five services/DB identity/99 migrations remain unchanged. Software
 restore and independent Desktop B recovery pass. No live unread mutation, backend
 restart or historical flag restoration. PR #288 final checks/merge event govern
 staging rebase integration; main promotion is separate.
+
+## 2026-11-03 — prevent full-history capture on Codex resume
+
+Branch vk/95c6-vk-duplicate-con recognizes the observed
+vibe-codex-executor/0.159.2 identity alongside codex_cli_rs/0.159.2 so the existing
+excludeTurns path activates. Exact-version scope and empty-turn verification are
+retained. The fixture reproduces full historical payloads without the flag and
+checks persisted-byte bounds. Seven client and 26 adjacent Rust tests pass; one
+private captured-response case is ignored. Two extracted old/new predicate checks,
+full formatter, ops and diff checks pass. No backend deployment, provider turn,
+restart or history deletion. Full workspace/CI and production acceptance remain
+pending. VK_DUPLICATE_HISTORY_FIX.md records evidence and rollout requirements.

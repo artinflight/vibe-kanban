@@ -124,7 +124,13 @@ enum ResumeWireRequest<'a, T> {
 }
 
 fn narrow_resume_supported(runtime: Option<&str>) -> bool {
-    runtime.and_then(|s| s.split_ascii_whitespace().next()) == Some("codex_cli_rs/0.159.2")
+    // Native userAgent uses the initialize caller's clientInfo.name. Vibe
+    // initializes as vibe-codex-executor; both names identify the qualified
+    // 0.159.2 runtime. Keep every other version on the original wire path.
+    matches!(
+        runtime.and_then(|s| s.split_ascii_whitespace().next()),
+        Some("codex_cli_rs/0.159.2" | "vibe-codex-executor/0.159.2")
+    )
 }
 
 fn resume_wire_request<'a, T: Serialize>(
@@ -2958,8 +2964,15 @@ mod tests {
     ) {
         use std::process::Stdio;
 
-        let full: Value =
+        let mut full: Value =
             serde_json::from_str(include_str!("fixtures/new-error-resume.json")).unwrap();
+        // Make accidental historical replay visible in persisted byte counts.
+        let message = full["thread"]["turns"][0]["error"]["message"]
+            .as_str()
+            .unwrap()
+            .to_owned();
+        full["thread"]["turns"][0]["error"]["message"] =
+            Value::String(message + &"historical-payload".repeat(2048));
         let mut empty = full.clone();
         empty["thread"]["turns"] = serde_json::json!([]);
         let mut child = tokio::process::Command::new("python3")
@@ -2980,7 +2993,7 @@ for line in sys.stdin:
     if method == "initialize":
         result = {"userAgent": runtime, "platformFamily": "unix", "platformOs": "linux"}
     elif method == "thread/resume":
-        result = full if request["params"]["threadId"] == "reject" else empty
+        result = empty if request["params"].get("excludeTurns") is True and request["params"]["threadId"] != "reject" else full
     elif method == "thread/goal/get":
         result = {"goal": None}
     elif method == "turn/start":
@@ -3055,27 +3068,34 @@ for line in sys.stdin:
             },
         };
         let original = serde_json::to_value(&request).unwrap();
-        let mut narrow = serde_json::to_value(
-            resume_wire_request(
-                &request,
-                "thread/resume",
-                Some("codex_cli_rs/0.159.2 (synthetic)"),
+        for runtime in [
+            "codex_cli_rs/0.159.2 (synthetic)",
+            "vibe-codex-executor/0.159.2 (Ubuntu 24.4.0; x86_64) dumb (vibe-codex-executor; 0.1.42)",
+        ] {
+            let mut narrow = serde_json::to_value(
+                resume_wire_request(&request, "thread/resume", Some(runtime)).unwrap(),
             )
-            .unwrap(),
-        )
-        .unwrap();
-        assert_eq!(narrow["params"]["excludeTurns"], true);
-        narrow["params"]
-            .as_object_mut()
-            .unwrap()
-            .remove("excludeTurns");
-        assert_eq!(narrow, original);
+            .unwrap();
+            assert_eq!(narrow["params"]["excludeTurns"], true);
+            narrow["params"]
+                .as_object_mut()
+                .unwrap()
+                .remove("excludeTurns");
+            assert_eq!(narrow, original);
+            assert!(validate_narrow_resume("thread/resume", Some(runtime), true).is_ok());
+            assert!(validate_narrow_resume("thread/resume", Some(runtime), false).is_err());
+        }
         for runtime in [
             None,
             Some(""),
             Some("codex_cli_rs/0.116.0"),
             Some("codex_cli_rs/0.159.20"),
             Some("codex_cli_rs/0.162.1"),
+            Some("vibe-codex-executor/0.116.0"),
+            Some("vibe-codex-executor/0.159.20"),
+            Some("vibe-codex-executor/0.162.1"),
+            Some("unknown-client/0.159.2"),
+            Some("vibe-codex-executor/0.159.2-extra"),
         ] {
             let wire = resume_wire_request(&request, "thread/resume", runtime).unwrap();
             assert_eq!(
@@ -3098,6 +3118,18 @@ for line in sys.stdin:
 
     #[tokio::test]
     async fn actual_client_narrows_ordinary_deadline_and_delegated_resumes() {
+        assert_client_narrows_resumes("codex_cli_rs/0.159.2 (synthetic)").await;
+    }
+
+    #[tokio::test]
+    async fn actual_client_narrows_live_vibe_identity_resumes() {
+        assert_client_narrows_resumes(
+            "vibe-codex-executor/0.159.2 (Ubuntu 24.4.0; x86_64) dumb (vibe-codex-executor; 0.1.42)",
+        )
+        .await;
+    }
+
+    async fn assert_client_narrows_resumes(runtime: &str) {
         #[derive(Debug)]
         struct WorkerGuard(Arc<tokio::sync::Mutex<()>>);
 
@@ -3124,8 +3156,7 @@ for line in sys.stdin:
             }
         }
 
-        let (client, child, stderr, log, cancel) =
-            spawn_resume_fixture("codex_cli_rs/0.159.2 (synthetic)").await;
+        let (client, child, stderr, log, cancel) = spawn_resume_fixture(runtime).await;
         let ordinary = client
             .thread_resume(ThreadResumeParams {
                 thread_id: "ordinary".into(),
@@ -3177,6 +3208,11 @@ for line in sys.stdin:
         assert!(successful_raw.contains("gpt-6-astra"));
         assert!(successful_raw.contains("new-delta-marker"));
         assert!(!successful_raw.contains("Potentially unintended activity"));
+        assert!(!successful_raw.contains("historical-payload"));
+        assert!(
+            successful_raw.len() < 16 * 1024,
+            "successful resumes must not persist the synthetic historical payload"
+        );
 
         let rejected = client
             .thread_resume(ThreadResumeParams {
@@ -3219,7 +3255,7 @@ for line in sys.stdin:
 
     #[tokio::test]
     async fn actual_client_preserves_legacy_resume_wire_and_response() {
-        let (client, child, stderr, _log, cancel) =
+        let (client, child, stderr, log, cancel) =
             spawn_resume_fixture("codex_cli_rs/0.116.0 (synthetic)").await;
         let response = client
             .thread_resume(ThreadResumeParams {
@@ -3229,6 +3265,12 @@ for line in sys.stdin:
             .await
             .unwrap();
         assert_eq!(response.thread.turns.len(), 1);
+        let raw = tokio::fs::read_to_string(log.path()).await.unwrap();
+        assert!(raw.contains("historical-payload"));
+        assert!(
+            raw.len() > 32 * 1024,
+            "fixture must reproduce historical growth"
+        );
 
         let requests = finish_resume_fixture(child, stderr, cancel).await;
         let resume = requests

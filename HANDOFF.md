@@ -13,6 +13,12 @@ and production acceptance remain pending. See `VK_DUPLICATE_HISTORY_FIX.md`
 for validation, investigation provenance and deployment acceptance requirements.
 Evidence: `/mnt/vk-storage/vk-duplicate-con-20261103-95c6/`.
 
+[PR #290](https://github.com/artinflight/vibe-kanban/pull/290) is the rebase staging
+integration authority through its final checks and merge event. All four frontend
+type checks and frontend lint pass. Local full check/lint lack required GLib
+metadata; the workspace-test attempt was stopped on the same prerequisite.
+Hosted checks govern broad validation. Original source commit: 83b96bc3b.
+
 No backend deployment or deletion occurred. Read `LIVE_DEPLOYMENT.json` and obtain
 fresh live observations before deployment; preserve the latest frontend, private
 history bindings, database and native homes. Do not reuse historical controllers

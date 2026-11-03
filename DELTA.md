@@ -2465,3 +2465,13 @@ private captured-response case is ignored. Two extracted old/new predicate check
 full formatter, ops and diff checks pass. No backend deployment, provider turn,
 restart or history deletion. Full workspace/CI and production acceptance remain
 pending. VK_DUPLICATE_HISTORY_FIX.md records evidence and rollout requirements.
+
+## 2026-11-03 — duplicate-log staging integration record
+
+PR #290 targets staging with the requested rebase method. Rebase onto freshly
+fetched d90e34746 completed without conflicts or source changes; original feature
+commit 83b96bc3b remains provenance. Final PR checks and merge event govern
+rebased integration IDs. Local format/ops, frontend types and frontend lint pass;
+full check/lint lack host GLib development metadata, and the workspace-test
+attempt was stopped on that confirmed prerequisite. Hosted PR checks provide
+broad validation. No backend restart/deployment, provider turn or data deletion.

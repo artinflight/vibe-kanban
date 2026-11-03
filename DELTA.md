@@ -2544,3 +2544,10 @@ or service restart accompanies Git integration. Added preservation regressions t
 the hosted recovery workflow. Local Rust baseline cannot resolve offline serde;
 SSD free space under 2 GiB precludes an unbounded rebuild/download. Full hosted
 validation and final PR checks must pass before merge. Main promotion is separate.
+
+Hosted recovery validation exposed eight inherited historical-catalog mismatches
+from legitimate staging changes. All 134 catalog entries match immutable public
+revision 17678647aeeb467868d2152da25676fd682f2b85 exactly. The recovery workflow
+now checks that recorded snapshot rather than mutable staging; every original
+public/deployed hash is unchanged. Current frontend preservation is checked by
+the separate new gate. No source validation is skipped or hash weakened.

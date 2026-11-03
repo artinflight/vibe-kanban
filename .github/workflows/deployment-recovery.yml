@@ -45,8 +45,15 @@ jobs:
         run: |
           python3 -B -m unittest discover -s scripts/dot-connector -p 'test_*.py' -v
           python3 -B scripts/dot-connector/verify_deployed_snapshot.py
+      # This catalog records the October 29 recovery source, not mutable staging.
+      - name: Checkout recorded public recovery source
+        uses: actions/checkout@v6
+        with:
+          ref: 17678647aeeb467868d2152da25676fd682f2b85
+          path: .recovery-public-source
+          persist-credentials: false
       - name: Published source inventories
         run: |
-          python3 -B scripts/deployment/source_custody.py --root . --catalog scripts/deployment/releases/20261029-source.json
+          python3 -B scripts/deployment/source_custody.py --root .recovery-public-source --catalog scripts/deployment/releases/20261029-source.json
           python3 -B scripts/deployment/source_custody.py --root scripts/deployment/incidents/20261029 --catalog scripts/deployment/incidents/20261029/sources.json
           python3 -B scripts/deployment/source_custody.py --root scripts/dot-connector/deployed-20261029 --catalog scripts/dot-connector/deployed-20261029/sources.json

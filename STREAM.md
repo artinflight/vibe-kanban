@@ -8,7 +8,9 @@ the mobile project drawer; its content layout override preserves other drawers'
 default scrolling. Preserve project selection, drag ordering and activity badges.
 
 The operator accepted the restored fix ("Good") and authorized PR/rebase merge
-into staging. Preserve the newer live workspace-visibility frontend, which keeps
+into staging. [PR #292](https://github.com/artinflight/vibe-kanban/pull/292) is the
+integration record; its final checks and merge event govern status/rebased IDs.
+Original deployed identities remain immutable. Preserve the newer live workspace-visibility frontend, which keeps
 all three scrolling source files exactly. Git integration does not redeploy.
 
 The original publication passed on November 2, then a newer unread release

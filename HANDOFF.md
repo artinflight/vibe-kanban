@@ -1,7 +1,9 @@
 # Accepted scrolling PR integration — 2026-11-03
 
 The operator accepted the fix ("Good") and requested a PR/rebase merge into
-staging. Branch is rebased onto fork/staging c3c1dc9d6 with scrolling source bytes
+staging. [PR #292](https://github.com/artinflight/vibe-kanban/pull/292) is the
+integration record; its final checks/merge event give final status and rebased IDs.
+Original deployed identities remain immutable. Branch is rebased onto fork/staging c3c1dc9d6 with scrolling source bytes
 unchanged. Current live frontend is the newer workspace-visibility composition:
 JS index-CM79W1F0.js, CSS index-BDlsFLgm.css. Its three scrolling files match the
 accepted release exactly; preserve this runtime. No redeployment during PR work.
@@ -38,7 +40,9 @@ Workflow and runbook include this requirement. See
 Integration checks: preservation tests pass. Full local check/lint/workspace
 Rust tests cannot complete because the offline registry lacks serde; SSD free
 space is under 2 GiB, so do not download/build around the storage guard. Full
-hosted Test validation is required before merge. Main promotion is separate.
+hosted Test validation is recorded at run 41740959926 (f75c2af9d); source code is
+unchanged by the later recovery-workflow/ledger correction. Recovery contracts
+pass at run 41741243530. Final PR checks must pass before rebase merge. Main promotion is separate.
 
 Prior pickup: [previous record](deployment-history/20261030-before-reconciliation/HANDOFF.md)
 and [HANDOFF history](HANDOFF_HISTORY_20261017.md).

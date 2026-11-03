@@ -1,7 +1,7 @@
 # Current source integration and production — 2026-11-03
 
 The operator accepted the restored scrolling projects menu ("Good") and requested
-a PR into staging with rebase merge. This branch is rebased onto fork/staging
+[PR #292](https://github.com/artinflight/vibe-kanban/pull/292) into staging with rebase merge. This branch is rebased onto fork/staging
 `c3c1dc9d6738f936635e40a9f7019bc2028f7689`; the three scrolling package files
 remain byte-identical to the accepted d0496eb1d feature. Main promotion remains
 separate. Git integration does not deploy code or restart services.
@@ -49,8 +49,11 @@ source records. Original deployed IDs stay immutable after Git rebase integratio
 
 Local Rust check/lint/workspace tests cannot resolve offline serde; less than
 2 GiB SSD capacity precludes dependency downloading or large local rebuilds.
-Required full validation will use the exact hosted branch head before merge;
-report private-dependency skips explicitly. Read the [deployment runbook](VK_AGENT_DEPLOYMENT_RUNBOOK.md)
+Full validation is recorded by
+[hosted baseline](https://github.com/artinflight/vibe-kanban/actions/runs/41740959926)
+and [recovery contracts](https://github.com/artinflight/vibe-kanban/actions/runs/41741243530).
+PR #292 final checks and merge event govern integration status/rebased IDs;
+private remote dependency checks retain their existing credential limits. Read the [deployment runbook](VK_AGENT_DEPLOYMENT_RUNBOOK.md)
 and [backend handoff](BACKEND_DEPLOYMENT_HANDOFF.md) before any runtime action.
 
 Full pre-integration pickup: [scrolling history](STATE_SCROLLING_HISTORY_20261103.md).

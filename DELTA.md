@@ -2533,3 +2533,14 @@ independently read back from Desktop B. Public assets/capabilities and five serv
 identities/backend/DB identity/99 migrations pass unchanged. No backend restart,
 data restore, provider call or device action. Operator acceptance pending. See
 VK_SCROLLING_PROJECTS_DEPLOYMENT.md and LIVE_DEPLOYMENT.json for current evidence.
+
+## 2026-11-03 — accepted scrolling, prepare staging rebase integration
+
+Operator accepted the restoration ("Good") and authorized PR/rebase merge. Rebased
+onto fork/staging c3c1dc9d6, retaining all staging ledger/continuity and the exact
+three accepted package files. The newer live workspace-visibility release preserves
+those files exactly; manifest now retains its current provenance. No deployment
+or service restart accompanies Git integration. Added preservation regressions to
+the hosted recovery workflow. Local Rust baseline cannot resolve offline serde;
+SSD free space under 2 GiB precludes an unbounded rebuild/download. Full hosted
+validation and final PR checks must pass before merge. Main promotion is separate.

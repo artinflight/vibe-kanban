@@ -2,7 +2,11 @@
 
 Current public frontend: <https://vibe.local>. Activated at **2026-11-03T09:59:20.537392+00:00**;
 JS `/assets/index-BRto7v9M.js`, CSS `/assets/index-BDlsFLgm.css`.
-Operator acceptance is pending. Reload existing tabs to load this release.
+The operator accepted the correction ("Good") and requested PR/rebase merge.
+The later workspace-visibility release preserves all three scrolling files exactly;
+current public assets are index-CM79W1F0.js / index-BDlsFLgm.css. This section
+retains the original scrolling publication's immutable identity. Git integration
+does not republish or restart the current runtime.
 
 ## Cause and actual reproduction
 
@@ -58,7 +62,8 @@ Receipt root: `/mnt/vk-storage/vk-scrolling-projects-20261103-9cb7-correction`. 
 `Desktop-B-recovery-verified.json` and `final-readonly.json`.
 Live frontend is `paired/candidate`; immediate fallback is `paired/fallback`.
 Future cutback requires fresh pointer/identity/hash checks and never restores old
-data. No source push, PR or main promotion accompanies this frontend publication.
+data. The operator separately authorized source push and PR/rebase integration into
+staging after acceptance. Main promotion remains separate.
 
 # Historical initial publication — 2026-11-02
 

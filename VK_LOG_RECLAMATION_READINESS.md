@@ -5,6 +5,10 @@ backup graph tooling are implemented and tested. That does not qualify the live
 readers, a recovery set, or a deployment boundary. No live log is converted or
 retired by this preparation.
 
+Source review is [draft PR #291](https://github.com/artinflight/vibe-kanban/pull/291),
+targeting staging. Hosted checks are pending on the final source head; the draft
+is not a deployment or conversion approval.
+
 ## Current readiness and ownership
 
 | Gate                            | Evidence and remaining action                                                                                                                                          | Owner                                             |
@@ -35,6 +39,10 @@ passed initial admission at23:28:55UTC, then stopped source hashing at23:29:26UT
 when full memory PSI reached0.14, above the unchanged0.10 limit. At23:30:07UTC,
 SSD free space was1,943,719,936bytes:1,277,505,536bytes below the build floor. No
 source retirement or further automatic retry was authorized by that result.
+A separate frozen inventory found2,482 compiler-metadata files totaling2,463,285,248
+allocated bytes in the shared debug target. This is a proposed reproducible-output
+review, not disposal clearance. Vibe's owner is reviewing actual target ownership,
+consumer dependencies and the required lease; no metadata was removed.
 
 ## Runnable conversion interface
 

@@ -46,6 +46,7 @@ class ReclaimTests(unittest.TestCase):
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_bytes(self.original)
             path.chmod(0o640)
+            os.setxattr(path, 'user.log_dedup_fixture', b'preserve extended metadata')
             path.with_suffix('.capture.json').write_text('{"capture_state":"closed"}\n')
         self.db = self.base / 'database'
         with sqlite3.connect(self.db) as conn:
@@ -114,10 +115,13 @@ class ReclaimTests(unittest.TestCase):
                 self.assertTrue(path.read_bytes().startswith(logs.MAGIC))
                 self.assertEqual(logs.reconstruct(path)['sha256'], logs.sha(self.original))
                 self.assertEqual(path.stat().st_mode & 0o777, 0o640)
+                self.assertEqual(os.getxattr(path, 'user.log_dedup_fixture'), b'preserve extended metadata')
             self.assertTrue(self.batch().run(rollback=True)['complete'])
         self.assert_original()
         self.assertEqual(sidecars, [(self.source / p).with_suffix('.capture.json').read_bytes() for p in self.paths])
         self.assertEqual(len(self.store.reads), 8)
+        for relative in self.paths:
+            self.assertEqual(os.getxattr(self.source / relative, 'user.log_dedup_fixture'), b'preserve extended metadata')
 
     def test_crash_after_manifest_publication_resumes_exact_operation(self):
         def crash(_):

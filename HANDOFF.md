@@ -1,6 +1,10 @@
 # Conversation-log reclamation — 2026-11-03
 
-Branch `vk/0815-vk-deduplicate-c`; committed format base `0192b38de`. Read
+Branch `vk/0815-vk-deduplicate-c`; committed format base `0192b38de`.
+Guarded follow-up `52c5ea5bd` is pushed. Draft [PR #291](https://github.com/artinflight/vibe-kanban/pull/291)
+targets staging; final-head checks and later deployment-owner receipts govern
+readiness. No merge or deployment is authorized by the draft. Final CI/coordination
+receipts are in `readiness-source-review.safe.json` beneath the evidence root. Read
 `VK_LOG_RECLAMATION_READINESS.md` before further action. The old protected reader
 on5650 shares live captures; updating only the main backend is insufficient.
 Preserve exact private retained-history inputs and latest live frontend.

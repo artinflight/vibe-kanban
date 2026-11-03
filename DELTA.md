@@ -2592,3 +2592,12 @@ is insufficient. Nightly is commissioning existing tracking/delivery; current-lo
 B proof remains pending. SSD ~1.9GiB<3GiB blocks builds; OS-log recovery cannot
 clear that floor. See VK_LOG_RECLAMATION_READINESS.md and current HANDOFF for exact
 readiness gates, tested command contract and private evidence. Production NOT READY.
+
+Guarded source is pushed as52c5ea5bd; draft PR291 targets staging. Local45 focused
+and8retained fence tests pass, including inode-bound interruption/rollback,
+publication headroom, actual xattr preservation, closed graph verification and
+unique-inode growth accounting. Hosted final-head checks remain authoritative.
+Disk's resumed source verification stopped at PSI0.14>0.10; no clearance. A
+separate exact compiler-metadata inventory is under Vibe-owner read-only review;
+no cleanup inferred from its suffix or size. Nightly's current-version B/adaptor
+question remains pending while it commissions its existing producer.

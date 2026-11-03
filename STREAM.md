@@ -1,25 +1,31 @@
-# Lossless conversation log deduplication — 2026-11-03
+# Guarded conversation-log reclamation readiness — 2026-11-03
 
-Branch `vk/0815-vk-deduplicate-c`. Implement content-addressed, compressed completed
-process-log storage and safe offline preparation following the disk investigation.
-The inherited qualified Codex narrow-resume fix prevents ongoing history replay.
+Branch `vk/0815-vk-deduplicate-c`, based on current fork/staging. Preserve committed
+format implementation `0192b38de` and inherited qualified narrow-resume prevention.
+Current objective: finish safe existing-log reclamation preparation, future-growth
+management and backup/Vibe-owner coordination; report actual run readiness.
 
-Preserve original reconstructed bytes, hashes, execution paths, review semantics,
-capture/recovered-final sidecars, native homes and attachments. Readers are updated
-for raw/history, strict review, capture framing and recovery hashes. New captures
-remain raw; archived logs reject appends. Objects are session-local. No live
-conversion, deletion, provider turn, backend restart or deployment is included.
+`VK_LOG_RECLAMATION_READINESS.md` is the current operator procedure/status;
+`VK_LOG_DEDUPLICATION.md` retains format and six-log preservation evidence.
+Python follow-up adds retained WriterFence integration, source-pinned owner-adapter
+command, exact terminal/inactive/root checks, independent B-body verification,
+durable object-first manifest publication, per-file crash recovery/raw rollback,
+metadata retention, backup dependency graph/closure verification and bounded growth
+observations. No new background producer, timer, GC or automatic conversion.
 
-`VK_LOG_DEDUPLICATION.md` contains OP::Disk Space's measurement/preparation,
-consumer audit, deployment and rollback procedure. The CLI builds a separate
-verified tree from a frozen plan; it never replaces originals. Source retirement
-requires reviewed recovery and authorized deployment custody. Old backends cannot
-read manifests; fallback needs compatible readers or reconstructed raw files.
+45 focused tests plus eight retained fence regressions pass. Real metadata audit:
+35,341 logs, 113,194,307,584 allocated log bytes, 3,187 closed/inactive candidates.
+Four closed/inactive sample files are prepared; legacy file deferred. Neither
+inventory nor a prepared list establishes custody. Six-file 812.1 MiB recovery
+potential remains a sample measurement; zero production bytes reclaimed.
 
-Validation: 36 utility tests, ten migration tests, server library compilation,
-utility clippy, required format and ops pass. The real six-file archive and full
-restore hash-match originals; 851,501,056 bytes (812.1 MiB) recovery potential is
-measured, with zero production bytes reclaimed. See the runbook and HANDOFF. Deployment, provider acceptance, full-population recovery and actual
-reclaimed space remain separate requirements, not inferred from source tests.
+Staging's completed owner review found old protected-reader routing on5650:
+main-backend-only conversion is unsafe. Current B source-version/normal recall
+proof, reader-aware fallback/current-data rehearsal, actual source-pinned owner
+adapter and compatible artifacts remain absent. Nightly is commissioning its own
+tracker/delivery/job; shared planning question is pending, not acceptance. Disk
+owner's guarded preservation recheck is separate; no original retirement cleared.
+SSD ~1.9 GiB is below the retained 3 GiB build floor. Local full check/lint stop at
+missing Node tools; no bulk install/build bypass. Production is NOT READY.
 
 Full historical archive: [STREAM_HISTORY_20261017.md](STREAM_HISTORY_20261017.md).

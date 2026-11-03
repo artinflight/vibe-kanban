@@ -2577,3 +2577,18 @@ logs reconstruct/restore byte-exactly: 1,089,056,768 original allocated bytes ve
 237,555,712 archived bytes including metadata; 851,501,056 bytes (812.1 MiB)
 measured recovery potential. No population extrapolation or production reclamation.
 Only generated verified restore copies were retired; originals/archive remain.
+
+## 2026-11-03 — guarded reclamation and growth preparation
+
+Added source-pinned controller admission, retained physical WriterFence integration,
+exact log-root/terminal-session checks, current-B full-body checks, durable object
+publication before manifests, crash recovery and raw rollback with metadata and
+staging ownership. Added physical backup graph/closure checks and bounded metadata
+inventory/growth comparison. No production adapter, B proof or serving artifacts
+fabricated; no live conversion/retirement, restart or new timer.
+
+Owner coordination found a shared old protected reader on5650; main-only deployment
+is insufficient. Nightly is commissioning existing tracking/delivery; current-log
+B proof remains pending. SSD ~1.9GiB<3GiB blocks builds; OS-log recovery cannot
+clear that floor. See VK_LOG_RECLAMATION_READINESS.md and current HANDOFF for exact
+readiness gates, tested command contract and private evidence. Production NOT READY.

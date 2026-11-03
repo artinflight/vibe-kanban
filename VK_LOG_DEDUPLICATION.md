@@ -1,7 +1,9 @@
 # OP::Disk Space — lossless conversation log deduplication
 
 Status: implemented and locally tested; production installation and reclamation
-are not performed. Do not confuse a packed copy with recovered free space.
+are not performed. The follow-up [reclamation readiness report](VK_LOG_RECLAMATION_READINESS.md)
+adds the guarded conversion/rollback command, backup graph and growth audit,
+including owner-discovered protected-reader and current-B blockers. Do not confuse a packed copy with recovered free space.
 
 ## Cause, scope and preservation
 

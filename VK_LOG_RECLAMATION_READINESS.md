@@ -1,0 +1,193 @@
+# Conversation-log reclamation readiness
+
+**Production conversion is blocked.** The installer, rollback, growth audit and
+backup graph tooling are implemented and tested. That does not qualify the live
+readers, a recovery set, or a deployment boundary. No live log is converted or
+retired by this preparation.
+
+## Current readiness and ownership
+
+| Gate                            | Evidence and remaining action                                                                                                                                          | Owner                                             |
+| ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- |
+| Lossless format/readers         | Committed base `0192b38de`; six real logs reconstructed and restored byte-exactly                                                                                      | Deduplication                                     |
+| Guarded conversion and rollback | Source-pinned controller entrypoint, retained physical fence, durable objects before manifests, per-file journal and interrupted rollback recovery pass fixtures       | Deduplication; deployment owner admits actual run |
+| Every serving reader            | Main backend remains the older build; completed history can reach the separate old protected reader on 5650, sharing the source directory                              | VK::Staging Check                                 |
+| Compatible rollback             | Reader-aware fallback, or verified raw reconstruction before an archive-unaware reader is released; current-data roundtrip still required                              | VK::Staging Check                                 |
+| Current Desktop B recovery      | Historical October 28 acceptance does not prove the selected current versions; exact bodies, sidecars, metadata mappings and independent normal recall remain required | Nightly Backup Efficiency                         |
+| Future archive backups          | Exact manifest/object/sidecar graph export and provider readback/closure verifier implemented; actual B consumer qualification outstanding                             | Nightly Backup Efficiency                         |
+| Build capacity                  | SSD approximately 1.9 GiB free, below the retained 3 GiB build floor; OS-log recovery does not fix SSD capacity                                                        | OP::Disk Space and deployment owner               |
+| Actual owner adapter            | Trusted source-pinned admission adapter and fresh config are required; no dummy production adapter or receipt is supplied                                              | VK::Staging Check, with Nightly B provider        |
+| First batch custody             | Prepared selection is not a physical fence; reselect/recheck under actual held ownership                                                                               | Deployment owner                                  |
+
+Staging completed its requested read-only review and conditionally accepted source
+integration into the next compatible release, **not deployment or conversion**.
+Its durable assessment identifies the main and protected-reader artifacts, exact
+private input, consumers, current frontend pointer and retained custody interfaces.
+Keep the latest live frontend; do not deploy the older source checkout's assets.
+
+Nightly is actively commissioning its existing tracker/delivery/backup workflow.
+A shared project question records the exact current-version and archive-graph
+requirements; it is not a received owner acceptance or a current B proof. Do not
+interrupt commissioning or create a second producer. OP::Disk Space's prior safe
+verification stops cleared zero files for retirement. A current recheck was
+requested under unchanged guards; no new deletion authority was given. That recheck
+passed initial admission at23:28:55UTC, then stopped source hashing at23:29:26UTC
+when full memory PSI reached0.14, above the unchanged0.10 limit. At23:30:07UTC,
+SSD free space was1,943,719,936bytes:1,277,505,536bytes below the build floor. No
+source retirement or further automatic retry was authorized by that result.
+
+## Runnable conversion interface
+
+The original [measurement/packing procedure](VK_LOG_DEDUPLICATION.md) remains the
+format and preservation reference. New scripts are in `scripts/log-dedup/`:
+
+- `reclaim.py::Batch`: bounded batch, at most 64 unique files and 2 GiB logical
+  originals; exact canonical source root; existing `WriterFence` instance with its
+  real held lease; terminal execution/session checks; unchanged source versions,
+  sidecar set and bytes; source-root binding in `fence.binding.log_source_root`.
+- `controller.py`: executable entrypoint using **verified adapter source bytes**.
+  Adapter hash, literal owned path, restrictive writability and protocol are
+  checked before executing it. There is no `--force`, `--backup-ok` or
+  `--fenced=true` bypass.
+- `graph.py`: deduplicated physical namespace dependencies with physical SHA256,
+  separate reconstructed-original hashes, and actual independent provider-body
+  verification with manifest reference closure. A graph export is not a backup.
+- `audit.py`: bounded read-only metadata inventory and comparison; no transcript
+  payload collection, automatic cleanup, service changes or new scheduler.
+
+After the owners supply the real reviewed adapter/config and close all gates:
+
+```bash
+python3 scripts/log-dedup/controller.py \
+  --plan "$SELECTED_PLAN" --archive "$PACKED_ARCHIVE" \
+  --journal "$NEW_OPERATION_DIRECTORY" \
+  --adapter "$REVIEWED_OWNER_ADAPTER" --adapter-sha256 "$OWNER_ADAPTER_SHA256" \
+  --config "$FRESH_OWNER_CONFIG"
+```
+
+The same command with `--rollback` reconstructs the original raw bytes. These
+variables are required reviewed inputs, **not a ready production invocation**.
+Do not reuse a consumed activation package, its old PIDs/leases, or expired B
+admission. The wrapper does not independently stop/freeze services.
+
+The adapter protocol is `PROTOCOL = 1` and
+`admit(config, plan, rollback=False)`, a context manager yielding:
+
+```python
+{
+    'writer_fence': actually_held_retained_writer_fence,
+    'recovery': independently_reopened_canonical_B_provider,
+    'reader_guard': current_reader_consumer_tracking_guard,
+    'reserve_bytes': owner_admitted_reconstruction_reserve,
+}
+```
+
+This is trusted executable deployment code, pinned by source hash. The owner must
+verify every imported dependency and config too. The `reader_guard` must verify
+actual build/reader identities, all consumers including the protected reader,
+log-root bindings, source tracking/backpressure and recovery ownership; it cannot
+just return a JSON ready flag. Existing ingress holds, queue boundary, capacity
+custody and deployment failure recovery remain authoritative.
+
+The B provider exposes its actual canonical
+`desktop:B:/vk-backups/...` location and
+`open_original(relative_path, expected_sha256)`, a context manager over independently
+reopened original bytes. The installer hashes complete bodies and checks exact
+lengths for each original and sidecar. Historical receipts alone do not pass.
+The graph verifier's separate `open_member(relative_path, physical_sha256)` checks
+archived physical members through the normal B reader. Normal namespace restore
+and Linux metadata acceptance still require the backup owner.
+
+The operation directory must be private and outside source/archive. Its exclusive
+lease and durable journal bind the plan, selected files and expected manifests.
+Publication peak and full raw reconstruction headroom are reserved before copying
+objects and checked again before each replacement. Object publication is create-only; existing objects are checked before reuse.
+Every object is durable before any original is atomically replaced. Original
+mode/owner/group/xattrs/time mapping is retained. New object directories/files
+are private, so every consuming UID/ACL must be explicitly qualified.
+
+On failure, the **owner context must retain maintenance/custody or complete its
+verified recovery before releasing consumers**. The library does not resume
+services. Resume the exact operation; unknown newer data/inodes and foreign
+staging are preserved. An interrupted raw rollback pins its staging inode before
+writing payload, and pins manifest/restored inodes before publication. Owned partial stages
+can be retired only after fresh recovery/fence validation; unknown stages stop.
+No per-execution object GC is introduced. Shared objects remain after rollback.
+
+## Prepared selection and backup graph
+
+A new read-only observation selected four closed logs in inactive sessions from
+the six-file measurement sample: 1,053,055,464 logical bytes. The entire OP::Disk Space session is deferred while its owner rechecks
+preservation; its legacy log is also excluded from automatic selection. Selection is time-specific and must be refreshed if work resumes; all
+selected sessions/executions are checked again under actual custody.
+The selected subset can reuse the verified immutable six-file archive without
+converting the deferred file or duplicating its staging payloads.
+
+Its dependency export has 30,339 physical members / 157,557,122 physical bytes.
+That includes manifests, shared compressed objects and sidecars. The provider
+verifier rejects missing referenced objects even if all supplied bodies hash-match.
+It does not itself establish live B coverage or normal restore acceptance.
+
+```bash
+python3 scripts/log-dedup/graph.py --root "$PACKED_ARCHIVE" --plan "$SELECTED_PLAN" > "$EVIDENCE/archive-graph.json"
+```
+
+The earlier **812.1 MiB** measured recovery potential remains evidence for the
+original **six-file** sample, not a verified saving for this four-file selection
+or the whole population. Production reclamation remains **zero**.
+
+## Managing future growth
+
+Deploy the inherited exact-qualified Codex narrow-resume prevention together with
+all required readers. Qualify new native identities/versions instead of widening
+that guard blindly. Preserve model context and new deltas. Measure returned resume
+turns and persisted bytes through Vibe after deployment under a bounded QA budget.
+
+Take finite metadata observations under the existing OP::Disk Space workflow:
+
+```bash
+python3 scripts/log-dedup/audit.py --root "$SOURCE_SESSIONS" --database "$CURRENT_DATABASE" > "$EVIDENCE/before.json"
+python3 scripts/log-dedup/audit.py --root "$SOURCE_SESSIONS" --database "$CURRENT_DATABASE" --previous "$EVIDENCE/before.json" > "$EVIDENCE/after.json"
+```
+
+Observations separate raw logical bytes, regular-log/object allocation, shared
+object counts, append growth, new/missing execution files and conversion activity.
+Unique inodes are counted once; sidecars, directory metadata and external staging
+are explicitly outside this payload metric. The existing disk monitor's filesystem
+free-space/capacity view remains authoritative. Never add decoded logical size to
+physical allocation or mistake OS recovery for SSD build headroom.
+
+A 232.9-second observed interval grew allocated log payload by 163,840 bytes and
+logical output by 164,968 bytes, with zero new execution logs/conversions. That is
+an unmatched-workload observation, **not prevention acceptance or a forecast**.
+Record workload/resume counts and post-install reader/send behavior before judging
+new growth. Later closed-log batches use the same B/reader/fence checks; legacy or
+pending/damaged captures remain explicit owner review. No new timer, background
+retry, retention policy or automatic conversion is enabled here.
+
+## Validation and exact next gates
+
+Forty-five focused migration/controller/audit/graph tests and eight retained physical
+fence regressions pass locally. Fixtures cover forward conversion, exact raw
+rollback, complete command plumbing, body/graph corruption, missing dependencies,
+wrong root/owner, active sessions, changed sidecars, foreign inode preservation,
+object-publication failure, interrupted manifest/rollback publication and staging
+recovery. These are detached fixtures, not live B or deployment acceptance.
+
+The prior 36 utility tests, source server check and real six-log reconstruction
+remain recorded in the format runbook. No Rust source changed in this follow-up.
+Full local check/lint attempts currently stop at absent `tsc`/`eslint`; no duplicate
+Node install was made. Full Cargo/workspace builds must not violate the SSD floor.
+Required formatting, ops, source integration/CI and owner reviews are recorded in
+the final handoff with any gaps. Provider execution QA is not claimed.
+
+Close the table's missing reader/B/admission/capacity gates; qualify the source and
+private-input artifacts; rehearse current-data candidate/fallback/candidate with
+protected/recent histories, later-write sentinel and original review hashes; then
+obtain/hold the actual drained run boundary. Report **ready** only with those
+receipts, exact source/adapter/config hashes and a fresh bounded batch. No source
+retirement may precede that evidence.
+
+Private plans, graph, growth observations, tests and owner coordination evidence
+remain under `/mnt/vk-storage/vk-log-dedup-20261103-0815/`. Do not publish transcript
+objects, raw logs, backup bindings or the private retained-history input.

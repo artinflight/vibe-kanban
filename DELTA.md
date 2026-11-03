@@ -2514,3 +2514,22 @@ retained with paired fallback. Public JS index-CRD24Nkw.js, CSS index-BDlsFLgm.c
 Trusted public hashes/capabilities, five service identities, backend hash, DB inode
 and 99 migrations pass unchanged. No backend restart, data restore, provider call
 or device action. See VK_SCROLLING_PROJECTS_DEPLOYMENT.md and LIVE_DEPLOYMENT.json.
+
+## 2026-11-03 — restore scrolling omitted by later unread publication
+
+Operator reported no change. Live discovery found unread fix-release-4 served
+pre-scrolling versions of all three layout files. Public negative control confirmed
+2850 px document height with 60 projects; the actual 19-project menu grew a 600 px
+window to 1134 px. Restored d0496eb1d's three files on latest live source 9a45a3ab,
+preserving all other 1314 pinned inputs. Five candidate/public browser sizes and
+real-data desktop/mobile boundary scrolling pass; actual desktop document now
+remains 600 px while the menu scrolls. 27 preserved-feature tests plus five new
+source-preservation gate tests pass. The gate rejects the exact overwritten release
+and is now required by VK_WORKFLOW/VK_AGENT_DEPLOYMENT_RUNBOOK.
+
+Published 09:59:20 UTC: JS index-BRto7v9M.js, CSS index-BDlsFLgm.css. 926 assets
+retained with paired fallback; 88,674,581-byte recovery archive fully restored and
+independently read back from Desktop B. Public assets/capabilities and five service
+identities/backend/DB identity/99 migrations pass unchanged. No backend restart,
+data restore, provider call or device action. Operator acceptance pending. See
+VK_SCROLLING_PROJECTS_DEPLOYMENT.md and LIVE_DEPLOYMENT.json for current evidence.

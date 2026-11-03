@@ -1,4 +1,66 @@
-# Scrolling projects menu publication — 2026-11-02
+# Scrolling restoration — 2026-11-03
+
+Current public frontend: <https://vibe.local>. Activated at **2026-11-03T09:59:20.537392+00:00**;
+JS `/assets/index-BRto7v9M.js`, CSS `/assets/index-BDlsFLgm.css`.
+Operator acceptance is pending. Reload existing tabs to load this release.
+
+## Cause and actual reproduction
+
+The operator reported no change after the initial publication. Fresh discovery
+found the live pointer at the later unread `fix-release-4/paired/candidate`,
+published November 2 at 18:28:43 UTC. Its three layout files exactly matched the
+pre-scrolling parent. Thus the first publication had been replaced with a newer
+unread build that omitted scrolling; its earlier passing tests were historical.
+
+The public negative test fails the internal-scrolling assertion: at 1440×900 with
+60 projects, list height equals content height (2644 px), document height is
+2850 px and the scrollbar is visible. With 19 actual projects in a 1440×600 window,
+the document is 1134 px tall and the list itself does not overflow.
+
+## Corrective publication and preservation
+
+The original three scrolling files from d0496eb1d were applied to the actual
+current source snapshot, preserving unread source
+`9a45a3abf2d99eb44c14ef7a744d6f7bf0fbb73e` and its earlier chat-notice composition.
+All other 1314 inputs match exactly; all 1317 pinned inputs were checked before
+and after the bounded production tsc/Vite build. No UI source rewrite was needed.
+
+`scripts/deployment/check_frontend_preservation.py` verifies the live artifact
+against its source, then rejects candidate changes outside the explicit reviewed
+path allowlist. Five unit tests cover preserved source, stale-layout replacement,
+reviewed updates, omitted files and invalid live provenance. An actual-source
+negative control rejects fix-release-4 against the initial scrolling snapshot,
+identifying all three omitted files even when its unrelated unread edits are
+allowed. Both workflow/runbook now require this gate and a final pointer recheck.
+This is repository publication tooling; it does not install a background watcher
+or change other workspaces/services.
+
+Five packaged-candidate and five served-public cases pass at 1440×900, 1024×600,
+393×852, 393×600 and 740×393 with wheel/touch input and 60 synthetic projects.
+The normal public list of 19 real projects passes desktop and phone scrolling,
+including wheel input at its bottom boundary. At 1440×600 the document stays
+600 px; the menu scrolls 350 px internally. Mobile document also stays fixed.
+No page errors, and all application mutations are intercepted. All 17 current
+unread/navigation and 10 chat-notice mounted regressions pass. Required formatting,
+ops/diff checks pass. Full Rust/PR baseline and physical-device QA were not run.
+
+The 88,674,581-byte source/software archive passed full extraction/hash checks
+and independent Desktop B readback before activation. Both paired roots retain
+926 hashed assets. The atomic pointer switch took 0.014740 seconds.
+Five service identities, backend executable, DB device/inode and 99 migrations
+are unchanged. No backend restart, state restoration, provider call or device action.
+Direct backend/history-proxy frontend roots and existing previews were preserved.
+
+Receipt root: `/mnt/vk-storage/vk-scrolling-projects-20261103-9cb7-correction`. Important files: `source-preservation.json`,
+`dropped-scrolling-negative-control.json`, `before-observed.json`,
+`normal-before-observed.json`, `browser-candidate/results.json`,
+`browser-live/results.json`, `normal-live-smoke.json`, `activation.json`,
+`Desktop-B-recovery-verified.json` and `final-readonly.json`.
+Live frontend is `paired/candidate`; immediate fallback is `paired/fallback`.
+Future cutback requires fresh pointer/identity/hash checks and never restores old
+data. No source push, PR or main promotion accompanies this frontend publication.
+
+# Historical initial publication — 2026-11-02
 
 The operator authorized deployment. The public frontend at <https://vibe.local>
 was activated at **2026-11-02T17:28:06.166500+00:00**. Reload existing tabs.

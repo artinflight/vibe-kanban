@@ -1,32 +1,36 @@
-# Scrolling projects menu deployed — 2026-11-02
+# Scrolling restored after later publication — 2026-11-03
 
-Live URL: `https://vibe.local`, published 17:28:06 UTC. Reload existing tabs.
-JS `index-CRD24Nkw.js`; CSS `index-BDlsFLgm.css`. Feature source is committed at
-`d0496eb1d4d6904aa69eb6b087d29c39ece488f0`, branch `vk/9cb7-vk-scrolling-pro`.
-The deployment source snapshot preserves the newer live explicit-unread and
-chat-notice fixes; rebuilding the older feature branch alone would omit them.
-Use [manifest](LIVE_DEPLOYMENT.json) and [release evidence](VK_SCROLLING_PROJECTS_DEPLOYMENT.md).
+Current public frontend: `https://vibe.local`, published 09:59:20 UTC.
+JS index-BRto7v9M.js; CSS index-BDlsFLgm.css. Reload existing tabs. The operator
+reported no change because the later unread fix-release-4 omitted all three
+scrolling files. The original November 2 receipt describes a superseded release.
+Fresh reproduction confirmed 2850 px document height with 60 projects, and 1134 px
+with 19 real projects in a 600 px desktop window.
 
-Desktop rail, names flyout and mobile project list scroll internally with hidden
-scrollbars and contained overscroll. Project actions/footer remain visible.
-Five candidate and five served-public browser sizes pass with 60 synthetic
-projects. Real-data desktop/mobile smoke checks show 19 projects and no page
-errors; all application writes were intercepted. Current live-source unread and
-chat-notice mounted regressions pass (17 + 10). Production tsc/Vite build, feature
-frontend types/lint, required format and ops checks pass. Full Rust/PR baseline
-and physical-phone QA were not run.
+Restored the unchanged d0496eb1d scrolling files onto the actual latest live source
+9a45a3abf2d99eb44c14ef7a744d6f7bf0fbb73e. All other 1314 live inputs are exact.
+Source snapshot: `/mnt/vk-storage/vk-scrolling-projects-20261103-9cb7-correction/source`.
+Never rebuild from the older feature branch alone: it omits newer unread fixes.
+The correction passed five packaged/public desktop-touch browser sizes, 19-project
+public desktop/mobile scrolling through the list boundary, 27 unread/chat-notice
+regressions and five source-preservation tests. Real desktop document now stays
+600 px while its menu scrolls. No page errors or application writes. Physical
+S25 testing and full Rust/PR baseline were not run. Operator acceptance pending.
 
-Receipt root: `/mnt/vk-storage/vk-scrolling-projects-20261102-9cb7`.
-Public root: `paired/candidate`; fallback: `paired/fallback` under that root.
-770 old/new assets retained. Software recovery archive independently restored
-and read back from Desktop B. All five service identities, backend hash, DB inode
-and 99 migrations unchanged. No backend restart, DB restore or provider call.
-Only the public frontend pointer changed; direct backend/history-proxy roots and
-preview routes remain untouched. Before any future cutback, recheck exact pointer
-ownership and retained fallback hashes; never restore old data over current writes.
+All receipts are under `/mnt/vk-storage/vk-scrolling-projects-20261103-9cb7-correction`.
+`paired/candidate` is live; `paired/fallback` retains the previous unread frontend.
+926 assets retained; 88,674,581-byte recovery archive fully restored and independently
+read back from Desktop B. All five service identities, backend hash, DB inode and
+99 migrations unchanged. No backend restart, database restore, inference or device
+action; direct backend/history frontend roots and previews preserved.
 
-Code and deployment notes are committed locally; no push or PR requested.
-Further Git integration/main promotion remains separate from this publication.
+Publication must run `scripts/deployment/check_frontend_preservation.py` against
+the resolved current live artifact/source and candidate, with only reviewed paths
+allowed to change. Recheck pointer ownership before activation. The new gate
+rejects the exact stale-source unread publication which dropped scrolling.
+Workflow and runbook include this requirement. See
+[release record](VK_SCROLLING_PROJECTS_DEPLOYMENT.md) and [manifest](LIVE_DEPLOYMENT.json).
+Code/deployment notes remain local; no PR, push or main promotion requested.
 
 Prior pickup: [previous record](deployment-history/20261030-before-reconciliation/HANDOFF.md)
 and [HANDOFF history](HANDOFF_HISTORY_20261017.md).

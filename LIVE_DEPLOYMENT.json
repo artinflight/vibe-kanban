@@ -1,6 +1,6 @@
 {
   "schema": 2,
-  "generated_at_utc": "2026-11-02T18:28:43.114247+00:00",
+  "generated_at_utc": "2026-11-03T09:59:20.537392+00:00",
   "canonical_repo": "/home/mcp/_vibe_kanban_repo",
   "canonical_repo_dirty": true,
   "canonical_branch": "vk/land-live-fixes-20260422",
@@ -32,12 +32,12 @@
   "history_proxy_port": 5640,
   "gateway_port": 4720,
   "public_frontend_pointer": "/home/mcp/.local/share/vibe-kanban/frontend-dist/current",
-  "public_frontend_release": "/mnt/vk-storage/vk-disappearing-unread-20261102-3ad7/fix-release-4/paired/candidate",
+  "public_frontend_release": "/mnt/vk-storage/vk-scrolling-projects-20261103-9cb7-correction/paired/candidate",
   "public_assets": [
-    "/assets/index-C-pTuj_j.css",
-    "/assets/index-DqfYW9pf.js"
+    "/assets/index-BDlsFLgm.css",
+    "/assets/index-BRto7v9M.js"
   ],
-  "frontend_routing_note": "Public frontend acknowledges a deliberately viewed latest reply/error after its running/approval turn settles and visibility/focus/dwell checks pass. Passive return/polling preserve unread. Explicit bulk fallback and live git-preservation notices remain. Backend/API/DB/services unchanged.",
+  "frontend_routing_note": "Public frontend adds independent projects-menu scrolling and hidden scrollbars while preserving current explicit-unread and chat-notice fixes. Backend/history-proxy direct frontend roots and all five services are unchanged.",
   "selected_runtime_environment": {
     "HOST": "127.0.0.1",
     "PORT": "5621",
@@ -145,17 +145,15 @@
   },
   "previous_live_release_evidence": "/mnt/vk-storage/vk-new-build-repair-20261029",
   "frontend_build": {
-    "source_commit": "9a45a3abf2d99eb44c14ef7a744d6f7bf0fbb73e",
-    "preserved_live_source_commit": "800011bd573e2869d6ea4c0e5bfba4d9046d9cbe",
-    "previous_feature_source": "b8bad21792f863bce31c42742f7439cc8539503a",
-    "method": "Preserving live frontend composition plus verified scoped frontend patch; bounded local production build",
-    "file_manifest": "/mnt/vk-storage/vk-disappearing-unread-20261102-3ad7/fix-release-4/frontend-artifact.json",
+    "source_commit": "d0496eb1d4d6904aa69eb6b087d29c39ece488f0",
+    "preserved_live_source_commit": "9a45a3abf2d99eb44c14ef7a744d6f7bf0fbb73e",
+    "preserved_live_base_commit": "800011bd573e2869d6ea4c0e5bfba4d9046d9cbe",
+    "method": "byte-verified current live frontend source plus exact three-file scrolling patch; local tsc && vite build; bounded 4096 MiB Node heap",
+    "file_manifest": "/mnt/vk-storage/vk-scrolling-projects-20261103-9cb7-correction/frontend-artifact.json",
+    "composition_manifest": "/mnt/vk-storage/vk-scrolling-projects-20261103-9cb7-correction/source-composition.json",
     "verified_manifest_files": 417,
-    "retained_asset_count": 874,
-    "prior_full_hosted_baseline_source": "b8bad21792f863bce31c42742f7439cc8539503a",
-    "prior_full_hosted_baseline_run": "https://github.com/artinflight/vibe-kanban/actions/runs/41493120165",
-    "backend_tree_unchanged_from_full_baseline": true,
-    "current_ci_authority": "https://github.com/artinflight/vibe-kanban/pull/288"
+    "retained_asset_count": 926,
+    "hosted_ci": false
   },
   "recovery": {
     "total_50_minute_cutoff": false,
@@ -168,26 +166,42 @@
   },
   "last_readonly_verification": {
     "status": "passed",
-    "UTC": "2026-11-02T18:28:43.114247+00:00",
-    "receipt": "/mnt/vk-storage/vk-disappearing-unread-20261102-3ad7/fix-release-4/activation.json",
+    "UTC": "2026-11-03T09:59:55.663430+00:00",
+    "receipt": "/mnt/vk-storage/vk-scrolling-projects-20261103-9cb7-correction/final-readonly.json",
+    "public_browser": "/mnt/vk-storage/vk-scrolling-projects-20261103-9cb7-correction/browser-live/results.json",
     "database_and_backend_identity_preserved": true,
-    "public_browser": "/mnt/vk-storage/vk-disappearing-unread-20261102-3ad7/integration/browser-settled-live/results.json",
-    "running_turn_browser": "/mnt/vk-storage/vk-disappearing-unread-20261102-3ad7/integration/browser-pending-live/results.json",
-    "validation_scope": "public TLS/assets/health, five services, backend hash, DB identity/99 migrations; four served layout cases plus API-verified running-turn guard; all writes intercepted"
+    "validation_scope": "verified TLS/public asset hashes and capabilities, five unchanged services, backend hash, DB identity/99 migrations and five browser viewports with application mutations intercepted"
   },
-  "frontend_deployed_at_utc": "2026-11-02T18:28:43.114247+00:00",
+  "frontend_deployed_at_utc": "2026-11-03T09:59:20.537392+00:00",
   "previous_frontend_build": {
-    "source_commit": "800011bd573e2869d6ea4c0e5bfba4d9046d9cbe",
-    "feature_commit": "800011bd573e2869d6ea4c0e5bfba4d9046d9cbe",
-    "preserved_live_source_commit": "02a9a993d8d9118ca703a22baa15efcf0c7cc4c9",
-    "method": "local tsc && vite production build; bounded 4096 MiB heap",
-    "file_manifest": "/mnt/vk-storage/vk-turn-end-error-20261102-94fb/chat-notices-frontend-1/frontend-artifact.safe.json",
-    "input_file_manifest": "/mnt/vk-storage/vk-turn-end-error-20261102-94fb/chat-notices-frontend-1/FINAL_SOURCE_INPUTS.safe.json",
+    "source_commit": "9a45a3abf2d99eb44c14ef7a744d6f7bf0fbb73e",
+    "preserved_live_source_commit": "800011bd573e2869d6ea4c0e5bfba4d9046d9cbe",
+    "previous_feature_source": "b8bad21792f863bce31c42742f7439cc8539503a",
+    "method": "Preserving live frontend composition plus verified scoped frontend patch; bounded local production build",
+    "file_manifest": "/mnt/vk-storage/vk-disappearing-unread-20261102-3ad7/fix-release-4/frontend-artifact.json",
     "verified_manifest_files": 417,
-    "retained_asset_count": 664,
-    "hosted_ci": false
+    "retained_asset_count": 874,
+    "prior_full_hosted_baseline_source": "b8bad21792f863bce31c42742f7439cc8539503a",
+    "prior_full_hosted_baseline_run": "https://github.com/artinflight/vibe-kanban/actions/runs/41493120165",
+    "backend_tree_unchanged_from_full_baseline": true,
+    "current_ci_authority": "https://github.com/artinflight/vibe-kanban/pull/288"
   },
   "frontend_only_deployment": {
+    "source_commit": "d0496eb1d4d6904aa69eb6b087d29c39ece488f0",
+    "preserved_frontend": "/mnt/vk-storage/vk-disappearing-unread-20261102-3ad7/fix-release-4/paired/candidate",
+    "evidence_root": "/mnt/vk-storage/vk-scrolling-projects-20261103-9cb7-correction",
+    "activation_receipt": "/mnt/vk-storage/vk-scrolling-projects-20261103-9cb7-correction/activation.json",
+    "rollback_frontend": "/mnt/vk-storage/vk-scrolling-projects-20261103-9cb7-correction/paired/fallback",
+    "previous_frontend": "/mnt/vk-storage/vk-disappearing-unread-20261102-3ad7/fix-release-4/paired/candidate",
+    "Desktop_B_recovery_receipt": "/mnt/vk-storage/vk-scrolling-projects-20261103-9cb7-correction/Desktop-B-recovery-verified.json",
+    "backend_unchanged": true,
+    "database_restore": false,
+    "browser_mutations_intercepted": true,
+    "source_preservation_receipt": "/mnt/vk-storage/vk-scrolling-projects-20261103-9cb7-correction/source-preservation.json",
+    "previous_scrolling_publication_overwritten": true,
+    "operator_acceptance_pending": true
+  },
+  "previous_frontend_only_deployment": {
     "source_commit": "9a45a3abf2d99eb44c14ef7a744d6f7bf0fbb73e",
     "evidence_root": "/mnt/vk-storage/vk-disappearing-unread-20261102-3ad7/fix-release-4",
     "activation_receipt": "/mnt/vk-storage/vk-disappearing-unread-20261102-3ad7/fix-release-4/activation.json",
@@ -197,37 +211,6 @@
     "backend_unchanged": true,
     "database_restore": false,
     "browser_mutations_intercepted": true
-  },
-  "previous_frontend_only_deployment": {
-    "source_commit": "b990b5939642b1ac7e744a9290840a731fa3f550",
-    "evidence_root": "/mnt/vk-storage/vk-unread-reselect-20261031-c097/reselect-release",
-    "activation_receipt": "/mnt/vk-storage/vk-unread-reselect-20261031-c097/reselect-release/activation.json",
-    "rollback_frontend": "/mnt/vk-storage/vk-unread-reselect-20261031-c097/reselect-release/paired/fallback",
-    "previous_frontend": "/mnt/vk-storage/vk-unread-reselect-20261031-c097/final/paired/candidate",
-    "Desktop_B_recovery_receipt": "/mnt/vk-storage/vk-unread-reselect-20261031-c097/reselect-release/Desktop-B-recovery-verified.json",
-    "backend_unchanged": true,
-    "database_restore": false,
-    "feature_resolution_verified": true,
-    "reproduced_same_route_defect_verified": true,
-    "operator_acceptance_pending": false,
-    "prior_release_reported_unresolved": true,
-    "integration_on_hold": false,
-    "git_push_performed": true,
-    "browser_live_receipt": "/mnt/vk-storage/vk-unread-reselect-20261031-c097/reselect-release/browser-live-reselect.json",
-    "browser_candidate_receipt": "/mnt/vk-storage/vk-unread-reselect-20261031-c097/reselect-release/browser-candidate-reselect.json",
-    "real_preservation_receipt": "/mnt/vk-storage/vk-unread-reselect-20261031-c097/reselect-release/own-candidate-verified.json",
-    "live_write_scope": "Only current task workspace native unread/seen state; all unrelated browser mutations blocked. Candidate manual-flag persistence test uses only current task issue/workspace and restores original flags/body.",
-    "validation_scope": "20 mounted regressions now in CI; local frontend types/lint, required format/ops and production build; real candidate/live desktop same-route click, mobile reopening, reload and completion preservation; full hosted baseline with workspace tests, Rust lint, schema/SQLx, Tauri and native integrations.",
-    "not_validated": "Physical-device interaction is not claimed. Full local Rust validation was stopped during dependency rebuilding to protect host storage; full hosted baseline passed instead. Refer to PR #287 checks for final integration validation.",
-    "operator_accepted": true,
-    "operator_acceptance": "Good, open PR, sync, rebase merge",
-    "git_integration_status": "PR #287 is the staging rebase integration record; its merge event is authoritative for final status and rebased IDs. Original deployed source is immutable.",
-    "pull_request": "https://github.com/artinflight/vibe-kanban/pull/287",
-    "requested_merge_method": "rebase",
-    "git_target_branch": "staging",
-    "hosted_baseline_passed": true,
-    "hosted_baseline_source": "be20b829502e1d24c72a944d3a7a06409cf75fb4",
-    "hosted_baseline_run": "https://github.com/artinflight/vibe-kanban/actions/runs/41204050237"
   },
   "frontend_integration": {
     "pull_request": "https://github.com/artinflight/vibe-kanban/pull/286",
@@ -386,5 +369,15 @@
       "running_turn_guard_candidate_and_served_passed": true
     },
     "agent_found_gap": "An older visible reply could acknowledge a newer running turn; reproduced with intercepted requests; superseded by final settled-turn guard"
+  },
+  "scrolling_restoration": {
+    "reason": "Later unread frontend publication omitted all three scrolling source files",
+    "initial_frontend": "/mnt/vk-storage/vk-scrolling-projects-20261102-9cb7/paired/candidate",
+    "superseding_frontend": "/mnt/vk-storage/vk-disappearing-unread-20261102-3ad7/fix-release-4/paired/candidate",
+    "negative_browser_receipt": "/mnt/vk-storage/vk-scrolling-projects-20261103-9cb7-correction/before-observed.json",
+    "real_projects_before": "/mnt/vk-storage/vk-scrolling-projects-20261103-9cb7-correction/normal-before-observed.json",
+    "real_projects_after": "/mnt/vk-storage/vk-scrolling-projects-20261103-9cb7-correction/normal-live-smoke.json",
+    "preservation_negative_control": "/mnt/vk-storage/vk-scrolling-projects-20261103-9cb7-correction/dropped-scrolling-negative-control.json",
+    "operator_accepted": false
   }
 }

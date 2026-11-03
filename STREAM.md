@@ -15,6 +15,12 @@ Exercise the actual client for ordinary, delegated and deadline-bound resumes,
 retained metadata/new deltas, ignored-flag rejection and legacy compatibility.
 Validation and rollout requirements are recorded in `VK_DUPLICATE_HISTORY_FIX.md`.
 
+[PR #290](https://github.com/artinflight/vibe-kanban/pull/290) targets staging with
+rebase; final checks and the merge event govern integration and rebased IDs. Local
+full Rust check/lint require missing host GLib development metadata; the workspace
+test attempt was stopped on that known prerequisite. Hosted PR checks provide
+the broad validation gate. Frontend types/lint, format and ops pass locally.
+
 Source repair is not deployed. Existing accumulated logs remain intact. A backend
 build/restart needs fresh backup, private history bindings, coordinated drain,
 current-data fallback rehearsal and post-install persisted-size/history/send QA

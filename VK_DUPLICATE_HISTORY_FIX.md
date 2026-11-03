@@ -49,10 +49,10 @@ No transcript payloads or private history bindings are copied into this document
 - Two standalone Rust checks compile the actual old/new predicates, reproduce the
   deployed identity false-negative and confirm exact-version/name scope.
 - `pnpm run format`, `pnpm run ops:check` and `git diff --check` pass.
-- Full workspace tests, full lint/types, hosted CI, candidate backend build, live
-  Vibe resume/send, matched disk-growth observation and deployment are not run.
-  They are not certified by these focused results. The normal full baseline is
-  still required before a staging PR.
+- These initial source-fix checks did not cover full workspace/CI validation.
+  The broader staging integration attempts are recorded below. Candidate backend
+  build, live Vibe resume/send, matched disk-growth observation and deployment
+  remain unperformed.
 
 Integrated command: `cargo test --offline --locked -p executors --lib
 executors::codex::client::tests -- --test-threads=1`. The resulting test binary also
@@ -72,6 +72,36 @@ historical payload exceeds 32 KiB; successful narrow resumes capture under 16 Ki
 across three resume paths with no historical marker. The legacy control retains
 the full historical payload and captures over 32 KiB. These are fixture bounds,
 not production storage savings.
+
+## Staging integration
+
+[PR #290](https://github.com/artinflight/vibe-kanban/pull/290) targets staging with
+the operator-requested rebase method. Fresh staging was
+`d90e347461688c06f55713e8a1057c52e51cfd00`; `git rebase fork/staging` completed
+without conflicts or source changes. Original feature commit
+`83b96bc3b1ef51a6a6d5dc6e7c51dcdd7abf7057` remains immutable provenance; the PR's
+final checks and merge event are authoritative for rebased integration IDs and
+readiness. Git integration does not deploy or restart the backend.
+
+The required local integration baseline was attempted using the shared SSD target,
+one Cargo job and disabled incremental compilation:
+
+- Full formatting and ops governance pass.
+- All four frontend type checks and local-web/UI lint pass.
+- `pnpm run check` and `pnpm run lint` stop in the Tauri dependency graph because
+  the MCP host lacks `glib-2.0.pc` (GLib >= 2.70). These are incomplete full checks.
+- `cargo test --workspace --offline --locked -- --test-threads=1` was invoked, then
+  its owned process group was stopped after the same missing mandatory dependency
+  was verified in both preceding checks. It is not a passing workspace test run.
+- Hosted PR checks supply broad validation on the final PR head. Their actual
+  conclusions, including any private-input skips, govern source readiness; local
+  host limitations must not be represented as successful full validation.
+
+Evidence: `integration/` beneath the task evidence directory. Existing backend
+PID, service invocation and executable hash were recorded before integration and
+must match a fresh final readback. The operator explicitly forbids a backend
+restart for this task. Deployment and production acceptance remain next-release
+work under the existing runbook.
 
 ## Deployment requirements and acceptance
 

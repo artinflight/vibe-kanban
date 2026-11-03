@@ -1,3 +1,13 @@
+# Dot delivery connector repair — 2026-11-03
+
+Both existing finite registrations were restored without changing scope or credentials.
+Eight retained events were accepted. Agent launch now reports optional notification
+setup independently; one original blocked request resumed in its original context.
+No Vibe/backend/frontend restart or replacement workspace occurred. Finite leases
+expire 10 November 10:00:51 UTC; platform renewal of both triggers remains required.
+See [repair evidence](VK_DOT_DELIVERY_RESTORATION.md). The frontend records below
+remain current and were not changed by this connector-only repair.
+
 # Current public frontend — 2026-11-02
 
 The frontend correction is published at `https://vibe.local`. Deliberate opening,

@@ -126,3 +126,22 @@ formatting is unavailable because Prettier/dependencies are absent. Full fronten
 check/lint, Rust workspace tests and private deployment CI were not run for this
 Python-only overlay. No frontend/backend build, phone UI testing or main-dot
 natural-reply acceptance is claimed. Hosted PR checks are reported separately.
+
+## GitHub integration
+
+[PR #289](https://github.com/artinflight/vibe-kanban/pull/289) targets staging.
+At head `f9211b5e61851c3aa24411179f37b094cadb33c4`, hosted connector/deployed-source
+contracts (including the 24 new mocks), sidechat contracts, branch policy/freshness
+and ops governance pass. Remaining Test jobs were still running at handoff.
+The recovery workflow's later `Published source inventories` step fails because
+its October 29 catalog expects earlier hashes for seven frontend files. Every one
+of those files is byte-identical to the fetched staging base `d90e34746` and is
+unchanged by this repair. The first mismatch is `WorkspacesSidebar.tsx`:
+expected `69efec5b20ca312056319c6c9139d3b988d7b1fe2dbdc2ee2bc438945a031179`,
+actual `fde2d0df022fb9275753103c5be810b19add9c4393f9ae618d3fd52937175acb`.
+[Recovery run](https://github.com/artinflight/vibe-kanban/actions/runs/41619728207)
+records the successful test steps and that baseline inventory failure. The other
+six mismatches are the kanban/workspace sidebar/container changes from newer
+frontend work. Historical custody hashes were not rewritten to make CI green;
+their release owner must reconcile preservation of the original catalog sources.
+The PR's latest exact-head checks remain authoritative. No merge is claimed.

@@ -18,3 +18,7 @@ restore old SQLite over newer writes, overwrite the live private adapter, or bun
 backend/UI release changes. Public PR is a source-only runtime-overlay handoff.
 
 Full historical archive: [HANDOFF_HISTORY_20261017.md](HANDOFF_HISTORY_20261017.md).
+
+Source handoff: [PR #289](https://github.com/artinflight/vibe-kanban/pull/289).
+Hosted repair tests pass; a recovery inventory check fails on seven unchanged
+staging frontend files. See the repair record before treating all CI as green.

@@ -1,11 +1,15 @@
 # Scrolling projects menu — 2026-11-02
 
-Branch `vk/9cb7-vk-scrolling-pro`, base `aceb355e9` (fork/staging at task start).
+Branch `vk/9cb7-vk-scrolling-pro`, original base `aceb355e9`, now rebased onto fork/staging `c3c1dc9d6`.
 Scope: bound the desktop shell's content row and AppBar so long project lists
 scroll internally, hide scrollbars, and contain overscroll. Keep the footer and
 project actions visible. Apply the same behavior to expanded project names and
 the mobile project drawer; its content layout override preserves other drawers'
 default scrolling. Preserve project selection, drag ordering and activity badges.
+
+The operator accepted the restored fix ("Good") and authorized PR/rebase merge
+into staging. Preserve the newer live workspace-visibility frontend, which keeps
+all three scrolling source files exactly. Git integration does not redeploy.
 
 The original publication passed on November 2, then a newer unread release
 omitted the three scrolling files. The operator reported no change. The November 3

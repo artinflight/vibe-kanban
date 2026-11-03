@@ -1,3 +1,12 @@
+# No-expiry supplement — prepared, not installed
+
+The candidate makes normal Dot registrations non-expiring, including accepted
+legacy finite-TTL requests. It preserves current owner, callback credentials,
+scope, revocation and shared modules. Fifteen candidate fixtures pass on public
+and exact-live baselines. Full package hashes fence newer shared changes.
+No live registration or service changed. Exact action-time confirmation precedes
+conversion and three Dot-only consumer reloads. [Proposal](VK_DOT_NO_EXPIRY_PROPOSAL.md).
+
 # Dot delivery restoration — 2026-11-03
 
 Branch `fix/dot-delivery-restoration-20261103`, based on fork/staging. Narrow Python

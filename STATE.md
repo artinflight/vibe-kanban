@@ -1,3 +1,11 @@
+# Dot lifetime supplement — prepared 2026-11-03
+
+The owner requests registrations active until explicitly revoked, without renewal.
+The five-module candidate and tests are prepared; no live change was made.
+Explicit action-time confirmation is still required for the persistent-access
+conversion. [Exact proposal and confirmation boundary](VK_DOT_NO_EXPIRY_PROPOSAL.md).
+The restored delivery and prompt-independence facts below remain current.
+
 # Dot delivery connector repair — 2026-11-03
 
 Both existing finite registrations were restored without changing scope or credentials.

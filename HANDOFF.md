@@ -1,3 +1,12 @@
+# No-expiry candidate — action-time confirmation pending
+
+Read [the exact proposal](VK_DOT_NO_EXPIRY_PROPOSAL.md) before live action.
+Candidate/manifest: `/mnt/vk-storage/dot-no-expiry-20261103/`. No live code,
+registration, binding or service changed. The recovered user constraint requires
+action-time confirmation of the exact duration expansion; preparation is not
+consent. Current leases still expire 10 November 10:00:51 UTC. Preserve all newer
+shared source and verify the full package baseline before any cutover.
+
 # Dot delivery restoration pickup — 2026-11-03
 
 Both original subscriptions renewed with signed callback verification; scope,

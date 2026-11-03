@@ -20,4 +20,3 @@ def delivery_binding(store, principal, thread_id):
     store.bind(Principal(principal.owner, 'owner'), thread_id, selected['id'],
                ttl=max(60, min(86400, int(selected['expires'] - store.clock()))))
     return {'subscription_id': selected['id']}
-

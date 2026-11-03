@@ -45,6 +45,18 @@ the manifest/checklist with exact evidence and explicit gaps. Frontend-only
 publication uses a new paired release plus atomic pointer, not an in-place
 directory overwrite. Native provider end-to-end QA is separate from mocks.
 
+Before every frontend publication, resolve the current public pointer and its
+artifact/source snapshot. Run `scripts/deployment/check_frontend_preservation.py`
+with `--live-artifact`, `--live-source`, `--candidate-source` and one
+`--changed-path` per reviewed source edit. Every other pinned live source input
+must match exactly; missing or unexpected changed inputs block publication.
+Recheck the pointer immediately before activation. A newer feature release can
+still be built from stale source: the November 2 unread release omitted the
+already-published scrolling files. Branch age, successful builds and retained
+hashed assets do not prove source preservation. Test the gate with
+`python3 -B -m unittest discover -s scripts/deployment -p test_frontend_preservation.py`.
+
+
 Antigravity is live with the existing account and supervised permissions. See
 [activation/recovery evidence](ACTIVATION_RECOVERY_20261030.md) for the exact runtime,
 private inputs, final-checkpoint correction and current-data fallback procedure.

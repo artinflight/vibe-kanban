@@ -1,4 +1,31 @@
-# Current frontend deployment — 2026-11-02
+# Current frontend: scrolling restored — 2026-11-03
+
+Scrolling was restored at **09:59:20 UTC** on `https://vibe.local`. Current JS is
+`index-BRto7v9M.js`; CSS is `index-BDlsFLgm.css`. The operator reported no change
+because a later unread publication had replaced the November 2 scrolling frontend
+and omitted its three source edits. Fresh public reproduction confirmed the
+regression; the historical passing checks below did not establish continued
+availability after that replacement.
+
+The correction applies the original scrolling files (`d0496eb1d`) to the actual
+latest unread release (`9a45a3abf2d99eb44c14ef7a744d6f7bf0fbb73e`). All other
+pinned live inputs match exactly. At 1440×600 with all 19 real projects, the old
+document grew to 1134 px. The corrected public document remains 600 px while the
+menu scrolls, including at its bottom boundary. Five candidate/public long-list
+viewports and real-data desktop/phone checks pass with no page errors or writes.
+27 preserved-feature regressions and five preservation-gate tests pass.
+
+The new source-preservation gate rejects the exact later release that dropped
+scrolling; the workflow/runbook now require it before frontend publication.
+The 88,674,581-byte software recovery package passed full extraction and Desktop B
+independent readback. Both paired roots retain 926 hashed assets. All five service
+identities, backend hash, DB device/inode and 99 migrations remain unchanged.
+No backend restart, DB restore, device action or inference. Existing tabs need a
+reload. Operator acceptance is pending; browser/device checks are not equivalent.
+See [release record](VK_SCROLLING_PROJECTS_DEPLOYMENT.md), [manifest](LIVE_DEPLOYMENT.json)
+and [handoff](HANDOFF.md).
+
+# Initial scrolling publication (later superseded) — 2026-11-02
 
 The scrolling projects menu is live at `https://vibe.local`, published at
 17:28:06 UTC. Public JS is `index-CRD24Nkw.js`; CSS is `index-BDlsFLgm.css`.

@@ -13,7 +13,11 @@ Its old service names, install paths and commands are not current authority.
    from 0.1.42. Preserve dirty canonical work; branch from current operator staging
    in a clean SSD worktree and record included/excluded code explicitly.
 2. Reconcile private history bindings, live UI/connector changes, schema and
-   generated types. Verify source catalogs. Preserve startup identity, capacity,
+   generated types. Verify source catalogs. For frontend publication, run
+   `scripts/deployment/check_frontend_preservation.py` against the currently
+   served source/artifact and candidate; allow only the reviewed changed paths.
+   Refuse missing or unexpected live-input changes and recheck the pointer before
+   activation. Preserve startup identity, capacity,
    approval and Recommend controls. `VK_CODEX_MAX_ACTIVE_EXECUTIONS=8` remains
    required; current cleanup flags and selected environment are in the manifest.
 3. Check SSD mount/free space and active build ownership. Normal shared target:

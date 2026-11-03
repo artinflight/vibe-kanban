@@ -1,3 +1,21 @@
+# Dot lifetime supplement — prepared 2026-11-03
+
+The owner requests registrations active until explicitly revoked, without renewal.
+The five-module candidate and tests are prepared; no live change was made.
+Explicit action-time confirmation is still required for the persistent-access
+conversion. [Exact proposal and confirmation boundary](VK_DOT_NO_EXPIRY_PROPOSAL.md).
+The restored delivery and prompt-independence facts below remain current.
+
+# Dot delivery connector repair — 2026-11-03
+
+Both existing finite registrations were restored without changing scope or credentials.
+Eight retained events were accepted. Agent launch now reports optional notification
+setup independently; one original blocked request resumed in its original context.
+No Vibe/backend/frontend restart or replacement workspace occurred. Finite leases
+expire 10 November 10:00:51 UTC; platform renewal of both triggers remains required.
+See [repair evidence](VK_DOT_DELIVERY_RESTORATION.md). The frontend records below
+remain current and were not changed by this connector-only repair.
+
 # Current public frontend — 2026-11-02
 
 The frontend correction is published at `https://vibe.local`. Deliberate opening,

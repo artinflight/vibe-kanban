@@ -1,0 +1,70 @@
+diff --git a/scripts/dot-connector/issue_workflow.py b/scripts/dot-connector/issue_workflow.py
+index fb944284d..44d53705c 100644
+--- a/scripts/dot-connector/issue_workflow.py
++++ b/scripts/dot-connector/issue_workflow.py
+@@ -41 +41,2 @@ TOOLS = [tool('create_issue', FIELDS,
+-              'native receipts and cannot start another workspace. Unknown launch is not success. Uses existing Recommend policy.', SELECTION),
++              'native receipts and cannot start another workspace. Unknown launch is not success. Uses existing Recommend policy. '
++              'Local authorised issue/chat scope is required; unavailable notifications do not block launch and delivery is reported separately.', SELECTION),
+@@ -165 +166,4 @@ class Workflow:
+-            return read()
++            value = read()
++            return None if value is None else dict(value, notifications={
++                'status': 'not_observed', 'delivery': 'not_confirmed',
++                'reason': 'native_receipt_is_execution_evidence_only'})
+@@ -198 +202,6 @@ class Workflow:
+-        self.api.chat_scope(owner, value, read)
++        chat = self.api.chat_scope(owner, value, read)
++        if (not isinstance(chat, dict) or chat.get('project_id') != pid
++                or chat.get('issue_id') != value['issue_id']
++                or chat.get('workspace_id') != value['workspace_id']):
++            raise Blocked('local_chat_scope_not_verified')
++        uid(chat.get('thread_id'))
+@@ -204 +213 @@ class Workflow:
+-            return dict(value, status='linked')
++            return self.finish(args, value, chat, 'linked')
+@@ -213,2 +222,27 @@ class Workflow:
+-            return self.api.note(args, dict(value, status='started'))
+-        return dict(value, status='launch_settled' if value['phase'] == 'settled' else 'launch_unknown' if value['phase'] == 'launching' else 'reserved')
++            return self.finish(args, value, chat, 'started')
++        return self.finish(args, value, chat, 'launch_settled' if value['phase'] == 'settled' else 'launch_unknown' if value['phase'] == 'launching' else 'reserved')
++
++    def finish(self, args, value, chat, status):
++        # Native dispatch has already returned. Optional notification work must
++        # never reinterpret its receipt as a failed/unknown agent launch. Scope
++        # and owner checks, chat-ready and the native launch claim remain strict.
++        value = dict(value, status=status, chat=dict(chat, status='linked'))
++        if status == 'started':
++            try:
++                value = self.api.note(args, value)
++            except Exception:
++                value['dispatch_note'] = {'state': 'unavailable',
++                                          'reason': 'inspect_existing_dispatch_receipt'}
++        try:
++            value['notifications'] = self.api.notifications(chat)
++        except Exception as error:
++            reasons = {
++                'Existing unique authorized chat subscription required; filters unchanged':
++                    'no_unique_active_authorized_subscription',
++                'Explicit destination migration required':
++                    'explicit_destination_migration_required',
++            }
++            value['notifications'] = {
++                'status': 'unavailable', 'delivery': 'not_confirmed',
++                'reason': reasons.get(str(error), 'notification_setup_unavailable')}
++        return value
+@@ -277 +310,0 @@ class Runtime:
+-        from scope_migration import delivery_binding
+@@ -279 +312,11 @@ class Runtime:
+-        delivery_binding(self.store, self.Principal(owner, 'dot'), current['id'])
++        return {'thread_id': current['id'], 'project_id': project,
++                'issue_id': issue, 'workspace_id': workspace}
++
++    def notifications(self, chat):
++        # Availability is independent of native dispatch and is not a webhook
++        # delivery receipt. Existing filters/lifetimes/explicit migration apply.
++        from scope_migration import delivery_binding
++        owner = self.hook.owner()
++        self.authorize(chat['project_id'])
++        binding = delivery_binding(self.store, self.Principal(owner, 'dot'), chat['thread_id'])
++        return dict(binding, status='configured', delivery='not_confirmed')

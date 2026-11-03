@@ -88,7 +88,9 @@ class Events:
             previous=old["secret"] if old and old["secret"]!=delivery["secret"] else None
             self.db.execute("INSERT INTO sidechat_subscriptions VALUES (?,?,?,?,?,?,1,?,?) ON CONFLICT(id) DO UPDATE SET secret=excluded.secret,expires=excluded.expires,active=1,previous_secret=excluded.previous_secret,rotation_until=excluded.rotation_until",
                 (sid,principal.owner,filters,delivery["url"],delivery["secret"],expires,previous,self.clock()+300 if previous else None))
-        return {"id":sid,"refreshBefore":__import__("datetime").datetime.fromtimestamp(expires,__import__("datetime").timezone.utc).isoformat(),"cursor":None,"truncated":False}
+        # Renew before the actual deadline; do not extend finite authority.
+        renew_before = expires - min(3600, ttl / 1000 / 5)
+        return {"id":sid,"refreshBefore":__import__("datetime").datetime.fromtimestamp(renew_before,__import__("datetime").timezone.utc).isoformat(),"cursor":None,"truncated":False}
 
     def _matches(self, sub, thread):
         filters=json.loads(sub["filters"])

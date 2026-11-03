@@ -1,29 +1,33 @@
-# Visible reply read correction — 2026-11-02
+# No-expiry candidate — action-time confirmation pending
 
-Live frontend source `9a45a3abf2d99eb44c14ef7a744d6f7bf0fbb73e`; JS `index-DqfYW9pf.js`,
-CSS `index-C-pTuj_j.css`, version 0.1.42. Deliberate opening/reselection/reading and
-jump to latest clear a loaded visible reply/error after 350 ms of foreground focus,
-once running/approval turns settle. Background return/polling/new output alone
-preserve unread. Bulk-read fallback remains. Reload all existing tabs/devices.
+Read [the exact proposal](VK_DOT_NO_EXPIRY_PROPOSAL.md) before live action.
+Candidate/manifest: `/mnt/vk-storage/dot-no-expiry-20261103/`. No live code,
+registration, binding or service changed. The recovered user constraint requires
+action-time confirmation of the exact duration expansion; preparation is not
+consent. Current leases still expire 10 November 10:00:51 UTC. Preserve all newer
+shared source and verify the full package baseline before any cutover.
 
-39 mounted regressions, frontend types/focused lint/format/ops and build pass.
-Four candidate/four served layout cases and candidate/served API-verified running
-turn guards pass with zero live writes. Earlier premature running reads were
-reproduced; the rejected filtered-marker candidate was never published.
+# Dot delivery restoration pickup — 2026-11-03
 
-All five services/backend hash/DB inode and 99 migrations are unchanged; 874
-assets retained in both paired roots. Desktop B recovery/restore pass. Evidence:
-`/mnt/vk-storage/vk-disappearing-unread-20261102-3ad7/fix-release-4/`.
-Never reuse consumed or rejected controllers; no backend restart or data restore.
+Both original subscriptions renewed with signed callback verification; scope,
+credentials and identity retained. Eight old events accepted. Original reserved
+request started once using its existing issue/workspace/session/request identity.
+Only connector reloaded; all other service identities preserved.
 
-[PR #288](https://github.com/artinflight/vibe-kanban/pull/288) is the staging rebase integration
-authority through its final checks and merge event. Prior full baseline 41493120165
-passes; Rust source is unchanged. Private remote checks skip without a deploy key.
-Main promotion is separate. Preserve unrelated dirty canonical work.
+[Source, live pins, acceptance and limits](VK_DOT_DELIVERY_RESTORATION.md).
+Private evidence: `/mnt/vk-storage/dot-delivery-recovery-20261103/`.
+The new read-only health field is on the existing registered reconciliation tool.
+All prior status fields and 1,300 original messages were verified unchanged.
+Finite registrations expire 10 November 10:00:51 UTC. Advance renewal response
+now allows a margin; platform must renew both triggers. Permanent-expiry proposal
+is uninstalled and no platform automation editing route is available here.
 
-The unchanged seen endpoint clears all workspace sessions and retains an arrival
-race. Automatic review rejected optional live-state mutation without exact per-turn
-restoration. No live persistence, historical unread reconstruction, provider call
-or physical-device test is claimed. See VK_DISAPPEARING_UNREAD_FIX.md/manifest.
+Do not retry the already-started original request, launch a validation agent,
+restore old SQLite over newer writes, overwrite the live private adapter, or bundle
+backend/UI release changes. Public PR is a source-only runtime-overlay handoff.
 
 Full historical archive: [HANDOFF_HISTORY_20261017.md](HANDOFF_HISTORY_20261017.md).
+
+Source handoff: [PR #289](https://github.com/artinflight/vibe-kanban/pull/289).
+Hosted repair tests pass; a recovery inventory check fails on seven unchanged
+staging frontend files. See the repair record before treating all CI as green.

@@ -2551,3 +2551,13 @@ revision 17678647aeeb467868d2152da25676fd682f2b85 exactly. The recovery workflow
 now checks that recorded snapshot rather than mutable staging; every original
 public/deployed hash is unchanged. Current frontend preservation is checked by
 the separate new gate. No source validation is skipped or hash weakened.
+
+## 2026-11-03 — scrolling staging PR #292
+
+PR #292 targets staging with the requested rebase method. Exact accepted scrolling
+files remain preserved through rebase onto c3c1dc9d6. Full hosted baseline is run
+41740959926 on f75c2af9d; subsequent source-code bytes are unchanged. Corrected
+historical-custody recovery run 41741243530 passes on a452d74ca. Final PR checks
+and merge event govern integration status and rebased IDs. Original deployed
+source/receipts and the later preserving live frontend remain unchanged. Main
+promotion is separate. Local Rust baseline remains blocked by offline serde.

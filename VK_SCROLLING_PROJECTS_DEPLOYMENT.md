@@ -63,7 +63,9 @@ Receipt root: `/mnt/vk-storage/vk-scrolling-projects-20261103-9cb7-correction`. 
 Live frontend is `paired/candidate`; immediate fallback is `paired/fallback`.
 Future cutback requires fresh pointer/identity/hash checks and never restores old
 data. The operator separately authorized source push and PR/rebase integration into
-staging after acceptance. Main promotion remains separate.
+staging after acceptance. [PR #292](https://github.com/artinflight/vibe-kanban/pull/292)
+is the integration record; its final checks and merge event govern the result
+and rebased IDs. The original feature/deployment IDs above remain immutable. Main promotion remains separate.
 
 # Historical initial publication — 2026-11-02
 

@@ -442,6 +442,10 @@
     "operator_acceptance": "Good, open pr and rebase merge",
     "original_feature_commit": "d0496eb1d4d6904aa69eb6b087d29c39ece488f0",
     "current_live_preserves_scrolling_files_exactly": true,
-    "runtime_changed_by_integration": false
+    "runtime_changed_by_integration": false,
+    "pull_request": "https://github.com/artinflight/vibe-kanban/pull/292",
+    "integration_authority": "PR #292 final checks and merge event; original deployed source remains immutable",
+    "full_hosted_baseline": "https://github.com/artinflight/vibe-kanban/actions/runs/41740959926",
+    "recovery_contracts": "https://github.com/artinflight/vibe-kanban/actions/runs/41741243530"
   }
 }

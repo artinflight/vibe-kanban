@@ -61,6 +61,19 @@ and no backup exception was used. The pointer switch took 0.012 seconds. All fiv
 service identities, backend hash and database identity/99 migrations remain
 unchanged. See VK_READ_LATER_DEPLOYMENT.md and LIVE_DEPLOYMENT.json.
 
+Latest refinement: `b1f609719` makes the shared action icon-only with accessible
+label/tooltip, places workspace/project/saved-issue actions in the existing row,
+and moves Kanban actions into its existing header. Deployed 2026-11-04T20:16:46.412428+00:00.
+The first Read Later build accidentally enabled VITE_DOT_SIDECHAT; the preceding
+visibility bundle compiled it disabled. Stored Dot notices resurfaced because
+polling was re-enabled, not because acknowledgement records were reset. The
+correction explicitly restores VITE_DOT_SIDECHAT=0; three-release disposable
+browser proof is in `/mnt/vk-storage/vk-read-later-20261104-f57c/inline-icons/dot-build-setting-browser.json`.
+Current source/output manifests, candidate/public desktop+phone icon geometry,
+zero polling/read/write assertions, scrolling cases and independent Desktop B
+recovery receipts are under `/mnt/vk-storage/vk-read-later-20261104-f57c/inline-icons`. All focused types/lint, 11+15+10 interaction
+and five preservation tests pass. No backend/data mutation or service restart.
+
 Next: operator UI acceptance and optional staging integration are separate. No
 further deployment is pending. A staging PR still requires the full repository
 baseline and branch freshness; any later publication needs a fresh preservation

@@ -1,31 +1,36 @@
-# Current frontend — Read Later, 2026-11-04
+# Current frontend — inline Read Later, 2026-11-04
 
-Read Later is live at <https://vibe.local>, published at 15:11:24 UTC. Reload
-existing tabs. Package version remains 0.1.42; current entry assets are JS
-`index-By-1MIma.js` and CSS `index-hk6iCElX.css`.
+Read Later is live at <https://vibe.local> with inline bookmark icons, published
+at 2026-11-04T20:16:46.412428+00:00. Reload existing tabs. Version remains 0.1.42;
+entry assets: JS `index-BT-0CtGx.js` and CSS `index-CIK7OAX6.css`.
 
-The active public pointer resolves to
-`/mnt/vk-storage/vk-read-later-20261104-f57c/deployment/paired/candidate`;
-`paired/fallback` retains the previous visibility frontend. The release applies
-feature `d91ae4f69` to the exact prior live source, preserving visibility,
-scrolling, notice and unread fixes. All 1,319 prior source inputs were checked;
-16 reviewed existing files changed and five files were added. The 417-file build
-and both paired roots retain 1,031 old/new hashed assets.
+The active pointer resolves to `/mnt/vk-storage/vk-read-later-20261104-f57c/inline-icons/paired/candidate`.
+Feature `b1f609719` changes six reviewed UI files on the exact current live
+source; all other pinned inputs are byte-identical. All 1,324 inputs and 417
+outputs are hashed; paired roots retain 1,084 assets.
+Visibility, scrolling and unread protections remain preserved.
 
-The bounded build, 11 Read Later, 15 conversation-read, 10 notice and five
-preservation-gate tests passed. Packaged and public Read Later browser checks
-passed at 1440 and 393 px; five scrolling layouts passed in each phase. All
-application writes were intercepted; no production read flags were changed.
-The 107,802,193-byte software archive passed a full isolated restore with 4,853
-files checked and independent Desktop B readback. Full Rust/hosted baseline,
-physical devices and provider-inference QA were not run for this frontend-only
-publication. All five live service identities, backend hash and database
-inode/99 migrations stayed unchanged; no restart or database restore.
+The first Read Later publication at 15:11 accidentally built with
+`VITE_DOT_SIDECHAT=1`, whereas the preceding visibility release compiled polling
+disabled. That exposed stored notices; no acknowledgement reset was performed.
+The correction explicitly restores `VITE_DOT_SIDECHAT=0`. A three-release browser
+comparison confirms no polling before the feature, polling in its first release,
+and no polling in this correction. Stored messages/acknowledgements are untouched.
+
+UI/web-core/local-web types, focused lint, required formatting/ops, 11 Read Later,
+15 conversation-read, 10 notice and five preservation regressions pass. Candidate
+and live browser checks pass desktop/phone icon-only same-row geometry, defer,
+persistence, restore, zero Dot polls, zero read/application writes and no errors.
+Five scrolling layouts pass in both phases. Recovery archive (112,244,120
+bytes, 4,966 verified files) passed full isolated restore and
+independent Desktop B readback before publication. Service identities, backend
+hash and database inode/99 migrations are unchanged; no restart or DB restore.
+No full Rust/hosted PR baseline, physical-device or provider-inference QA was run.
 
 [LIVE_DEPLOYMENT.json](LIVE_DEPLOYMENT.json) and
-[Read Later deployment](VK_READ_LATER_DEPLOYMENT.md) hold exact provenance,
-recovery, validation and limits. Git integration is separate: local commits only,
-no push/PR/main promotion. Historical source IDs below remain immutable.
+[Read Later deployment](VK_READ_LATER_DEPLOYMENT.md) record exact evidence.
+Local commits only; no push, PR or main promotion. Historical source IDs below
+remain immutable.
 
 # Previous source integration and production — 2026-11-03
 

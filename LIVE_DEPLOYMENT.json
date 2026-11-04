@@ -32,12 +32,12 @@
   "history_proxy_port": 5640,
   "gateway_port": 4720,
   "public_frontend_pointer": "/home/mcp/.local/share/vibe-kanban/frontend-dist/current",
-  "public_frontend_release": "/mnt/vk-storage/vk-read-later-20261104-f57c/deployment/paired/candidate",
+  "public_frontend_release": "/mnt/vk-storage/vk-read-later-20261104-f57c/inline-icons/paired/candidate",
   "public_assets": [
-    "/assets/index-By-1MIma.js",
-    "/assets/index-hk6iCElX.css"
+    "/assets/index-BT-0CtGx.js",
+    "/assets/index-CIK7OAX6.css"
   ],
-  "frontend_routing_note": "Read Later is live: browser-local, host/user-scoped deferral preserves unread state; ordered Attention, Read Later, Running, completed/idle history. Preserves current visibility, scrolling, notice and unread fixes. Reload existing tabs. Backend/API/DB/services unchanged.",
+  "frontend_routing_note": "Read Later uses accessible inline bookmark icons. Dot polling restored to the pre-Read-Later disabled setting; first release accidentally enabled it. Existing stored acknowledgements untouched. Reload tabs. Backend/API/DB/services unchanged.",
   "selected_runtime_environment": {
     "HOST": "127.0.0.1",
     "PORT": "5621",
@@ -145,14 +145,15 @@
   },
   "previous_live_release_evidence": "/mnt/vk-storage/vk-new-build-repair-20261029",
   "frontend_build": {
-    "feature_commit": "d91ae4f69c75c6076a0f021223c0a4efae9fbe55",
-    "preserved_live_frontend": "/mnt/vk-storage/vk-invisible-workspaces-20261103-75db/paired/candidate",
-    "method": "Read Later patch applied to byte-verified live source; bounded tsc && vite production build, one CPU, 5 GiB service memory cap",
-    "file_manifest": "/mnt/vk-storage/vk-read-later-20261104-f57c/deployment/frontend-artifact.json",
-    "input_file_manifest": "/mnt/vk-storage/vk-read-later-20261104-f57c/deployment/source-composition.json",
+    "feature_commit": "b1f60971908611058f3f1d066e6fdd7fcbf7d58e",
+    "preserved_live_frontend": "/mnt/vk-storage/vk-read-later-20261104-f57c/deployment/paired/candidate",
+    "method": "Six-file inline icon patch on exact live source; bounded tsc && vite build; explicit VITE_DOT_SIDECHAT=0 restores pre-feature runtime behavior",
+    "file_manifest": "/mnt/vk-storage/vk-read-later-20261104-f57c/inline-icons/frontend-artifact.json",
+    "input_file_manifest": "/mnt/vk-storage/vk-read-later-20261104-f57c/inline-icons/source-composition.json",
     "source_files": 1324,
     "verified_manifest_files": 417,
-    "retained_asset_count": 1031,
+    "retained_asset_count": 1084,
+    "VITE_DOT_SIDECHAT": "0",
     "hosted_ci": false
   },
   "recovery": {
@@ -166,13 +167,13 @@
   },
   "last_readonly_verification": {
     "status": "passed",
-    "UTC": "2026-11-04T15:13:34.814835+00:00",
-    "receipt": "/mnt/vk-storage/vk-read-later-20261104-f57c/deployment/live-after-verified.json",
+    "UTC": "2026-11-04T20:17:34.667711+00:00",
+    "receipt": "/mnt/vk-storage/vk-read-later-20261104-f57c/inline-icons/live-after-verified.json",
     "database_and_backend_identity_preserved": true,
-    "public_browser": "/mnt/vk-storage/vk-read-later-20261104-f57c/deployment/browser-live/browser-results.json",
-    "validation_scope": "trusted HTTPS/assets/API capabilities; five unchanged service identities, backend executable and database inode/99 migrations; Read Later desktop/phone acceptance and five scrolling layouts; zero live read-state/application writes"
+    "public_browser": "/mnt/vk-storage/vk-read-later-20261104-f57c/inline-icons/browser-live/browser-results.json",
+    "validation_scope": "Trusted HTTPS/assets/API capabilities; unchanged services/backend/database inode/99 migrations; desktop/phone inline-icon geometry, zero Dot notification polls, defer/reload/restore and five scrolling layouts; zero state writes"
   },
-  "frontend_deployed_at_utc": "2026-11-04T15:11:24.760627+00:00",
+  "frontend_deployed_at_utc": "2026-11-04T20:16:46.412428+00:00",
   "previous_frontend_build": {
     "source_commit": "800011bd573e2869d6ea4c0e5bfba4d9046d9cbe",
     "feature_commit": "800011bd573e2869d6ea4c0e5bfba4d9046d9cbe",
@@ -185,21 +186,21 @@
     "hosted_ci": false
   },
   "frontend_only_deployment": {
-    "published_at_utc": "2026-11-04T15:11:24.760627+00:00",
-    "feature_commit": "d91ae4f69c75c6076a0f021223c0a4efae9fbe55",
-    "publication_receipt": "/mnt/vk-storage/vk-read-later-20261104-f57c/deployment/activation.json",
-    "candidate": "/mnt/vk-storage/vk-read-later-20261104-f57c/deployment/paired/candidate",
-    "fallback": "/mnt/vk-storage/vk-read-later-20261104-f57c/deployment/paired/fallback",
-    "pointer_switch_seconds": 0.012086095055565238,
+    "published_at_utc": "2026-11-04T20:16:46.412428+00:00",
+    "feature_commit": "b1f60971908611058f3f1d066e6fdd7fcbf7d58e",
+    "publication_receipt": "/mnt/vk-storage/vk-read-later-20261104-f57c/inline-icons/activation.json",
+    "candidate": "/mnt/vk-storage/vk-read-later-20261104-f57c/inline-icons/paired/candidate",
+    "fallback": "/mnt/vk-storage/vk-read-later-20261104-f57c/inline-icons/paired/fallback",
+    "pointer_switch_seconds": 0.0072414419846609235,
     "Desktop_B_recovery_verified": true,
-    "recovery_archive_sha256": "9e07c01905243b36e4cdfcc6ea999c9710b61e0424def2bed7a6becdce06c95f",
+    "recovery_archive_sha256": "977e0018736873b8ad41d6cc677915008dcb3410c0c449497f4adc54a5ae2ca8",
     "backend_restarted": false,
     "database_mutations": false,
     "seen_unread_requests_sent": 0,
     "served_browser_cases": 2,
-    "served_browser_receipt": "/mnt/vk-storage/vk-read-later-20261104-f57c/deployment/browser-live/browser-results.json",
+    "served_browser_receipt": "/mnt/vk-storage/vk-read-later-20261104-f57c/inline-icons/browser-live/browser-results.json",
     "preserved_scrolling_browser_cases": 5,
-    "preserved_scrolling_browser_receipt": "/mnt/vk-storage/vk-read-later-20261104-f57c/deployment/scrolling-browser-live/results.json",
+    "preserved_scrolling_browser_receipt": "/mnt/vk-storage/vk-read-later-20261104-f57c/inline-icons/scrolling-browser-live/results.json",
     "operator_acceptance_pending": true
   },
   "previous_frontend_only_deployment": {
@@ -477,6 +478,49 @@
     "native_route_qualification_gap": "Cached Rust proc-macro dependency E0463; Rust tests not executed"
   },
   "read_later_deployment": {
+    "feature_commit": "b1f60971908611058f3f1d066e6fdd7fcbf7d58e",
+    "source_composition": "/mnt/vk-storage/vk-read-later-20261104-f57c/inline-icons/source-composition.json",
+    "published_at_utc": "2026-11-04T20:16:46.412428+00:00",
+    "browser_local_preferences": true,
+    "cross_device_sync": false,
+    "existing_tabs_must_reload": true,
+    "live_data_mutations": false,
+    "backend_changes": false,
+    "source_git_integration": "Local feature commit; not pushed or opened as a PR",
+    "receipt": "/mnt/vk-storage/vk-read-later-20261104-f57c/inline-icons/activation.json",
+    "inline_icons": true,
+    "dot_build_setting_correction": "/mnt/vk-storage/vk-read-later-20261104-f57c/inline-icons/dot-build-setting-browser.json"
+  },
+  "frontend_build_before_inline_icons": {
+    "feature_commit": "d91ae4f69c75c6076a0f021223c0a4efae9fbe55",
+    "preserved_live_frontend": "/mnt/vk-storage/vk-invisible-workspaces-20261103-75db/paired/candidate",
+    "method": "Read Later patch applied to byte-verified live source; bounded tsc && vite production build, one CPU, 5 GiB service memory cap",
+    "file_manifest": "/mnt/vk-storage/vk-read-later-20261104-f57c/deployment/frontend-artifact.json",
+    "input_file_manifest": "/mnt/vk-storage/vk-read-later-20261104-f57c/deployment/source-composition.json",
+    "source_files": 1324,
+    "verified_manifest_files": 417,
+    "retained_asset_count": 1031,
+    "hosted_ci": false
+  },
+  "frontend_only_deployment_before_inline_icons": {
+    "published_at_utc": "2026-11-04T15:11:24.760627+00:00",
+    "feature_commit": "d91ae4f69c75c6076a0f021223c0a4efae9fbe55",
+    "publication_receipt": "/mnt/vk-storage/vk-read-later-20261104-f57c/deployment/activation.json",
+    "candidate": "/mnt/vk-storage/vk-read-later-20261104-f57c/deployment/paired/candidate",
+    "fallback": "/mnt/vk-storage/vk-read-later-20261104-f57c/deployment/paired/fallback",
+    "pointer_switch_seconds": 0.012086095055565238,
+    "Desktop_B_recovery_verified": true,
+    "recovery_archive_sha256": "9e07c01905243b36e4cdfcc6ea999c9710b61e0424def2bed7a6becdce06c95f",
+    "backend_restarted": false,
+    "database_mutations": false,
+    "seen_unread_requests_sent": 0,
+    "served_browser_cases": 2,
+    "served_browser_receipt": "/mnt/vk-storage/vk-read-later-20261104-f57c/deployment/browser-live/browser-results.json",
+    "preserved_scrolling_browser_cases": 5,
+    "preserved_scrolling_browser_receipt": "/mnt/vk-storage/vk-read-later-20261104-f57c/deployment/scrolling-browser-live/results.json",
+    "operator_acceptance_pending": true
+  },
+  "read_later_deployment_before_inline_icons": {
     "feature_commit": "d91ae4f69c75c6076a0f021223c0a4efae9fbe55",
     "source_composition": "/mnt/vk-storage/vk-read-later-20261104-f57c/deployment/source-composition.json",
     "published_at_utc": "2026-11-04T15:11:24.760627+00:00",

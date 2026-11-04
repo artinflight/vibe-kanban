@@ -33,3 +33,11 @@ VK_SCROLLING_PROJECTS_DEPLOYMENT.md.
 
 Prior continuity: [pre-reconciliation record](deployment-history/20261030-before-reconciliation/STREAM.md)
 and [full historical archive](STREAM_HISTORY_20261017.md).
+
+The operator requested icon-only Read Later controls inline with each notification.
+Commit `b1f609719` implements this on workspaces, project notices, saved issues
+and Kanban headers. Published 2026-11-04T20:16:46.412428+00:00; no extra action row.
+The operator also reported resurfaced cleared Dot notices. Exact bundle/browser
+comparison found accidental build-flag drift (disabled before, enabled in first
+Read Later release). The correction restores VITE_DOT_SIDECHAT=0 without modifying
+stored acknowledgement state. Future builds must preserve runtime flags too.

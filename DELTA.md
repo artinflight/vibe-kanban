@@ -2592,3 +2592,16 @@ lane was respected; no backup exception, backend restart, database restore,
 agent launch, device work, push or PR. Exact provenance: LIVE_DEPLOYMENT.json and
 VK_READ_LATER_DEPLOYMENT.md. All five services, backend hash and DB identity/99
 migrations unchanged. Native-provider inference/full hosted baseline not run.
+
+## 2026-11-04 — inline Read Later / Dot flag correction
+
+- `b1f609719`: accessible icon-only controls share the existing notification row
+  and Kanban header; no added action row.
+- Published 2026-11-04T20:16:46.412428+00:00 from exact live source plus six-file patch.
+- Confirmed accidental VITE_DOT_SIDECHAT drift: previous disabled, first Read Later
+  enabled. Restored disabled behavior; no stored acknowledgements/read flags changed.
+- Types/lint/format/ops, 11+15+10 interactions, five preservation regressions,
+  candidate/public desktop+phone geometry and five scrolling layouts pass.
+- Full isolated software recovery and independent Desktop B readback verified;
+  backend/services/database unchanged. Exact evidence in VK_READ_LATER_DEPLOYMENT.md
+  and LIVE_DEPLOYMENT.json. Local commits only; no push/PR.

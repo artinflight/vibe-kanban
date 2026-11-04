@@ -1,4 +1,61 @@
-# Read Later frontend deployment — 2026-11-04
+# Inline icon correction — 2026-11-04
+
+Published **2026-11-04T20:16:46.412428+00:00** at <https://vibe.local>; reload existing tabs.
+Version 0.1.42, JS `index-BT-0CtGx.js`, CSS `index-CIK7OAX6.css`.
+Source commit `b1f60971908611058f3f1d066e6fdd7fcbf7d58e` changes six UI files on the exact first Read Later live
+source. Inline bookmark controls keep tooltip, keyboard label, pressed state and
+a 44 px phone touch target. Workspace/project/saved-issue actions share the row;
+Kanban actions occupy the existing header, and inbox/list actions remain inline.
+
+## Dot notification regression
+
+The first deployment below accidentally built with `VITE_DOT_SIDECHAT=1`.
+The preceding visibility bundle compiled notification polling disabled. Enabling
+it exposed stored Dot notices; deployment never reset their acknowledgements.
+Source hashes alone did not catch this build-setting change. This correction
+explicitly uses `VITE_DOT_SIDECHAT=0`, restoring the previous runtime setting
+without bulk-clearing, marking read or changing any stored notification state.
+A disposable browser compared all three packaged releases: request counts were
+0, 1 and 0 respectively. The expected disabled behavior is now asserted by the
+candidate/live browser test and publication controller, and documented in
+VK_WORKFLOW.md. This does not claim that saved Dot notices were acknowledged.
+
+## Current validation and recovery
+
+All 1,324 pinned inputs were checked; only the six reviewed files differ. The
+417-file build passed in 3m34s with one CPU, 5 GiB cap, 1.9 GiB peak and no swap.
+Paired roots retain 1,084 hashed assets. Source preservation
+passed before build, after build and immediately before activation.
+
+UI/web-core/local-web types, focused ESLint, formatting/ops, 11 Read Later,
+15 conversation-read, 10 notice and five preservation regressions pass. Candidate
+and public HTTPS browser tests pass at 1440/393 px: icon-only same-row geometry,
+defer/reload/restore, no overflow/errors, zero Dot polls and zero read/application
+writes. Scrolling wheel/touch acceptance passes five layouts in both phases.
+Trusted public health/assets and backend/database identity checks pass.
+Full Rust/hosted PR baseline, physical devices, ordinary user sends and real
+provider execution were not exercised by this frontend-only correction.
+
+Evidence: `/mnt/vk-storage/vk-read-later-20261104-f57c/inline-icons`. The 112,244,120-byte software archive passed a
+full isolated restore (4,966 files) and independent Desktop B
+readback before publication. SHA-256 `977e0018736873b8ad41d6cc677915008dcb3410c0c449497f4adc54a5ae2ca8`.
+Atomic switch: 0.007241 seconds. All five service identities,
+backend executable hash and database inode/99 migrations remained unchanged.
+No restart, DB restore, notification write, device action, push or PR. The paired
+fallback retains the immediately previous index, including its known flag drift;
+any fallback requires fresh ownership checks. Existing preview routes are intact.
+
+Receipts: `activation.json`, `source-composition.json`, `frontend-artifact.json`,
+`preservation-after-build.json`, `pair-receipt.json`, `recovery-restore-check.json`,
+`Desktop-B-recovery-verified.json`, `dot-build-setting-browser.json`,
+`browser-candidate-verified/browser-results.json`, `browser-live/browser-results.json`,
+`scrolling-browser-candidate/results.json`, `scrolling-browser-live/results.json`,
+and `live-before-verified.json`/`live-after-verified.json` in the evidence root.
+
+The following is historical; its feature behavior remains, while its flag setting,
+entry assets and publication identity are superseded by this correction.
+
+## Original Read Later frontend deployment — 2026-11-04
 
 Read Later was published at **2026-11-04T15:11:24.760627+00:00** to
 <https://vibe.local>. Existing tabs must reload. Package version stays 0.1.42;

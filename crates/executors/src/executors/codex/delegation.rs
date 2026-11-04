@@ -23,7 +23,8 @@ use crate::{
 };
 
 pub const TOOL: &str = "vk_delegate";
-pub const INSTRUCTIONS: &str = "AutoSwitch controls delegation through vk_delegate. Native collaboration tools are disabled for this execution. Delegate only independent, substantial work or a useful batch; perform tiny operations yourself. Supply a compact requirements/decisions brief and repository-relative scope paths. Do not copy conversation history. Scope paths are ownership declarations, not permission to ignore repository instructions. Use start, then status to collect results; cancel work that has become obsolete. Do not finish while a child remains active. Use follow_up on the same task for corrections; observable failure can raise its model at that boundary if the operator permits escalation. Do not relaunch duplicates under new task names or invoke another Codex CLI to evade these controls. You own review, integration and final acceptance. Children cannot delegate or own native goals. Do not delegate while a native goal owns this execution.";
+pub const INSTRUCTIONS: &str = include_str!("delegation_instructions.md");
+
 static ACTIVE: AtomicUsize = AtomicUsize::new(0);
 static ADMISSION: StdMutex<()> = StdMutex::new(());
 pub fn active_count() -> usize {
@@ -944,6 +945,15 @@ mod tests {
     }
     #[tokio::test]
     async fn delegation_cancel_dispatch_keeps_reader_and_parent_alive() {
+        bounded_specialist_fixture(false).await;
+    }
+
+    #[tokio::test]
+    async fn active_goal_delegates_bounded_specialist_without_transferring_ownership() {
+        bounded_specialist_fixture(true).await;
+    }
+
+    async fn bounded_specialist_fixture(with_goal: bool) {
         use codex_app_server_protocol::{JSONRPCNotification, JSONRPCRequest};
         use tokio_util::sync::CancellationToken;
 
@@ -964,6 +974,8 @@ for line in sys.stdin:
         assert p['model'] in ('gpt-5.6-luna','gpt-6.1-sol')
         assert p['config']['features.multi_agent'] is False and p['config']['features.multi_agent_v2'] is False
         assert 'PARENT_PRIVATE_HISTORY' not in json.dumps(p)
+        assert p['config']['features.goals'] is False
+        assert not p.get('dynamicTools')
         print(json.dumps({'id':d['id'],'result':{'thread':{'id':'11111111-1111-4111-8111-111111111111'},'model':model,'reasoningEffort':effort,'modelProvider':'openai','serviceTier':None}}),flush=True)
     elif d.get('method')=='thread/settings/update':
         p=d['params']; model,effort=p['model'],p['effort']
@@ -977,6 +989,8 @@ for line in sys.stdin:
         print(json.dumps({'method':'turn/started','params':{'threadId':p['threadId'],'turn':{'id':'native-fixture-turn','status':'inProgress'}}}),flush=True)
         print(json.dumps({'method':'thread/tokenUsage/updated','params':{'threadId':p['threadId'],'turnId':'native-fixture-turn','tokenUsage':{'last':{'inputTokens':42,'cachedInputTokens':11,'outputTokens':7,'reasoningOutputTokens':2}}}}),flush=True)
         print(json.dumps({'method':'turn/completed','params':{'threadId':p['threadId'],'turn':{'id':'native-fixture-turn','status':'completed'}}}),flush=True)
+    elif d.get('method')=='turn/steer':
+        print(json.dumps({'id':d['id'],'result':{'turnId':d['params']['expectedTurnId']}}),flush=True)
     elif d.get('method')=='turn/interrupt':
         print(json.dumps({'id':d['id'],'result':{}}),flush=True)
         print(json.dumps({'method':'turn/completed','params':{'threadId':'child','turn':{'id':'child-turn','status':'interrupted'}}}),flush=True)
@@ -1003,8 +1017,15 @@ for line in sys.stdin:
         );
         client.connect(peer.clone());
         client.set_exit_signal(signal);
-        client.register_session("root").await.unwrap();
-        client.on_notification(&peer,"{}",JSONRPCNotification{method:"turn/started".into(),params:Some(json!({"threadId":"root","turn":{"id":"parent-turn","status":"inProgress","items":[],"error":null}}))}).await.unwrap();
+        let root_id = Uuid::new_v4().to_string();
+        client.register_session(&root_id).await.unwrap();
+        if with_goal {
+            client.on_notification(&peer, "{}", JSONRPCNotification {
+                method: "thread/goal/updated".into(),
+                params: Some(json!({"threadId":root_id,"goal":{"threadId":root_id,"objective":"Verify parent outcome using bounded specialist evidence","status":"active","createdAt":1,"tokenBudget":null}})),
+            }).await.unwrap();
+        }
+        client.on_notification(&peer,"{}",JSONRPCNotification{method:"turn/started".into(),params:Some(json!({"threadId":root_id,"turn":{"id":"parent-turn","status":"inProgress","items":[],"error":null}}))}).await.unwrap();
         let assignment = Assignment {
             task: "child".into(),
             message: "Fix spelling typos in README.md".into(),
@@ -1038,12 +1059,13 @@ for line in sys.stdin:
         let control = Arc::new(Delegation {
             policy,
             parent,
-            root_thread: "root".into(),
+            root_thread: root_id.clone(),
             root: dir.clone(),
             params: ThreadStartParams {
                 config: Some(HashMap::from([
                     ("features.multi_agent".into(), json!(false)),
                     ("features.multi_agent_v2".into(), json!(false)),
+                    ("features.goals".into(), json!(false)),
                 ])),
                 ..Default::default()
             },
@@ -1064,7 +1086,7 @@ for line in sys.stdin:
             id: codex_app_server_protocol::RequestId::String("dynamic-call".into()),
             method: "item/tool/call".into(),
             params: Some(
-                json!({"threadId":"root","turnId":"parent-turn","callId":"call","tool":TOOL,"arguments":{"action":"cancel","task":"child"}}),
+                json!({"threadId":root_id,"turnId":"parent-turn","callId":"call","tool":TOOL,"arguments":{"action":"cancel","task":"child"}}),
             ),
         };
         tokio::time::timeout(
@@ -1086,6 +1108,7 @@ for line in sys.stdin:
             "interrupted"
         );
         assert!(client.delegation_turn_current("parent-turn").await);
+        assert!(!client.delegation_turn_current("stale-turn").await);
         assert!(
             rx.try_recv().is_err(),
             "A child completion cannot end the owner"
@@ -1137,6 +1160,7 @@ for line in sys.stdin:
         assert_eq!(record.status, "completed");
         assert_eq!(record.usage.unwrap()["last"]["cachedInputTokens"], 11);
         assert!(client.delegation_turn_current("parent-turn").await);
+        assert!(!client.delegation_turn_current("stale-turn").await);
         let previous = control.state.lock().await.records["child"].clone();
         {
             let mut state = control.state.lock().await;

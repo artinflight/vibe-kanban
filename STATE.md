@@ -1,3 +1,10 @@
+# Active-goal delegation source correction — 2026-11-04
+
+The focused branch corrects a goal/delegation instruction and capability mismatch;
+this is not a deployment record. The parent retains goal ownership. See
+`VK_GOAL_SPECIALIST_DELEGATION.md` and the current HANDOFF for evidence, verification
+and limits. Existing production work remains unchanged.
+
 # Current source integration and production — 2026-11-03
 
 The operator accepted the restored scrolling projects menu ("Good") and requested

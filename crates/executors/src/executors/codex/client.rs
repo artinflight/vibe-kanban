@@ -198,6 +198,7 @@ pub struct AppServerClient {
     exit_signal: OnceLock<ExitSignalSender>,
     goal: Mutex<Option<(NativeGoal, Progress)>>,
     goal_pausing: AtomicBool,
+    goal_has_token_budget: AtomicBool,
     completion_reconciliation_sent: AtomicBool,
     capacity_stopped: AtomicBool,
     scheduled_capacity: OnceLock<crate::capacity::PreparedCapacity>,
@@ -545,6 +546,7 @@ impl AppServerClient {
             exit_signal: OnceLock::new(),
             goal: Mutex::new(None),
             goal_pausing: AtomicBool::new(false),
+            goal_has_token_budget: AtomicBool::new(false),
             completion_reconciliation_sent: AtomicBool::new(false),
             capacity_stopped: AtomicBool::new(false),
             scheduled_capacity: OnceLock::new(),
@@ -556,13 +558,11 @@ impl AppServerClient {
 
     pub async fn delegation_turn_current(&self, turn: &str) -> bool {
         !self.cancel.is_cancelled()
+            && !self.goal_pausing.load(Ordering::SeqCst)
+            && !self.capacity_stopped.load(Ordering::SeqCst)
+            && self.scheduled_capacity.get().is_none()
+            && !self.goal_has_token_budget.load(Ordering::SeqCst)
             && self.current_turn_id.lock().await.as_deref() == Some(turn)
-            && self
-                .goal
-                .lock()
-                .await
-                .as_ref()
-                .is_none_or(|(g, _)| g.status != "active")
     }
 
     pub fn set_delegation(&self, control: Arc<super::delegation::Delegation>) {
@@ -677,8 +677,11 @@ impl AppServerClient {
     async fn accept_goal(&self, value: Value) -> Result<(), ExecutorError> {
         if value.is_null() {
             *self.goal.lock().await = None;
+            self.goal_has_token_budget.store(false, Ordering::SeqCst);
             return Ok(());
         }
+        // Native accounting is per-thread; do not let children evade a root budget.
+        let budgeted = value.get("tokenBudget").is_some_and(|v| !v.is_null());
         let goal: NativeGoal =
             serde_json::from_value(value).map_err(|e| ExecutorError::Io(io::Error::other(e)))?;
         let goal = if self.scheduled_capacity.get().is_some() {
@@ -697,14 +700,22 @@ impl AppServerClient {
         if self.thread_id.lock().await.as_deref() != Some(goal.thread_id.as_str()) {
             return Ok(()); // Descendant agents never own the root goal.
         }
+        self.goal_has_token_budget
+            .store(budgeted && goal.status == "active", Ordering::SeqCst);
+        let changes_owner = self.goal.lock().await.as_ref().is_none_or(|(old, _)| {
+            old.objective != goal.objective
+                || old.created_at != goal.created_at
+                || old.goal_id != goal.goal_id
+        });
         if goal.status == "active"
+            && (budgeted || changes_owner)
             && let Some(control) = self.delegation.get()
             && control.active().await
         {
             control.close();
-            self.abort_delegation_execution("Native goal activated with independent children; stop before bypassing goal accounting").await;
+            self.abort_delegation_execution("Collect delegated work before changing the parent goal or adding a native token budget").await;
             return Err(ExecutorError::Io(io::Error::other(
-                "Collect delegated work before starting a native goal",
+                "Active children belong to the existing unbudgeted parent goal",
             )));
         }
         let mut guard = self.goal.lock().await;
@@ -1645,20 +1656,17 @@ impl AppServerClient {
                         == Some(params.thread_id.as_str())
                         && self.current_turn_id.lock().await.as_deref()
                             == Some(params.turn_id.as_str());
-                    let goal_active = self
-                        .goal
-                        .lock()
-                        .await
-                        .as_ref()
-                        .is_some_and(|(g, _)| g.status == "active");
                     let control = self.delegation.get().cloned();
+                    let read_or_cancel = matches!(
+                        params.arguments["action"].as_str(),
+                        Some("status" | "cancel")
+                    );
                     if !root
-                        || goal_active
-                        || self.capacity_stopped.load(Ordering::SeqCst)
                         || control.is_none()
+                        || (!read_or_cancel && !self.delegation_turn_current(&params.turn_id).await)
                     {
                         return send_server_response(peer, request_id, DynamicToolCallResponse {
-                            content_items:vec![DynamicToolCallOutputContentItem::InputText {text:"Delegation requires the current root turn, a configured router, and no active native goal or scheduled capacity run.".into()}],success:false}).await;
+                            content_items:vec![DynamicToolCallOutputContentItem::InputText {text:"Delegation requires the current root turn and a configured router. New child work is unavailable during stopping, scheduled capacity runs, or an explicit native token budget. An ordinary active goal retains ownership and may delegate bounded work.".into()}],success:false}).await;
                     }
                     let client = self
                         .self_ref
@@ -2688,6 +2696,7 @@ impl JsonRpcCallbacks for AppServerClient {
             self.hold_pending_initialization("Native goal removed during first run")
                 .await?;
             *self.goal.lock().await = None;
+            self.goal_has_token_budget.store(false, Ordering::SeqCst);
         }
         // Existing threads cannot retrofit dynamic tools in Codex 0.153.4.
         // Accept the same checkpoint contract from a root assistant item only.
@@ -3755,6 +3764,48 @@ for line in sys.stdin:
         // Stop and capacity guards take precedence even over completion handling.
         client.capacity_stopped.store(true, Ordering::SeqCst);
         assert!(client.goal_turn_completed("stopped").await.unwrap());
+    }
+
+    #[tokio::test]
+    async fn active_goal_keeps_ownership_and_budget_stop_fences() {
+        let client = AppServerClient::new(
+            LogWriter::new(tokio::io::sink()),
+            None,
+            false,
+            false,
+            RepoContext::default(),
+            false,
+            String::new(),
+            CancellationToken::new(),
+        );
+        *client.thread_id.lock().await = Some("owner".into());
+        *client.current_turn_id.lock().await = Some("parent-turn".into());
+        *client.goal.lock().await = Some((
+            NativeGoal {
+                goal_id: "parent-goal".into(),
+                thread_id: "owner".into(),
+                objective: "Deliver full outcome".into(),
+                status: "active".into(),
+                created_at: 1,
+            },
+            Progress::default(),
+        ));
+        assert!(client.delegation_turn_current("parent-turn").await);
+        // A child's complete/budgeted goal cannot replace or budget the parent.
+        client.accept_goal(json!({"threadId":"specialist","id":"child-goal","objective":"Subtask","status":"complete","createdAt":2,"tokenBudget":10})).await.unwrap();
+        let snapshot = client.goal.lock().await.clone().unwrap();
+        assert_eq!(snapshot.0.goal_id, "parent-goal");
+        assert_eq!(snapshot.0.status, "active");
+        assert!(snapshot.1.completed.is_empty());
+        assert!(client.delegation_turn_current("parent-turn").await);
+        client.goal_has_token_budget.store(true, Ordering::SeqCst);
+        assert!(!client.delegation_turn_current("parent-turn").await);
+        client.goal_has_token_budget.store(false, Ordering::SeqCst);
+        client.goal_pausing.store(true, Ordering::SeqCst);
+        assert!(!client.delegation_turn_current("parent-turn").await);
+        client.goal_pausing.store(false, Ordering::SeqCst);
+        client.capacity_stopped.store(true, Ordering::SeqCst);
+        assert!(!client.delegation_turn_current("parent-turn").await);
     }
 
     #[tokio::test]

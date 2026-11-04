@@ -1,3 +1,23 @@
+# Active-goal delegation correction — 2026-11-04
+
+- NODEs orchestration session `fe65418e-fe3d-4bc2-b3be-f9b663cb1880`, native
+  `01a15bed-31d8-7b63-8f5b-8d967243c82c`, received an automatic-review rejection
+  at 21:04:55 UTC: the active-goal instruction prohibited delegation and required
+  an unavailable tool. Its persisted dynamic tool list only had the checkpoint.
+- Current Codex 0.166.0 resume schema still cannot add dynamic tools. The fix
+  distinguishes bounded specialist assignments from transferring goal ownership,
+  explicitly supports authorized continuations of existing Vibe specialists,
+  shares routed child setup with `/goal` start/resume, and removes the blanket
+  active-goal admission ban for ordinary unbudgeted goals.
+- Explicit native token budgets and scheduled-capacity runs remain fenced until
+  aggregate child accounting exists. Ownership changes with active children,
+  stale turns, stop, nested delegation, capacity and approval controls remain.
+- NODEs is already doing specialist work after pausing its goal; its running
+  assignments were inspected but not modified, duplicated, or interrupted.
+- Source change requires managed backend deployment. Do not restart from here.
+  Test results and exact release limitations are recorded in
+  `VK_GOAL_SPECIALIST_DELEGATION.md`.
+
 # Accepted scrolling PR integration — 2026-11-03
 
 The operator accepted the fix ("Good") and requested a PR/rebase merge into

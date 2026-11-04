@@ -61,6 +61,95 @@ class SQLPointTests(unittest.TestCase):
         self.assertEqual(list(self.root.glob('nightly-sql-*.sqlite')),[])
         self.assertFalse(result['baseline_accepted'])
 
+    def test_sequential_RAM_restores_complete_point_with_only_one_image_at_a_time(self):
+        import io,json
+        create=tempfile.mkstemp;saved={};independent=[]
+        original=self.source.read_bytes()
+        def prepare(value):
+            saved.update(value)
+            if 'sequential_RAM_checkpoint' in value:
+                self.assertTrue(Path(saved['captured_RAM_point']['working_RAM_path']).exists())
+                self.assertFalse(value['sequential_RAM_checkpoint']['independent_SQL_restore_accepted'])
+        def allocate(*args,**kwargs):
+            if kwargs.get('prefix')=='nightly-sql-independent-':
+                self.assertEqual(list(self.root.glob('nightly-sql-api-*')),[])
+                independent.append(True)
+            return create(*args,**kwargs)
+        with patch('vk_nightly_sql_point.tempfile.mkstemp',side_effect=allocate):
+            result=self.capture(sequential_RAM=True,memory_floor_bytes=4096,on_prepared=prepare)
+        self.assertEqual(independent,[True]);self.assertTrue(result['one_SQL_image_at_a_time'])
+        self.assertEqual(result['recovery_memory_admission']['additional_images'],1)
+        self.assertEqual(saved['captured_RAM_point']['memory_admission']['additional_images'],1)
+        self.assertEqual(result['sha256'],saved['captured_RAM_point']['sha256'])
+        self.assertEqual(result['independent']['integrity'],'ok')
+        self.assertTrue(result['independent']['independent_Linux_metadata_verified'])
+        self.assertNotEqual(result['independent']['separate_restored_inode'],saved['captured_RAM_point']['working_identity'][:2])
+        self.assertEqual(result['source_API_image_bytes'],len(original));self.assertGreater(result['new_B_encoded_payload_bytes'],0)
+        self.assertFalse(result['resumed_retained_SQL_point']);self.assertEqual(self.source.read_bytes(),original)
+        proof=io.BytesIO();self.client.verify(result['B_acceptance_object'],proof)
+        self.assertTrue(json.loads(proof.getvalue())['one_SQL_image_at_a_time'])
+        self.assertEqual(list(self.root.glob('nightly-sql-*.sqlite')),[])
+
+    def test_sequential_checkpoint_callback_failure_retains_API_and_resumes_no_source_recopy(self):
+        saved={}
+        def stop(value):
+            saved.update(value)
+            if 'sequential_RAM_checkpoint' in value:raise RuntimeError('stop before API release')
+        with self.assertRaisesRegex(RuntimeError,'before API release'):
+            self.capture(sequential_RAM=True,on_prepared=stop,cohort_id='b'*64)
+        api=Path(saved['captured_RAM_point']['working_RAM_path']);self.assertTrue(api.exists())
+        self.source.unlink();connect=sqlite3.connect
+        def no_source(*args,**kwargs):
+            if str(self.source) in str(args[0]):self.fail('sequential resume recaptured source')
+            return connect(*args,**kwargs)
+        with patch('vk_nightly_sql_point.sqlite3.connect',side_effect=no_source):
+            result=self.capture(sequential_RAM=True,cohort_id='b'*64,resume=saved['captured_RAM_point'],
+                resume_layout={k:saved[k] for k in ('layout','manifest')})
+        self.assertEqual(result['new_B_encoded_payload_bytes'],0)
+        self.assertTrue(result['resumed_retained_SQL_point']);self.assertFalse(api.exists())
+        self.assertEqual(result['independent']['integrity'],'ok')
+
+    def test_sequential_failure_after_API_release_recovers_only_from_B_no_payload_recopy(self):
+        saved={};create=tempfile.mkstemp
+        def allocate(*args,**kwargs):
+            if kwargs.get('prefix')=='nightly-sql-independent-':
+                self.assertFalse(Path(saved['captured_RAM_point']['working_RAM_path']).exists())
+                raise BlockingIOError('injected after durable B checkpoint and API release')
+            return create(*args,**kwargs)
+        with patch('vk_nightly_sql_point.tempfile.mkstemp',side_effect=allocate):
+            with self.assertRaisesRegex(BlockingIOError,'after durable B checkpoint'):
+                self.capture(sequential_RAM=True,on_prepared=lambda value:saved.update(value))
+        self.source.unlink()
+        result=self.capture(sequential_RAM=True,resume=saved['captured_RAM_point'],
+            resume_layout={k:saved[k] for k in ('layout','manifest')})
+        self.assertTrue(result['recovered_from_durable_B_layout'])
+        self.assertEqual(result['new_B_encoded_payload_bytes'],0);self.assertEqual(result['source_API_image_bytes'],0)
+        self.assertEqual(result['independent']['integrity'],'ok')
+
+    def test_sequential_missing_B_chunk_receipt_cannot_release_API_duplicate(self):
+        saved={}
+        def remove_fixture_receipt(value):
+            saved.update(value)
+            if 'layout' in value:
+                chunk=value['layout']['segments'][0]
+                (self.store/(chunk['sha256']+'.accepted.json')).unlink()
+        with self.assertRaises(ValueError):
+            self.capture(sequential_RAM=True,on_prepared=remove_fixture_receipt)
+        self.assertTrue(Path(saved['captured_RAM_point']['working_RAM_path']).exists())
+        self.assertTrue(self.source.exists());self.assertEqual(list(self.root.glob('nightly-sql-independent-*')),[])
+
+    def test_sequential_changed_API_inode_cannot_be_released(self):
+        saved={}
+        def change_fixture(value):
+            saved.update(value)
+            if 'layout' in value:
+                path=Path(saved['captured_RAM_point']['working_RAM_path'])
+                original=path.read_bytes();path.write_bytes(original)
+        with self.assertRaisesRegex(ValueError,'checkpoint identity changed'):
+            self.capture(sequential_RAM=True,on_prepared=change_fixture)
+        self.assertTrue(Path(saved['captured_RAM_point']['working_RAM_path']).exists())
+        self.assertEqual(list(self.root.glob('nightly-sql-independent-*')),[])
+
     def test_fresh_cohort_runs_API_but_reuses_identical_accepted_body_without_copy(self):
         import io,json
         first=self.capture(cohort_id='a'*64)

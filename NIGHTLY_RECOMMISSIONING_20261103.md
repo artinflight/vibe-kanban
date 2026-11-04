@@ -156,3 +156,27 @@ Exact owner contract and matching acknowledgement are retained in
 and NIGHTLY_OWNER_ACK.private.json. ContractSHA
 1f47c0faed50e41395e172523e8915e1344e21fabb46cb7aa3ae302ef021b603.
 D/NIGHTLY_DEDUP_COORDINATION.private.json records Nightly scope and test evidence.
+
+## Prepared sequential SQL RAM path (not the running package)
+
+The active worker-v18 file producer is unchanged. The next SQL stage admits
+two full images plus the4GiB host floor; the measured3.52GB largest DB would
+need about11.5GB available versus the later~8.9GB host observation. A source
+option SQL_sequential_RAM is prepared without reducing that floor or integrity.
+It uses one API image at a time plus the existing bounded object buffers.
+
+An API image is fully hashed/integrity-checked, streamed to accepted B chunks,
+and bound to its ordered manifest. The normal B reader reopens that manifest
+and every accepted chunk identity. The caller durably records that checkpoint
+before releasing only this newly generated API duplicate. A different RAM
+inode is then reconstructed from B and passes the unchanged full hash, SQLite
+integrity/schema and Linux metadata checks before SQL acceptance. Source DBs,
+old RAM recovery files, B originals and historical epochs remain untouched.
+
+115focused RAM/protocol integration tests pass, including five new tests for
+actual one-image allocation, failure before/after API release, no-recapture B
+resume, missing B receipts and changed API identities. Full hosted qualification
+and an exact versioned package/terminal ownership handover are required before
+using the option. A future resource preflight is an actual measurement; this
+source preparation does not assert that SQL admission has already failed or
+that the current full backup/schedule is accepted.

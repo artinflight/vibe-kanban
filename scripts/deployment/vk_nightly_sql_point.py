@@ -3,7 +3,9 @@
 The API needs a random-access destination. Use an actually admitted tmpfs file,
 never OS/work-SSD staging, then stream new content-addressed chunks to B. Exact
 accepted images are probed/reused without copying them. A failed working image
-is retained; only a newly verified duplicate is released after B acceptance.
+is retained. Explicit sequential mode may release its generated API duplicate
+after a complete authenticated B checkpoint; full independent SQL restore and
+acceptance still follow. Originals and unrelated old scratch remain untouched.
 """
 import base64
 import hashlib
@@ -69,8 +71,9 @@ def admit_working_memory(size,client,*,copies,memory_floor_bytes):
     """Admit the next real RAM allocation, retaining the installed host floor.
 
     Existing retained tmpfs data is already charged in MemAvailable and is not
-    reserved again. A fresh API point needs two images through independent B
-    restore; resuming an existing image/layout needs only one additional copy.
+    reserved again. The ordinary path needs two images through independent B
+    restore. Explicit sequential mode releases only its authenticated B-backed
+    API duplicate first. Existing images are not charged as new allocations.
     """
     if memory_floor_bytes is None:return None
     if type(memory_floor_bytes) is not int or memory_floor_bytes<0:
@@ -83,14 +86,54 @@ def admit_working_memory(size,client,*,copies,memory_floor_bytes):
         memory_floor_bytes=memory_floor_bytes,MemAvailable=values['MemAvailable'])
 
 
+
+def release_checkpointed_API_RAM(captured,retained,client,*,root,guard,on_prepared):
+    """Release only this API duplicate after authenticated durable B coverage.
+
+    Called after the normal B manifest readback. Every ordered chunk was already
+    independently restored on acceptance; recheck its actual native identity.
+    A later failure preserves that complete checkpoint for the existing recovery
+    path, never requires live-source recapture and cannot accept the SQL point.
+    """
+    guard();path=Path(captured['working_RAM_path'])
+    if (path.parent!=root or not path.name.startswith('nightly-sql-api-')
+            or path.resolve()!=path or path.is_symlink()):
+        raise ValueError('exact generated API RAM checkpoint path required')
+    try:info=path.lstat()
+    except FileNotFoundError:return None  # A previous valid handover already released it.
+    if (not stat.S_ISREG(info.st_mode) or info.st_nlink!=1 or info.st_uid!=os.getuid()
+            or fingerprint(info)!=captured['working_identity'] or info.st_size!=captured['bytes']):
+        raise ValueError('original API RAM checkpoint identity changed; preserve')
+    with path.open('rb') as source:
+        if (stream_hash(source)!=captured['sha256']
+                or fingerprint(os.fstat(source.fileno()))!=captured['working_identity']):
+            raise ValueError('original API RAM checkpoint hash changed; preserve')
+    proofs=[];segments=retained['layout']['segments']
+    for offset in range(0,len(segments),64):
+        guard();proofs.append(client.probe_accepted(segments[offset:offset+64]))
+    checkpoint=dict(format='vk-nightly-sequential-SQL-RAM-checkpoint-v1',
+        API_image_sha256=captured['sha256'],API_image_bytes=captured['bytes'],
+        manifest=retained['manifest'],accepted_object_identity_proofs=proofs,
+        original_API_inode=captured['working_identity'][:2],
+        original_API_RAM_hash_verified=True,normal_B_manifest_reopened=True,
+        accepted_B_object_identities_verified=True,
+        independent_SQL_restore_accepted=False)
+    # Persist the proof in the caller's B state BEFORE removing the duplicate.
+    # Callback failure leaves it in place. No old/source/recovery inode is used.
+    on_prepared(dict(sequential_RAM_checkpoint=checkpoint));guard()
+    release_verified_ram(path,captured['working_identity'])
+    return checkpoint
+
+
 def capture_SQL_point(source,client,*,allowed_sources,guard,retained_by_sha,ram_root,
                       maximum_image_bytes,chunk_bytes,timeout_seconds,on_prepared=lambda _:None,resume=None,
-                      resume_layout=None,cohort_id=None,memory_floor_bytes=None):
+                      resume_layout=None,cohort_id=None,memory_floor_bytes=None,sequential_RAM=False):
     """retained_by_sha returns only authenticated independent SQL image pairs.
 
     All image/chunk receipts remain distinct from final baseline/namespace
     acceptance. No WAL/main-file shortcut or source journal mode change occurs.
     """
+    if type(sequential_RAM) is not bool:raise ValueError('explicit SQL RAM sequencing policy required')
     if cohort_id is not None:digest(cohort_id)
     if resume is not None and resume.get('SQL_cohort_id')!=cohort_id:
         raise ValueError('retained SQL API point belongs to another qualification cohort')
@@ -102,7 +145,7 @@ def capture_SQL_point(source,client,*,allowed_sources,guard,retained_by_sha,ram_
     if resume_layout is not None:
         return recover_SQL_layout(path,client,resume,resume_layout,root=root,guard=guard,
             maximum_image_bytes=maximum_image_bytes,timeout_seconds=timeout_seconds,on_prepared=on_prepared,cohort_id=cohort_id,
-            memory_floor_bytes=memory_floor_bytes)
+            memory_floor_bytes=memory_floor_bytes,release_checkpointed_API=sequential_RAM)
     guard();before=path.lstat() if resume is None else None
     if before is not None and not stat.S_ISREG(before.st_mode):raise ValueError('regular API source required')
     source_meta=metadata(path) if resume is None else resume['source_metadata_before']
@@ -125,9 +168,10 @@ def capture_SQL_point(source,client,*,allowed_sources,guard,retained_by_sha,ram_
             if point_bytes>maximum_image_bytes:
                 return dict(source=str(path),status='larger_SQL_working_window_required',measured_image_bytes=point_bytes,
                             RAM_image_limit=maximum_image_bytes,new_B_payload_bytes=0,baseline_accepted=False)
-            memory_admission=admit_working_memory(point_bytes,client,copies=2,memory_floor_bytes=memory_floor_bytes)
+            copies=1 if sequential_RAM else 2
+            memory_admission=admit_working_memory(point_bytes,client,copies=copies,memory_floor_bytes=memory_floor_bytes)
             fs=os.statvfs(root)
-            if fs.f_bavail*fs.f_frsize<2*point_bytes+client.maximum+16*1024**2:
+            if fs.f_bavail*fs.f_frsize<copies*point_bytes+client.maximum+16*1024**2:
                 raise OSError('actual RAM API+independent-restore scratch unavailable')
             fd,temp=tempfile.mkstemp(prefix='nightly-sql-api-',suffix='.sqlite',dir=root)
             os.close(fd);working=Path(temp)
@@ -181,7 +225,7 @@ def capture_SQL_point(source,client,*,allowed_sources,guard,retained_by_sha,ram_
                 if sha!=resume['sha256'] or fingerprint(os.fstat(image.fileno()))!=working_identity:
                     raise ValueError('retained API point bytes changed; preserve and reconcile')
             initial=resume['initial_SQL_integrity'];changed=resume['source_changed_online'];captured=resume
-            admit_working_memory(size,client,copies=1,memory_floor_bytes=memory_floor_bytes)
+            admit_working_memory(size,client,copies=0 if sequential_RAM else 1,memory_floor_bytes=memory_floor_bytes)
         legacy=retained_by_sha(sha,size)
         if legacy is not None:
             for part in (legacy['proof']['native'],legacy['proof']['Linux_reopen']):
@@ -197,14 +241,27 @@ def capture_SQL_point(source,client,*,allowed_sources,guard,retained_by_sha,ram_
             independent['current_Linux_metadata_verified']=True
         else:
             uploaded_before=client.payload_bytes_sent;sink=ChunkSink(client,chunk_bytes=chunk_bytes)
+            uploaded_hash=hashlib.sha256();uploaded_bytes=0
             with working.open('rb') as image:
-                for block in iter(lambda:image.read(65536),b''):check();sink.write(block)
+                for block in iter(lambda:image.read(65536),b''):
+                    check();uploaded_hash.update(block);uploaded_bytes+=len(block);sink.write(block)
+                if (uploaded_bytes!=size or uploaded_hash.hexdigest()!=sha
+                        or fingerprint(os.fstat(image.fileno()))!=working_identity):
+                    raise ValueError('API image changed during B upload; preserve all versions')
             segments=sink.finish();data_uploaded=client.payload_bytes_sent-uploaded_before
             prepared=dict(source=str(path),bytes=size,sha256=sha,segments=segments,source_metadata=source_meta,
                 method='SQLite-backup-API',independent_SQL_restore_accepted=False)
             if cohort_id is not None:prepared['SQL_cohort_id']=cohort_id
             manifest=client.ensure(json.dumps(prepared,sort_keys=True,separators=(',',':')).encode())
             on_prepared(dict(layout=prepared,manifest=manifest,working_RAM_path=str(working)))
+            if sequential_RAM and size>0:
+                return recover_SQL_layout(path,client,captured,dict(layout=prepared,manifest=manifest),
+                    root=root,guard=guard,maximum_image_bytes=maximum_image_bytes,
+                    timeout_seconds=max(0.001,timeout_seconds-(time.monotonic()-started)),
+                    on_prepared=on_prepared,cohort_id=cohort_id,memory_floor_bytes=memory_floor_bytes,
+                    release_checkpointed_API=True,
+                    fresh_sequential_capture=dict(initial_payload_bytes=initial_upload,
+                        API_captured_this_call=resume is None,new_B_data_bytes=data_uploaded))
             restore_fd,restore_path=tempfile.mkstemp(prefix='nightly-sql-independent-',suffix='.sqlite',dir=root)
             restored=Path(restore_path)
             with os.fdopen(restore_fd,'wb') as output:
@@ -250,7 +307,7 @@ def capture_SQL_point(source,client,*,allowed_sources,guard,retained_by_sha,ram_
 
 
 def recover_SQL_layout(source,client,captured,retained,*,root,guard,maximum_image_bytes,
-                       timeout_seconds,on_prepared,cohort_id=None,memory_floor_bytes=None):
+                       timeout_seconds,on_prepared,cohort_id=None,memory_floor_bytes=None,fresh_sequential_capture=None,release_checkpointed_API=False):
     """Finish a durable uploaded API image after its volatile RAM file is lost.
 
     The original API bracket, manifest and accepted chunk identities must all
@@ -286,13 +343,28 @@ def recover_SQL_layout(source,client,captured,retained,*,root,guard,maximum_imag
         # retain every-block host guards and the same whole recovery deadline.
         if last_health is None or time.monotonic()-last_health>=5:
             client.health();last_health=time.monotonic();health_RPC_count+=1
-    memory_admission=admit_working_memory(size,client,copies=1,memory_floor_bytes=memory_floor_bytes)
-    fs=os.statvfs(root)
-    if fs.f_bavail*fs.f_frsize<size+client.maximum+16*1024**2:
-        raise OSError('actual RAM independent SQL recovery scratch unavailable')
+    def admit_restore():
+        admission=admit_working_memory(size,client,copies=1,memory_floor_bytes=memory_floor_bytes)
+        fs=os.statvfs(root)
+        if fs.f_bavail*fs.f_frsize<size+client.maximum+16*1024**2:
+            raise OSError('actual RAM independent SQL recovery scratch unavailable')
+        return admission
+    if not release_checkpointed_API:
+        memory_admission=admit_restore()
+    else:
+        # Only the small layout/chunk proof scratch is admitted until the
+        # generated API duplicate has been safely released.
+        admit_working_memory(0,client,copies=0,memory_floor_bytes=memory_floor_bytes)
+    # Authenticate the small normal-B layout first. This allows a failed
+    # sequential handover to recover even while its API duplicate still exists.
     manifest=io.BytesIO();client.verify(retained['manifest'],manifest)
     if len(manifest.getvalue())>1024**2 or json.loads(manifest.getvalue())!=expected:
         raise ValueError('authenticated B SQL manifest differs')
+    sequential_checkpoint=None
+    if release_checkpointed_API:
+        sequential_checkpoint=release_checkpointed_API_RAM(captured,retained,client,
+            root=root,guard=check,on_prepared=on_prepared)
+    if release_checkpointed_API:memory_admission=admit_restore()
     fd,temp=tempfile.mkstemp(prefix='nightly-sql-independent-',suffix='.sqlite',dir=root);restored=Path(temp)
     with os.fdopen(fd,'wb') as out:
         for segment in layout['segments']:check();client.verify(segment,out)
@@ -308,6 +380,8 @@ def recover_SQL_layout(source,client,captured,retained,*,root,guard,maximum_imag
     independent.update(separate_restored_inode=restored_identity[:2],independent_Linux_metadata_verified=True)
     row=dict(kind='file',bytes=size,sha256=sha,segments=layout['segments'],
         **{k:metadata[k] for k in ('mode','uid','gid','mtime_ns','xattrs')})
+    if release_checkpointed_API and restored_identity[:2]==captured['working_identity'][:2]:
+        raise ValueError('independent SQL restore reused original API inode; preserve')
     record=dict(source=str(source),status='consistent_SQL_point_verified',method='SQLite-backup-API',
         source_identity_before=captured['source_identity_before'],source_metadata_before=metadata,
         source_metadata_after=captured['source_metadata_after'],source_changed_online=captured['source_changed_online'],
@@ -318,6 +392,14 @@ def recover_SQL_layout(source,client,captured,retained,*,root,guard,maximum_imag
         source_API_point_qualifies_later_epoch_not_original=True,
         recovery_health_RPC_count=health_RPC_count,recovery_health_RPC_interval_seconds=5,
         verified_RAM_duplicates=[dict(path=str(restored),identity=restored_identity)])
+    if release_checkpointed_API:
+        record['sequential_RAM_checkpoint']=sequential_checkpoint
+        record['one_SQL_image_at_a_time']=True
+    if fresh_sequential_capture is not None:
+        record.update(resumed_retained_SQL_point=not fresh_sequential_capture['API_captured_this_call'],
+            source_API_image_bytes=size if fresh_sequential_capture['API_captured_this_call'] else 0,
+            new_B_encoded_payload_bytes=fresh_sequential_capture['new_B_data_bytes'])
+        uploaded=fresh_sequential_capture['initial_payload_bytes']
     if cohort_id is not None:record['SQL_cohort_id']=cohort_id
     check();record['recovery_health_RPC_count']=health_RPC_count
     record['B_acceptance_object']=client.ensure(json.dumps(record,sort_keys=True,separators=(',',':')).encode())

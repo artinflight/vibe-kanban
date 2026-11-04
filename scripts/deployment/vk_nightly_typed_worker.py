@@ -122,6 +122,8 @@ def configuration(path,expected,*,folder=None,authenticate_only=False):
         if len(set(names))!=len(names) or value['B_index_name'] in names:
             raise ValueError('distinct accepted carrier and current map indexes required')
     if value.get('phase_kind')=='SQL-points':
+        if type(value.get('SQL_sequential_RAM',False)) is not bool:
+            raise ValueError('explicit SQL RAM sequencing policy required')
         derived=value.get('SQL_sources_from_current_map',False)
         if type(derived) is not bool:raise ValueError('explicit SQL source queue authority required')
         if derived and (value['format']!='vk-nightly-typed-worker-B-v1' or value.get('SQL_reuse_controls')):
@@ -269,7 +271,8 @@ def run_SQL(config,*,backend=None,at_component_boundary=lambda:None):
                     retained_by_sha=lambda sha,size:old.get((sha,size)),ram_root='/dev/shm',
                     maximum_image_bytes=config['maximum_SQL_image_bytes'],chunk_bytes=config['chunk_bytes'],
                     timeout_seconds=config['SQL_image_timeout_seconds'],on_prepared=prepared,resume=retained,
-                    resume_layout=layout,cohort_id=cohort,memory_floor_bytes=config['memory_floor_bytes'])
+                    resume_layout=layout,cohort_id=cohort,memory_floor_bytes=config['memory_floor_bytes'],
+                    sequential_RAM=config.get('SQL_sequential_RAM',False))
                 if result['status']=='larger_SQL_working_window_required':state['deferred'][source]=result
                 else:
                     state['completed'][source]=result;state['partial'].pop(source,None);state['deferred'].pop(source,None)

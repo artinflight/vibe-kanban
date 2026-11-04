@@ -2,7 +2,7 @@
 
 The user requested the actual operational Nightly service. Historical October28
 restore acceptance remains valid; it did not install a nightly scheduler. As of
-19:30EST, body schedule is still OFF and no next run is claimed. No backend or
+19:50EST, body schedule is still OFF and no next run is claimed. No backend or
 Staging restart is required. PR263 remains the sole source integration.
 
 ## Live ownership and exact continuation
@@ -15,7 +15,7 @@ It reuses prior B namespace, qualification and accepted bodies, without reading
 source bodies or putting indexes on SSD. The historical cold restore is reused.
 
 The finite serial collector vk-nightly-serial-commissioning-20261103.service
-PID377969 waits for this SAME job, then runs the exact worker-v17 bootstrap,
+PID511131/start96047691 waits for this SAME job, then runs the exact worker-v18 bootstrap,
 actual incremental qualification, normal composed restore and gated installer.
 D/SERIAL_COMMISSIONING_STATUS.private.json and its pinned CONFIG identify stage
 and original deadlines. Its own lease prevents a second collector. Child logs
@@ -23,11 +23,12 @@ retain only a64KiB RAM tail, fixed local health mirrors, and authoritative B
 phase receipts. It does not enable scheduling from source tests or a partial set.
 Check actual unit/PID/start and receipt before continuing or replacing anything.
 
-P=D/worker-v17. PREPARATION.private.json pins every module and config:
-normal service e2e797194ae4910454754bac0916dd929ea9240df4abc1932c480ac062cff2f3;
-calendar3852bad67a3f0179ddfbaaddeaa8b94ea081b2bd7e4e12d736ebb33bc268c3dd;
-bootstrapf7eea2ec5264472a659c2556347a51f0be41c2d9c5530c58f9cf293bde3341b6.
-Exact code is HEAD65fff2188 plus current source fixes (uncommitted at this note).
+P=D/worker-v18. PREPARATION.private.json pins every module and config:
+normal service 55bf786534254dbba11c27a2292c342528a73c4b910c75b94ad73e67c8641eb1;
+calendare582e268d3c529990bc51c7c4cc3943e253b829e5c7ef863f5817ecefb270507;
+bootstrap13fd6ecf77c79f45af666737a92d9e956a51245e6b5a473bf3707a05c2849da3.
+Exact worker sourcebe449480091a15ee70140d3af44762f61da231f0 is committed/pushed;
+947hosted recovery checks pass (run41748125104), alongside201local checks.
 Never modify loaded packages; install another version only after real leases
 and exact terminal ownership permit handover. The calendar remains22–04Toronto,
 with a hard04:00 stop preserving completed B objects/phase checkpoints.
@@ -99,3 +100,26 @@ source/PR/installed package parity must be recorded after source preservation.
 The accepted October28 evidence and exact B capsule/interface are preserved in
 [prior handoff](HANDOFF_NIGHTLY_HISTORY_20261103_1930.md). Never present that
 retained restore as a newly current or commissioned nightly backup.
+
+
+## Bounded workload sizing and source-integration boundary
+
+The six-day gap produced more than20k unresolved qualifiers, so the old20k
+qualification/100k capture ceilings could not complete this inventory. Before
+ANY capture child existed, the waiting-only collector377969/start95974730 was
+PIDFD-interrupted and proven terminal/empty; same composition103466 continued.
+Worker-v18 changes only selected-name ceilings to1million (finite, within the
+measured namespace plus bounded delta), not a global rescan.128GiB finite source
+read allowance is unchanged and is not a transfer-demand estimate. CPU/memory/
+STOP/floors and the original bootstrap00:23:10Z–08:23:10Z clock are unchanged.
+V17 code/config and checkpoint proof remain. The successor collector511131/
+start96047691 owns the same serial continuation and no second producer.
+
+PR263 contains exact worker sourcebe4494800. Hosted Backup recovery run41748125104
+passed947tests in79.53s. Read-only merge-tree comparison with current Staging
+identified only four continuity-document conflicts:DELTA/HANDOFF/STATE/STREAM.
+Automatic approval review rejected the requested worktree merge of broad
+Staging history as outside authorized scope; no merge or indirect bypass was
+performed. Operational Python-worker commissioning is independent of that
+source merge and requires no Vibe backend restart. PR conflict resolution is
+still unperformed; do not report combined source integration as accepted.

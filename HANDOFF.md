@@ -1,7 +1,7 @@
 # Nightly operational commissioning — November 3, 2026 (EST)
 
 The user requested finishing the service. October28 accepted restore remains
-valid; no recurring schedule had been installed. At19:30EST, body scheduleOFF,
+valid; no recurring schedule had been installed. At19:50EST, body scheduleOFF,
 next runNONE, current whole-cycle acceptance pending. No backend/Staging restart.
 [Current details](NIGHTLY_RECOMMISSIONING_20261103.md) include exact config hashes,
 source/runtime observations, root plan and proof boundaries.
@@ -16,8 +16,8 @@ PID103466/start95825707. Read its STATUS/RESULT.private.json. It reuses retained
 B namespace/qualification/bodies;0source bodies/SSD index bytes.
 
 The finite serial collector vk-nightly-serial-commissioning-20261103.service
-PID377969 waits for that SAME result. D/SERIAL_COMMISSIONING_STATUS.private.json
-and pinned CONFIG own actual stage/deadlines. It then runs worker-v17 initial
+PID511131/start96047691 waits for that SAME result. D/SERIAL_COMMISSIONING_STATUS.private.json
+and pinned CONFIG own actual stage/deadlines. It then runs worker-v18 initial
 current backup/SQL/runtime/native proof/normal composed restore, followed by a
 real measured incremental qualification. Only actual independent acceptance
 permits the existing exact-package installer to enable22–04Toronto scheduling.
@@ -26,11 +26,10 @@ log is a fixed64KiB RAM tail; authoritative receipts/indexes and all bodies stay
 B. Never edit a loaded package or replace a live owner. A collector failure
 preserves exact STOP, B progress and diagnostics, without automatic repair.
 
-P=D/worker-v17; PREPARATION.private.json pins source/config closure.
-ServiceSHAe2e797194ae4910454754bac0916dd929ea9240df4abc1932c480ac062cff2f3.
+P=D/worker-v18; PREPARATION.private.json pins source/config closure.
+ServiceSHA55bf786534254dbba11c27a2292c342528a73c4b910c75b94ad73e67c8641eb1.
 All119 selected roots retain the old117, adding actual current backend and
-frontend pointer; Dot alias transitions are recorded. Current source is65fff2188
-plus tested recommissioning fixes (see Git for exact preservation status).
+frontend pointer; Dot alias transitions are recorded. Worker sourcebe4494800 is committed/pushed;947hosted recovery checks pass.
 
 ## Repaired tracker and real gap evidence
 

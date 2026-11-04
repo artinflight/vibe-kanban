@@ -56,6 +56,12 @@ already-published scrolling files. Branch age, successful builds and retained
 hashed assets do not prove source preservation. Test the gate with
 `python3 -B -m unittest discover -s scripts/deployment -p test_frontend_preservation.py`.
 
+Preserve build-time feature settings as well as source hashes. The November 4
+Read Later build accidentally changed `VITE_DOT_SIDECHAT` from disabled to `1`,
+re-exposing stored Dot notices without changing their acknowledgements. Compare
+the previous and candidate runtime behavior, record the explicit flag in the
+artifact manifest, and assert the expected notification polling in a disposable
+browser before publication. Source preservation alone cannot detect flag drift.
 
 Antigravity is live with the existing account and supervised permissions. See
 [activation/recovery evidence](ACTIVATION_RECOVERY_20261030.md) for the exact runtime,

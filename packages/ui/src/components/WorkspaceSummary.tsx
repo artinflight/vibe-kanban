@@ -191,7 +191,7 @@ export function WorkspaceSummary({
   return (
     <div
       className={cn(
-        'mobile-workspace-card group relative rounded-sm transition-all duration-100 overflow-hidden',
+        'mobile-workspace-card group relative flex items-center rounded-sm transition-all duration-100 overflow-hidden',
         isActive ? 'bg-tertiary' : '',
         className
       )}
@@ -206,7 +206,7 @@ export function WorkspaceSummary({
       <button
         aria-current={isActive ? 'page' : undefined}
         onClick={onClick}
-        className="flex w-full cursor-pointer flex-col text-left px-base py-half transition-all duration-150 text-normal"
+        className="flex min-w-0 flex-1 cursor-pointer flex-col text-left px-base py-half transition-all duration-150 text-normal"
       >
         <div
           className={cn(
@@ -347,30 +347,23 @@ export function WorkspaceSummary({
         )}
       </button>
 
-      {onToggleReadLater && (
-        <div className="relative z-10 flex justify-end px-half">
+      <div className="flex shrink-0 items-center pr-half">
+        {onToggleReadLater && (
           <ReadLaterButton later={readLater} onToggle={onToggleReadLater} />
-        </div>
-      )}
-
-      {/* Right-side hover action - more options only */}
-      {workspaceId && onOpenWorkspaceActions && (
-        <div className="absolute right-0 top-0 bottom-0 flex items-center sm:opacity-0 sm:group-hover:opacity-100">
-          {/* Gradient fade from transparent to background */}
-          <div className="h-full w-6 pointer-events-none bg-gradient-to-r from-transparent to-secondary" />
-          {/* Single action button */}
-          <div className="flex items-center pr-base h-full bg-secondary">
-            <button
-              onClick={handleOpenCommandBar}
-              onPointerDown={(e) => e.stopPropagation()}
-              className="p-1.5 rounded-sm text-low hover:text-normal hover:bg-tertiary"
-              title={t('workspaces.more')}
-            >
-              <DotsThreeIcon className="size-5" weight="bold" />
-            </button>
-          </div>
-        </div>
-      )}
+        )}
+        {workspaceId && onOpenWorkspaceActions && (
+          <button
+            type="button"
+            onClick={handleOpenCommandBar}
+            onPointerDown={(event) => event.stopPropagation()}
+            className="rounded-sm p-1.5 text-low hover:bg-tertiary hover:text-normal focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brand sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
+            aria-label={t('workspaces.more')}
+            title={t('workspaces.more')}
+          >
+            <DotsThreeIcon className="size-5" weight="bold" />
+          </button>
+        )}
+      </div>
     </div>
   );
 }

@@ -745,10 +745,10 @@ export function WorkspacesSidebarContainer({
         workspaceFilters.projectIds.includes(item.projectId ?? ''))
   );
   const readLaterIssueRows = laterIssues.map((item) => (
-    <div key={item.id} className="flex flex-col px-base">
+    <div key={item.id} className="flex items-center px-base">
       <button
         type="button"
-        className="min-h-11 px-base py-half text-left text-normal hover:bg-tertiary focus-visible:ring-1 focus-visible:ring-brand"
+        className="min-h-11 min-w-0 flex-1 px-base py-half text-left text-normal hover:bg-tertiary focus-visible:ring-1 focus-visible:ring-brand"
         onClick={() => {
           navigation.goToProjectIssue(item.projectId!, item.id);
           if (isMobile) setMobileActiveTab('dot');
@@ -763,9 +763,7 @@ export function WorkspacesSidebarContainer({
           unread
         </span>
       </button>
-      <div className="flex justify-end">
-        <ReadLaterButton later onToggle={() => setReadLater(item, false)} />
-      </div>
+      <ReadLaterButton later onToggle={() => setReadLater(item, false)} />
     </div>
   ));
   // Keep every attention/running item available to the accordion sections.

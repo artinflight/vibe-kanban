@@ -24,13 +24,13 @@ export function ReadLaterButton({
         event.stopPropagation();
         onToggle();
       }}
-      className="inline-flex min-h-11 md:min-h-0 shrink-0 items-center gap-half rounded-sm px-base py-half text-sm text-low hover:bg-tertiary hover:text-normal focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brand"
+      className="inline-flex h-11 w-11 md:h-7 md:w-7 shrink-0 items-center justify-center rounded-sm text-low hover:bg-tertiary hover:text-normal focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brand"
     >
       <BookmarkSimpleIcon
+        aria-hidden="true"
         className="size-icon-sm"
         weight={later ? 'fill' : 'regular'}
       />
-      {label}
     </button>
   );
 }

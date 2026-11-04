@@ -44,7 +44,8 @@ try {
     });
     const errors = [],
       writes = [],
-      seen = [];
+      seen = [],
+      dotRequests = [];
     let target;
     let closing = false;
     // Pending polling requests can finish while a verified context is closing.
@@ -83,6 +84,7 @@ try {
       guard(async (route) => {
         const request = route.request();
         const path = new URL(request.url()).pathname;
+        if (path === '/api/dot-sidechat/notifications') dotRequests.push(path);
         if (
           request.method() === 'POST' &&
           path === '/api/workspaces/summaries'
@@ -130,6 +132,31 @@ try {
       .getByRole('button', { name: 'Read Later', exact: true })
       .first()
       .waitFor();
+    const action = attention
+      .locator('.mobile-workspace-card')
+      .getByRole('button', { name: 'Read Later', exact: true })
+      .first();
+    assert.equal(
+      (await action.innerText()).trim(),
+      '',
+      'Read Later is icon-only'
+    );
+    const geometry = await action.evaluate((button) => {
+      const row = button.closest('.mobile-workspace-card');
+      const main = row.querySelector('button');
+      const a = button.getBoundingClientRect(),
+        b = main.getBoundingClientRect();
+      return {
+        top: a.top,
+        bottom: a.bottom,
+        mainTop: b.top,
+        mainBottom: b.bottom,
+      };
+    });
+    assert(
+      geometry.top < geometry.mainBottom && geometry.bottom > geometry.mainTop,
+      'Read Later must share the notification row'
+    );
     const beforeSeen = seen.length;
     await attention
       .locator('.mobile-workspace-card')
@@ -159,8 +186,17 @@ try {
       false
     );
     assert.deepEqual(errors, []);
+    if (process.env.VK_EXPECT_DOT_DISABLED === '1')
+      assert.deepEqual(
+        dotRequests,
+        [],
+        'Preserve the previous disabled Dot notification setting'
+      );
     results.push({
       width,
+      iconOnly: true,
+      inline: true,
+      dotNotificationRequests: dotRequests.length,
       persisted: true,
       restored: true,
       readCallsFromActions: seen.length - beforeSeen,

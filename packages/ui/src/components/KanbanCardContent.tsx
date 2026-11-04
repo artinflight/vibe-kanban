@@ -128,6 +128,7 @@ export type KanbanCardContentProps<TTag extends KanbanTag = KanbanTag> = {
   displayId: string;
   title: string;
   primaryContent?: ReactNode;
+  headerAction?: ReactNode;
   isExpanded?: boolean;
   onToggleExpanded?: () => void;
   description?: string | null;
@@ -152,6 +153,7 @@ export function KanbanCardContent<TTag extends KanbanTag = KanbanTag>({
   displayId,
   title,
   primaryContent,
+  headerAction,
   isExpanded = true,
   onToggleExpanded,
   description,
@@ -324,6 +326,7 @@ export function KanbanCardContent<TTag extends KanbanTag = KanbanTag>({
             ) : (
               <KanbanAssignee assignees={assignees} />
             ))}
+          {headerAction}
           {onMoreActionsClick && (
             <button
               type="button"

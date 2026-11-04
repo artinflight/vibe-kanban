@@ -24,13 +24,13 @@ export function ProjectDotNotices({
       className="flex flex-col gap-half px-base"
     >
       {notices.map((notice) => (
-        <div key={notice.projectId} className="flex flex-col">
+        <div key={notice.projectId} className="flex items-center">
           <button
             type="button"
             data-project-dot-notice={notice.projectId}
             aria-label={`${notice.name}: ${notice.unreadCount} unread project Dot Chat messages`}
             onClick={() => onOpen(notice.projectId)}
-            className="flex w-full min-w-0 flex-col text-left px-base py-half text-normal hover:bg-tertiary focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand"
+            className="flex min-w-0 flex-1 flex-col text-left px-base py-half text-normal hover:bg-tertiary focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand"
             style={{
               minHeight: 44,
               overflowWrap: 'anywhere',
@@ -54,12 +54,10 @@ export function ProjectDotNotices({
             </span>
           </button>
           {onToggleReadLater && (
-            <div className="flex justify-end">
-              <ReadLaterButton
-                later={notice.readLater}
-                onToggle={() => onToggleReadLater(notice.projectId)}
-              />
-            </div>
+            <ReadLaterButton
+              later={notice.readLater}
+              onToggle={() => onToggleReadLater(notice.projectId)}
+            />
           )}
         </div>
       ))}

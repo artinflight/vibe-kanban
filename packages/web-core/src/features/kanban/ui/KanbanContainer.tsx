@@ -2148,6 +2148,7 @@ export function KanbanContainer() {
                                 dragDisabled={isMultiSelectActive}
                               >
                                 <KanbanCardContent
+                                  headerAction={renderReadLaterAction(issue.id)}
                                   displayId={issue.simple_id}
                                   title={issue.title}
                                   isExpanded={
@@ -2247,9 +2248,6 @@ export function KanbanContainer() {
                                     ),
                                   }}
                                 />
-                                <div className="flex justify-end">
-                                  {renderReadLaterAction(issue.id)}
-                                </div>
                               </KanbanCard>
                             );
                           })}

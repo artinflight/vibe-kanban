@@ -2605,3 +2605,18 @@ migrations unchanged. Native-provider inference/full hosted baseline not run.
 - Full isolated software recovery and independent Desktop B readback verified;
   backend/services/database unchanged. Exact evidence in VK_READ_LATER_DEPLOYMENT.md
   and LIVE_DEPLOYMENT.json. Local commits only; no push/PR.
+
+## 2026-11-04 — read-workspace bookmark candidate, publication blocked
+
+- `8aa46ba36`: allow saving already-read workspaces, retain saved read entries
+  through reading/reload/pagination, and translate accurate removal labels.
+- `449819b1e`: correct h-full/h-auto conflict and assert section bounds, after
+  the first candidate failed phone hit-target acceptance; it was never published.
+- Corrected candidate passes 57 focused regressions, types/lint/format/ops, four
+  desktop/phone × read/unread browser cases and five scrolling layouts.
+- Fully restored/verified 116,678,639-byte SSD archive, 5,071 files. Desktop B copy
+  has not started because another backup owns the shared lane. Required copy
+  waiver/continuation choice is pending; no waiver received. Owned idle waiter
+  stopped; no automatic deployment, other backup untouched.
+- Live pointer, backend, data/read-state and VITE_DOT_SIDECHAT=0 unchanged.
+  No PR/push or new live-browser acceptance. Resume evidence/steps in HANDOFF.md.

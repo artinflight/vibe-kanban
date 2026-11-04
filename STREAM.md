@@ -1,3 +1,17 @@
+<!-- save-read-pending-start -->
+Current task: already-read workspace bookmarks are implemented in `8aa46ba36`,
+with the phone section-height correction in `449819b1e`. The corrected candidate
+passed four read/unread × desktop/phone browser cases, five scrolling layouts,
+types/lint/format/ops and focused regressions. Full SSD software recovery restore
+passed. Publication is pending the shared Desktop B backup lane; no activation
+has occurred. The owned idle waiter was stopped; no automatic publication or
+backup is running for this task. The explicit Desktop B waiver/continuation
+decision is pending. Live remains the preceding inline-icon release. Evidence:
+`/mnt/vk-storage/vk-read-later-20261104-f57c/save-read-fixed`.
+The first attempted candidate (`save-read`) failed phone overlap acceptance and
+was never published; retain its diagnostic evidence.
+<!-- save-read-pending-end -->
+
 # Read Later — 2026-11-04
 
 Branch `vk/f57c-read-later`, based on fork/staging `ee2efee4d`.

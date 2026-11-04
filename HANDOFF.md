@@ -1,83 +1,57 @@
-# Read Later implementation — 2026-11-04
+# Read Later pickup — implementation ready, publication blocked
 
-Implemented VK Dev T91 on `vk/f57c-read-later` after the operator lifted the hold.
-The operator requested a local commit of the implementation and continuity notes;
-see Git history for its identity. The operator subsequently authorized deployment:
-Read Later is live at https://vibe.local as of November 4, 15:11:24 UTC. Reload
-existing tabs. No push, backend restart or additional agent launch.
+As of 2026-11-04T21:20:55.397887+00:00, source commits `8aa46ba36` (save already-read workspaces) and
+`449819b1e` (phone section sizing and overlap regression) are complete. The
+operator's current request is implemented and validated but **not deployed**.
+Live still uses the previous inline-icon release; LIVE_DEPLOYMENT.json and
+STATE.md remain its authoritative runtime record.
 
-Behavior:
-- Sidebar sections: Attention, Read Later, Running, then Completed/idle history.
-  Read Later starts folded; it has an item count and a dedicated phone filter.
-- Unread workspace rows, project notices, issue cards/list rows and inbox
-  notifications expose Read Later and Return to Attention. These actions stop
-  click/key propagation and never call mark-read, navigation or agent APIs.
-- A browser-local Zustand preference is scoped by host, user, entity kind and ID.
-  It survives reloads, retains unread badges and falls back to memory if browser
-  storage is denied. There is no cross-device synchronization or backend schema.
-- Issue preferences also defer linked workspace rows. Opening an item continues
-  to use the existing explicit navigation/read behavior. Read items leave the
-  deferred collection; unrelated attention/approval/running semantics are kept.
-- Completed is the existing idle collection, not an issue status transition.
+Current feature behavior in the candidate:
+- Already-read and unread ordinary workspaces offer the existing inline bookmark.
+  Read/unread flags remain unchanged. A saved workspace stays in Read Later after
+  reading/polling/reload and beyond pagination, until explicitly removed.
+- Removal uses "Remove from Read Later" in all seven locales and returns a read
+  workspace to Completed/idle history. Issue/inbox unread eligibility is unchanged.
+- Attention → Read Later → Running → Completed order, browser-local host/user
+  preferences and VITE_DOT_SIDECHAT=0 remain preserved.
+- Section natural height explicitly overrides h-full, preventing long phone lists
+  from overlapping the Read Later header. The earlier rejected candidate under
+  `save-read` was never published; retain its diagnostic evidence.
 
-Validation completed:
-- `pnpm run format`; touched UI and test files additionally formatted with the
-  web-core Prettier configuration (root format does not include packages/ui).
-- `pnpm run ops:check`, `pnpm run web-core:check`, `pnpm run local-web:check`,
-  `pnpm run ui:check`; all passed. Type checks required
-  `NODE_OPTIONS=--max-old-space-size=2048`; the inherited 768 MiB heap exhausted
-  before producing results. Existing SSD dependency caches were reused.
-- ESLint passed for all changed UI components and web-core files, using the
-  existing UI and local-web configurations respectively.
-- 11 Read Later interaction/persistence tests pass:
-  `VK_TEST_OUTPUT=<mounted-SSD-directory> node scripts/testing/run-read-later-tests.mjs`.
-- 12 existing tests pass with `node --experimental-strip-types --test` against
-  `workspaceSidebarPagination.test.ts`, `dotProjectNotices.test.ts`, and
-  `dotWorkspaceActivity.test.ts` in their existing directories.
-- Real Chromium at 1440 and 393 px passed defer, persisted reload, restore and
-  horizontal-overflow checks with zero read calls, zero application writes and
-  zero page errors. A desktop action overlay and phone section-height overlap
-  were found and fixed during these tests. All application writes were
-  intercepted; unread summaries were disposable browser response fixtures.
-  Reproduce using `scripts/testing/read-later-browser.mjs` with VK_TEST_BASE and
-  VK_TEST_OUTPUT. Results/screenshots: `/mnt/vk-storage/vk-read-later-20261104-f57c`.
-- `git diff --check` passed. No Rust/full workspace/remote deployment checks or
-  physical-device tests were needed/run for this frontend-only change. No
-  production unread records, conversations or provider turns were modified.
+Validation passed:
+- UI/web-core/local-web types, focused lint, required format/ops/diff checks.
+- 15 Read Later, 15 conversation-read, 10 notice, 12 pagination/Dot and five
+  preservation regressions. The corrected production tsc/Vite build passed with
+  one CPU, 5 GiB cap, 2.3 GiB observed peak and no swap.
+- Packaged candidate: four desktop/phone × read/unread cases passed inline icon,
+  section bounds, save/reload/remove, no overflow/errors, zero read/application
+  writes and no Dot polls. Five scrolling layouts passed. New live-browser tests
+  have not run because publication has not occurred. Full Rust/hosted baseline,
+  real provider sends and physical-device tests were not run.
+- Exact live composition: 1,324 pinned source inputs, 11 reviewed production edits,
+  417 hashed outputs, 1,137 paired assets; all other live sources preserved.
+- Software recovery: 116,678,639 bytes, full isolated restore and 5,071 file hashes
+  verified. Desktop B copy has **not started**: another owner holds the native
+  shared backup lane. Do not interrupt or bypass that owner.
 
-The lightweight branch frontend used the verified existing public gateway on
-4720. The preview guide's historical 4511 default is not listening; the current
-workflow/runtime record takes precedence. No isolated backend was started and no
-public preview route was replaced. The temporary frontend preview was stopped
-after browser validation. Preserve every other preview/service.
+Release gate: VK_AGENT_DEPLOYMENT_RUNBOOK.md step 6 requires a verified current
+Desktop B recovery copy. An asynchronous choice was offered: keep waiting, or
+explicitly waive that copy for this frontend-only release. No waiver was received.
+Only this task's idle waiter was stopped while awaiting that decision. No owned
+backup/controller/browser/build process remains active; no automatic deployment.
+No backend/service/data/read-state/device change or push/PR was performed.
 
-Deployment: current live source was composed with the Read Later patch and
-passed the preservation gate before build and publication. The packaged and
-served frontend passed desktop/phone Read Later and five-layout scrolling tests.
-All live writes were intercepted. The software recovery archive was fully
-restored on SSD and independently read back from Desktop B before activation.
-The shared backup lane was initially busy; publication waited for its release,
-and no backup exception was used. The pointer switch took 0.012 seconds. All five
-service identities, backend hash and database identity/99 migrations remain
-unchanged. See VK_READ_LATER_DEPLOYMENT.md and LIVE_DEPLOYMENT.json.
-
-Latest refinement: `b1f609719` makes the shared action icon-only with accessible
-label/tooltip, places workspace/project/saved-issue actions in the existing row,
-and moves Kanban actions into its existing header. Deployed 2026-11-04T20:16:46.412428+00:00.
-The first Read Later build accidentally enabled VITE_DOT_SIDECHAT; the preceding
-visibility bundle compiled it disabled. Stored Dot notices resurfaced because
-polling was re-enabled, not because acknowledgement records were reset. The
-correction explicitly restores VITE_DOT_SIDECHAT=0; three-release disposable
-browser proof is in `/mnt/vk-storage/vk-read-later-20261104-f57c/inline-icons/dot-build-setting-browser.json`.
-Current source/output manifests, candidate/public desktop+phone icon geometry,
-zero polling/read/write assertions, scrolling cases and independent Desktop B
-recovery receipts are under `/mnt/vk-storage/vk-read-later-20261104-f57c/inline-icons`. All focused types/lint, 11+15+10 interaction
-and five preservation tests pass. No backend/data mutation or service restart.
-
-Next: operator UI acceptance and optional staging integration are separate. No
-further deployment is pending. A staging PR still requires the full repository
-baseline and branch freshness; any later publication needs a fresh preservation
-check against the then-live source. No main promotion was performed.
+Evidence and prepared fresh controller:
+`/mnt/vk-storage/vk-read-later-20261104-f57c/save-read-fixed`. The controller is unused and requires Desktop B verification; do not
+reuse stale ownership evidence blindly. Before resuming, re-read the current
+pointer/source/artifact and protected service/database identities. If the pointer
+changed, compose against the new live source and repeat the preservation gate.
+Preserve VITE_DOT_SIDECHAT=0. Complete Desktop B copy and independent readback,
+then fresh atomic publication, four public browser cases and five scrolling
+layouts, trusted public/runtime verification, final continuity and commit.
+`record-final-deployment.py` in the evidence root consumes actual activation and
+live receipts; it must not run before those checks exist. A waiver requires an
+explicit bounded operator instruction and truthful recovery/controller records.
 
 Prior continuity: [pre-reconciliation record](deployment-history/20261030-before-reconciliation/HANDOFF.md)
 and [full historical archive](HANDOFF_HISTORY_20261017.md).

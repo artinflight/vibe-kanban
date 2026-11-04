@@ -1,3 +1,30 @@
+<!-- save-read-pending-start -->
+# Already-read workspace candidate — not deployed
+
+Status 2026-11-04T21:20:55.397887+00:00: `8aa46ba36` adds already-read workspace bookmarks;
+`449819b1e` fixes long-list phone section overlap and adds a browser bounds check.
+Saved workspaces preserve read state and remain until explicitly removed.
+The icon stays inline; removal labels are translated in all seven locales.
+
+Candidate evidence: `/mnt/vk-storage/vk-read-later-20261104-f57c/save-read-fixed`. Types/lint/format/ops, 57 focused regressions,
+four desktop/phone × read/unread packaged cases, and five scrolling layouts pass.
+The bounded tsc/Vite build passed. All 1,324 source inputs and 417 outputs are
+hashed; only 11 reviewed production inputs differ from the exact live source.
+Paired roots retain 1,137 assets. VITE_DOT_SIDECHAT=0 remains preserved.
+No live acceptance for this candidate is claimed; it has not been activated.
+Full Rust/hosted CI, physical devices and real provider sends were not exercised.
+
+The 116,678,639-byte software recovery archive passed full isolated restore with
+5,071 files checked; SHA-256
+`d3495e68585b46d33439754601cd94a6899b8e143e5a06c68709cb395357885c`.
+Desktop B copy has not started because another owner holds the shared native
+backup lane. Step 6 of VK_AGENT_DEPLOYMENT_RUNBOOK.md requires that verified
+copy before publication. An explicit copy waiver/continuation decision is pending;
+no waiver was received. The owned idle waiter was stopped, preserving the other
+backup. Nothing will publish automatically. Current live assets/backend/data
+remain unchanged. See HANDOFF.md for safe resume and ownership checks.
+<!-- save-read-pending-end -->
+
 # Inline icon correction — 2026-11-04
 
 Published **2026-11-04T20:16:46.412428+00:00** at <https://vibe.local>; reload existing tabs.

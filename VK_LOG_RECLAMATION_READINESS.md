@@ -6,8 +6,10 @@ readers, a recovery set, or a deployment boundary. No live log is converted or
 retired by this preparation.
 
 Source review is [draft PR #291](https://github.com/artinflight/vibe-kanban/pull/291),
-targeting staging. Hosted checks are pending on the final source head; the draft
-is not a deployment or conversion approval.
+targeting staging. Both hosted workflows passed on source `087319cc4`. A subsequent rebase onto
+current staging preserves all dedup code; new-head checks govern integration.
+The user has now requested production completion, including deployment and recovery;
+actual ownership, recovery and admission checks still govern every operation.
 
 ## Current readiness and ownership
 
@@ -19,7 +21,7 @@ is not a deployment or conversion approval.
 | Compatible rollback             | Reader-aware fallback, or verified raw reconstruction before an archive-unaware reader is released; current-data roundtrip still required                              | VK::Staging Check                                 |
 | Current Desktop B recovery      | Historical October 28 acceptance does not prove the selected current versions; exact bodies, sidecars, metadata mappings and independent normal recall remain required | Nightly Backup Efficiency                         |
 | Future archive backups          | Exact manifest/object/sidecar graph export and provider readback/closure verifier implemented; actual B consumer qualification outstanding                             | Nightly Backup Efficiency                         |
-| Build capacity                  | SSD approximately 1.9 GiB free, below the retained 3 GiB build floor; OS-log recovery does not fix SSD capacity                                                        | OP::Disk Space and deployment owner               |
+| Build capacity                  | Latest SSD observation is 7.5 GiB free; fresh build ownership/resources and retained 3 GiB floor still apply                                                        | OP::Disk Space and deployment owner               |
 | Actual owner adapter            | Trusted source-pinned admission adapter and fresh config are required; no dummy production adapter or receipt is supplied                                              | VK::Staging Check, with Nightly B provider        |
 | First batch custody             | Prepared selection is not a physical fence; reselect/recheck under actual held ownership                                                                               | Deployment owner                                  |
 
@@ -216,3 +218,23 @@ retirement may precede that evidence.
 Private plans, graph, growth observations, tests and owner coordination evidence
 remain under `/mnt/vk-storage/vk-log-dedup-20261103-0815/`. Do not publish transcript
 objects, raw logs, backup bindings or the private retained-history input.
+
+
+## Production completion requested — 2026-11-04
+
+The operator explicitly requests carrying the task through production conversion,
+verified recovery and actual reclaimed-space acceptance. Existing Nightly and Vibe
+owners are coordinating their actual recovery/reader/deployment interfaces. The
+accepted `NIGHTLY_BACKUP_CONTRACT.private.json` retains whole-session object-store
+closure, physical versus logical hashes and normal-reader/fallback semantics.
+No semantic turn omission is permitted; Nightly commissioning proceeds independently
+of unactivated conversion and remains the sole backup producer.
+
+Current observation has 3,221 closed/inactive files (84,557,012,508 logical bytes)
+selected into 66 finite bounded preparations, beginning with four unchanged
+sample originals. This is an exact selection accounting, not recoverable capacity.
+`PRODUCTION_EXECUTION_20261104.private.json` binds the selection and outstanding
+source, B recovery, both readers, admission, conversion, acceptance and accounting
+outcomes. Legacy/active/pending/damaged records remain excluded and preserved.
+The older resource/owner observations above are dated provenance, not renewed
+clearance. No production bytes have yet been reclaimed by this stream.

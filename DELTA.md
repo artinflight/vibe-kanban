@@ -2618,3 +2618,19 @@ acceptance is inferred. Current source is draft PR291; hosted checks are pending
 Production remains blocked on compatible all-reader deployment/rollback,
 current-version independent B recall, the real owner adapter, capacity and
 current-data/drained-boundary acceptance. Originals and archive remain intact.
+
+
+## 2026-11-04 — resume through production recovery
+
+User explicitly requests complete production deduplication/reclamation, resolving
+backup, both-reader compatibility and deployment rather than stopping at gates.
+Rebased source onto latest stagingee2efee4d; dedup code bytes are unchanged and all
+upstream ledger entries preserved. Prior head087319cc4 passed both hosted workflows.
+Latest SSD7.5GiB observation supersedes the earlier capacity blocker.
+
+Existing Vibe owner now prepares actual all-reader artifacts/rollback/admission;
+Nightly retains its active composed-restore qualification and sole producer role.
+Fresh bounded inventory finds3,221 closed/inactive logs /84,557,012,508 logical
+bytes; finite66-batch metadata plan starts with four unchanged measured sources.
+Plans are not custody or saving estimates. No source retirement, service switch
+or new backup pipeline has occurred; production accounting remains zero.

@@ -1,3 +1,22 @@
+# Production resumption — 2026-11-04
+
+User now explicitly requests production completion through verified recovery and
+space reclamation. Preparation-only boundaries below are historical scope. Current
+finite execution state is `PRODUCTION_EXECUTION_20261104.private.json` under
+`/mnt/vk-storage/vk-log-dedup-20261103-0815/`. It records 66 bounded selections for
+3,221 closed/inactive logs (84,557,012,508 logical bytes), starting with four
+unchanged sample files. No production conversion yet; preserve all exclusions.
+
+Existing Vibe owner execution62230d3f prepares both readers/rollback/artifacts and
+real admission. Nightly execution9fa136d4 retains its existing file/SQL/runtime
+phases and is qualifying composed normal restore; no duplicate backup pipeline.
+Source087319cc4 has passing hosted Test/Historical recovery. Rebase onto current
+stagingee2efee4d retains identical dedup code and latest frontend-preservation rules.
+SSD7.5GiB free clears the old capacity observation, subject to fresh owner checks.
+Continue implementation/admission/recovery work; do not stop at a dependency list.
+
+---
+
 # Conversation-log reclamation — 2026-11-04
 
 Branch `vk/0815-vk-deduplicate-c`; committed format base `0192b38de`.

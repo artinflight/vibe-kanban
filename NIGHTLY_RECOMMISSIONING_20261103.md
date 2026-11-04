@@ -1,5 +1,9 @@
 # Nightly commissioning — November 3, 2026 (EST)
 
+Current correction22:20EST: original producer/collector are terminal, not running.
+Their21:54:59EST stop was native Desktop memory admission typed as fatal.
+See the terminal checkpoint below before interpreting any old phase STATUS.
+
 The user requested the actual operational Nightly service. Historical October28
 restore acceptance remains valid; it did not install a nightly scheduler. As of
 20:56EST, body schedule is still OFF and no next run is claimed. No backend or
@@ -180,3 +184,29 @@ and an exact versioned package/terminal ownership handover are required before
 using the option. A future resource preflight is an actual measurement; this
 source preparation does not assert that SQL admission has already failed or
 that the current full backup/schedule is accepted.
+
+## Actual V18 terminal checkpoint and resource classification
+
+At21:54:59EST, Source.deliver opened source-outbox-inodes-v14-runtime-20261103
+and native Store.configure declined the unchanged128MiB cache+256MiB frame
+headroom requirement. ValueError was incorrectly treated as fatal. This was
+not a reported drive fault, access denial or SQLite corruption.545committed
+files/2,943,833,454B independent readback/1,458,134,306B encoded upload and all
+prior qualification/carriers survive. Collector511131 and producer766070 are
+absent; the unit is inactive with no cgroup. Fixed file STATUS was stale.
+
+Fresh normal native metadata03:15:25UTC reports12,045,193,216B physical RAM
+available against402,653,184B new-control admission. The memory comparison is
+unchanged. Only its positive temporary failure is now typed BlockingIOError;
+the service returns75 only for genuine typed resource/ownership/SQLiteBUSY
+conditions. STOP/access/SMART/identity/integrity/unavailable observations remain
+fatal.118focused native resource/SQL/service/journal checks pass.
+
+The source observer stayed ready/errors0. Temporary journal delivery completed
+03:18:52UTC with actual normal B reopen and ACK through7229131. All stopped
+producer evidence is preserved in D/v18-native-memory-terminal-20261104.
+A successor must prove terminal single ownership, retain original phase clocks
+and B cohort, and set resume_qualified_input_sha256 to
+6ac090413487ca09a5795041342970af60a0d5faea86d1795306b0268d1722e1.
+It must reopen this exact qualified input, not replay a new suffix or hash the
+completed gap again. Final recorded delta/current SQL remain separate stages.

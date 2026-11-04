@@ -23,6 +23,7 @@ from zoneinfo import ZoneInfo
 from vk_nightly_capture_adapter import mcp_lease
 from vk_nightly_current_cycle import run
 from vk_nightly_cycle_state import CycleState,window
+from vk_nightly_b_controls import NativeControlDeferred
 from vk_nightly_desktop_controls import DesktopControls
 from vk_nightly_desktop_objects import DesktopObjects
 from vk_nightly_file_cycle import Source,read_owned,optional_report
@@ -243,7 +244,11 @@ def execute(value,workers,*,report):
 
 def failure_exit_code(error):
     """Finite calendar retry only for positive temporary-admission evidence."""
-    return (75 if isinstance(error,(ResourceDeferred,BlockingIOError))
+    native_temporary=(isinstance(error,NativeControlDeferred) and not error.guard_reason
+        and (error.native_error_type=='BlockingIOError'
+            or error.native_error_type=='OperationalError' and error.native_error_message in
+                ('database is locked','database table is locked')))
+    return (75 if isinstance(error,(ResourceDeferred,BlockingIOError)) or native_temporary
         or (getattr(error,'nightly_Desktop_transport_unavailable',False) is True
             and getattr(error,'nightly_transport_exit_code',None)==255) else 1)
 

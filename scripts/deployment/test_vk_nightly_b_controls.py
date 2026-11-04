@@ -943,6 +943,39 @@ class BControlTests(unittest.TestCase):
         self.assertEqual(probe.execute('pragma temp_store_directory').fetchone(),previous)
         self.assertEqual(tempfile.gettempdir(),original);probe.close()
 
+    def test_actual_native_memory_shortage_defers_without_lowering_cache_or_frame_requirement(self):
+        import ctypes
+        from types import SimpleNamespace
+        from unittest.mock import patch
+        import vk_nightly_objects as objects
+        from vk_nightly_b_controls import Store,NativeControlDeferred
+        from vk_nightly_service import failure_exit_code
+        store=Store(self.controls,objects,guard=lambda _:None);store.temporary_configured=True
+        db=sqlite3.connect(':memory:');self.addCleanup(db.close)
+        db.execute('create table preserved(value)');db.execute("insert into preserved values('kept')")
+        cache=db.execute('pragma cache_size').fetchone();required=store.cache_bytes+256*1024**2
+        available=[required-1]
+        def memory(pointer):pointer._obj.availPhys=available[0];return 1
+        fake=SimpleNamespace(kernel32=SimpleNamespace(GlobalMemoryStatusEx=memory))
+        with patch('vk_nightly_b_controls.os.name','nt'),patch.object(ctypes,'windll',fake,create=True):
+            with self.assertRaisesRegex(BlockingIOError,'actual_available_bytes=.*required_bytes=') as stopped:
+                store.configure(db)
+            self.assertEqual(db.execute('pragma cache_size').fetchone(),cache)
+            self.assertEqual(db.execute('select * from preserved').fetchall(),[('kept',)])
+            self.assertEqual(required,384*1024**2)
+            available[0]=required;store.configure(db)
+        self.assertEqual(db.execute('pragma cache_size').fetchone(),(-128*1024,))
+        source=io.BytesIO();send(source,dict(error_type=type(stopped.exception).__name__,error=str(stopped.exception),guard_reason=None));source.seek(0)
+        with self.assertRaises(NativeControlDeferred) as deferred:Client(source,io.BytesIO()).call(op='open',name='owned')
+        self.assertEqual(failure_exit_code(deferred.exception),75)
+        for kind,message,reason in [('PermissionError','denied',None),
+                ('BlockingIOError','memory','actual STOP'),
+                ('OperationalError','database disk image malformed',None)]:
+            error=NativeControlDeferred(dict(error_type=kind,error=message,guard_reason=reason))
+            self.assertEqual(failure_exit_code(error),1)
+        busy=NativeControlDeferred(dict(error_type='OperationalError',error='database is locked'))
+        self.assertEqual(failure_exit_code(busy),75)
+
     def test_existing_larger_index_is_rejected_before_a_misleading_SQLITE_FULL(self):
         from vk_nightly_b_controls import NativeControlError
         db=self.client.connect('grown',self.sha)

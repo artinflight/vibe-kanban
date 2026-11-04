@@ -1,76 +1,63 @@
-# Nightly operational commissioning — November 3, 2026 (EST)
+# Nightly commissioning — November 3, 2026 (EST)
 
-The user requested finishing the service. October28 accepted restore remains
-valid; no recurring schedule had been installed. At20:56EST, body scheduleOFF,
-next runNONE, current whole-cycle acceptance pending. No backend/Staging restart.
-[Current details](NIGHTLY_RECOMMISSIONING_20261103.md) include exact config hashes,
-source/runtime observations, root plan and proof boundaries.
-
-## Existing jobs: collect, do not duplicate
+The current file producer766070/start96188877 and collector511131/start96047691
+are TERMINAL. At21:54:59EST, a source-journal B connection failed native physical
+memory admission. It was incorrectly typed ValueError/fatal. No drive fault,
+access denial or integrity error was reported. Scheduling isOFF; next runNONE.
+Read D/SERIAL_COMMISSIONING_STATUS.private.json FIRST, then phase status; a
+retained files-STATUS is not evidence that its former producer remains alive.
 
 D=/mnt/vk-storage/vk-nightly-efficiency-20261017/commissioning-20261103.
-The same current-composition-v15-lease-wait completed20:02:46EST; independent B
-metadata reopen passed,55,588 retained points/17.64GB reused,0source bodies/new
-payload/SSD indexes. Its RESULT is preserved; do not repeat composition.
+Original worker-v18 is immutable. D/v18-native-memory-terminal-20261104 preserves
+exact STOP, log tail, ownership, phase status and original cycle binding.545file
+points/2.943GB independent readback/1.458GB sent were committed; all earlier
+qualification, retained carriers and native objects survive. Do not recapture.
+The exact frozen inputSHA is
+6ac090413487ca09a5795041342970af60a0d5faea86d1795306b0268d1722e1.
+Use supported resume_qualified_input_sha256, same B map/cohort and original
+bootstrap00:23:10–08:23:10UTC clocks. Do not enroll another input for this resume.
 
-The finite serial collector vk-nightly-serial-commissioning-20261103.service
-PID511131/start96047691 collected that SAME result. D/SERIAL_COMMISSIONING_STATUS.private.json
-and pinned CONFIG own actual stage/deadlines. It runs worker-v18 initial
-current backup/SQL/runtime/native proof/normal composed restore, followed by a
-real measured incremental qualification. Only actual independent acceptance
-permits the existing exact-package installer to enable22–04Toronto scheduling.
-Hard04:00 stop, completed B data and original phase clocks remain. Every child
-log is a fixed64KiB RAM tail; authoritative receipts/indexes and all bodies stay
-B. Never edit a loaded package or replace a live owner. A collector failure
-preserves exact STOP, B progress and diagnostics, without automatic repair.
+Source fixes are tested: native memory admission becomes positive temporary
+BlockingIOError; service recognizes only typed resource/ownership/SQLiteBUSY
+deferral. Actual native memory requirement384MiB and STOP/access/drive/integrity
+failures remain unchanged. Desktop fresh03:15UTC had12.045GB available; this
+is fresh evidence, not a persistent resource reservation or OOM inference.
 
-P=D/worker-v18; PREPARATION.private.json pins source/config closure.
-ServiceSHA55bf786534254dbba11c27a2292c342528a73c4b910c75b94ad73e67c8641eb1.
-All119 selected roots retain the old117, adding actual current backend and
-frontend pointer; Dot alias transitions are recorded. Worker sourcebe4494800 is committed/pushed;947hosted recovery checks pass.
+The prepared sequential SQL option uses one generated API image at a time.
+Only a complete authenticated B chunk/manifest checkpoint permits releasing that
+new duplicate; a different RAM inode must then pass full SQLite/hash/schema/
+Linux metadata verification. Old RAM recovery and source DBs remain untouched.
+115SQL/worker/native tests passed, then118native-resource/SQL/service/journal
+checks passed. Hosted952backup checks passed on SQL headcc4913f6c; final source
+head/hosted rerun and exact successor package must be recorded before handover.
+Never modify loaded packages or start a duplicate. Details/receipts are in
+[NIGHTLY_RECOMMISSIONING_20261103.md](NIGHTLY_RECOMMISSIONING_20261103.md).
 
-## Repaired tracker and real gap evidence
+Observer vk-nightly-observer.service remains enabled, PID3868069/start95598773,
+epoch3006ed41a73f42d5be33c4ac08d59b18,119roots/~839k watches/errors0.
+Source outbox/rollback is bounded~17MiB; growing indexes and all payload stay B.
+Temporary vk-nightly-journal-delivery.timer is enabled;03:18:52UTC delivery
+independently reopened B and ACKed7229131. Preserve it until accepted cron
+replaces it. No backend/Staging restart or E destination.
 
-V11 stopped on SQLite COMMIT BUSY; V12 filled its8MiB undrained outbox. Tested
-retry is finite and only retries the SAME BUSY transaction; FULL/access/STOP/
-integrity still fail closed. No automatic journal delivery was installed.
-The new vk-nightly-observer.service is enabled, PID3868069/start95598773,
-epoch3006ed41a73f42d5be33c4ac08d59b18, observer-v14-runtime config.
-838481 watches/errors0, ~641MBcgroup/847MBpeak/swap0. Live ceiling1048576;
-no persistent sysctl file found. Reboot continuity is not claimed; new epochs
-require explicit gap reconciliation. Fixed preallocated local outbox/reserve
-~17MiB. Growing indexes stay on B.
+Accepted metadata composition completed20:02:46EST:55,588retained points/17.64GB
+reused,0source bodies/new payload/SSD indexes. Namespace gap proof covers852916
+paths/errors0 with normal B reopen. Do not repeat those completed steps.
+Remaining: resume current file phase; SQL/API/runtime; complete descriptor/
+native proof/normal composed restore; actual incremental <=6h and Toronto04:00;
+then exact-package installer, active22–04hard-stop schedule and actual next run.
+Source tests alone do not qualify installation.
 
-vk-nightly-journal-delivery.timer is enabled; real B reopen precedes ACK/prune.
-It defers under controller/body leases.25percentCPU fits measured startup into
-55s. After verified cron installation the collector disables this redundant
-owned timer, leaving the accepted cron minute pulse. No unrelated timer changes.
-Gap-reconciliation-v14-runtime completed18:51EST:852916paths,98978directories,
-0pending/replay errors, separate normal B reopen. Exact terminal proofSHA
-0545a730d2c17ae80e690eef6122d13dee01bcfb5756e1ecdb7f9cb5c922333a.
-This is metadata acceptance, not tonight's whole backup. Old gaps/epochs remain.
-
-## Remaining acceptance
-
-Collect current files, SQL/API images, runtime/aliases, complete typed descriptor
-and native proof, independent normal composed restore. Then same-package actual
-incremental <=6h/04:00, durable journal reopen, installed schedule and next run.
-Normal B consumer metadata probe passed399aliases/18physical roots,0inode changes;
-B mount device numbers are freshly requalified without relaxing native drive
-identity, STOP, leases, metadata/hash or access checks. No archive payload read.
-Runtime points have versioned B components; native fixtures prove unchanged
-replay uploads0bytes. Fresh resource admission is required for actual SQL RAM.
-
-Focused Python/native-RAM tests and ops/diff pass; full local formatting stops
-at missingPrettier after Rust formatting passes. No test substitutes for real
-baseline or schedule acceptance. PR263 remains sole integration.
+Existing0815 dedup owner contract and matching Nightly ACK are accepted. All live
+session roots/hidden .log-objects/sidecars are already in scope. Nightly shares
+verified B chunks while preserving every original byte. Future converted-session
+acceptance requires complete physical dependency closure and normal-reader
+reconstruction. Conversion is unactivated and is not a commissioning dependency.
+No sample capture, raw retirement, GC or semantic turn omission.
 
 Preserve [October28 evidence](HANDOFF_NIGHTLY_HISTORY_20261103_1930.md),
-[original full history](HANDOFF_HISTORY_20261017.md), accepted162.70GB cold restore,
-137DB points and later valid supplements.7783original gaps and later epochs stay
-explicit. No second cold copy/global source inventory, source deletion, backend
-restart, paid route or E archive destination is authorized.
-
-0815 dedup contract/ack accepted; see current details. Existing live roots include
-hidden chunk stores. Nightly reuses verified B chunks, preserving every byte.
-Unactivated conversion does not block commissioning; no new sample or retirement.
+[original history](HANDOFF_HISTORY_20261017.md), accepted162.70GB cold restore,
+137DB points and valid supplements.7783original gaps and later epochs remain
+explicit. PR263 is sole integration; normal Staging merge was auto-review denied
+for unrelated tree/index changes. Do not bypass that rejection. Operational
+Nightly uses a separately pinned tested package and requires no backend restart.

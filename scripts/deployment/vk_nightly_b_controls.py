@@ -128,7 +128,13 @@ class Store:
             if not ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(m)):
                 raise OSError('native Desktop memory admission unreadable')
             planned=(len(self.handles)+1)*self.cache_bytes+256*1024**2
-            if m.availPhys<planned:raise ValueError('native control-cache and frame headroom unavailable')
+            if m.availPhys<planned:
+                # This is a positive temporary resource admission failure, not
+                # denied access, a drive fault or corrupt data. Keep the SAME
+                # physical-memory requirement; the caller may only retry after
+                # fresh native admission, within its original finite window.
+                raise BlockingIOError('native control-cache and frame headroom unavailable: '
+                    +'actual_available_bytes='+str(m.availPhys)+' required_bytes='+str(planned))
         db.execute('pragma temp_store=MEMORY');db.execute('pragma cache_size=-'+str(self.cache_bytes//1024));db.execute('pragma mmap_size=0')
         def progress():
             try:self.guard(0);return 0
@@ -824,7 +830,7 @@ def serve(root,source,output,*,objects,guard,maximum_index_bytes=4*1024**3):
 
 class NativeControlError(ValueError):
     def __init__(self,value):
-        self.native_error_type=value['error_type'];self.guard_reason=value.get('guard_reason');self.native_context=value.get('native_context')
+        self.native_error_type=value['error_type'];self.native_error_message=value['error'];self.guard_reason=value.get('guard_reason');self.native_context=value.get('native_context')
         super().__init__('native B '+value['error_type']+': '+value['error']+
                          ('; '+self.guard_reason if self.guard_reason else '')+
                          ('; context='+json.dumps(self.native_context,sort_keys=True)[:2048] if self.native_context else ''))

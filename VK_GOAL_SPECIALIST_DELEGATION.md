@@ -36,12 +36,17 @@ Regression coverage runs the existing bounded child protocol fixture with an
 active parent goal, including cancellation, read-only scope, launch, result/usage
 collection, follow-up and stale-turn rejection. Separate tests verify that child
 goal notifications cannot mutate the parent goal or checklist, and budget/stop
-fences still reject new child work.
+fences still reject new child work. The native protocol peer is deterministic:
+it reads a fixture README, returns the spelling finding, and proves that result
+is collected without changing the file or ending the parent. It does not certify
+a real model call, classifier admission, or an already-running production turn.
 
 Local offline Rust compilation is blocked by the missing serde registry entry.
 Rust formatting passed; full `pnpm run format` reaches missing Prettier because
 this old worktree no longer has frontend dependencies. No frontend files change.
-Hosted CI will be the Rust validation authority. No live NODEs assignment, native
+Executable results and the exact validated revision are recorded in
+[PR #293](https://github.com/artinflight/vibe-kanban/pull/293) and its hosted checks;
+local dependency failures are not test passes. No live NODEs assignment, native
 goal, service, provider setting or device was changed. Activating the new runtime
 instructions requires a managed backend release and a subsequent native turn;
 an already-running turn retains its earlier instructions.

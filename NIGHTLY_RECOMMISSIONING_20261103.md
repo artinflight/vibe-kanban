@@ -2,20 +2,20 @@
 
 The user requested the actual operational Nightly service. Historical October28
 restore acceptance remains valid; it did not install a nightly scheduler. As of
-19:50EST, body schedule is still OFF and no next run is claimed. No backend or
+20:56EST, body schedule is still OFF and no next run is claimed. No backend or
 Staging restart is required. PR263 remains the sole source integration.
 
 ## Live ownership and exact continuation
 
 D=/mnt/vk-storage/vk-nightly-efficiency-20261017/commissioning-20261103.
-The existing current-composition-v15-lease-wait job owns the metadata writer:
-unit vk-nightly-current-composition-v15-20261103.service,
-PID103466/start95825707. Read its STATUS/RESULT.private.json; do not duplicate it.
-It reuses prior B namespace, qualification and accepted bodies, without reading
-source bodies or putting indexes on SSD. The historical cold restore is reused.
+The existing current-composition-v15-lease-wait job completed20:02:46EST with
+independent normal B metadata reopen:55,588 completed points/17,643,758,579 raw
+bytes reused,0source body reads/new body payload/SSD indexes. Its RESULT remains
+a metadata acceptance, not the current whole-backup result. Do not repeat it.
+The historical cold restore is reused.
 
 The finite serial collector vk-nightly-serial-commissioning-20261103.service
-PID511131/start96047691 waits for this SAME job, then runs the exact worker-v18 bootstrap,
+PID511131/start96047691 collected that SAME result and runs the exact worker-v18 bootstrap,
 actual incremental qualification, normal composed restore and gated installer.
 D/SERIAL_COMMISSIONING_STATUS.private.json and its pinned CONFIG identify stage
 and original deadlines. Its own lease prevents a second collector. Child logs
@@ -123,3 +123,36 @@ Staging history as outside authorized scope; no merge or indirect bypass was
 performed. Operational Python-worker commissioning is independent of that
 source merge and requires no Vibe backend restart. PR conflict resolution is
 still unperformed; do not report combined source integration as accepted.
+
+## Conversation deduplication owner contract
+
+User-requested coordination with the existing0815 owner completed20:56EST.
+Its current source087319cc49055ad44474dea33be729720dec9518 has not activated
+production conversion. VKLOGCAS1 retains every original byte in an ordered
+manifest plus session-local processes/.log-objects/<sha256>.gz chunks. Preserve
+the entire session store, all manifests/sidecars/adjacent files, aliases and
+Linux metadata. The current119-root scope includes the live sessions tree and
+does not exclude hidden chunk directories. No source roots or running packages
+were changed for this coordination.
+
+Nightly already reuses verified whole-file versions and SHA256-addressed B
+chunks; identical accepted chunks send0new payload. Three actual RAM protocol
+checks passed duplicate reuse, ordered independent readback and interrupted
+readback resume without a second completed copy. These are component tests,
+not production composed-restore acceptance. The same producer766070/start96188877
+continues current qualification/capture; no second producer was launched.
+
+Before accepting any future converted session, retain its complete physical
+manifest/object/sidecar graph and original logical hash/length as distinct
+bindings. The normal B reader must reproduce physical bytes in the original
+namespace and independently reconstruct selected conversations to their original
+hash/length. Missing shared chunks fail that archive's recovery acceptance.
+No semantic turn removal, raw-original retirement, object GC or dedup deployment
+is authorized by the backup contract. Unactivated reclamation is not a Nightly
+commissioning dependency. Its offline sample remains outside live required scope.
+
+Exact owner contract and matching acknowledgement are retained in
+/mnt/vk-storage/vk-log-dedup-20261103-0815/NIGHTLY_BACKUP_CONTRACT.private.json
+and NIGHTLY_OWNER_ACK.private.json. ContractSHA
+1f47c0faed50e41395e172523e8915e1344e21fabb46cb7aa3ae302ef021b603.
+D/NIGHTLY_DEDUP_COORDINATION.private.json records Nightly scope and test evidence.

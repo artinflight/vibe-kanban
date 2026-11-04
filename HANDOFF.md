@@ -1,7 +1,7 @@
 # Nightly operational commissioning — November 3, 2026 (EST)
 
 The user requested finishing the service. October28 accepted restore remains
-valid; no recurring schedule had been installed. At19:50EST, body scheduleOFF,
+valid; no recurring schedule had been installed. At20:56EST, body scheduleOFF,
 next runNONE, current whole-cycle acceptance pending. No backend/Staging restart.
 [Current details](NIGHTLY_RECOMMISSIONING_20261103.md) include exact config hashes,
 source/runtime observations, root plan and proof boundaries.
@@ -9,15 +9,13 @@ source/runtime observations, root plan and proof boundaries.
 ## Existing jobs: collect, do not duplicate
 
 D=/mnt/vk-storage/vk-nightly-efficiency-20261017/commissioning-20261103.
-The same metadata composition owns the writer:
-current-composition-v15-lease-wait, unit
-vk-nightly-current-composition-v15-20261103.service,
-PID103466/start95825707. Read its STATUS/RESULT.private.json. It reuses retained
-B namespace/qualification/bodies;0source bodies/SSD index bytes.
+The same current-composition-v15-lease-wait completed20:02:46EST; independent B
+metadata reopen passed,55,588 retained points/17.64GB reused,0source bodies/new
+payload/SSD indexes. Its RESULT is preserved; do not repeat composition.
 
 The finite serial collector vk-nightly-serial-commissioning-20261103.service
-PID511131/start96047691 waits for that SAME result. D/SERIAL_COMMISSIONING_STATUS.private.json
-and pinned CONFIG own actual stage/deadlines. It then runs worker-v18 initial
+PID511131/start96047691 collected that SAME result. D/SERIAL_COMMISSIONING_STATUS.private.json
+and pinned CONFIG own actual stage/deadlines. It runs worker-v18 initial
 current backup/SQL/runtime/native proof/normal composed restore, followed by a
 real measured incremental qualification. Only actual independent acceptance
 permits the existing exact-package installer to enable22–04Toronto scheduling.
@@ -72,3 +70,7 @@ Preserve [October28 evidence](HANDOFF_NIGHTLY_HISTORY_20261103_1930.md),
 137DB points and later valid supplements.7783original gaps and later epochs stay
 explicit. No second cold copy/global source inventory, source deletion, backend
 restart, paid route or E archive destination is authorized.
+
+0815 dedup contract/ack accepted; see current details. Existing live roots include
+hidden chunk stores. Nightly reuses verified B chunks, preserving every byte.
+Unactivated conversion does not block commissioning; no new sample or retirement.

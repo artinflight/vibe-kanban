@@ -65,6 +65,62 @@ class TrackingTests(unittest.TestCase):
             with self.assertRaises(ValueError):store.report('one',3)
             self.assertEqual(len(store.report('one',0)['changed']),2)
 
+    def test_busy_commit_retries_same_transaction_until_reader_releases(self):
+        import sqlite3
+        with TrackingStore.held(self.path) as store:
+            store.start(self.binding)
+            reader=sqlite3.connect(self.path,isolation_level=None,check_same_thread=False)
+            try:
+                reader.execute('begin')
+                reader.execute('select * from epochs').fetchall()
+                observed=[]
+                def guard():
+                    observed.append(True)
+                    if len(observed)==2:reader.execute('rollback')
+                store.wait_guard=guard
+                store.commit(self.report(3,{'/source/retained':8}))
+                self.assertGreaterEqual(len(observed),2)
+                self.assertEqual(store.report('one',0)['events'],{'/source/retained':8})
+                self.assertFalse(store.db.in_transaction)
+            finally:reader.close()
+
+    def test_busy_commit_still_obeys_guard_and_preserves_previous_cursor(self):
+        import sqlite3
+        with TrackingStore.held(self.path) as store:
+            store.start(self.binding);store.commit(self.report(2))
+            reader=sqlite3.connect(self.path,isolation_level=None)
+            try:
+                reader.execute('begin');reader.execute('select * from epochs').fetchall()
+                calls=[]
+                def guard():
+                    calls.append(True)
+                    if len(calls)>1:raise PermissionError('STOP')
+                store.wait_guard=guard
+                with self.assertRaisesRegex(PermissionError,'STOP'):
+                    store.commit(self.report(3,{'/source/unaccepted':8}))
+                self.assertFalse(store.db.in_transaction)
+                self.assertEqual(store.report('one',0)['sequence'],2)
+                self.assertEqual(store.report('one',0)['events'],{})
+            finally:reader.close()
+
+    def test_busy_commit_has_finite_wait_without_replaying_writes(self):
+        import sqlite3
+        with TrackingStore.held(self.path) as store:
+            store.start(self.binding)
+            reader=sqlite3.connect(self.path,isolation_level=None)
+            try:
+                reader.execute('begin');reader.execute('select * from epochs').fetchall()
+                store.db.execute('begin immediate')
+                store.db.execute("update epochs set cursor=7 where instance='one'")
+                started=time.monotonic()
+                with self.assertRaises(sqlite3.OperationalError):
+                    store.finish_transaction(maximum_wait=.05)
+                self.assertLess(time.monotonic()-started,1)
+                self.assertTrue(store.db.in_transaction)
+                store.db.execute('rollback')
+                self.assertEqual(store.report('one',0)['sequence'],0)
+            finally:reader.close()
+
     def test_backwards_commit_and_competing_owner_refused(self):
         with TrackingStore.held(self.path) as store:
             store.start(self.binding);store.commit(self.report(5))

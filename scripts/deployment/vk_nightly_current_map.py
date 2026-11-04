@@ -117,12 +117,14 @@ def terminal_epoch_successor(previous,current,proof):
     The normal native provider authenticates the exact proof before this call.
     Accepted immutable descriptors/carriers remain separate and unchanged.
     """
-    if (not isinstance(proof,dict) or proof.get('format')!='vk-nightly-closed-source-epoch-gap-v1'
+    if (not isinstance(proof,dict) or proof.get('format') not in
+            ('vk-nightly-closed-source-epoch-gap-v1','vk-nightly-closed-source-alias-gap-v2',
+             'vk-nightly-closed-source-additive-gap-v3')
             or proof.get('old_instance')!=previous.get('instance')
             or proof.get('new_instance')!=current.get('instance')
             or previous.get('instance')==current.get('instance')
-            or any(proof.get(k)!=previous.get(k) or previous.get(k)!=current.get(k)
-                   for k in ('plan_sha256','scope_sha256','required_root_bindings'))
+            or any(proof.get(k)!=previous.get(k) for k in ('plan_sha256','scope_sha256'))
+            or proof.get('required_root_bindings')!=previous.get('required_root_bindings')
             or proof.get('old_owner_verified_terminal') is not True
             or type(proof.get('old_MainPID')) is not int or proof['old_MainPID']!=0
             or type(proof.get('old_committed_sequence')) is not int
@@ -135,6 +137,51 @@ def terminal_epoch_successor(previous,current,proof):
             or proof.get('complete_later_metadata_required') is not True
             or not isinstance(proof.get('reason'),str) or not 0<len(proof['reason'])<=4096):
         raise ValueError('exact retained terminal epoch/gap proof required')
+    additive=proof['format']=='vk-nightly-closed-source-additive-gap-v3'
+    for field in ('plan_sha256','scope_sha256'):
+        digest(current[field])
+        if additive:
+            if proof.get('new_'+field)!=current[field]:raise ValueError('exact later source contract required')
+        elif previous[field]!=current[field]:raise ValueError('unchanged source contract required')
+    old=previous.get('required_root_bindings');new=current.get('required_root_bindings')
+    if proof['format']=='vk-nightly-closed-source-epoch-gap-v1':
+        if old!=new:raise ValueError('unchanged roots required by v1 terminal gap')
+    else:
+        # A published symlink can legitimately change during a stopped epoch.
+        # Authenticate BOTH root sets, retain the old epoch, and require a full
+        # later namespace plus live suffix. No dropped/added or regular root is
+        # authorized by this narrowly versioned transition.
+        if (not isinstance(old,dict) or not isinstance(new,dict) or not set(old)<=set(new)
+                or (not additive and set(old)!=set(new))
+                or proof.get('new_required_root_bindings')!=new):
+            raise ValueError('all original logical roots must remain in the exact later contract')
+        if additive:
+            added=sorted(set(new)-set(old))
+            if not added or proof.get('added_roots')!=added:raise ValueError('exact nonempty additive root set required')
+            for path in added:
+                root=new[path];key(path[1:])
+                if (not path.startswith('/') or not isinstance(root,dict)
+                        or len(root.get('identity',[]))!=3
+                        or root['identity'][2] not in (stat.S_IFREG,stat.S_IFDIR,stat.S_IFLNK)
+                        or len(root.get('target_identity',[]))!=3
+                        or root['target_identity'][2] not in (stat.S_IFREG,stat.S_IFDIR)
+                        or not isinstance(root.get('resolved'),str) or not root['resolved'].startswith('/')):
+                    raise ValueError('actual typed added source binding required')
+                key(root['resolved'][1:])
+        changed=sorted(k for k in old if old[k]!=new[k])
+        if (not changed and not additive) or proof.get('changed_alias_roots')!=changed:
+            raise ValueError('exact nonempty changed alias set required')
+        for path in changed:
+            before,after=old[path],new[path]
+            for root in (before,after):
+                if (not isinstance(root,dict) or len(root.get('identity',[]))!=3
+                        or root['identity'][2]!=stat.S_IFLNK
+                        or len(root.get('target_identity',[]))!=3
+                        or root['target_identity'][2]!=stat.S_IFDIR
+                        or not isinstance(root.get('literal'),str) or not root['literal'].startswith('/')
+                        or root.get('resolved')!=root['literal']):
+                    raise ValueError('only explicit absolute directory-alias transitions are supported')
+            key(path[1:]);key(before['resolved'][1:]);key(after['resolved'][1:])
     digest(proof['old_source_database_sha256'])
     return json.dumps(proof,sort_keys=True,separators=(',',':'))
 
@@ -442,7 +489,10 @@ class CurrentMap:
             same_scope=all(previous.get(k)==binding.get(k) for k in
                            ('plan_sha256','scope_sha256','required_root_bindings'))
             additional_SQL=[];extension_raw=None
-            if not same_scope:
+            terminal_alias_transition=(terminal_raw is not None and
+                terminal_epoch_gap.get('format') in ('vk-nightly-closed-source-alias-gap-v2',
+                    'vk-nightly-closed-source-additive-gap-v3'))
+            if not same_scope and not terminal_alias_transition:
                 additional_SQL=additive_scope_SQL_sources(previous,binding,source_scope_extension,
                     {p for p, in db.execute('select path from SQL_sources')})
                 extension_raw=json.dumps(source_scope_extension,sort_keys=True,separators=(',',':'))

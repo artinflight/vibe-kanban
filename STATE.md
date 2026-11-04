@@ -62,7 +62,7 @@ Collapsible issue behavior and approved frontend release: [topic evidence](VK_CO
 ## Nightly integration commissioning — October 26
 
 Nightly remains a separate worker/config/scheduler; it does not require a backend
-restart. Durable tracking is running; the historical restore/components remain
+restart. New November3 tracking and automatic journal delivery are running; historical restore/components remain
 retained. The October28 retained composed restore is accepted; recurring commissioning
 is not accepted. Live MM scope explicitly excludes B;
 the old copied Staging-only guard is historical. Read the

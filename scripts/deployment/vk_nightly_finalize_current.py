@@ -66,6 +66,16 @@ def bind_runtime_scope(client,current_map,contract,result,*,guard):
     if contract.get('always_runtime_files') is not None:
         raise ValueError('late-bound runtime contract must not override concrete references')
     expected=contract['required_runtime_points'];reference=result['component_reference']
+    if contract.get('runtime_point_authority')=='same-cycle-independent-source-sample-v1':
+        paths=contract.get('required_runtime_paths')
+        if (expected is not None or not isinstance(paths,list) or not 1<=len(paths)<=16
+                or len(paths)!=len(set(paths))):
+            raise ValueError('exact finite dynamically sampled runtime paths required')
+        expected=result.get('sampled_runtime_source_points',{})
+        if set(expected)!=set(paths):raise ValueError('actual runtime sample omitted or added a source')
+        contract['required_runtime_points']={p:{k:v[k] for k in ('kind','bytes','sha256')} for p,v in expected.items()}
+    elif contract.get('runtime_point_authority') is not None:
+        raise ValueError('unsupported runtime source-point authority')
     if not expected or len(expected)>16 or result.get('actual_independent_B_runtime_component_reopen_verified') is not True:
         raise ValueError('finite independently reopened runtime component required')
     guard();db=client.connect(current_map['index_name'],current_map['checkpoint_sha256'],readonly=True,working=True)
@@ -81,6 +91,10 @@ def bind_runtime_scope(client,current_map,contract,result,*,guard):
             if (any(point[k]!=expected[path][k] for k in ('kind','bytes','sha256'))
                     or point['component_index_sha256']!=reference['sha256']):
                 raise ValueError('runtime point differs from installed source pins/sealed component')
+            if contract.get('runtime_point_authority'):
+                record=db.execute('select row from runtime_component_points where name=?',(path[1:],)).fetchone()
+                if (not record or decode_member(record[0])['accepted']['qualification']['source_identity']!=expected[path]['source_identity']):
+                    raise ValueError('actual runtime component differs from same-cycle source identity')
         contract['always_runtime_files']=actual
     finally:db.close()
     guard()

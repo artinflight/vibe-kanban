@@ -23,7 +23,7 @@ from vk_nightly_file_cycle import Source,read_owned
 from vk_nightly_schedule import block,apply,END
 from vk_nightly_journal_delivery import cron_line
 from vk_nightly_outbox_export import verify_delivery
-from vk_nightly_service import load as load_service,scheduled_cycle
+from vk_nightly_service import load as load_service,scheduled_cycle,qualification_cycle
 from vk_nightly_typed_worker import host_guard
 from vk_typed_recovery import checksum
 from vk_prep_common import storage
@@ -41,10 +41,12 @@ def qualification(store,value,service_sha256,*,guard):
         row=db.execute('select binding from nightly_cycles where cycle_id=?',(cycle_id,)).fetchone()
     if not row:raise ValueError('accepted cycle binding missing')
     binding=json.loads(row[0])
-    if (checksum(binding)!=cycle_id or binding.get('cycle_kind')!='incremental'
+    if (checksum(binding)!=cycle_id or binding.get('cycle_kind') not in ('incremental','qualification-incremental')
             or binding.get('schedule_template_sha256')!=service_sha256):
         raise ValueError('accepted commissioning or other package is not ordinary exact-package evidence')
-    expected=scheduled_cycle(value,binding['scheduled_night'],service_sha256)['cycle']['cycle_binding']
+    if binding['cycle_kind']=='qualification-incremental':
+        expected=qualification_cycle(value,binding['started_UTC'],service_sha256)['cycle']['cycle_binding']
+    else:expected=scheduled_cycle(value,binding['scheduled_night'],service_sha256)['cycle']['cycle_binding']
     expected['previous_accepted_sha256']=binding['previous_accepted_sha256']
     if (binding!=expected or not binding['previous_accepted_sha256']
             or accepted['previous_accepted_sha256']!=binding['previous_accepted_sha256']
@@ -87,7 +89,7 @@ def qualification(store,value,service_sha256,*,guard):
     guard()
     return dict(format='vk-nightly-exact-package-commissioning-qualification-v1',
         service_configuration_sha256=service_sha256,accepted_baseline_sha256=checksum(accepted),
-        accepted_cycle_id=cycle_id,scheduled_night=binding['scheduled_night'],completed_UTC=accepted['completed_UTC'],
+        accepted_cycle_id=cycle_id,scheduled_night=binding.get('scheduled_night'),qualification_kind=binding['cycle_kind'],completed_UTC=accepted['completed_UTC'],
         elapsed_seconds=accepted['elapsed_seconds'],descriptor_sha256=accepted['descriptor_sha256'],
         restore_receipt_sha256=accepted['restore_receipt_sha256'],
         actual_ordinary_incremental_and_normal_restore_verified=True,schedule_enabled=False)
@@ -229,9 +231,14 @@ def main():
             if folder.resolve()!=folder or folder.is_symlink():raise ValueError('canonical calendar state directory required')
             with calendar_lease(folder/'lease'):
                 state=calendar_state(folder/'state.private.json')
-                state=adopt_completed_night(state,evidence,enabled_sha)
+                if evidence['qualification_kind']=='qualification-incremental':
+                    # Daytime measured qualification does not suppress tonight.
+                    # Preserve any existing calendar state; never reset a run.
+                    if state is not None and state.get('configuration_sha256')!=enabled_sha:
+                        raise ValueError('existing calendar configuration requires reconciliation')
+                else:state=adopt_completed_night(state,evidence,enabled_sha)
                 ready()
-                calendar_checkpoint(folder/'state.private.json',state)
+                if state is not None:calendar_checkpoint(folder/'state.private.json',state)
                 # A failed cron update retains this truthful accepted-night
                 # checkpoint. Identical retry is safe and cannot recapture it.
                 now=datetime.now(timezone.utc)

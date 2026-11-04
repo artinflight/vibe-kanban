@@ -342,6 +342,14 @@ class BControlTests(unittest.TestCase):
                     with self.assertRaisesRegex(ValueError,'prepared runtime point changed'):
                         cycle.run(controls,config,report=lambda _:None)
                     capture.assert_not_called()
+                controls.update(refresh_runtime_points=True,runtime_seed_checkpoint_sha256=self.sha)
+                updated=cycle.run(controls,config,report=lambda _:None)
+                self.assertEqual(updated['captured']['completed_members'],1)
+                self.assertEqual(updated['always_runtime_files'][str(source)]['sha256'],hashlib.sha256(source.read_bytes()).hexdigest())
+                sent=objects.payload_bytes_sent
+                repeated=cycle.run(controls,config,report=lambda _:None)
+                self.assertEqual(repeated['captured']['completed_members'],0)
+                self.assertEqual(objects.payload_bytes_sent,sent)
         finally:
             process.stdin.close();self.assertEqual(process.wait(timeout=10),0);process.stdout.close();process.stderr.close()
 
@@ -502,6 +510,17 @@ class BControlTests(unittest.TestCase):
         contract=copy.deepcopy(template)
         bind_runtime_scope(self.client,settings['current_map'],contract,result,guard=lambda:None)
         self.assertEqual(contract['always_runtime_files'],result['always_runtime_files'])
+        dynamic=dict(template,required_runtime_points=None,required_runtime_paths=[str(source)],
+            runtime_point_authority='same-cycle-independent-source-sample-v1')
+        observed=dict(result,sampled_runtime_source_points=expected)
+        accepted=copy.deepcopy(dynamic)
+        bind_runtime_scope(self.client,settings['current_map'],accepted,observed,guard=lambda:None)
+        self.assertEqual(accepted['always_runtime_files'],result['always_runtime_files'])
+        self.assertEqual(set(accepted['required_runtime_points']),{str(source)})
+        changed=copy.deepcopy(observed);changed['sampled_runtime_source_points'][str(source)]['source_identity'][1]+=1
+        with self.assertRaises(ValueError):bind_runtime_scope(self.client,settings['current_map'],copy.deepcopy(dynamic),changed,guard=lambda:None)
+        omitted=dict(observed,sampled_runtime_source_points={})
+        with self.assertRaises(ValueError):bind_runtime_scope(self.client,settings['current_map'],copy.deepcopy(dynamic),omitted,guard=lambda:None)
         for mutation in ('pin','scope','component','proof','result'):
             c=copy.deepcopy(template);r=copy.deepcopy(result)
             if mutation=='pin':c['required_runtime_points'][str(source)]['sha256']='a'*64
@@ -728,6 +747,31 @@ class BControlTests(unittest.TestCase):
         with self.assertRaisesRegex(TimeoutError,'original whole-cycle'):
             run_cycle(store,binding,**adapters)
         self.assertIsNone(store.accepted());self.assertNotIn('restore',calls)
+
+    def test_actual_native_daytime_incremental_qualification_does_not_relabel_bootstrap(self):
+        from datetime import datetime,timedelta,timezone
+        from vk_nightly_cycle_state import run_cycle
+        from vk_nightly_commission import qualification
+        from vk_nightly_service import qualification_cycle
+        from vk_typed_recovery import checksum
+        store,binding,adapters,calls,now=self.cycle_fixture()
+        first=run_cycle(store,binding,**adapters)
+        template=dict(cycle=dict(cycle_binding=dict(binding,cycle_kind='incremental',SQL_cohort_tag='template',
+            SQL_phase_index=dict(index_name='template-sql',checkpoint_sha256=self.sha)),
+            SQL=dict(SQL_phase_index=dict(index_name='template-sql',checkpoint_sha256=self.sha)),finalize={}))
+        with self.assertRaisesRegex(ValueError,'not ordinary exact-package'):qualification(store,template,'a'*64,guard=lambda:None)
+        now[0]=datetime(2099,1,3,17,tzinfo=timezone.utc)
+        prepared=qualification_cycle(template,now[0].isoformat(),'a'*64)['cycle']['cycle_binding']
+        prepared['previous_accepted_sha256']=checksum(first)
+        actual_restore=adapters['restore'];ordinary=dict(adapters,
+            restore=lambda *a:dict(actual_restore(*a),actual_existing_B_backed_consumer_route_verified=True))
+        now[0]+=timedelta(seconds=1)
+        accepted=run_cycle(store,prepared,**ordinary)
+        result=qualification(store,template,'a'*64,guard=lambda:None)
+        self.assertEqual(result['qualification_kind'],'qualification-incremental')
+        self.assertIsNone(result['scheduled_night']);self.assertEqual(result['elapsed_seconds'],1)
+        self.assertEqual(result['restore_receipt_sha256'],accepted['restore_receipt_sha256'])
+        with self.assertRaises(ValueError):qualification(store,template,'b'*64,guard=lambda:None)
 
     def test_whole_cycle_refuses_partial_points_and_unauthenticated_restore_before_pointer(self):
         from vk_nightly_cycle_state import run_cycle

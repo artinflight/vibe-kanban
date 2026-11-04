@@ -1,77 +1,75 @@
-# Nightly restore verified — October28,08:13EDT
+# Nightly operational commissioning — November 3, 2026 (EST)
 
-Current goal SATISFIED: restore verification completed, discovered bugs fixed,
-verified dependency handoff delivered to existing Staging. No backup recapture,
-backend restart, production switch or schedule activation occurred. Recurring
-Nightly commissioning is a SEPARATE unfinished task: schedule OFF, nextNONE.
-Original22–04Toronto capture cycle remains expired; its pointer was not advanced.
+The user requested finishing the service. October28 accepted restore remains
+valid; no recurring schedule had been installed. At19:30EST, body scheduleOFF,
+next runNONE, current whole-cycle acceptance pending. No backend/Staging restart.
+[Current details](NIGHTLY_RECOMMISSIONING_20261103.md) include exact config hashes,
+source/runtime observations, root plan and proof boundaries.
 
-## Actual acceptance
+## Existing jobs: collect, do not duplicate
 
-Source09327026008464ebb9ffcc4507631da50b2a62ce (solePR263) passed the actual normal
-UID1000 consumer on existing B-backed VK-Candidate-20261009. Result at
-2026-10-28T08:13:34.667609-04:00; measured normal-only phase1349.8s.
-798077namespace members,660381files/200777178777logical bytes,
-221SQL proof records.15mandatory actual readbacks/368903595B passed
-fullhash/Linuxmetadata; working90 SQL integrity OK + schema matched. Sequential
-RAM payload peak169500672B. All15sample receipts match the final result.
-Previous162.70GB cold restore and all valid layers/images remain; no fresh full
-200GB decode/copy is claimed. Original7783archive gaps and supplemental epochs
-stay explicit; captured points are not a live writer fence.
+D=/mnt/vk-storage/vk-nightly-efficiency-20261017/commissioning-20261103.
+The same metadata composition owns the writer:
+current-composition-v15-lease-wait, unit
+vk-nightly-current-composition-v15-20261103.service,
+PID103466/start95825707. Read its STATUS/RESULT.private.json. It reuses retained
+B namespace/qualification/bodies;0source bodies/SSD index bytes.
 
-D=/mnt/vk-storage/vk-nightly-efficiency-20261017/commissioning-20261026
-P=D/restore-only-093270260-20261028; C=D/b-controls-v1.
-P/RESULT.private.json SHA48eca5b2efdf4c4b8544855dd40bac3d84beae783e4b6fa1eab49050a2fc5f6b.
-P/READBACK_PROOFS.private.json holds15actual sample receipts; SOURCE_VALIDATION
-holds151focused tests +13applicable exact-head hosted checks (consent job skipped).
-Rust/ops/diff checks pass. Full local format stops only at missing Prettier.
-Former owner1103083/start39592858/unitvk-nightly-retained-restore-093270260-20261028
-is terminal/MainPID0/emptycgroup. No consumer/retry/timer was left armed by this work.
+The finite serial collector vk-nightly-serial-commissioning-20261103.service
+PID377969 waits for that SAME result. D/SERIAL_COMMISSIONING_STATUS.private.json
+and pinned CONFIG own actual stage/deadlines. It then runs worker-v17 initial
+current backup/SQL/runtime/native proof/normal composed restore, followed by a
+real measured incremental qualification. Only actual independent acceptance
+permits the existing exact-package installer to enable22–04Toronto scheduling.
+Hard04:00 stop, completed B data and original phase clocks remain. Every child
+log is a fixed64KiB RAM tail; authoritative receipts/indexes and all bodies stay
+B. Never edit a loaded package or replace a live owner. A collector failure
+preserves exact STOP, B progress and diagnostics, without automatic repair.
 
-## Durable B proof and delivered Staging interface
+P=D/worker-v17; PREPARATION.private.json pins source/config closure.
+ServiceSHAe2e797194ae4910454754bac0916dd929ea9240df4abc1932c480ac062cff2f3.
+All119 selected roots retain the old117, adding actual current backend and
+frontend pointer; Dot alias transitions are recorded. Current source is65fff2188
+plus tested recommissioning fixes (see Git for exact preservation status).
 
-P/DURABLE_B_PROOF.private.json: immutable B controls image
-0720a45cade8fc4e5fd3a30dda10f409bc23b5bcc762c2f696517e416c2daace.sqlite,3207168B;
-B:/vk-backups/vk-nightly-efficiency-20261026/controls-v1. Independent full stream
-readback + separate SQLpart reopen/hash/count PASSED. Payload includes candidate,
-exact packet/descriptors/proofs, actual result, pinned normal-reader source,
-source validation and current runtime metadata observation.0new source bodies.
+## Repaired tracker and real gap evidence
 
-Matching shared receipt:
-/mnt/vk-storage/vk-git-recurrence-release-20261017/NIGHTLY_RESTORE_VERIFIED_20261028.private.json
-and C/VERIFIED_RESTORE_CONSUMER_HANDOFF_20261028.private.json;
-SHA70c40501ceb7798a62f61e914fba73a57717990d05fa2bb63c7e4f0148271ce4.
-Old authoritative NIGHTLY_RELEASE_CONSUMER_HANDOFF.private.json remains untouched.
-Verify capsule/header/part digests, then consume its pinned source/packet under
-fresh ordinary B identity/STOP/health/access/capacity/lease and finite read-only
-admission. Never reuse the expired packet deadline as a new admission.
-Staging still owns current-live pin comparison and a consistent bounded final
-journal/file/SQL delta before any separately approved cutover. No global source
-inventory or repeat cold restore is needed merely to recover this accepted set.
-Runtime observation around07:55EDT:14/14captured pins +frontend/DB links unchanged;
-that metadata observation is not current SQL freshness or a writer fence.
+V11 stopped on SQLite COMMIT BUSY; V12 filled its8MiB undrained outbox. Tested
+retry is finite and only retries the SAME BUSY transaction; FULL/access/STOP/
+integrity still fail closed. No automatic journal delivery was installed.
+The new vk-nightly-observer.service is enabled, PID3868069/start95598773,
+epoch3006ed41a73f42d5be33c4ac08d59b18, observer-v14-runtime config.
+838481 watches/errors0, ~641MBcgroup/847MBpeak/swap0. Live ceiling1048576;
+no persistent sysctl file found. Reboot continuity is not claimed; new epochs
+require explicit gap reconciliation. Fixed preallocated local outbox/reserve
+~17MiB. Growing indexes stay on B.
 
-## Actual failures and fixes preserved
+vk-nightly-journal-delivery.timer is enabled; real B reopen precedes ACK/prune.
+It defers under controller/body leases.25percentCPU fits measured startup into
+55s. After verified cron installation the collector disables this redundant
+owned timer, leaving the accepted cron minute pulse. No unrelated timer changes.
+Gap-reconciliation-v14-runtime completed18:51EST:852916paths,98978directories,
+0pending/replay errors, separate normal B reopen. Exact terminal proofSHA
+0545a730d2c17ae80e690eef6122d13dee01bcfb5756e1ecdb7f9cb5c922333a.
+This is metadata acceptance, not tonight's whole backup. Old gaps/epochs remain.
 
-C0 native audit completed06:30 (P's native_proof_reused_from pins its exact
-candidate/source). Normal C0 then hit its separate90min verification admission
-at07:37:12 inside local-RAM SQLite checking; no drive fault. It queried B paths
-per1000SQL ops and duplicated provider checks. Current source coalesces only
-nested checks, pins external root IDs directly and keeps resource/time checks
-inside local SQLite plus full dependency checks at archive access/acceptance.
-Outer native B STOP/identity/health/capacity and kernel leases remain. No numeric
-resource threshold or security policy was relaxed. Earlier provider/base-name/
-ordered-history fixes also passed the complete native audit. Native audit/map/
-SQLAPI/images/bodies were reused, not recaptured or relabelled.
+## Remaining acceptance
 
-The failed169.5MB temporary RAM duplicate was absent after VM idle; its sealed
-B original remains. Old failed run/diagnostics/native proof and earlier recovery
-sources stay preserved. Do not treat old partial/timeout receipts as accepted.
-D/LATEST_STATUS.private.json now records this actual accepted restore and shared
-handoff; it is not recurring-service commissioning acceptance.
+Collect current files, SQL/API images, runtime/aliases, complete typed descriptor
+and native proof, independent normal composed restore. Then same-package actual
+incremental <=6h/04:00, durable journal reopen, installed schedule and next run.
+Normal B consumer metadata probe passed399aliases/18physical roots,0inode changes;
+B mount device numbers are freshly requalified without relaxing native drive
+identity, STOP, leases, metadata/hash or access checks. No archive payload read.
+Runtime points have versioned B components; native fixtures prove unchanged
+replay uploads0bytes. Fresh resource admission is required for actual SQL RAM.
 
-Earlier details survive in [06:08history](HANDOFF_NIGHTLY_HISTORY_20261028_0608.md),
-[03:46history](HANDOFF_NIGHTLY_HISTORY_20261028_0346.md), private
-D/HANDOFF_BEFORE_NORMAL_ONLY_20261028.md and [original history](HANDOFF_HISTORY_20261017.md).
-See [Nightly contract](VK_NIGHTLY_BACKUP_EFFICIENCY.md) and
-[overnight contract](VK_NIGHTLY_OVERNIGHT_ACCEPTANCE.md).
+Focused Python/native-RAM tests and ops/diff pass; full local formatting stops
+at missingPrettier after Rust formatting passes. No test substitutes for real
+baseline or schedule acceptance. PR263 remains sole integration.
+
+Preserve [October28 evidence](HANDOFF_NIGHTLY_HISTORY_20261103_1930.md),
+[original full history](HANDOFF_HISTORY_20261017.md), accepted162.70GB cold restore,
+137DB points and later valid supplements.7783original gaps and later epochs stay
+explicit. No second cold copy/global source inventory, source deletion, backend
+restart, paid route or E archive destination is authorized.

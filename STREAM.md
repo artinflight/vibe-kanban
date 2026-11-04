@@ -66,3 +66,18 @@ Prior branch intent and evidence remain in
 
 The merged upstream stream archive remains in
 [Staging stream history](STREAM_HISTORY_20261017.md).
+
+
+## Recommissioning — November 3 (EST)
+
+The user requested finishing the operational service. V11 SQLite COMMIT BUSY and
+V12 undrained outbox exhaustion explain the dead trackers; the Oct28 task had
+ended at restore handoff without service/calendar adoption. Tested changes now
+cover bounded same-transaction BUSY handling, authenticated additive-root/alias
+gap closure, versioned current runtime points, fresh normal-B mount placement,
+and actual initial/ordinary incremental qualification before calendar install.
+A new119-root observer and automatic B journal delivery are live. The same
+metadata composition is being collected into the serial real backup/SQL/
+runtime/normal-restore/qualification chain. No enabled calendar or current
+whole-cycle acceptance is claimed yet. See the current handoff for exact units,
+package hashes, proof boundaries and remaining tests. All prior data are kept.

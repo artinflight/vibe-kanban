@@ -73,6 +73,83 @@ raise SystemExit(subprocess.call(['wsl.exe','-d','VK-Candidate-20261009','--exec
     return ssh_command(controls,'python -B -u -c "import base64;exec(base64.b64decode(\''+encoded+'\'))"')
 
 
+PLACEMENT_PROBE = r"""
+import os,json,pathlib,re,stat,sys
+assert os.getuid()==1000 and os.getgid()==1000
+raw=sys.stdin.buffer.readline(65537)
+if len(raw)>65536:raise ValueError('bounded provider roots required')
+paths=json.loads(raw);result={}
+if not isinstance(paths,list) or not 1<=len(paths)<=64:raise ValueError('finite unique physical providers required')
+mount=None
+if any(p.startswith('/mnt/b/') for p in paths):
+ for line in pathlib.Path('/proc/self/mountinfo').read_text().splitlines():
+  left,right=line.split(' - ',1);fields=left.split();detail=right.split()
+  if fields[4]=='/mnt/b':
+   source=re.sub(r'\\([0-7]{3})',lambda m:chr(int(m[1],8)),detail[1]).rstrip('\\/').upper()
+   mount=dict(source=source,filesystem=detail[0])
+ if not mount or mount['source']!='B:' or mount['filesystem'] not in ('9p','drvfs'):raise ValueError('actual Windows B drvfs mount required')
+for path in paths:
+ p=pathlib.Path(path);info=p.lstat()
+ if not p.is_absolute() or p.resolve()!=p or not stat.S_ISDIR(info.st_mode):raise ValueError('canonical provider root required')
+ result[path]=[info.st_dev,info.st_ino]
+print(json.dumps(dict(uid=os.getuid(),gid=os.getgid(),bindings=result,B_mount=mount)))
+"""
+
+
+def reconcile_placement(placement,observed):
+    """Only B's transient Linux mount device may change; every inode stays pinned."""
+    import copy
+    value=copy.deepcopy(placement)
+    if (observed.get('uid')!=value['expected_uid'] or observed.get('gid')!=value['expected_gid']
+            or set(observed.get('bindings',{}))!=set(value['roots'].values())):
+        raise ValueError('actual provider owner/root scope differs')
+    if any(path.startswith('/mnt/b/') for path in value['roots'].values()):
+        mount=observed.get('B_mount',{})
+        if (not isinstance(mount,dict) or mount.get('source')!='B:'
+                or mount.get('filesystem') not in ('9p','drvfs')):
+            raise ValueError('actual Windows B mount identity required')
+    for name,path in value['roots'].items():
+        old=value['root_bindings'][name];new=observed['bindings'][path]
+        if (not isinstance(new,list) or len(new)!=2 or any(type(x) is not int or x<=0 for x in new)
+                or new[1]!=old[1] or (new[0]!=old[0] and not path.startswith('/mnt/b/'))):
+            raise ValueError('pinned provider inode or non-B placement changed: '+path)
+        value['root_bindings'][name]=new
+    return value
+
+
+def probe_placement(controls,placement,*,guard,deadline):
+    """Fresh exact normal-B placement before packet sealing; no payload reads.
+
+    Driver device numbers change across WSL mount generations. Query physical
+    providers once (not once per logical alias), retaining pinned inodes, the
+    native B guard, the existing B-backed distro and all normal reader leases.
+    Both SSH and WSL data use stdin, avoiding Windows command-length limits.
+    """
+    from vk_nightly_window import seconds_left
+    paths=sorted(set(placement['roots'].values()))
+    raw=(json.dumps(paths,separators=(',',':'))+'\n').encode()
+    if len(raw)>65536 or not 1<=len(paths)<=64:raise ValueError('bounded physical provider scope required')
+    program=r'''import subprocess,json,sys
+q="Get-ItemProperty 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Lxss\\*' | Where-Object DistributionName -eq 'VK-Candidate-20261009' | Select-Object DistributionName,BasePath | ConvertTo-Json -Compress"
+r=subprocess.run(['powershell.exe','-NoProfile','-NonInteractive','-Command',q],capture_output=True,text=True,timeout=30,check=True)
+v=json.loads(r.stdout)
+if not isinstance(v,dict) or v.get('DistributionName')!='VK-Candidate-20261009' or v.get('BasePath')!=r'\\?\B:\vk-backups\vk-safe-release-20261009\linux-candidate\distribution':raise ValueError('normal consumer B placement differs')
+raw=sys.stdin.buffer.readline(65537)
+if len(raw)>65536:raise ValueError('bounded root data required')
+r=subprocess.run(['wsl.exe','-d','VK-Candidate-20261009','--exec','setpriv','--reuid','1000','--regid','1000','--clear-groups','python3','-B','-c',PROBE],input=raw,capture_output=True,timeout=60)
+if r.returncode:raise ValueError('normal provider probe failed: '+r.stderr.decode(errors='replace')[-2048:])
+sys.stdout.buffer.write(r.stdout)
+'''
+    program='PROBE='+repr(PLACEMENT_PROBE)+'\n'+program
+    wire=base64.b64encode(program.encode())+b'\n'+raw
+    command=ssh_command(controls,'python -B -u -c "import sys,base64;raw=sys.stdin.buffer.readline(65537);assert len(raw)<=65536;exec(base64.b64decode(raw))"')
+    guard()
+    result=subprocess.run(command,input=wire,capture_output=True,timeout=min(95,seconds_left(deadline)))
+    if result.returncode:raise ValueError('normal provider placement unavailable: '+result.stderr.decode(errors='replace')[-2048:])
+    if len(result.stdout)>65536:raise ValueError('bounded provider observation exceeded')
+    guard();return reconcile_placement(placement,json.loads(result.stdout))
+
+
 def run(controls,packet,*,guard,report=lambda _:None,clock=time.monotonic):
     guard();wire=bundle(packet)
     process=subprocess.Popen(command(controls),stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE)

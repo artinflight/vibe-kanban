@@ -80,7 +80,7 @@ def cron_line(script,script_sha,package,service,service_sha,receipt,legacy,legac
     if os.getuid()==0:raise ValueError('normal unprivileged journal owner required')
     return ('* * * * * /usr/bin/env XDG_RUNTIME_DIR=/run/user/'+str(os.getuid())
         +' PYTHONPATH='+str(package)+' /usr/bin/systemd-run --user --scope --quiet --collect '
-        '--property=CPUQuota=5\\% --property=MemoryHigh=128M --property=MemoryMax=256M '
+        '--property=CPUQuota=25\\% --property=MemoryHigh=128M --property=MemoryMax=256M '
         '--property=MemorySwapMax=0 --property=TasksMax=32 '
         '/usr/bin/timeout --signal=TERM --kill-after=5 55 '
         '/usr/bin/nice -n 19 /usr/bin/ionice -c 3 /usr/bin/python3 -B -S '+str(script)

@@ -142,7 +142,14 @@ def run(config,workers,store,*,consumer,guard,report=lambda _:None,now=lambda:da
             settings['runtime_phase']=results['runtime']
             value=finalize(remote.client,**settings)
         left=(datetime.fromisoformat(end)-now()).total_seconds()
-        packet=consumer_packet(value,**dict(config['consumer'],remaining_seconds=left,whole_cycle_deadline_UTC=end))
+        consumer_settings=dict(config['consumer'])
+        refresh=consumer_settings.pop('refresh_provider_placement',False)
+        if type(refresh) is not bool:raise ValueError('explicit provider requalification setting required')
+        if refresh:
+            from vk_nightly_remote_consumer import probe_placement
+            consumer_settings['provider_placement']=probe_placement(main['B_controls'],consumer_settings['provider_placement'],guard=owner.guard,deadline=end)
+            report(dict(phase='fresh-normal-B-provider-placement-verified',source_payload_bytes_read=0))
+        packet=consumer_packet(value,**dict(consumer_settings,remaining_seconds=left,whole_cycle_deadline_UTC=end))
         return dict(candidate=value,packet=packet,final_delta=tail,recorded_SQL_closure=SQL_closure)
     def restore(results,end,check):
         # The independently pinned normal consumer must enforce actual B

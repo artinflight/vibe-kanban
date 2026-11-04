@@ -98,6 +98,82 @@ class CurrentMapTests(unittest.TestCase):
             self.assertEqual(result['member_states'],{'verified-file':1,'file-needs-qualification':1})
             with self.assertRaisesRegex(ValueError,'durable journal suffix'):SealedMemberIndex(m.db,m.check,{'consistent_SQL_sidecars':{}})
 
+    def test_terminal_alias_transition_requires_exact_both_epochs_without_scope_loss(self):
+        import copy
+        from vk_nightly_current_map import terminal_epoch_successor
+        root='/home/current'
+        before=dict(identity=[1,2,stat.S_IFLNK],literal='/old',resolved='/old',target_identity=[1,3,stat.S_IFDIR])
+        after=dict(identity=[1,4,stat.S_IFLNK],literal='/new',resolved='/new',target_identity=[1,5,stat.S_IFDIR])
+        old=dict(instance='old',start_sequence=1,plan_sha256='a'*64,scope_sha256='b'*64,required_root_bindings={root:before})
+        new=dict(old,instance='new',required_root_bindings={root:after})
+        proof=dict(format='vk-nightly-closed-source-alias-gap-v2',old_instance='old',new_instance='new',
+            **{k:old[k] for k in ('plan_sha256','scope_sha256','required_root_bindings')},
+            new_required_root_bindings=new['required_root_bindings'],changed_alias_roots=[root],
+            old_owner_verified_terminal=True,old_MainPID=0,old_committed_sequence=2,old_B_delivered_sequence=1,
+            old_gap_continuity_proven=False,original_epoch_repaired=False,current_baseline_accepted=False,
+            complete_later_metadata_required=True,reason='terminal tracker; recorded publication changed directory alias',
+            old_source_database_sha256='c'*64)
+        self.assertEqual(json.loads(terminal_epoch_successor(old,new,proof)),proof)
+        bads=[]
+        for key,value in [('changed_alias_roots',[]),('new_required_root_bindings',{}),('old_owner_verified_terminal',False),
+                          ('original_epoch_repaired',True),('current_baseline_accepted',True),('plan_sha256','d'*64)]:
+            bads.append(dict(proof,**{key:value}))
+        bad=copy.deepcopy(proof);bad['new_required_root_bindings'][root]['target_identity'][2]=stat.S_IFREG;bads.append(bad)
+        bad=copy.deepcopy(proof);bad['required_root_bindings'][root]['identity'][2]=stat.S_IFDIR;bads.append(bad)
+        for bad in bads:
+            with self.subTest(bad=bad),self.assertRaises(ValueError):terminal_epoch_successor(old,new,bad)
+        with self.assertRaises(ValueError):terminal_epoch_successor(old,new,dict(proof,format='vk-nightly-closed-source-epoch-gap-v1'))
+        with self.assertRaises(ValueError):terminal_epoch_successor(old,dict(new,required_root_bindings={}),proof)
+
+    def test_terminal_additive_scope_keeps_every_old_root_and_all_old_gap_truth(self):
+        import copy
+        from vk_nightly_current_map import terminal_epoch_successor
+        root=dict(identity=[1,2,stat.S_IFDIR],resolved='/old',literal=None,target_identity=[1,2,stat.S_IFDIR])
+        old=dict(instance='old',start_sequence=4,plan_sha256='a'*64,scope_sha256='b'*64,required_root_bindings={'/old':root})
+        added=dict(identity=[1,3,stat.S_IFREG],resolved='/new-server',literal=None,target_identity=[1,3,stat.S_IFREG])
+        new=dict(old,instance='new',plan_sha256='c'*64,scope_sha256='d'*64,required_root_bindings={'/old':root,'/new-server':added})
+        proof=dict(format='vk-nightly-closed-source-additive-gap-v3',old_instance='old',new_instance='new',
+            **{k:old[k] for k in ('plan_sha256','scope_sha256','required_root_bindings')},
+            new_plan_sha256=new['plan_sha256'],new_scope_sha256=new['scope_sha256'],new_required_root_bindings=new['required_root_bindings'],
+            added_roots=['/new-server'],changed_alias_roots=[],old_owner_verified_terminal=True,old_MainPID=0,
+            old_committed_sequence=5,old_B_delivered_sequence=4,old_gap_continuity_proven=False,original_epoch_repaired=False,
+            current_baseline_accepted=False,complete_later_metadata_required=True,reason='preserved terminal epoch plus new runtime root',old_source_database_sha256='e'*64)
+        self.assertEqual(json.loads(terminal_epoch_successor(old,new,proof)),proof)
+        for field,value in [('added_roots',[]),('new_plan_sha256','f'*64),('new_required_root_bindings',{}),
+                            ('old_gap_continuity_proven',True),('complete_later_metadata_required',False)]:
+            with self.subTest(field=field),self.assertRaises(ValueError):terminal_epoch_successor(old,new,dict(proof,**{field:value}))
+        bad=copy.deepcopy(new);del bad['required_root_bindings']['/old']
+        with self.assertRaises(ValueError):terminal_epoch_successor(old,bad,dict(proof,new_required_root_bindings=bad['required_root_bindings']))
+        for mode in [stat.S_IFIFO,stat.S_IFSOCK]:
+            bad=copy.deepcopy(new);bad['required_root_bindings']['/new-server']['identity'][2]=mode
+            with self.assertRaises(ValueError):terminal_epoch_successor(old,bad,dict(proof,new_required_root_bindings=bad['required_root_bindings']))
+
+    def test_alias_successor_retains_closed_namespace_and_body_versions(self):
+        import copy
+        first=self.later_namespace();old=json.loads(first.execute('select binding from gap_meta').fetchone()[0])
+        alias='/home/current';before=dict(identity=[1,2,stat.S_IFLNK],literal='/old',resolved='/old',target_identity=[1,3,stat.S_IFDIR])
+        after=dict(identity=[1,4,stat.S_IFLNK],literal='/new',resolved='/new',target_identity=[1,5,stat.S_IFDIR])
+        old['required_root_bindings']={alias:before};first.execute('update gap_meta set binding=?',(json.dumps(old),))
+        first.execute('insert into namespace values(?,?)',('home/a',encode_observation(self.observation)))
+        second=self.later_namespace();new=dict(old,instance='alias-successor',required_root_bindings={alias:after})
+        second.execute('update gap_meta set binding=?',(json.dumps(new),));second.execute('insert into namespace values(?,?)',('home/a',encode_observation(self.observation)))
+        proof=dict(format='vk-nightly-closed-source-alias-gap-v2',old_instance=old['instance'],new_instance=new['instance'],
+            **{k:old[k] for k in ('plan_sha256','scope_sha256','required_root_bindings')},new_required_root_bindings=new['required_root_bindings'],changed_alias_roots=[alias],
+            old_owner_verified_terminal=True,old_MainPID=0,old_committed_sequence=old['start_sequence']+1,old_B_delivered_sequence=old['start_sequence'],
+            old_gap_continuity_proven=False,original_epoch_repaired=False,current_baseline_accepted=False,complete_later_metadata_required=True,
+            reason='terminal owner and retained publication boundary',old_source_database_sha256='c'*64)
+        with CurrentMap.held(self.path,binding=self.binding,create=True) as m:
+            self.compile(m);m.reconcile_namespace(first,lambda n:self.version,checkpoint=lambda:None,maximum_paths=10)
+            m.db.execute('update namespace_reconciliation set suffix_complete=1')
+            result=m.reconcile_namespace(second,lambda n:self.version,checkpoint=lambda:None,maximum_paths=10,
+                allow_unaccepted_epoch_successor=True,terminal_epoch_gap=proof)
+            self.assertFalse(result['more_names']);self.assertTrue(result['journal_suffix_required'])
+            row=m.db.execute('select binding,complete,suffix_complete from namespace_reconciliation_history').fetchone()
+            self.assertEqual(json.loads(row[0]),old);self.assertEqual(row[1:],(1,1))
+            self.assertEqual(m.db.execute('select state from members where name=?',('home/a',)).fetchone(),('verified-file',))
+            self.assertEqual(json.loads(m.db.execute('select binding from namespace_reconciliation').fetchone()[0]),new)
+            self.assertEqual(m.db.execute('select suffix_complete from namespace_reconciliation').fetchone(),(0,))
+
     def test_completed_suffix_successor_requires_exact_retained_terminal_gap(self):
         import copy
         first=self.later_namespace();first.execute('insert into namespace values(?,?)',('home/a',encode_observation(self.observation)))

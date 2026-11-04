@@ -32,7 +32,8 @@ def window(binding):
     if binding.get('cycle_kind')=='incremental':
         overnight_window(start,end)
         return start.timestamp(),end.timestamp()
-    if not math.isfinite(seconds) or not 0<seconds<=8*3600:
+    maximum=6*3600 if binding.get('cycle_kind')=='qualification-incremental' else 8*3600
+    if not math.isfinite(seconds) or not 0<seconds<=maximum:
         raise ValueError('finite original commissioning window required; not recurring overnight acceptance')
     return start.timestamp(),end.timestamp()
 

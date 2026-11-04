@@ -49,8 +49,8 @@ def load(path,expected,*,folder=None):
                 or hashlib.sha256((folder/name).read_bytes()).hexdigest()!=sha):
             raise ValueError('installed service source differs: '+name)
     window(value['cycle']['cycle_binding'])
-    if value['cycle']['cycle_binding'].get('cycle_kind') not in ('incremental','adopt-existing-commissioning'):
-        raise ValueError('explicit timed incremental or existing commissioning cycle required')
+    if value['cycle']['cycle_binding'].get('cycle_kind') not in ('incremental','adopt-existing-commissioning','bootstrap-current','qualification-incremental'):
+        raise ValueError('explicit timed incremental, bootstrap or existing commissioning cycle required')
     phases={};workers={}
     for name,reference in value['phase_references'].items():
         control=read_owned(reference['config'],reference['sha256'])
@@ -68,7 +68,7 @@ def load(path,expected,*,folder=None):
                     or legacy['B_controls']['B_root']!=workers[name]['B_controls']['B_root']
                     or any(old.get(k)!=phases[name].get(k) for k in ('cohort_tag','SQL_phase_index','runtime_component'))):
                 raise ValueError('existing component data/source/cohort binding differs from installed adoption definition')
-    elif value.get('existing_components'):raise ValueError('ordinary cycle cannot adopt earlier component timings')
+    elif value.get('existing_components'):raise ValueError('fresh cycle cannot adopt earlier component timings')
     for field in ('controller_lease','status'):
         p=Path(value[field])
         if not p.is_absolute() or p.resolve()!=p or not p.is_relative_to('/mnt/vk-storage'):
@@ -151,6 +151,31 @@ def scheduled_cycle(template,evening,template_sha256):
     from vk_nightly_b_controls import name as index_name
     reference=dict(cycle['SQL']['SQL_phase_index'],index_name=index_name(tag+'-sql'))
     binding.update(started_UTC=start.isoformat(),deadline_UTC=end.isoformat(),scheduled_night=evening,
+        schedule_template_sha256=template_sha256,SQL_cohort_tag=tag,SQL_phase_index=reference)
+    cycle['SQL'].update(cohort_tag=tag,SQL_phase_index=reference)
+    cycle['finalize'].update(SQL_phase=reference,cycle_binding=dict(binding))
+    return value
+
+
+def qualification_cycle(template,started_UTC,template_sha256):
+    """One real six-hour qualification, never a calendar launch or cold replay.
+
+    Same fixed worker/phase/restore path and predecessor CAS as an incremental
+    night. The explicit commissioning run may start during the day; it cannot
+    extend past six hours or the forthcoming Toronto04:00 hard stop.
+    """
+    from datetime import timedelta
+    from vk_nightly_b_controls import name as index_name
+    if template.get('existing_components') or template['cycle']['cycle_binding']['cycle_kind']!='incremental':
+        raise ValueError('only the ordinary fixed template may qualify incrementally')
+    started=datetime.fromisoformat(started_UTC)
+    if started.tzinfo is None:raise ValueError('aware qualification start required')
+    end=min(started+timedelta(hours=6),bounds(night(started))[1])
+    value=copy.deepcopy(template);cycle=value['cycle'];binding=cycle['cycle_binding']
+    tag='qualification-'+started.strftime('%Y%m%d%H%M%S')+'-'+template_sha256[:16]+'-'+hashlib.sha256(started_UTC.encode()).hexdigest()[:8]
+    reference=dict(cycle['SQL']['SQL_phase_index'],index_name=index_name(tag+'-sql'))
+    binding.pop('scheduled_night',None)
+    binding.update(cycle_kind='qualification-incremental',started_UTC=started.isoformat(),deadline_UTC=end.isoformat(),
         schedule_template_sha256=template_sha256,SQL_cohort_tag=tag,SQL_phase_index=reference)
     cycle['SQL'].update(cohort_tag=tag,SQL_phase_index=reference)
     cycle['finalize'].update(SQL_phase=reference,cycle_binding=dict(binding))

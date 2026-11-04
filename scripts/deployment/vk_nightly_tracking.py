@@ -66,6 +66,27 @@ def source_bindings(plan):
 
 
 class TrackingStore:
+    def finish_transaction(self, *, maximum_wait=5.0):
+        """Retry only a local SQLite BUSY commit, without replaying writes.
+
+        A rollback-journal reader can briefly prevent COMMIT despite our writer
+        lease. The inotify pump continues; admission is checked between retries.
+        FULL, LOCKED, denied access and integrity errors are never retried.
+        """
+        deadline=time.monotonic()+maximum_wait
+        while True:
+            self.check()
+            getattr(self,'wait_guard',lambda:None)()
+            try:
+                self.db.execute('commit')
+                return
+            except sqlite3.OperationalError as error:
+                if (not isinstance(self.db,sqlite3.Connection)
+                        or getattr(error,'sqlite_errorcode',None)!=sqlite3.SQLITE_BUSY
+                        or time.monotonic()>=deadline):
+                    raise
+                time.sleep(min(.05,max(0,deadline-time.monotonic())))
+
     """Exact complete reports commit atomically before in-memory events drain."""
     @classmethod
     @contextmanager
@@ -119,7 +140,7 @@ class TrackingStore:
         try:
             self.db.execute("update epochs set ready=0,terminal='prior owner no longer holds exclusive tracking lease' where terminal is NULL")
             self.db.execute('insert into epochs values(?,?,0,0,NULL)',(binding['instance'],canonical(binding).decode()))
-            self.db.execute('commit')
+            self.finish_transaction()
         except BaseException:
             self.db.execute('rollback');raise
 
@@ -142,7 +163,7 @@ class TrackingStore:
             fault=self.db.execute('select 1 from faults where instance=? limit 1',(value['instance'],)).fetchone()
             ready=value['ready'] and not fault and not value.get('pending_directory_moves') and not value.get('pending_file_enrollments')
             self.db.execute('update epochs set cursor=?,ready=? where instance=?',(value['sequence'],int(ready),value['instance']))
-            self.check();self.db.execute('commit')
+            self.check();self.finish_transaction()
         except BaseException:
             if self.db.in_transaction:self.db.execute('rollback')
             raise
@@ -231,6 +252,7 @@ def serve(plan,path,endpoint,*,guard,status_path,stop=None,store_factory=None,st
                 failure.append(str(error));stop.set();return
     write_status=status_writer or (lambda value:save(status_path,value))
     with (store_factory() if store_factory else TrackingStore.held(path)) as store:
+        store.wait_guard=guard
         store.start(binding);write_status(dict(binding,phase='enrolling',ready=False))
         pump=threading.Thread(target=drain,daemon=True);pump.start()
         try:

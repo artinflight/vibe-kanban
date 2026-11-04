@@ -71,7 +71,7 @@ class DeliveryTests(unittest.TestCase):
             '/fixed/receipt','/fixed/legacy','c'*64,'/fixed/log')
         self.assertEqual(line.count('\n'),1)
         self.assertIn('--signal=TERM --kill-after=5 55',line)
-        self.assertIn('CPUQuota=5\\%',line);self.assertIn('MemorySwapMax=0',line)
+        self.assertIn('CPUQuota=25\\%',line);self.assertIn('MemorySwapMax=0',line)
         self.assertIn('tail -c 65536 > /fixed/log',line);self.assertNotIn('>>',line)
         command=line.split(' ',5)[5].replace('\\%','%')
         self.assertEqual(subprocess.run(['/bin/sh','-n','-c',command]).returncode,0)

@@ -23,6 +23,22 @@ class ServiceTests(unittest.TestCase):
         p=self.root/name;raw=json.dumps(value).encode();p.write_bytes(raw);p.chmod(0o600)
         return str(p),hashlib.sha256(raw).hexdigest()
 
+    def test_provider_mount_generation_refresh_keeps_physical_B_and_all_inodes(self):
+        import copy
+        from vk_nightly_remote_consumer import reconcile_placement,PLACEMENT_PROBE
+        placement=dict(expected_uid=1000,expected_gid=1000,roots={'one':'/mnt/b/vk-backups/one','alias':'/mnt/b/vk-backups/one','base':'/var/tmp/base'},
+            root_bindings={'one':[40,11],'alias':[40,11],'base':[2080,77]})
+        observed=dict(uid=1000,gid=1000,bindings={'/mnt/b/vk-backups/one':[72,11],'/var/tmp/base':[2080,77]},B_mount=dict(source='B:',filesystem='9p'))
+        fresh=reconcile_placement(placement,observed)
+        self.assertEqual(fresh['root_bindings']['one'],[72,11]);self.assertEqual(fresh['root_bindings']['alias'],[72,11])
+        self.assertEqual(placement['root_bindings']['one'],[40,11])
+        for key,value in [('uid',0),('B_mount',dict(source='E:',filesystem='9p')),('B_mount',None)]:
+            with self.subTest(key=key),self.assertRaises(ValueError):reconcile_placement(placement,dict(observed,**{key:value}))
+        for path,index,value in [('/mnt/b/vk-backups/one',1,12),('/var/tmp/base',0,2096)]:
+            bad=copy.deepcopy(observed);bad['bindings'][path][index]=value
+            with self.assertRaises(ValueError):reconcile_placement(placement,bad)
+        compile(PLACEMENT_PROBE,'bounded-physical-provider-probe','exec')
+
     def test_service_package_includes_actual_dynamic_normal_reader(self):
         from vk_nightly_typed_worker import source_closure
         from vk_nightly_remote_consumer import bundle
@@ -141,6 +157,32 @@ class ServiceTests(unittest.TestCase):
         self.assertEqual(template['cycle']['SQL']['SQL_phase_index']['index_name'],'template')
         bad=dict(template,existing_components={'files':{}})
         with self.assertRaises(ValueError):service.scheduled_cycle(bad,'2026-10-27','4'*64)
+
+    def test_measured_qualification_keeps_six_hour_limit_and_toronto_hard_stop(self):
+        from vk_nightly_cycle_state import window
+        template=dict(cycle=dict(cycle_binding=dict(cycle_kind='incremental',previous_accepted_sha256=None),
+            SQL=dict(SQL_phase_index=dict(index_name='template',checkpoint_sha256='3'*64)),finalize={}))
+        first=service.qualification_cycle(template,'2026-11-03T18:00:00+00:00','a'*64)
+        binding=first['cycle']['cycle_binding']
+        self.assertEqual(binding['cycle_kind'],'qualification-incremental')
+        self.assertEqual(binding['deadline_UTC'],'2026-11-04T00:00:00+00:00')
+        self.assertEqual(window(binding)[1]-window(binding)[0],21600)
+        late=service.qualification_cycle(template,'2026-11-04T08:30:00+00:00','a'*64)
+        self.assertEqual(late['cycle']['cycle_binding']['deadline_UTC'],'2026-11-04T09:00:00+00:00')
+        self.assertNotIn('scheduled_night',binding)
+        with self.assertRaises(ValueError):service.scheduled_cycle(first,'2026-11-03','a'*64)
+        with self.assertRaises(ValueError):window(dict(binding,deadline_UTC='2026-11-04T01:00:00+00:00'))
+        self.assertEqual(template['cycle']['cycle_binding']['cycle_kind'],'incremental')
+
+    def test_one_time_fresh_bootstrap_cannot_be_scheduled_or_count_as_overnight(self):
+        from datetime import datetime,timezone,timedelta
+        from vk_nightly_cycle_state import window
+        start=datetime(2026,11,3,18,tzinfo=timezone.utc)
+        binding=dict(cycle_kind='bootstrap-current',started_UTC=start.isoformat(),deadline_UTC=(start+timedelta(hours=4)).isoformat())
+        self.assertEqual(window(binding),(start.timestamp(),(start+timedelta(hours=4)).timestamp()))
+        with self.assertRaises(ValueError):window(dict(binding,cycle_kind='incremental'))
+        with self.assertRaises(ValueError):window(dict(binding,deadline_UTC=(start+timedelta(hours=9)).isoformat()))
+        with self.assertRaises(ValueError):service.scheduled_cycle(dict(cycle=dict(cycle_binding=binding)), '2026-11-03','a'*64)
 
     def test_adopted_components_cannot_be_relabelled_as_an_ordinary_timed_cycle(self):
         from vk_nightly_current_cycle import run

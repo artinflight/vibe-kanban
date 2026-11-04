@@ -495,3 +495,27 @@ unverified completion, or a differing incumbent calendar state, cannot manufactu
 this marker. An identical adoption retry after a failed cron update is safe.
 An actual RAM state-file/tick test proves no runner is called for that night and
 that the next eligible start is22:00Toronto; this is not production acceptance.
+
+
+## Initial baseline and measured qualification — November 3
+
+Initial `bootstrap-current` completes the retained current workload through the
+same real file/SQL/runtime/native-proof/normal-reader path under its original
+finite admission. It cannot qualify the recurring schedule. A following
+`qualification-incremental` uses the exact ordinary template, the actual accepted
+predecessor and unique SQL cohort, with a six-hour maximum and no completion
+later than the next Toronto04:00. This explicit daytime commissioning cycle
+cannot start the calendar, adopt legacy timings or mark tonight completed.
+Only real independent B phase/restore/journal evidence permits the existing
+installer to enable the unchanged22–04calendar. The first normal launch remains
+due. Thus measured ordinary elapsed time is established without confusing a
+multi-hour retained backlog or test fixture with overnight success.
+
+The normal B-backed WSL mount can receive a different Linux device number after
+idle/restart. Before packet sealing, the installed consumer may explicitly
+requalify the finite physical provider roots via the existing strict transport.
+The registered distribution must still be on B; `/mnt/b` must actually map B;
+UID/GID, canonical directory paths and every inode remain unchanged. Only those
+B mount device numbers can update. Accepted-base/native Linux placement stays
+strict. Native B fault/STOP/capacity/access and final normal-reader lease/hash/
+metadata checks remain mandatory. This metadata check reads no archive payload.

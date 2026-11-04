@@ -1145,6 +1145,86 @@ impl Codex {
         }
     }
 
+    fn prepare_delegation(
+        params: &mut ThreadStartParams,
+        routing: Option<&crate::routing::RoutingDecision>,
+        env: &ExecutionEnv,
+    ) {
+        if routing.is_some_and(|d| d.mode != crate::routing::RoutingMode::Manual)
+            && env.capacity.is_none()
+        {
+            for feature in ["multi_agent", "multi_agent_v2"] {
+                params
+                    .config
+                    .get_or_insert_default()
+                    .insert(format!("features.{feature}"), serde_json::json!(false));
+            }
+            params
+                .dynamic_tools
+                .get_or_insert_default()
+                .push(delegation::tool_spec());
+            params.developer_instructions = Some(format!(
+                "{}\n\n{}",
+                params.developer_instructions.as_deref().unwrap_or_default(),
+                delegation::INSTRUCTIONS
+            ));
+        }
+    }
+
+    async fn configure_delegation(
+        client: &Arc<AppServerClient>,
+        routing: Option<&crate::routing::RoutingDecision>,
+        child_params: ThreadStartParams,
+        telemetry_env: &ExecutionEnv,
+        thread_id: String,
+        mut inherited: serde_json::Value,
+    ) -> Result<(), ExecutorError> {
+        if let Some(decision) = routing.filter(|d| d.mode != crate::routing::RoutingMode::Manual)
+            && telemetry_env.capacity.is_none()
+            && let Some(policy) = telemetry_env.get("VK_ROUTING_POLICY")
+        {
+            let config = client
+                .goal_request("config/read", serde_json::json!({"includeLayers": false}))
+                .await?;
+            let max = config
+                .pointer("/config/agents/max_concurrent_threads_per_session")
+                .and_then(serde_json::Value::as_u64)
+                .unwrap_or(4)
+                .saturating_sub(1) as usize;
+            let max = std::env::var("VK_CODEX_MAX_CHILDREN")
+                .ok()
+                .and_then(|v| v.parse::<usize>().ok())
+                .map_or(max, |n| n.min(max));
+            let account = client.get_account().await?;
+            inherited["accountFingerprint"] = serde_json::json!(
+                crate::routing::account_fingerprint(&serde_json::to_value(&account.account)?)
+            );
+
+            match delegation::Delegation::new(
+                serde_json::from_str(policy)?,
+                decision.clone(),
+                thread_id.clone(),
+                child_params,
+                telemetry_env.clone(),
+                inherited,
+                max,
+            )
+            .await
+            {
+                Ok(control) => client.set_delegation(control),
+                Err(error) => {
+                    tracing::warn!(%error, "Delegation unavailable; parent execution remains usable");
+                    slash_commands::log_event_raw(
+                        client.log_writer(),
+                        format!("AutoSwitch delegation unavailable: {error}"),
+                    )
+                    .await?;
+                }
+            }
+        }
+        Ok(())
+    }
+
     async fn spawn_inner(
         &self,
         current_dir: &Path,
@@ -1164,27 +1244,7 @@ impl Codex {
         {
             params.service_tier = Some(None); // Explicitly clear a resumed Fast setting.
         }
-        if routing
-            .as_ref()
-            .is_some_and(|d| d.mode != crate::routing::RoutingMode::Manual)
-            && env.capacity.is_none()
-        {
-            for feature in ["multi_agent", "multi_agent_v2"] {
-                params
-                    .config
-                    .get_or_insert_default()
-                    .insert(format!("features.{feature}"), serde_json::json!(false));
-            }
-            params
-                .dynamic_tools
-                .get_or_insert_default()
-                .push(delegation::tool_spec());
-            params.developer_instructions = Some(format!(
-                "{}\n\n{}",
-                params.developer_instructions.as_deref().unwrap_or_default(),
-                delegation::INSTRUCTIONS
-            ));
-        }
+        Self::prepare_delegation(&mut params, routing.as_ref(), env);
         let resume_session = resume_session.map(|s| s.to_string());
         let telemetry_env = env.clone();
 
@@ -1329,47 +1389,15 @@ impl Codex {
         ) {
             client.set_routing_telemetry(binding);
         }
-        if let Some(decision) = routing
-            .as_ref()
-            .filter(|d| d.mode != crate::routing::RoutingMode::Manual)
-            && telemetry_env.capacity.is_none()
-            && let Some(policy) = telemetry_env.get("VK_ROUTING_POLICY")
-        {
-            let config = client
-                .goal_request("config/read", serde_json::json!({"includeLayers": false}))
-                .await?;
-            let max = config
-                .pointer("/config/agents/max_concurrent_threads_per_session")
-                .and_then(serde_json::Value::as_u64)
-                .unwrap_or(4)
-                .saturating_sub(1) as usize;
-            let max = std::env::var("VK_CODEX_MAX_CHILDREN")
-                .ok()
-                .and_then(|v| v.parse::<usize>().ok())
-                .map_or(max, |n| n.min(max));
-            let inherited = serde_json::json!({"model": resolved_model, "reasoningEffort":resolved_effort,"accountFingerprint":crate::routing::account_fingerprint(&serde_json::to_value(&account.account)?)});
-            match delegation::Delegation::new(
-                serde_json::from_str(policy)?,
-                decision.clone(),
-                thread_id.clone(),
-                child_params,
-                telemetry_env.clone(),
-                inherited,
-                max,
-            )
-            .await
-            {
-                Ok(control) => client.set_delegation(control),
-                Err(error) => {
-                    tracing::warn!(%error, "Delegation unavailable; parent execution remains usable");
-                    slash_commands::log_event_raw(
-                        client.log_writer(),
-                        format!("AutoSwitch delegation unavailable: {error}"),
-                    )
-                    .await?;
-                }
-            }
-        }
+        Self::configure_delegation(
+            &client,
+            routing.as_ref(),
+            child_params,
+            telemetry_env,
+            thread_id.clone(),
+            serde_json::json!({"model":resolved_model,"reasoningEffort":resolved_effort}),
+        )
+        .await?;
         if let Some(execution) = telemetry_env.get("VK_EXECUTION_PROCESS_ID")
             && crate::provider_failover::observer::provider_launch(execution)?
         {

@@ -2561,3 +2561,5 @@ historical-custody recovery run 41741243530 passes on a452d74ca. Final PR checks
 and merge event govern integration status and rebased IDs. Original deployed
 source/receipts and the later preserving live frontend remain unchanged. Main
 promotion is separate. Local Rust baseline remains blocked by offline serde.
+
+2026-11-04: Investigated the exact NODEs active-goal delegation rejection. Prepared bounded specialist support with parent goal ownership retained, an explicit existing-session route for old threads lacking dynamic tools, and preserved budget/capacity/stop/admission fences. No production mutation or restart.

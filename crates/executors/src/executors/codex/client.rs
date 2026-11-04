@@ -3792,16 +3792,16 @@ for line in sys.stdin:
         ));
         assert!(client.delegation_turn_current("parent-turn").await);
         // A child's complete/budgeted goal cannot replace or budget the parent.
-        client.accept_goal(json!({"threadId":"specialist","id":"child-goal","objective":"Subtask","status":"complete","createdAt":2,"tokenBudget":10})).await.unwrap();
+        client.accept_goal(serde_json::json!({"threadId":"specialist","id":"child-goal","objective":"Subtask","status":"complete","createdAt":2,"tokenBudget":10})).await.unwrap();
         let snapshot = client.goal.lock().await.clone().unwrap();
         assert_eq!(snapshot.0.goal_id, "parent-goal");
         assert_eq!(snapshot.0.status, "active");
         assert!(snapshot.1.completed.is_empty());
         assert!(client.delegation_turn_current("parent-turn").await);
         // Exercise native root budget parsing, not just the cached admission flag.
-        client.accept_goal(json!({"threadId":"owner","id":"budgeted-parent","objective":"Bounded parent","status":"active","createdAt":2,"tokenBudget":10})).await.unwrap();
+        client.accept_goal(serde_json::json!({"threadId":"owner","id":"budgeted-parent","objective":"Bounded parent","status":"active","createdAt":2,"tokenBudget":10})).await.unwrap();
         assert!(!client.delegation_turn_current("parent-turn").await);
-        client.accept_goal(json!({"threadId":"owner","id":"unbudgeted-parent","objective":"Unbudgeted parent","status":"active","createdAt":3,"tokenBudget":null})).await.unwrap();
+        client.accept_goal(serde_json::json!({"threadId":"owner","id":"unbudgeted-parent","objective":"Unbudgeted parent","status":"active","createdAt":3,"tokenBudget":null})).await.unwrap();
         assert!(client.delegation_turn_current("parent-turn").await);
         client.goal_pausing.store(true, Ordering::SeqCst);
         assert!(!client.delegation_turn_current("parent-turn").await);

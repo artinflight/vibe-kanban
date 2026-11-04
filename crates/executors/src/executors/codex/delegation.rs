@@ -972,7 +972,8 @@ model,effort='gpt-5.6-luna','low'
 for line in sys.stdin:
     d=json.loads(line)
     if d.get('id')=='start-admission' and 'result' in d:
-        Path('admission.json').write_text(json.dumps(d['result']))
+        Path('admission.tmp').write_text(json.dumps(d['result']))
+        Path('admission.tmp').rename('admission.json')
     if d.get('method') in ('thread/start','thread/resume'):
         p=d['params']
         assert p['model'] in ('gpt-5.6-luna','gpt-6.1-sol')
@@ -1035,7 +1036,7 @@ for line in sys.stdin:
         client.on_notification(&peer,"{}",JSONRPCNotification{method:"turn/started".into(),params:Some(json!({"threadId":root_id,"turn":{"id":"parent-turn","status":"inProgress","items":[],"error":null}}))}).await.unwrap();
         let assignment = Assignment {
             task: "child".into(),
-            message: "Fix spelling typos in README.md".into(),
+            message: "Review spelling typos in README.md and report findings".into(),
             context: String::new(),
             paths: vec!["README.md".into()],
             independent: true,

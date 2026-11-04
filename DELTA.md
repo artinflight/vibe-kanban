@@ -2577,3 +2577,18 @@ agent launch, PR or commit/push. See HANDOFF.md for commands, limits and receipt
 The operator subsequently requested staging and a local commit of the Read Later
 implementation, tests and continuity notes. See Git history for the commit
 identity. No push or deployment was requested.
+
+## 2026-11-04 — Read Later frontend published
+
+The operator authorized deployment. Published Read Later at 15:11:24 UTC using
+feature d91ae4f69 applied to the exact prior live visibility composition. The
+1,319-input preservation gate passed; 16 existing files changed and five were
+added. Public JS index-By-1MIma.js/CSS index-hk6iCElX.css; version 0.1.42. All
+1,031 old/new assets remain retained. Composed-source tests, candidate/public
+desktop-phone Read Later and five scrolling-layout checks passed without live
+read-state writes. Full isolated software restore (4,853 files) and independent
+Desktop B readback passed before the 0.012-second switch. The busy shared backup
+lane was respected; no backup exception, backend restart, database restore,
+agent launch, device work, push or PR. Exact provenance: LIVE_DEPLOYMENT.json and
+VK_READ_LATER_DEPLOYMENT.md. All five services, backend hash and DB identity/99
+migrations unchanged. Native-provider inference/full hosted baseline not run.

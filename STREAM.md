@@ -19,12 +19,13 @@ between devices. Return to Attention removes the preference. An item whose unrea
 activity is cleared no longer occupies Read Later; new inbox messages in a deferred
 thread bring the regrouped notification back to Attention.
 
-This is frontend-only source work. No API/migration/generated-type change, backend
-restart, production publication, PR, push or device action. The operator
-authorized a local commit of this implementation and its continuity notes. Current runtime
-truth remains in STATE and LIVE_DEPLOYMENT.json. Use the current live-source
-preservation gate before any future publication; this branch alone is not a
-replacement for newer live inputs.
+The operator authorized deployment. Read Later was published on November 4 at
+15:11:24 UTC using a separate composition of the exact current live source plus
+this feature patch. Visibility, scrolling, notices and unread protections are
+preserved. No backend/API/migration/generated-type change, restart, PR, push or
+device action. See STATE.md, LIVE_DEPLOYMENT.json and VK_READ_LATER_DEPLOYMENT.md.
+Future publications must use the preservation gate against the then-current live
+source; the feature branch alone is not a replacement for newer live inputs.
 
 Validation and pickup details are in HANDOFF.md. Previous scrolling integration
 and runtime preservation history remain in STATE.md and

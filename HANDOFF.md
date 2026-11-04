@@ -2,7 +2,9 @@
 
 Implemented VK Dev T91 on `vk/f57c-read-later` after the operator lifted the hold.
 The operator requested a local commit of the implementation and continuity notes;
-see Git history for its identity. No push, deployment or agent launch.
+see Git history for its identity. The operator subsequently authorized deployment:
+Read Later is live at https://vibe.local as of November 4, 15:11:24 UTC. Reload
+existing tabs. No push, backend restart or additional agent launch.
 
 Behavior:
 - Sidebar sections: Attention, Read Later, Running, then Completed/idle history.
@@ -49,11 +51,20 @@ workflow/runtime record takes precedence. No isolated backend was started and no
 public preview route was replaced. The temporary frontend preview was stopped
 after browser validation. Preserve every other preview/service.
 
-Next: review this diff and exercise the UI before promotion/publication. A PR into
-staging still requires the repository's full baseline, current staging freshness
-and the existing source-preservation gate for any production publication. Read
-STATE.md and LIVE_DEPLOYMENT.json before runtime work; this feature does not alter
-those deployed-source records.
+Deployment: current live source was composed with the Read Later patch and
+passed the preservation gate before build and publication. The packaged and
+served frontend passed desktop/phone Read Later and five-layout scrolling tests.
+All live writes were intercepted. The software recovery archive was fully
+restored on SSD and independently read back from Desktop B before activation.
+The shared backup lane was initially busy; publication waited for its release,
+and no backup exception was used. The pointer switch took 0.012 seconds. All five
+service identities, backend hash and database identity/99 migrations remain
+unchanged. See VK_READ_LATER_DEPLOYMENT.md and LIVE_DEPLOYMENT.json.
+
+Next: operator UI acceptance and optional staging integration are separate. No
+further deployment is pending. A staging PR still requires the full repository
+baseline and branch freshness; any later publication needs a fresh preservation
+check against the then-live source. No main promotion was performed.
 
 Prior continuity: [pre-reconciliation record](deployment-history/20261030-before-reconciliation/HANDOFF.md)
 and [full historical archive](HANDOFF_HISTORY_20261017.md).

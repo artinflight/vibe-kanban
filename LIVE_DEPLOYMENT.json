@@ -1,6 +1,6 @@
 {
   "schema": 2,
-  "generated_at_utc": "2026-11-03T10:58:25.374567+00:00",
+  "generated_at_utc": "2026-11-04T15:12:20.399892+00:00",
   "canonical_repo": "/home/mcp/_vibe_kanban_repo",
   "canonical_repo_dirty": true,
   "canonical_branch": "vk/land-live-fixes-20260422",
@@ -32,12 +32,12 @@
   "history_proxy_port": 5640,
   "gateway_port": 4720,
   "public_frontend_pointer": "/home/mcp/.local/share/vibe-kanban/frontend-dist/current",
-  "public_frontend_release": "/mnt/vk-storage/vk-invisible-workspaces-20261103-75db/paired/candidate",
+  "public_frontend_release": "/mnt/vk-storage/vk-read-later-20261104-f57c/deployment/paired/candidate",
   "public_assets": [
-    "/assets/index-BDlsFLgm.css",
-    "/assets/index-CM79W1F0.js"
+    "/assets/index-By-1MIma.js",
+    "/assets/index-hk6iCElX.css"
   ],
-  "frontend_routing_note": "Visibility fix live: default All workspace assignments and mobile task statuses, visible saved-search chip, explicit Mine hidden-count recovery. Carries forward the November 3 scrolling correction and existing unread protections. Reload existing tabs/devices. Backend/API/DB/services unchanged.",
+  "frontend_routing_note": "Read Later is live: browser-local, host/user-scoped deferral preserves unread state; ordered Attention, Read Later, Running, completed/idle history. Preserves current visibility, scrolling, notice and unread fixes. Reload existing tabs. Backend/API/DB/services unchanged.",
   "selected_runtime_environment": {
     "HOST": "127.0.0.1",
     "PORT": "5621",
@@ -145,13 +145,15 @@
   },
   "previous_live_release_evidence": "/mnt/vk-storage/vk-new-build-repair-20261029",
   "frontend_build": {
-    "feature_source_commit": "66bbe11786983886851d9473ec662ec7bca6571d",
-    "preserved_live_source": "/mnt/vk-storage/vk-scrolling-projects-20261103-9cb7-correction/source",
-    "feature_manifest": "/mnt/vk-storage/vk-invisible-workspaces-20261103-75db/frontend-artifact.json",
-    "composition_manifest": "/mnt/vk-storage/vk-invisible-workspaces-20261103-75db/frontend-composition.json",
-    "unchanged_input_count": 1313,
-    "build_log": "/mnt/vk-storage/vk-invisible-workspaces-20261103-75db/frontend-build-final.log",
-    "paired_asset_count": 978
+    "feature_commit": "d91ae4f69c75c6076a0f021223c0a4efae9fbe55",
+    "preserved_live_frontend": "/mnt/vk-storage/vk-invisible-workspaces-20261103-75db/paired/candidate",
+    "method": "Read Later patch applied to byte-verified live source; bounded tsc && vite production build, one CPU, 5 GiB service memory cap",
+    "file_manifest": "/mnt/vk-storage/vk-read-later-20261104-f57c/deployment/frontend-artifact.json",
+    "input_file_manifest": "/mnt/vk-storage/vk-read-later-20261104-f57c/deployment/source-composition.json",
+    "source_files": 1324,
+    "verified_manifest_files": 417,
+    "retained_asset_count": 1031,
+    "hosted_ci": false
   },
   "recovery": {
     "total_50_minute_cutoff": false,
@@ -164,14 +166,13 @@
   },
   "last_readonly_verification": {
     "status": "passed",
-    "UTC": "2026-11-02T18:28:43.114247+00:00",
-    "receipt": "/mnt/vk-storage/vk-disappearing-unread-20261102-3ad7/fix-release-4/activation.json",
+    "UTC": "2026-11-04T15:13:34.814835+00:00",
+    "receipt": "/mnt/vk-storage/vk-read-later-20261104-f57c/deployment/live-after-verified.json",
     "database_and_backend_identity_preserved": true,
-    "public_browser": "/mnt/vk-storage/vk-disappearing-unread-20261102-3ad7/integration/browser-settled-live/results.json",
-    "running_turn_browser": "/mnt/vk-storage/vk-disappearing-unread-20261102-3ad7/integration/browser-pending-live/results.json",
-    "validation_scope": "public TLS/assets/health, five services, backend hash, DB identity/99 migrations; four served layout cases plus API-verified running-turn guard; all writes intercepted"
+    "public_browser": "/mnt/vk-storage/vk-read-later-20261104-f57c/deployment/browser-live/browser-results.json",
+    "validation_scope": "trusted HTTPS/assets/API capabilities; five unchanged service identities, backend executable and database inode/99 migrations; Read Later desktop/phone acceptance and five scrolling layouts; zero live read-state/application writes"
   },
-  "frontend_deployed_at_utc": "2026-11-03T10:55:35.807043+00:00",
+  "frontend_deployed_at_utc": "2026-11-04T15:11:24.760627+00:00",
   "previous_frontend_build": {
     "source_commit": "800011bd573e2869d6ea4c0e5bfba4d9046d9cbe",
     "feature_commit": "800011bd573e2869d6ea4c0e5bfba4d9046d9cbe",
@@ -184,19 +185,22 @@
     "hosted_ci": false
   },
   "frontend_only_deployment": {
-    "published_at_utc": "2026-11-03T10:55:35.807043+00:00",
-    "publication_receipt": "/mnt/vk-storage/vk-invisible-workspaces-20261103-75db/frontend-publication.json",
-    "candidate": "/mnt/vk-storage/vk-invisible-workspaces-20261103-75db/paired/candidate",
-    "fallback": "/mnt/vk-storage/vk-invisible-workspaces-20261103-75db/paired/fallback",
-    "pointer_switch_seconds": 0.005150215933099389,
-    "served_browser_cases": 17,
-    "served_browser_receipt": "/mnt/vk-storage/vk-invisible-workspaces-20261103-75db/browser-served-inclusive/results.json",
+    "published_at_utc": "2026-11-04T15:11:24.760627+00:00",
+    "feature_commit": "d91ae4f69c75c6076a0f021223c0a4efae9fbe55",
+    "publication_receipt": "/mnt/vk-storage/vk-read-later-20261104-f57c/deployment/activation.json",
+    "candidate": "/mnt/vk-storage/vk-read-later-20261104-f57c/deployment/paired/candidate",
+    "fallback": "/mnt/vk-storage/vk-read-later-20261104-f57c/deployment/paired/fallback",
+    "pointer_switch_seconds": 0.012086095055565238,
     "Desktop_B_recovery_verified": true,
+    "recovery_archive_sha256": "9e07c01905243b36e4cdfcc6ea999c9710b61e0424def2bed7a6becdce06c95f",
     "backend_restarted": false,
     "database_mutations": false,
     "seen_unread_requests_sent": 0,
-    "native_route_safeguards_deployed": false,
-    "native_route_qualification_gap": "Cached Rust proc-macro dependency E0463; Rust tests not executed"
+    "served_browser_cases": 2,
+    "served_browser_receipt": "/mnt/vk-storage/vk-read-later-20261104-f57c/deployment/browser-live/browser-results.json",
+    "preserved_scrolling_browser_cases": 5,
+    "preserved_scrolling_browser_receipt": "/mnt/vk-storage/vk-read-later-20261104-f57c/deployment/scrolling-browser-live/results.json",
+    "operator_acceptance_pending": true
   },
   "previous_frontend_only_deployment": {
     "source_commit": "b990b5939642b1ac7e744a9290840a731fa3f550",
@@ -447,5 +451,41 @@
     "integration_authority": "PR #292 final checks and merge event; original deployed source remains immutable",
     "full_hosted_baseline": "https://github.com/artinflight/vibe-kanban/actions/runs/41740959926",
     "recovery_contracts": "https://github.com/artinflight/vibe-kanban/actions/runs/41741243530"
+  },
+  "frontend_build_before_read_later": {
+    "feature_source_commit": "66bbe11786983886851d9473ec662ec7bca6571d",
+    "preserved_live_source": "/mnt/vk-storage/vk-scrolling-projects-20261103-9cb7-correction/source",
+    "feature_manifest": "/mnt/vk-storage/vk-invisible-workspaces-20261103-75db/frontend-artifact.json",
+    "composition_manifest": "/mnt/vk-storage/vk-invisible-workspaces-20261103-75db/frontend-composition.json",
+    "unchanged_input_count": 1313,
+    "build_log": "/mnt/vk-storage/vk-invisible-workspaces-20261103-75db/frontend-build-final.log",
+    "paired_asset_count": 978
+  },
+  "frontend_only_deployment_before_read_later": {
+    "published_at_utc": "2026-11-03T10:55:35.807043+00:00",
+    "publication_receipt": "/mnt/vk-storage/vk-invisible-workspaces-20261103-75db/frontend-publication.json",
+    "candidate": "/mnt/vk-storage/vk-invisible-workspaces-20261103-75db/paired/candidate",
+    "fallback": "/mnt/vk-storage/vk-invisible-workspaces-20261103-75db/paired/fallback",
+    "pointer_switch_seconds": 0.005150215933099389,
+    "served_browser_cases": 17,
+    "served_browser_receipt": "/mnt/vk-storage/vk-invisible-workspaces-20261103-75db/browser-served-inclusive/results.json",
+    "Desktop_B_recovery_verified": true,
+    "backend_restarted": false,
+    "database_mutations": false,
+    "seen_unread_requests_sent": 0,
+    "native_route_safeguards_deployed": false,
+    "native_route_qualification_gap": "Cached Rust proc-macro dependency E0463; Rust tests not executed"
+  },
+  "read_later_deployment": {
+    "feature_commit": "d91ae4f69c75c6076a0f021223c0a4efae9fbe55",
+    "source_composition": "/mnt/vk-storage/vk-read-later-20261104-f57c/deployment/source-composition.json",
+    "published_at_utc": "2026-11-04T15:11:24.760627+00:00",
+    "browser_local_preferences": true,
+    "cross_device_sync": false,
+    "existing_tabs_must_reload": true,
+    "live_data_mutations": false,
+    "backend_changes": false,
+    "source_git_integration": "Local feature commit; not pushed or opened as a PR",
+    "receipt": "/mnt/vk-storage/vk-read-later-20261104-f57c/deployment/activation.json"
   }
 }

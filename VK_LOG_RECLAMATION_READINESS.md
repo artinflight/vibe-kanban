@@ -1,5 +1,45 @@
 # Conversation-log reclamation readiness
 
+## Full scope and estimate reconciliation — 2026-11-04
+
+The four-log first switch is a deployment and recovery check, not the reclamation
+objective. Its827,506,688-byte net potential must never be presented as the total.
+The full objective includes all losslessly reclaimable retained process logs and
+future-growth prevention, with readable history and normal backup recovery.
+
+The retained November4 inventory accounts for114,327,764,992 allocated bytes:
+
+| Population | Files | Allocated bytes | Disposition |
+| --- | ---: | ---: | --- |
+| Closed/inactive capture selection |3,221|84,570,415,104|66 planned preparations; require actual positive net benefit and recovery |
+| Legacy captures |32,033|26,171,772,928|Separate terminal lossless review and B proof; still part of full reclamation work |
+| Sessions then running |143|3,139,092,480|Preserve active work; reassess after natural completion |
+| Captures not closed |16|446,480,384|Preserve pending bytes; no completeness assumption |
+| Unbound and invalid |2|4,096|Preserve pending exact reference/metadata resolution |
+
+These rows sum exactly to the inventory total. They are storage populations, not
+reclaimed or guaranteed reclaimable bytes. Most legacy files are tiny; positive
+benefit is required rather than inflating them with archive overhead. The closed
+and larger legacy cohorts contain110,605,913,625 logical source bytes before
+packing. Native histories remain separately referenced and preserved.
+
+The original retained-log space model conditionally projected71,378,242,786 to
+75,136,506,738 bytes of recovery from an83,177,480,192-byte closed population.
+It used purposive windows, not a complete packed census; do not promote it to a
+verified total. The original growth report separately measured112.6GB of process
+logs and about44.0GB of native history, on its earlier date. Adding native history,
+parent totals, originals and backup copies would not establish equivalent recovery.
+The examined original receipts do not establish hundreds of GB of recoverable
+conversation logs. Any broader estimate needs exact distinct roots and measured
+net benefit; no scope is silently replaced by the four-log result.
+
+Private provenance: FULL_SCOPE_ACCOUNTING_20261104.private.json in the existing
+dedup case, original retained-log space-model.safe.json and original growth report.
+Actual production manifest replacements/reclaimed log bytes remain zero at this
+checkpoint. The one native operation is armed and waiting for natural active-turn
+drain. Its first result is an intermediate outcome;66 batches, legacy acceptance,
+remaining terminal logs and measured prevention remain required.
+
 **Production conversion is blocked.** The installer, rollback, growth audit and
 backup graph tooling are implemented and tested. That does not qualify the live
 readers, a recovery set, or a deployment boundary. No live log is converted or

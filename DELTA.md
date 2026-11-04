@@ -2634,3 +2634,15 @@ Fresh bounded inventory finds3,221 closed/inactive logs /84,557,012,508 logical
 bytes; finite66-batch metadata plan starts with four unchanged measured sources.
 Plans are not custody or saving estimates. No source retirement, service switch
 or new backup pipeline has occurred; production accounting remains zero.
+
+
+## 2026-11-04 — bounded normal-recovery stream bridge
+
+Added NormalRecovery over the existing held Nightly normal reader to connect its
+accepted namespace/body API to original/graph verification without whole-log RAM
+materialization or another transport/capture. Eight regressions pass: exact EOF,
+wrong versions, truncated/extended/corrupt content, partial consumption, lost
+leases, path isolation, bounded reads and full original/sidecar verifier integration.
+Actual provider/index ownership and native B admission remain with the backup
+owner; this is not a production acceptance receipt. Online preparation stopped
+at actual memory/PSI admission, preserving all sources; no retry threshold relaxed.

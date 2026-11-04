@@ -238,3 +238,19 @@ source, B recovery, both readers, admission, conversion, acceptance and accounti
 outcomes. Legacy/active/pending/damaged records remain excluded and preserved.
 The older resource/owner observations above are dated provenance, not renewed
 clearance. No production bytes have yet been reclaimed by this stream.
+
+
+## Normal Nightly reader bridge
+
+`recovery_stream.py::NormalRecovery` bridges Nightly's existing validated,
+lease-held `HeldRecoverySet` (`index.entry`, `blocks`, `check`) to the installer's
+`open_original` and graph verifier's `open_member` interfaces. The trusted owner
+must pin the accepted source namespace, real handle, native B admission and every
+provider/index lease. It adds no transport, capture, lease acquisition or fallback.
+
+Reads are bounded to 1 MiB, preserve the original namespace, verify selected
+physical version/length/hash and require complete consumption to verified EOF.
+Lost custody, partial reads, corruption, traversal and cross-session substitution
+fail. Eight new fixture regressions cover those cases and the existing full
+original/sidecar verifier integration. This interface does not itself establish
+live B qualification, deployment admission or production recovery.

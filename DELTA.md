@@ -2561,3 +2561,143 @@ historical-custody recovery run 41741243530 passes on a452d74ca. Final PR checks
 and merge event govern integration status and rebased IDs. Original deployed
 source/receipts and the later preserving live frontend remain unchanged. Main
 promotion is separate. Local Rust baseline remains blocked by offline serde.
+
+## 2026-11-03 — lossless completed conversation log deduplication
+
+Implemented session-local content-addressed compressed log manifests, transparent
+backend reconstruction and append refusal; exact-byte offline plan/pack/verify/
+restore tooling preserves sources and sidecars. OP::Disk Space procedure and
+production/rollback requirements: `VK_LOG_DEDUPLICATION.md`. Prevention inherits the
+qualified narrow-resume correction. No live conversion, deletion or deployment.
+
+Validation: 36 utility tests (one pre-existing private probe ignored), ten migration
+tests, server library check, utility clippy, full format and ops pass. Seven
+unchanged prevention tests pass again in their qualified cached binary. Six real
+logs reconstruct/restore byte-exactly: 1,089,056,768 original allocated bytes versus
+237,555,712 archived bytes including metadata; 851,501,056 bytes (812.1 MiB)
+measured recovery potential. No population extrapolation or production reclamation.
+Only generated verified restore copies were retired; originals/archive remain.
+
+## 2026-11-03 — guarded reclamation and growth preparation
+
+Added source-pinned controller admission, retained physical WriterFence integration,
+exact log-root/terminal-session checks, current-B full-body checks, durable object
+publication before manifests, crash recovery and raw rollback with metadata and
+staging ownership. Added physical backup graph/closure checks and bounded metadata
+inventory/growth comparison. No production adapter, B proof or serving artifacts
+fabricated; no live conversion/retirement, restart or new timer.
+
+Owner coordination found a shared old protected reader on5650; main-only deployment
+is insufficient. Nightly is commissioning existing tracking/delivery; current-log
+B proof remains pending. SSD ~1.9GiB<3GiB blocks builds; OS-log recovery cannot
+clear that floor. See VK_LOG_RECLAMATION_READINESS.md and current HANDOFF for exact
+readiness gates, tested command contract and private evidence. Production NOT READY.
+
+Guarded source is pushed as52c5ea5bd; draft PR291 targets staging. Local45 focused
+and8retained fence tests pass, including inode-bound interruption/rollback,
+publication headroom, actual xattr preservation, closed graph verification and
+unique-inode growth accounting. Hosted final-head checks remain authoritative.
+Disk's resumed source verification stopped at PSI0.14>0.10; no clearance. A
+separate exact compiler-metadata inventory is under Vibe-owner read-only review;
+no cleanup inferred from its suffix or size. Nightly's current-version B/adaptor
+question remains pending while it commissions its existing producer.
+
+
+## 2026-11-04 — reclamation owner handoff and capacity proposal
+
+Vibe's read-only shared-target assessment conditionally classified2,104 exact
+compiler-metadata files /1,811,595,264 allocated bytes as regenerable;378 files
+remain excluded. Existing build/Cargo locks, fresh resource/consumer/non-use
+proof and exact action authorization remain required. Global proc visibility was
+incomplete; passwordless sudo was unavailable. No compiler metadata was removed,
+no build floor cleared and no privilege/network/service setting changed.
+
+Corrected the unresolved shared Nightly question to the four-file candidate /
+30,339-member graph. Its existing commissioning remains active; no owner B
+acceptance is inferred. Current source is draft PR291; hosted checks are pending.
+Production remains blocked on compatible all-reader deployment/rollback,
+current-version independent B recall, the real owner adapter, capacity and
+current-data/drained-boundary acceptance. Originals and archive remain intact.
+
+
+## 2026-11-04 — resume through production recovery
+
+User explicitly requests complete production deduplication/reclamation, resolving
+backup, both-reader compatibility and deployment rather than stopping at gates.
+Rebased source onto latest stagingee2efee4d; dedup code bytes are unchanged and all
+upstream ledger entries preserved. Prior head087319cc4 passed both hosted workflows.
+Latest SSD7.5GiB observation supersedes the earlier capacity blocker.
+
+Existing Vibe owner now prepares actual all-reader artifacts/rollback/admission;
+Nightly retains its active composed-restore qualification and sole producer role.
+Fresh bounded inventory finds3,221 closed/inactive logs /84,557,012,508 logical
+bytes; finite66-batch metadata plan starts with four unchanged measured sources.
+Plans are not custody or saving estimates. No source retirement, service switch
+or new backup pipeline has occurred; production accounting remains zero.
+
+
+## 2026-11-04 — bounded normal-recovery stream bridge
+
+Added NormalRecovery over the existing held Nightly normal reader to connect its
+accepted namespace/body API to original/graph verification without whole-log RAM
+materialization or another transport/capture. Eight regressions pass: exact EOF,
+wrong versions, truncated/extended/corrupt content, partial consumption, lost
+leases, path isolation, bounded reads and full original/sidecar verifier integration.
+Actual provider/index ownership and native B admission remain with the backup
+owner; this is not a production acceptance receipt. Online preparation stopped
+at actual memory/PSI admission, preserving all sources; no retry threshold relaxed.
+
+## 2026-11-04 — verified finite preparation; production still unactivated
+
+- Source e70732c92 passed both hosted workflows; 53 focused bridge/controller tests
+  pass. Additional static review found archive-aware readers in seven affected
+  history/review/recovery paths.
+- Measured the exact four-file selected graph: 222,183,424 allocated bytes versus
+  1,053,085,696 original log allocation, before directory/store effects. This is
+  792.4 MiB preparation margin, never a production recovery claim.
+- Sealed a subsequent 33-file/2,020,462,248-byte lossless archive with unchanged
+  originals under the retained resource guards. Separate Rust verification was
+  refused before startup on shared pressure; all evidence/copies retained.
+- Existing Vibe/Nightly owners continue actual protected-reader and normal-restore
+  qualification. No production log converted, source retired, alternate producer
+  started or deployment accepted. Finite execution/ownership receipts remain in
+  the existing private evidence case.
+- At15:11UTC, corrected protected v8 build and eight exact production replay tests
+  pass; independent full-artifact hash verification also passes. Actual current-data
+  rehearsal/admission and production conversion remain unaccepted.
+
+## 2026-11-04 — separate create-only object preparation from manifest retirement
+
+- Added bounded additive preparation for immutable session-local objects while raw
+  logs remain untouched. No fake writer fence or standalone manifest switch;
+  original B/reader/custody controller remains mandatory for any log replacement.
+- Checks include source/sidecar/session identity, complete packed body integrity,
+  original reconstruction reserve, real CLI memory/PSI/deadline admission and
+  create-only publication. Interrupted/foreign/corrupt inputs stay preserved.
+- Documented pre-addition allocation baseline and existing Nightly coordination.
+  No production invocation, manifest replacement or recovered-space claim.
+- Additive preparation is bounded by its file/byte set and real resource guards.
+  An optional operator-specified elapsed budget replaces an arbitrary default
+  whole-preparation cutoff; this does not change existing backup job deadlines.
+- Actual additive attempts stopped at shared pressure after959then8310total
+  objects; originals remained raw. Own cgroup high events stayed224, no OOM.
+  Additive I/O now waits for the SAME memory/swap/PSI admission rather than
+  repeatedly restarting full packed verification; hard failures still stop.
+
+## 2026-11-04 — actual B restore and durable primary object preparation
+
+- Actual normal B restore accepted8versions/1,053,055,572B with full hashes and
+  Linux metadata;287.094s, independently accepted immutable source/index leases.
+- Durably prepublished30,331primary objects:218,107,904B plus3,411,968Bdirectories.
+  Four raw logs/sidecars unchanged; zero manifest replacements/actual recovery.
+- Resource-safe additive preparation paused at the same real admission floor;
+  no lowered threshold or memory/OOM event.65focused checks and both hosted
+  workflows pass sourceb9049b82d. Final release recovery/custody/window remain.
+
+- Added same-process owner/Batch integration with exact module identity, shared
+  actual fence/B context, guarded partial-publication raw recovery, and refusal
+  to select old software after lost custody.70focused tests pass; format/ops pass.
+  Existing Nightly component actually restored1316files/377679320B including
+  both readers, current frontend and online review snapshot. Final quiet review,
+  operation journal, real host boundary, deployment and conversion remain pending;
+  zero log space recovery is claimed by this source change.

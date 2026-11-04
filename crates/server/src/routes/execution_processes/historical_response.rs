@@ -248,7 +248,9 @@ fn bounded_file_hash(path: &Path) -> RecoveryResult<String> {
         return Err("Original capture exceeds recovery size bound".into());
     }
     let mut digest = Sha256::new();
-    let mut reader = file.take(MAX_SOURCE_BYTES + 1);
+    let mut reader = utils::log_archive::open_file(path, file)
+        .map_err(|_| "Original capture archive unavailable")?
+        .take(MAX_SOURCE_BYTES + 1);
     let mut buffer = [0; 64 * 1024];
     let mut count = 0;
     loop {

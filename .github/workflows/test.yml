@@ -44,6 +44,13 @@ env:
   RUNNER_LABEL: &runner_label ubuntu-24.04
 
 jobs:
+  log-archive:
+    runs-on: *runner_label
+    steps:
+      - uses: actions/checkout@v6
+      - name: Lossless migration and recovery regressions
+        run: python3 -m unittest discover -s scripts/log-dedup -p 'test_*.py' -v
+
   branch-policy:
     if: github.event_name == 'pull_request'
     runs-on: *runner_label
@@ -130,6 +137,7 @@ jobs:
               - 'docs/audits/**'
               - 'docs/operations/**'
             backend:
+              - 'scripts/log-dedup/**'
               - 'scripts/dot-connector/**'
               - 'scripts/watcher-events/**'
               - 'crates/api-types/**'

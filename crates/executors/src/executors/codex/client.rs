@@ -3798,9 +3798,11 @@ for line in sys.stdin:
         assert_eq!(snapshot.0.status, "active");
         assert!(snapshot.1.completed.is_empty());
         assert!(client.delegation_turn_current("parent-turn").await);
-        client.goal_has_token_budget.store(true, Ordering::SeqCst);
+        // Exercise native root budget parsing, not just the cached admission flag.
+        client.accept_goal(json!({"threadId":"owner","id":"budgeted-parent","objective":"Bounded parent","status":"active","createdAt":2,"tokenBudget":10})).await.unwrap();
         assert!(!client.delegation_turn_current("parent-turn").await);
-        client.goal_has_token_budget.store(false, Ordering::SeqCst);
+        client.accept_goal(json!({"threadId":"owner","id":"unbudgeted-parent","objective":"Unbudgeted parent","status":"active","createdAt":3,"tokenBudget":null})).await.unwrap();
+        assert!(client.delegation_turn_current("parent-turn").await);
         client.goal_pausing.store(true, Ordering::SeqCst);
         assert!(!client.delegation_turn_current("parent-turn").await);
         client.goal_pausing.store(false, Ordering::SeqCst);

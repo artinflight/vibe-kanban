@@ -964,11 +964,15 @@ mod tests {
         use crate::env::RepoContext;
         let dir = std::env::temp_dir().join(format!("vk-delegation-test-{}", Uuid::new_v4()));
         std::fs::create_dir(&dir).unwrap();
+        std::fs::write(dir.join("README.md"), "Review teh fixture only.\n").unwrap();
         let mut process=tokio::process::Command::new("python3").args(["-u","-c",r#"
 import sys,json
+from pathlib import Path
 model,effort='gpt-5.6-luna','low'
 for line in sys.stdin:
     d=json.loads(line)
+    if d.get('id')=='start-admission' and 'result' in d:
+        Path('admission.json').write_text(json.dumps(d['result']))
     if d.get('method') in ('thread/start','thread/resume'):
         p=d['params']
         assert p['model'] in ('gpt-5.6-luna','gpt-6.1-sol')
@@ -987,6 +991,9 @@ for line in sys.stdin:
         assert 'Delegated assignment:' in p['input'][0]['text']
         print(json.dumps({'id':d['id'],'result':{'turn':{'id':'native-fixture-turn'}}}),flush=True)
         print(json.dumps({'method':'turn/started','params':{'threadId':p['threadId'],'turn':{'id':'native-fixture-turn','status':'inProgress'}}}),flush=True)
+        text=Path('README.md').read_text()
+        result=f"Reviewed README.md: {text.count('teh')} spelling defect; no files changed"
+        print(json.dumps({'method':'item/completed','params':{'threadId':p['threadId'],'turnId':'native-fixture-turn','item':{'type':'agentMessage','id':'review-result','text':result}}}),flush=True)
         print(json.dumps({'method':'thread/tokenUsage/updated','params':{'threadId':p['threadId'],'turnId':'native-fixture-turn','tokenUsage':{'last':{'inputTokens':42,'cachedInputTokens':11,'outputTokens':7,'reasoningOutputTokens':2}}}}),flush=True)
         print(json.dumps({'method':'turn/completed','params':{'threadId':p['threadId'],'turn':{'id':'native-fixture-turn','status':'completed'}}}),flush=True)
     elif d.get('method')=='turn/steer':
@@ -994,7 +1001,7 @@ for line in sys.stdin:
     elif d.get('method')=='turn/interrupt':
         print(json.dumps({'id':d['id'],'result':{}}),flush=True)
         print(json.dumps({'method':'turn/completed','params':{'threadId':'child','turn':{'id':'child-turn','status':'interrupted'}}}),flush=True)
-"#]).stdin(std::process::Stdio::piped()).stdout(std::process::Stdio::piped()).kill_on_drop(true).spawn().unwrap();
+"#]).current_dir(&dir).stdin(std::process::Stdio::piped()).stdout(std::process::Stdio::piped()).kill_on_drop(true).spawn().unwrap();
         let cancel = CancellationToken::new();
         let (tx, mut rx) = tokio::sync::oneshot::channel();
         let signal = ExitSignalSender::new(tx);
@@ -1081,6 +1088,37 @@ for line in sys.stdin:
             closing: AtomicBool::new(false),
         });
         client.set_delegation(control.clone());
+        // Exercise real dynamic start admission before assessment. An active goal
+        // must reach the normal size guard, not the former blanket goal rejection.
+        let request = JSONRPCRequest {
+            trace: None,
+            id: codex_app_server_protocol::RequestId::String("start-admission".into()),
+            method: "item/tool/call".into(),
+            params: Some(
+                json!({"threadId":root_id,"turnId":"parent-turn","callId":"admit","tool":TOOL,
+                "arguments":{"action":"start","task":"tiny","message":"Inspect one word","context":"bounded test","paths":["README.md"],"independent":true,"size":"tiny","read_only":true}}),
+            ),
+        };
+        client
+            .on_request(&peer, &serde_json::to_string(&request).unwrap(), request)
+            .await
+            .unwrap();
+        tokio::time::timeout(std::time::Duration::from_secs(3), async {
+            while !dir.join("admission.json").exists() {
+                tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+            }
+        })
+        .await
+        .unwrap();
+        let admission: Value =
+            serde_json::from_slice(&std::fs::read(dir.join("admission.json")).unwrap()).unwrap();
+        assert_eq!(admission["success"], false);
+        assert!(
+            admission
+                .to_string()
+                .contains("Perform tiny or dependent work in the parent"),
+            "{admission}"
+        );
         let request = JSONRPCRequest {
             trace: None,
             id: codex_app_server_protocol::RequestId::String("dynamic-call".into()),
@@ -1158,6 +1196,14 @@ for line in sys.stdin:
         .unwrap();
         let record = control.state.lock().await.records["child"].clone();
         assert_eq!(record.status, "completed");
+        assert_eq!(
+            record.result,
+            "Reviewed README.md: 1 spelling defect; no files changed"
+        );
+        assert_eq!(
+            std::fs::read_to_string(dir.join("README.md")).unwrap(),
+            "Review teh fixture only.\n"
+        );
         assert_eq!(record.usage.unwrap()["last"]["cachedInputTokens"], 11);
         assert!(client.delegation_turn_current("parent-turn").await);
         assert!(!client.delegation_turn_current("stale-turn").await);

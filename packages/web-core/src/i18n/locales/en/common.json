@@ -126,7 +126,7 @@
   "workspaces": {
     "attention": "Attention",
     "readLater": "Read Later",
-    "returnToAttention": "Return to Attention",
+    "removeFromReadLater": "Remove from Read Later",
     "noReadLater": "Nothing saved for later",
     "completed": "Completed",
     "title": "Workspaces",

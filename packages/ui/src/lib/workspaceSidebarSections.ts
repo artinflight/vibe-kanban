@@ -18,7 +18,7 @@ export function workspaceSidebarSections<T extends SidebarActivity>(
   const isActive = (ws: T) =>
     !!ws.isRunning ||
     (ws.activeSubagentCount ?? 0) + (ws.unresolvedSubagentCount ?? 0) > 0;
-  const isDeferred = (ws: T) => !!ws.readLater && hasUnreadSidebarActivity(ws);
+  const isDeferred = (ws: T) => !!ws.readLater;
   const needsAttention = (ws: T) =>
     (ws.dotNeedsAttentionCount ?? 0) > 0 ||
     ws.hasPendingApproval ||

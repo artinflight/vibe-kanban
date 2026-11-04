@@ -10,7 +10,7 @@ export function ReadLaterButton({
 }) {
   const { t } = useTranslation('common');
   const label = later
-    ? t('workspaces.returnToAttention')
+    ? t('workspaces.removeFromReadLater')
     : t('workspaces.readLater');
   return (
     <button

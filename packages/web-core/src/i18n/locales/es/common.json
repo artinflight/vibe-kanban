@@ -112,7 +112,7 @@
   "workspaces": {
     "attention": "Atención",
     "readLater": "Leer más tarde",
-    "returnToAttention": "Volver a Atención",
+    "removeFromReadLater": "Quitar de Leer más tarde",
     "noReadLater": "Nada guardado para más tarde",
     "completed": "Completado",
     "title": "Espacios de trabajo",

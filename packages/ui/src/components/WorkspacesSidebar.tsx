@@ -1,7 +1,4 @@
-import {
-  hasUnreadSidebarActivity,
-  workspaceSidebarSections,
-} from '../lib/workspaceSidebarSections';
+import { workspaceSidebarSections } from '../lib/workspaceSidebarSections';
 import type { DotActivityState } from './DotActivityIndicators';
 import type { ReactNode } from 'react';
 import { useCallback, useMemo, useRef, useState } from 'react';
@@ -174,7 +171,7 @@ function WorkspaceList({
           key={workspace.id}
           readLater={workspace.readLater}
           onToggleReadLater={
-            onToggleReadLater && hasUnreadSidebarActivity(workspace)
+            onToggleReadLater
               ? () => onToggleReadLater(workspace.id)
               : undefined
           }

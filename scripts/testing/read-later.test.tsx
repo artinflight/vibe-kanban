@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test, before } from 'node:test';
-import { act } from 'react';
+import { act, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import i18next from 'i18next';
 import { I18nextProvider } from 'react-i18next';
@@ -109,15 +109,17 @@ test('grouping preserves unread and running activity beyond the first page', () 
   );
   assert.deepEqual(
     groups.readLaterWorkspaces.map((row) => row.id),
-    ['later']
+    ['later', 'read']
   );
   assert.ok(groups.runningWorkspaces.some((row) => row.id === 'running'));
   assert.ok(groups.runningWorkspaces.some((row) => row.id === 'subagent'));
   assert.ok(groups.raisedHandWorkspaces.some((row) => row.id === 'approval'));
   assert.equal(JSON.stringify(rows), before);
-  assert.equal(
-    workspaceSidebarSections(rows).idleWorkspaces.at(-1)?.id,
-    'read'
+  assert.ok(!groups.idleWorkspaces.some((row) => row.id === 'read'));
+  assert.ok(
+    paginateWorkspaceSidebar(rows, 50, false, false).some(
+      (row) => row.id === 'read'
+    )
   );
 });
 
@@ -237,13 +239,116 @@ for (const phone of [false, true])
         assert.equal(source[1].dotUnreadCount, 3);
         await click(
           host.querySelector(
-            '[data-workspace-section="later"] [aria-label="Return to Attention"]'
+            '[data-workspace-section="later"] [aria-label="Remove from Read Later"]'
           )
         );
         assert.match(
           host.querySelector('[data-workspace-section="attention"]')!
             .textContent!,
           /Project notice/
+        );
+        assert.equal(selections, 0);
+      } finally {
+        await close();
+      }
+    });
+  }
+
+for (const phone of [false, true])
+  for (const layoutMode of ['accordion', 'flat'] as const) {
+    test(`read workspaces can be saved and stay saved after reading (${phone ? 'phone' : 'desktop'}, ${layoutMode})`, async () => {
+      reset();
+      window.matchMedia = (() => ({
+        matches: phone,
+        addEventListener() {},
+        removeEventListener() {},
+      })) as typeof window.matchMedia;
+      let selections = 0;
+      const read = {
+        id: 'read',
+        name: 'Already read workspace',
+        hasUnseenActivity: false,
+        dotUnreadCount: 0,
+      };
+      const unread = {
+        id: 'unread',
+        name: 'Unread workspace',
+        hasUnseenActivity: true,
+        dotUnreadCount: 2,
+      };
+      let markRead = () => {};
+      function Sidebar() {
+        const { isReadLater, setReadLater } = useReadLater();
+        const [hasUnread, setUnread] = useState(true);
+        markRead = () => setUnread(false);
+        const rows = [
+          read,
+          {
+            ...unread,
+            hasUnseenActivity: hasUnread,
+            dotUnreadCount: hasUnread ? 2 : 0,
+          },
+        ].map((row) => ({
+          ...row,
+          readLater: isReadLater('workspace', row.id),
+        }));
+        return (
+          <WorkspacesSidebar
+            layoutMode={layoutMode}
+            workspaces={rows}
+            activityWorkspaces={rows}
+            totalWorkspacesCount={rows.length}
+            selectedWorkspaceId={null}
+            onSelectWorkspace={() => selections++}
+            searchQuery=""
+            onSearchChange={() => {}}
+            onToggleWorkspaceReadLater={(id) =>
+              setReadLater(
+                { kind: 'workspace', id },
+                !isReadLater('workspace', id)
+              )
+            }
+          />
+        );
+      }
+      const { host, close } = await mount(<Sidebar />);
+      try {
+        await click(
+          host.querySelector(
+            '[data-workspace-section="ready"] [aria-label="Read Later"]'
+          )
+        );
+        await click(
+          [...host.querySelectorAll('button[aria-expanded]')].find((button) =>
+            button.textContent?.startsWith('Read Later')
+          ) ?? null
+        );
+        const later = () =>
+          host.querySelector('[data-workspace-section="later"]')!;
+        assert.match(later().textContent!, /Already read workspace/);
+        assert.equal(read.hasUnseenActivity, false);
+        assert.equal(read.dotUnreadCount, 0);
+        await click(
+          host.querySelector(
+            '[data-workspace-section="attention"] [aria-label="Read Later"]'
+          )
+        );
+        await act(async () => markRead());
+        assert.match(later().textContent!, /Unread workspace/);
+        assert.equal(
+          later().querySelectorAll('[aria-label="Remove from Read Later"]')
+            .length,
+          2
+        );
+        await act(async () => useReadLaterStore.persist.rehydrate());
+        assert.match(later().textContent!, /Already read workspace/);
+        assert.match(later().textContent!, /Unread workspace/);
+        await click(
+          later().querySelector('[aria-label="Remove from Read Later"]')
+        );
+        assert.match(
+          host.querySelector('[data-workspace-section="ready"]')!.textContent!,
+          /Already read workspace/
         );
         assert.equal(selections, 0);
       } finally {
@@ -278,7 +383,7 @@ test('issue action is reversible and does not open/read its parent', async () =>
       useReadLaterStore.getState().items[readLaterKey(scope, 'issue', 'i')]
     );
     assert.equal(opened, 0);
-    await click(host.querySelector('[aria-label="Return to Attention"]'));
+    await click(host.querySelector('[aria-label="Remove from Read Later"]'));
     assert.equal(
       useReadLaterStore.getState().items[readLaterKey(scope, 'issue', 'i')],
       undefined
@@ -316,7 +421,7 @@ test('notification moves to later unread, restores, and completed read items sin
     );
     assert.ok(
       host.querySelector(
-        '[aria-label="Read Later"] [aria-label="Return to Attention"]'
+        '[aria-label="Read Later"] [aria-label="Remove from Read Later"]'
       )
     );
     assert.equal(writes.length, 0);
@@ -324,14 +429,14 @@ test('notification moves to later unread, restores, and completed read items sin
     assert.equal(original.seen, false);
     await act(async () => {
       host
-        .querySelector('[aria-label="Return to Attention"]')!
+        .querySelector('[aria-label="Remove from Read Later"]')!
         .dispatchEvent(
           new window.KeyboardEvent('keydown', { key: ' ', bubbles: true })
         );
     });
     assert.equal(writes.length, 0);
     assert.equal(navigations.length, 0);
-    await click(host.querySelector('[aria-label="Return to Attention"]'));
+    await click(host.querySelector('[aria-label="Remove from Read Later"]'));
     assert.ok(
       host.querySelector('[aria-label="Attention"] [aria-label="Read Later"]')
     );

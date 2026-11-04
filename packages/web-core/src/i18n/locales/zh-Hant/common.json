@@ -112,7 +112,7 @@
   "workspaces": {
     "attention": "需要關注",
     "readLater": "稍後閱讀",
-    "returnToAttention": "返回需要關注",
+    "removeFromReadLater": "從稍後閱讀中移除",
     "noReadLater": "沒有稍後閱讀的項目",
     "completed": "已完成",
     "title": "工作區",

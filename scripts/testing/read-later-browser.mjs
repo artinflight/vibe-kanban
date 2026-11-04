@@ -36,7 +36,12 @@ const browser = await chromium.launch({
 });
 const results = [];
 try {
-  for (const width of [1440, 393]) {
+  for (const [width, unread] of [
+    [1440, true],
+    [1440, false],
+    [393, true],
+    [393, false],
+  ]) {
     const context = await browser.newContext({
       viewport: { width, height: 1000 },
       isMobile: width < 768,
@@ -107,7 +112,7 @@ try {
           )?.workspace_id;
           for (const row of rows) {
             if (row.workspace_id === target) {
-              row.has_unseen_turns = true;
+              row.has_unseen_turns = unread;
               row.has_pending_approval = false;
             }
           }
@@ -123,7 +128,10 @@ try {
     page.on('pageerror', (error) => errors.push(error.message));
     page.setDefaultTimeout(30000);
     await page.goto(`${base}/workspaces`, { waitUntil: 'domcontentloaded' });
-    const attention = page.locator('[data-workspace-section="attention"]');
+    const sourceSection = unread ? 'attention' : 'ready';
+    const attention = page.locator(
+      `[data-workspace-section="${sourceSection}"]`
+    );
     const laterHeader = page
       .locator('button[aria-expanded]')
       .filter({ hasText: /^Read Later/ });
@@ -168,14 +176,14 @@ try {
     await laterHeader.click();
     const later = page.locator('[data-workspace-section="later"]');
     await later
-      .getByRole('button', { name: 'Return to Attention', exact: true })
+      .getByRole('button', { name: 'Remove from Read Later', exact: true })
       .waitFor();
     await page.reload({ waitUntil: 'domcontentloaded' });
     await later
-      .getByRole('button', { name: 'Return to Attention', exact: true })
+      .getByRole('button', { name: 'Remove from Read Later', exact: true })
       .waitFor();
     await later
-      .getByRole('button', { name: 'Return to Attention', exact: true })
+      .getByRole('button', { name: 'Remove from Read Later', exact: true })
       .click();
     await laterHeader.filter({ hasText: '0' }).waitFor();
     assert.equal(seen.length, beforeSeen);
@@ -194,6 +202,7 @@ try {
       );
     results.push({
       width,
+      initiallyUnread: unread,
       iconOnly: true,
       inline: true,
       dotNotificationRequests: dotRequests.length,
@@ -203,8 +212,15 @@ try {
       blockedWrites: writes.length,
       pageErrors: errors,
     });
-    await page.screenshot({ path: resolve(output, `read-later-${width}.png`) });
-    console.log(`Read Later browser passed: ${width}px`);
+    await page.screenshot({
+      path: resolve(
+        output,
+        `read-later-${width}-${unread ? 'unread' : 'read'}.png`
+      ),
+    });
+    console.log(
+      `Read Later browser passed: ${width}px, ${unread ? 'unread' : 'read'}`
+    );
     closing = true;
     await context.close();
   }

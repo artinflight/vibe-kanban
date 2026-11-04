@@ -1,4 +1,5 @@
 interface WorkspaceActivity {
+  readLater?: boolean;
   isRunning?: boolean;
   hasPendingApproval?: boolean;
   hasUnseenActivity?: boolean;
@@ -19,6 +20,7 @@ export function paginateWorkspaceSidebar<T extends WorkspaceActivity>(
   // Idle history is paginated; actionable work must remain visible in its section.
   return workspaces.filter(
     (workspace, index) =>
+      workspace.readLater ||
       index < limit ||
       (accordion &&
         (workspace.isRunning ||

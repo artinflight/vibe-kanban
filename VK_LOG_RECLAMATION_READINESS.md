@@ -312,7 +312,9 @@ python3 scripts/log-dedup/stage_objects.py --plan "$SELECTED_PLAN" --archive "$P
 The tool checks original/sidecar identities, terminal session binding, complete
 packed log reconstruction, object integrity, owned directories and original/raw
 reconstruction headroom. Publication is create-only, including concurrent-name
-collisions. Changed inputs, resource loss and foreign temporary inodes fail safely.
+collisions. Changed inputs, resource loss and foreign temporary inodes fail safely. An elapsed
+time budget is optional (`--seconds`); the default has no arbitrary total timeout.
+The file/byte limits and real memory/swap/PSI/capacity guards always apply.
 Source logs remain raw and available. No source retirement or object cleanup occurs.
 
 The original guarded controller is still mandatory. It reopens current B originals,

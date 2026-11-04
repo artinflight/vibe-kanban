@@ -149,16 +149,17 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     for name in ('plan', 'archive', 'database'):
         parser.add_argument('--' + name, required=True, type=Path)
-    parser.add_argument('--seconds', type=int, default=900)
+    parser.add_argument('--seconds', type=int, help='Optional operator-specified elapsed-time budget')
     args = parser.parse_args()
-    if not 1 <= args.seconds <= 1800:
-        raise logs.ArchiveError('Finite preparation deadline required')
+    if args.seconds is not None and args.seconds < 1:
+        raise logs.ArchiveError('Explicit preparation budget must be positive')
     resource.setrlimit(resource.RLIMIT_AS, (768 * 1024**2, 768 * 1024**2))
     os.nice(15)
-    deadline = time.monotonic() + args.seconds
+    deadline = None if args.seconds is None else time.monotonic() + args.seconds
 
     def guard():
-        if time.monotonic() > deadline or not os.path.ismount('/mnt/vk-storage'):
+        if ((deadline is not None and time.monotonic() > deadline)
+                or not os.path.ismount('/mnt/vk-storage')):
             raise logs.ArchiveError('Preparation deadline or SSD mount unavailable')
         values = {line.split(':')[0]: int(line.split()[1]) * 1024
                   for line in Path('/proc/meminfo').read_text().splitlines()}

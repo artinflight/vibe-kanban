@@ -2676,3 +2676,6 @@ at actual memory/PSI admission, preserving all sources; no retry threshold relax
   create-only publication. Interrupted/foreign/corrupt inputs stay preserved.
 - Documented pre-addition allocation baseline and existing Nightly coordination.
   No production invocation, manifest replacement or recovered-space claim.
+- Additive preparation is bounded by its file/byte set and real resource guards.
+  An optional operator-specified elapsed budget replaces an arbitrary default
+  whole-preparation cutoff; this does not change existing backup job deadlines.

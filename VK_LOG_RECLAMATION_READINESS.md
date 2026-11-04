@@ -364,3 +364,15 @@ has not occurred. Normal B recall currently costs287seconds; do not call the
 handover brief without measuring the complete switch and raw fallback. Qualify
 supported B prewarm before physical freeze while retaining real custody, or agree
 the concrete measured window under the restart protocol.
+
+The root same-process bridge is `scripts/log-dedup/operation.py`. Call `prepare`
+before constructing the actual fence so the owner's six pinned modules establish
+one class identity. Pass the SAME held fence and normal B context to
+`convert_held`; it calls actual activation, custody sealing, `admit_held` and
+`Batch`. It never releases maintenance or starts an agent. Partial conversion
+failure must complete guarded raw rollback before old-reader recovery. Lost
+reader custody refuses both rollback and old-reader selection, preserving the
+journal and archive-aware paths for controlled recovery. Five integration tests
+exercise actual fixture conversion, partial publication and lost custody;
+70 focused log-dedup tests pass. Host boundary, full public/UI acceptance and
+physical accounting are still separate mandatory parts of the finite operation.

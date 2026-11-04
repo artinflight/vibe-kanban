@@ -2693,3 +2693,11 @@ at actual memory/PSI admission, preserving all sources; no retry threshold relax
 - Resource-safe additive preparation paused at the same real admission floor;
   no lowered threshold or memory/OOM event.65focused checks and both hosted
   workflows pass sourceb9049b82d. Final release recovery/custody/window remain.
+
+- Added same-process owner/Batch integration with exact module identity, shared
+  actual fence/B context, guarded partial-publication raw recovery, and refusal
+  to select old software after lost custody.70focused tests pass; format/ops pass.
+  Existing Nightly component actually restored1316files/377679320B including
+  both readers, current frontend and online review snapshot. Final quiet review,
+  operation journal, real host boundary, deployment and conversion remain pending;
+  zero log space recovery is claimed by this source change.

@@ -1,3 +1,22 @@
+# Actual production checkpoint — 2026-11-04 18:15 UTC
+
+Normal B recovery for4originals+4sidecars/1,053,055,572B passed full EOF/hash/Linux
+metadata restore in287seconds. All30,331canary objects are durably prepublished;
+actual primary preparation cost221,519,872B including object directories. Raw
+logs/sidecars unchanged: **zero manifest switches, zero reclaimed log bytes**.
+Immutable B receipt and before/after allocation are in the private case below.
+Sourceb9049b82d passed both hosted workflows;65focused tests/format/ops pass.
+
+Existing Vibe owner closes separate99cache/retained86fallback, measured cold-read
+memory and final activation/queue custody. Existing Nightly owner executione5cd0f2c
+closes final v3 software/runtime/journal recovery and supported B prewarm; reuse
+accepted v3recall instead of repeating capture. Do not push its cancelled Git
+publication. No whole-Nightly/calendar prerequisite for these accepted originals.
+Actual287srecall inside frozen controller exceeds5starget: qualify supported
+prewarm retaining SAME genuine B/index/provider leases before freeze, or obtain
+a concrete measured window under the restart protocol. Controller protections
+remain mandatory; no local original/packed data pretending to be B recovery.
+
 # Production log reclamation pickup — 2026-11-04 15:11 UTC
 
 User explicitly requests completing production lossless deduplication, verified

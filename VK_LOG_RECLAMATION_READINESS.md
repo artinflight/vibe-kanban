@@ -329,3 +329,38 @@ preparation alone does not establish a brief or accepted maintenance window.
 This procedure has **not yet been run against production**. Detached failure and
 preservation regressions cover it; owner qualification and actual receipts govern
 activation.
+
+## Actual recovery and object preparation — 2026-11-04 18:15 UTC
+
+The exact four-original/four-sidecar normal B recovery passed: 1,053,055,572 bytes,
+independent complete EOF/hash verification and Linux owner/mode/mtime/xattrs
+restoration in sequential RAM, 287.094 seconds. The immutable receipt is
+`NIGHTLY_SELECTED_RECALL_ACCEPTED.b110c48a78779042.private.json` in the existing
+private case. This is selected-version recovery, not whole-backup/calendar or
+production retirement acceptance.
+
+All 30,331 canary objects are now durably prepublished on the primary filesystem:
+218,107,904 allocated bytes plus 3,411,968 object-directory bytes. All four raw
+originals and their sidecars remain unchanged. The scope grew from 1,053,163,520
+to 1,274,683,392 bytes during preparation. **Zero manifests replaced; zero actual
+log bytes reclaimed.** Final net recovery must subtract the complete preparation
+cost and measure source/manifest/store/directory allocation after releasing old
+file descriptors. Source b9049b82d passed both hosted workflows and65focused
+checks; format/ops checks pass. No resource threshold was lowered.
+
+Actual resource pressure stopped earlier attempts at959and8310objects. The final
+preparer paused I/O during shared pressure and resumed only at the same admitted
+thresholds, completing without log writes. The original six-file812.1MiB potential
+and four-file792.4MiB packed-file margin are separate from actual recovery and
+exclude target directory overhead.
+
+Main/protected current-data raw/archive comparisons and the protected fallback/
+return test passed, including private replies, T18 native messages, pagination,
+latest frontend and later writes. The protected reader needs a separate99-schema
+working cache while retaining its86-schema original for rollback. Cold-history
+resource limits, final runtime/software/journal recovery bindings and the actual
+held reader/writer boundary remain release-owner work. Final reader activation
+has not occurred. Normal B recall currently costs287seconds; do not call the
+handover brief without measuring the complete switch and raw fallback. Qualify
+supported B prewarm before physical freeze while retaining real custody, or agree
+the concrete measured window under the restart protocol.

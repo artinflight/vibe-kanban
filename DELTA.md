@@ -2683,3 +2683,13 @@ at actual memory/PSI admission, preserving all sources; no retry threshold relax
   objects; originals remained raw. Own cgroup high events stayed224, no OOM.
   Additive I/O now waits for the SAME memory/swap/PSI admission rather than
   repeatedly restarting full packed verification; hard failures still stop.
+
+## 2026-11-04 — actual B restore and durable primary object preparation
+
+- Actual normal B restore accepted8versions/1,053,055,572B with full hashes and
+  Linux metadata;287.094s, independently accepted immutable source/index leases.
+- Durably prepublished30,331primary objects:218,107,904B plus3,411,968Bdirectories.
+  Four raw logs/sidecars unchanged; zero manifest replacements/actual recovery.
+- Resource-safe additive preparation paused at the same real admission floor;
+  no lowered threshold or memory/OOM event.65focused checks and both hosted
+  workflows pass sourceb9049b82d. Final release recovery/custody/window remain.

@@ -235,3 +235,23 @@ journal unit now points to V20, preserving timer/resources/observer. No recurrin
 body schedule is installed or accepted yet. D/V20_ACTIVATION_ADMISSION.private.json
 and V20_FIRST_REAL_PROGRESS.private.json preserve exact evidence. Source/contract
 preparation failures were confined to unstarted config files; P19 was never run.
+
+## Bounded closure of disappeared or replaced versions — November4
+
+A source version selected earlier can disappear before its body is captured.
+Repeated qualification against the frozen namespace cannot prove that old
+nonempty version. The normal cycle now permits one separately recorded,
+authenticated B-journal suffix under its existing path/byte/time admission,
+then requalifies only unresolved current names. A later observed absence retains
+the earlier unresolved row in namespace history; it never repairs the old epoch
+or certifies missing bytes. Native independent map reopen must find no unresolved
+file points before the phase is complete. Access/integrity failures, absent
+readback proof, incomplete closure and exceeded budgets still fail closed.
+
+A controlled frozen-input handover does not silently opt into a newer namespace.
+The running P20 source320 package is unchanged. If its old temporary-name point
+cannot close, preserve its terminal receipt and all completed bodies, then use
+an explicitly versioned normal current-suffix continuation with the original
+cohort/deadline and tested successor. No global namespace scan or duplicate bulk
+producer is required. Real production closure/SQL/runtime/normal restore and
+ordinary incremental qualification remain necessary before calendar adoption.

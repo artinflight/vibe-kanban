@@ -11,6 +11,7 @@ import time
 from vk_nightly_cycle_state import run_cycle
 from vk_nightly_file_cycle import Source
 from vk_nightly_file_cycle import run as file_cycle
+from vk_nightly_incremental import advance_suffix
 from vk_nightly_sql_cycle import run as SQL_cycle
 from vk_nightly_runtime_cycle import capture_component
 from vk_nightly_finalize_current import finalize,consumer_packet
@@ -34,19 +35,40 @@ def recorded_file_tail(worker,owner,*,report):
             source_report=lambda:owner.report(remote.client),status_sink=report)
 
 
-def close_deferred_files(original,worker,owner,*,report):
-    """Close only unresolved recorded names, without a new namespace suffix.
+def close_deferred_files(original,worker,owner,*,report,maximum_delta_paths=None):
+    """Close deferred versions, optionally using one normal journal suffix.
 
     The predecessor receipt remains byte-for-byte readable on B. A crash before
     the whole-cycle phase commit reuses accepted bodies from the same map; a
     crash after that commit skips this callback through the reopened ledger.
     Original deferred epoch truth is retained inside the composed receipt.
+    A normal cycle may apply one separately recorded, bounded journal suffix
+    if a recorded version vanished. Frozen-input handovers do not opt in.
     """
     if original.get('more_pending') is False:return original
     if (original.get('actual_independent_B_file_cycle_receipt_reopen_verified') is not True
             or original.get('requires_source_requalification') is not True):
         raise ValueError('only independently reopened deferred file points can enter bounded closure')
+    if maximum_delta_paths is not None and (type(maximum_delta_paths) is not int or not 1<=maximum_delta_paths<=100000):
+        raise ValueError('existing finite namespace closure admission required')
     tail=recorded_file_tail(worker,owner,report=report)
+    closure_delta=closure_delivery=None
+    if (tail.get('more_pending') is True and tail.get('requires_source_requalification') is True
+            and maximum_delta_paths is not None):
+        owner.check();closure_delivery=owner.deliver()
+        target=owner.config['B_delivery_target']
+        report(dict(phase='closing-unavailable-versions-with-one-journal-suffix',
+            original_file_receipt_sha256=checksum(original),maximum_paths=maximum_delta_paths,
+            global_namespace_audits_started=0,original_epoch_repaired=False))
+        with DesktopControls(worker['B_controls'],guard=owner.guard) as remote:
+            closure_delta=advance_suffix(remote.client,index_name=worker['B_index_name'],
+                checkpoint_sha256=worker['B_checkpoint_sha256'],journal_name=target['index_name'],
+                journal_checkpoint_sha256=target['checkpoint_sha256'],plan=owner.plan,
+                maximum_paths=maximum_delta_paths,maximum_journal_bytes=worker['B_controls']['maximum_index_bytes'],
+                guard=owner.guard,on_progress=report)
+        if closure_delta.get('normal_B_metadata_reopen_verified') is not True:
+            raise ValueError('actual independently reopened journal closure required')
+        tail=recorded_file_tail(worker,owner,report=report)
     if tail.get('more_pending') is not False:
         raise ValueError('recorded file points still changing or incomplete; preserve all versions')
     # A different normal native connection observes committed member states;
@@ -62,7 +84,8 @@ def close_deferred_files(original,worker,owner,*,report):
     owner.check()
     return dict(phase='finite-current-file-cycle-complete',more_pending=False,
         original_component_receipt=original,original_component_receipt_sha256=checksum(original),
-        recorded_file_delta=tail,normal_B_file_closure_reopen_verified=True,
+        recorded_file_delta=tail,namespace_closure_delta=closure_delta,namespace_closure_delivery=closure_delivery,
+        normal_B_file_closure_reopen_verified=True,
         actual_independent_B_file_cycle_receipt_reopen_verified=True,
         final_B_delivery=original['final_B_delivery'],baseline_accepted=False,schedule_enabled=False)
 
@@ -102,7 +125,9 @@ def run(config,workers,store,*,consumer,guard,report=lambda _:None,now=lambda:da
         if value.get('more_pending') is False:return value
         started=time.monotonic()
         owner=Source(source_ref,main['B_controls'],guard=lambda:(check(),host_guard(main,started)))
-        return close_deferred_files(value,main,owner,report=report)
+        return close_deferred_files(value,main,owner,report=report,
+            maximum_delta_paths=(None if config['files'].get('resume_qualified_input_sha256')
+                                 else config['files'].get('maximum_delta_paths')))
     def SQL(_,end,check):
         check()
         return completed_components['SQL'] if completed_components else SQL_cycle(config['SQL'],actual['SQL'],report=report)

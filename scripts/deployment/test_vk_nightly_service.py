@@ -200,4 +200,38 @@ class ServiceTests(unittest.TestCase):
             capture.assert_not_called()
 
 
+    def test_deferred_namespace_closure_is_finite_and_keeps_access_and_readback_gates(self):
+        from contextlib import contextmanager
+        from types import SimpleNamespace
+        import vk_nightly_current_cycle as composed
+        original=dict(more_pending=True,requires_source_requalification=True,
+            actual_independent_B_file_cycle_receipt_reopen_verified=True,final_B_delivery={})
+        worker=dict(B_controls={'maximum_index_bytes':1048576},B_index_name='map',B_checkpoint_sha256='1'*64)
+        owner=SimpleNamespace(check=lambda:None,guard=lambda:None,deliver=lambda:{'delivered':True},plan={},
+            config={'B_delivery_target':dict(index_name='journal',checkpoint_sha256='2'*64)})
+        @contextmanager
+        def controls(*_,**__):yield SimpleNamespace(client=object())
+        pending=dict(more_pending=True,requires_source_requalification=True)
+        for limit in (None,0,True,100001):
+            with self.subTest(limit=limit),patch.object(composed,'recorded_file_tail',return_value=pending) as tail,\
+                 patch.object(composed,'advance_suffix') as advance:
+                with self.assertRaises(ValueError):
+                    composed.close_deferred_files(original,worker,owner,report=lambda _:None,maximum_delta_paths=limit)
+                advance.assert_not_called()
+                if limit is not None:tail.assert_not_called()
+        with patch.object(composed,'DesktopControls',controls),patch.object(composed,'recorded_file_tail',return_value=pending):
+            with patch.object(composed,'advance_suffix',return_value={}) as advance:
+                with self.assertRaisesRegex(ValueError,'independently reopened'):
+                    composed.close_deferred_files(original,worker,owner,report=lambda _:None,maximum_delta_paths=16)
+                self.assertEqual(advance.call_count,1)
+            with patch.object(composed,'advance_suffix',side_effect=PermissionError('actual access denied')) as advance:
+                with self.assertRaisesRegex(PermissionError,'actual access denied'):
+                    composed.close_deferred_files(original,worker,owner,report=lambda _:None,maximum_delta_paths=16)
+                self.assertEqual(advance.call_count,1)
+            with patch.object(composed,'advance_suffix',return_value={'normal_B_metadata_reopen_verified':True}) as advance:
+                with self.assertRaisesRegex(ValueError,'still changing'):
+                    composed.close_deferred_files(original,worker,owner,report=lambda _:None,maximum_delta_paths=16)
+                self.assertEqual(advance.call_count,1,'one bounded suffix, never an unbounded retry loop')
+
+
 if __name__=='__main__':unittest.main()

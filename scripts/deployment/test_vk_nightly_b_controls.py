@@ -264,6 +264,80 @@ class BControlTests(unittest.TestCase):
         self.assertEqual(view.execute('select count(*) from namespace_replay_history where name=?',(prefix+'/note',)).fetchone(),(2,))
         view.close()
 
+    def test_deferred_vanished_version_closes_only_through_real_journal_suffix(self):
+        from test_vk_nightly_recovery_descriptor import fixture,current_view
+        from vk_nightly_inode_journal import Journal
+        from vk_nightly_tracking import FORMAT as TRACKING_FORMAT,source_bindings
+        from vk_nightly_namespace import replay_metadata,observe
+        from vk_nightly_outbox_export import export
+        from vk_nightly_current_map import encode_member,decode_member
+        from vk_prep_common import identity
+        from vk_change_journal import scope
+        import vk_nightly_current_cycle as composed
+        root=self.root/'vanished-closure';root.mkdir()
+        db,path,_,rows,body,_=fixture(root)
+        source=root/'source';source.mkdir()
+        unchanged=source/'untouched';unchanged.write_bytes((body/'note').read_bytes())
+        transient=source/'temporary-snapshot';transient.write_bytes(b'nonempty earlier temporary version')
+        original_observation=observe(transient)
+        plan={'sources':[str(source)]};journal=Journal(plan);self.addCleanup(journal.close)
+        journal.tree(source);journal.ready=True
+        def report(since):
+            value=journal.report(since)
+            return dict(value,format=TRACKING_FORMAT,plan_sha256=identity(plan),since=since,terminal=None,
+                barrier=dict(instance=value['instance'],durable_sequence=value['sequence'],kernel_drain_completed=True))
+        initial=report(0);binding=dict(instance=initial['instance'],start_sequence=initial['sequence'],
+            plan_sha256=identity(plan),scope_sha256=identity(scope(plan)),required_root_bindings=source_bindings(plan))
+        db.execute('delete from members');prefix=str(source)[1:]
+        db.execute('insert into members values(?,?,?)',(prefix,'directory',encode_member(dict(member=rows['home/state']))))
+        db.execute('insert into members values(?,?,?)',(str(unchanged)[1:],'verified-file',encode_member(dict(member=rows['home/state/note']))))
+        earlier=dict(namespace=original_observation,qualification=dict(state='current-version-deferred',source=str(transient)))
+        db.execute('insert into members values(?,?,?)',(str(transient)[1:],'current-namespace-replay-required',encode_member(earlier)))
+        db.execute('update namespace_reconciliation set binding=?',(json.dumps(binding),))
+        db.execute('delete from namespace_replay_windows');db.execute('delete from namespace_replay_inputs')
+        current_view(db,path).apply_metadata_replay(initial,replay_metadata(plan,initial,instance=initial['instance'],
+            since=initial['sequence'],maximum_paths=16,checkpoint=lambda:None),checkpoint=lambda:None,maximum_paths=16)
+        db.close();digest=self.import_other(path)
+        self.client.connect('closure-map',digest).close()
+        native_binding=dict(initial,owner_pid=os.getpid())
+        def deliver():
+            with tracking_store(self.client,'closure-journal',self.sha,maximum_bytes=8*1024**2) as ledger:
+                return export(native_binding,report(0),ledger,guard=lambda:None)
+        delivered=deliver();transient.unlink()
+        original=dict(more_pending=True,requires_source_requalification=True,
+            actual_independent_B_file_cycle_receipt_reopen_verified=True,final_B_delivery=delivered)
+        saved=json.dumps(original,sort_keys=True)
+        owner=SimpleNamespace(check=lambda:None,guard=lambda:None,deliver=deliver,plan=plan,
+            config={'B_delivery_target':dict(index_name='closure-journal',checkpoint_sha256=self.sha)})
+        worker=dict(B_controls={'maximum_index_bytes':8*1024**2},B_index_name='closure-map',B_checkpoint_sha256=digest)
+        @contextmanager
+        def controls(*_,**__):yield SimpleNamespace(client=self.client)
+        before={p.name:p.stat().st_ino for p in self.objects.iterdir()}
+        pending=dict(more_pending=True,requires_source_requalification=True)
+        with patch.object(composed,'DesktopControls',controls),patch.object(composed,'recorded_file_tail',side_effect=[pending,dict(more_pending=False,completed_members=0)]),\
+             patch('vk_nightly_namespace.os.walk',side_effect=AssertionError('global rescan')),\
+             patch('vk_nightly_namespace.observe',wraps=observe) as observed:
+            closed=composed.close_deferred_files(original,worker,owner,report=lambda _:None,maximum_delta_paths=16)
+        self.assertNotIn(str(unchanged),[str(c.args[0]) for c in observed.call_args_list])
+        self.assertTrue(closed['namespace_closure_delta']['normal_B_metadata_reopen_verified'])
+        self.assertEqual(closed['namespace_closure_delta']['global_namespace_audits_started'],0)
+        self.assertEqual(closed['namespace_closure_delta']['source_body_bytes_read'],0)
+        self.assertFalse(closed['more_pending']);self.assertEqual(json.dumps(original,sort_keys=True),saved)
+        view=self.client.connect('closure-map',digest,readonly=True,working=True)
+        self.assertIsNone(view.execute('select state from members where name=?',(str(transient)[1:],)).fetchone())
+        self.assertEqual(view.execute('select state from members where name=?',(str(unchanged)[1:],)).fetchone(),('verified-file',))
+        history=view.execute('select old_state,row,disposition from namespace_replay_history where name=?',(str(transient)[1:],)).fetchone()
+        self.assertEqual(history[0],'current-namespace-replay-required')
+        self.assertEqual(decode_member(history[1]),earlier)
+        self.assertEqual(history[2],'later-journal-replaced-or-absent');view.close()
+        # Reopening after a controller interruption skips the now-closed names;
+        # no second suffix, source body, object copy or original-epoch rewrite.
+        with patch.object(composed,'DesktopControls',controls),\
+             patch.object(composed,'recorded_file_tail',return_value=dict(more_pending=False,completed_members=0)),\
+             patch.object(composed,'advance_suffix',side_effect=AssertionError('completed suffix repeated')):
+            again=composed.close_deferred_files(original,worker,owner,report=lambda _:None,maximum_delta_paths=16)
+        self.assertFalse(again['more_pending']);self.assertEqual({p.name:p.stat().st_ino for p in self.objects.iterdir()},before)
+
     def test_actual_native_runtime_component_adoption_seal_and_complete_descriptor(self):
         from test_vk_nightly_recovery_descriptor import fixture,runtime_fixture
         from vk_nightly_b_controls import NativeControlError

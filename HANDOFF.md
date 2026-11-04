@@ -1,11 +1,12 @@
 # Nightly commissioning — November 3, 2026 (EST)
 
 ACTIVE continuation: vk-nightly-serial-commissioning-v20-20261104.service,
-collector2318713/start97057855, producer2319719/start97058720, worker-v20-resource-resume.
+collector2318713/start97057855, producer3384909/start97669773 (attempt2), worker-v20-resource-resume.
 D/V20_FIRST_REAL_PROGRESS.private.json authenticates all69source hashes at
 3200564800296798a29909ca11a2e0def988202d,953hosted checks/118local checks, normal
 B frozen-input reopen,5outstanding paths/62MB requalification and0global scans.
 Original input/cohort/deadlines are preserved; do not launch another job.
+Prepared vanished-version closure: see the topic guide.
 
 The former producer766070/start96188877 and collector511131/start96047691
 are TERMINAL. At21:54:59EST, a source-journal B connection failed native physical

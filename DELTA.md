@@ -2646,3 +2646,22 @@ leases, path isolation, bounded reads and full original/sidecar verifier integra
 Actual provider/index ownership and native B admission remain with the backup
 owner; this is not a production acceptance receipt. Online preparation stopped
 at actual memory/PSI admission, preserving all sources; no retry threshold relaxed.
+
+## 2026-11-04 — verified finite preparation; production still unactivated
+
+- Source e70732c92 passed both hosted workflows; 53 focused bridge/controller tests
+  pass. Additional static review found archive-aware readers in seven affected
+  history/review/recovery paths.
+- Measured the exact four-file selected graph: 222,183,424 allocated bytes versus
+  1,053,085,696 original log allocation, before directory/store effects. This is
+  792.4 MiB preparation margin, never a production recovery claim.
+- Sealed a subsequent 33-file/2,020,462,248-byte lossless archive with unchanged
+  originals under the retained resource guards. Separate Rust verification was
+  refused before startup on shared pressure; all evidence/copies retained.
+- Existing Vibe/Nightly owners continue actual protected-reader and normal-restore
+  qualification. No production log converted, source retired, alternate producer
+  started or deployment accepted. Finite execution/ownership receipts remain in
+  the existing private evidence case.
+- At15:11UTC, corrected protected v8 build and eight exact production replay tests
+  pass; independent full-artifact hash verification also passes. Actual current-data
+  rehearsal/admission and production conversion remain unaccepted.

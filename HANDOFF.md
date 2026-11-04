@@ -1,72 +1,68 @@
-# Production resumption — 2026-11-04
+# Production log reclamation pickup — 2026-11-04 15:11 UTC
 
-User now explicitly requests production completion through verified recovery and
-space reclamation. Preparation-only boundaries below are historical scope. Current
-finite execution state is `PRODUCTION_EXECUTION_20261104.private.json` under
-`/mnt/vk-storage/vk-log-dedup-20261103-0815/`. It records 66 bounded selections for
-3,221 closed/inactive logs (84,557,012,508 logical bytes), starting with four
-unchanged sample files. No production conversion yet; preserve all exclusions.
+User explicitly requests completing production lossless deduplication, verified
+recovery and actual reclaimed space. **No live logs converted; production recovery
+zero.** Continue through dependencies; do not report source/preparation as success.
+Read `VK_LOG_RECLAMATION_READINESS.md`, then `VK_LOG_DEDUPLICATION.md`, deployment
+runbooks and actual owner receipts. Preserve latest frontend/private history,
+current99-migration database and later writes, attachment/native homes, profiles,
+active jobs, durable queues and uncertain received inputs.
 
-Existing Vibe owner execution62230d3f prepares both readers/rollback/artifacts and
-real admission. Nightly execution9fa136d4 retains its existing file/SQL/runtime
-phases and is qualifying composed normal restore; no duplicate backup pipeline.
-Source087319cc4 has passing hosted Test/Historical recovery. Rebase onto current
-stagingee2efee4d retains identical dedup code and latest frontend-preservation rules.
-SSD7.5GiB free clears the old capacity observation, subject to fresh owner checks.
-Continue implementation/admission/recovery work; do not stop at a dependency list.
+Branch `vk/0815-vk-deduplicate-c` rebased onto stagingee2efee4d; Rust/tools from
+original087319cc4 remain unchanged except new normal-recovery bridgee70732c92.
+Both hosted workflows passed e70732c92.53 focused Python tests plus eight retained
+WriterFence regressions pass. Seven reader call sites were additionally reviewed;
+normal history, capture validation, report/review and recovery hashes reconstruct
+original bytes. Runtime/private-overlay/B acceptance is still required.
+Draft [PR291](https://github.com/artinflight/vibe-kanban/pull/291) targets staging.
 
----
+Private case `/mnt/vk-storage/vk-log-dedup-20261103-0815/` contains:
+- `PRODUCTION_EXECUTION_20261104.private.json`: full finite requirements/selection,
+  owner sessions, source and validation, stopped attempts and completed preparation.
+- Accepted `NIGHTLY_BACKUP_CONTRACT.private.json`: complete session object stores,
+  sidecars and exact raw reconstruction/fallback. Do not repeat contract work.
+- `B_ORIGINAL_FALLBACK_REQUEST_20261104.private.json`: first4 originals+4sidecars,
+  1,053,055,572B actual B readback requested. Exact individually accepted versions
+  can qualify if the normal consumer contract permits; no whole-set claim/fake
+  verified handle. Provider must retain actual native B and index/provider leases.
+- `candidate-closed-inactive.json`, original6-file `archive/`, selected graph and
+  `CANARY_SELECTED_PHYSICAL_ALLOCATION_20261104.private.json`: raw allocation
+  1,053,085,696B vs222,183,424B packed members.792.4MiB preparation margin before
+  directory/store effects; actual target accounting and released descriptors needed.
+- `batch-preparation-0001-pack-existing/`: sealed33-file/2,020,462,248B archive,
+  unchanged originals. Original pressure-stop evidence retained. Additional Rust
+  readback refused before child startup at renewed pressure; no guard relaxation.
+- `measure_selected_allocation.private.py`: finite selected logs/sidecars,
+  process-directory and COMPLETE affected-session store accounting. Online baseline
+  is not custody; rerun inside real owner boundary and separate filesystem delta.
+- `POST_OPERATION_VERIFICATION_WAKE.private.json`: INERT one-time existing-session
+  wake intent, neither submitted nor armed. Do not replace queued/user work.
 
-# Conversation-log reclamation — 2026-11-04
+Existing Vibe session591c6123 execution62230d3f owns both-reader artifacts, preserved
+T18 overlay/private inputs, current-data rehearsal, rollback and real admission.
+Case `/mnt/vk-storage/vk-log-reader-release-20261104`, bounded `status.py` identifies
+latest build/rehearsal receipts. Main sealed110,181,488B executable SHA67548f64...
+was independently verified. Protected stale cache and duplicate-function failures
+were caught before deployment. Corrected v8 executable SHA40a91f69.../110,229,872B
+was independently byte-verified; eight exact production replay tests pass. Final
+source pins must retain corrected overlay inputs. Current-data rehearsal remains
+pending; admission spec is unqualified. Owner adapter requires both
+actual reader cgroups physically frozen, executable/birth/root bindings and real
+WriterFence. Invoke controller from SAME pinned snapshot as its admitted modules.
 
-Branch `vk/0815-vk-deduplicate-c`; committed format base `0192b38de`.
-Guarded follow-up `52c5ea5bd` and metadata regression `e8d07f01a` are pushed. Draft [PR #291](https://github.com/artinflight/vibe-kanban/pull/291)
-targets staging; final-head checks and later deployment-owner receipts govern
-readiness. No merge or deployment is authorized by the draft. Final CI/coordination
-receipts are in `readiness-source-review.safe.json` beneath the evidence root. Read
-`VK_LOG_RECLAMATION_READINESS.md` before further action. The old protected reader
-on5650 shares live captures; updating only the main backend is insufficient.
-Preserve exact private retained-history inputs and latest live frontend.
+Existing Nightly session4e89eddc execution9fa136d4 retains sole producer/schedule
+ownership in commissioning-20261103. Current catalog/recovery qualification remains
+in progress, schedule off; no actual selected normal-B provider delivered yet.
+Shared project question9ac92f70 carries exact interface and owner updates. Preserve
+all accepted backups/old epochs; no duplicate capture or transport/agent workload.
 
-New Python tools: `controller.py` loads verified source bytes for a real owner
-admission context; `reclaim.py` requires the held existing WriterFence and exact
-log-root binding, actual reopened B originals/sidecars, reader/consumer guard and
-rollback headroom. Durable objects precede manifests; journal recovery preserves
-unknown newer files/inodes. `graph.py` exports/validates complete physical archive
-dependencies. `audit.py` measures bounded metadata growth without payloads,
-schedules or cleanup. The missing production adapter is not replaced by ready
-flags or fixture providers. Actual owner context must recover/retain maintenance
-on failure before releasing consumers.
+Global WriterFence requires zero running executions and quiet durable dispatch;
+root/owner turns must finish naturally before a complete supervised operation can
+hold it. Never forge DB completion, drop prompts or weaken guards. Prepare/rehearse
+the complete critical path first, preserve latest-data fallback and owner controls.
+SSD capacity is volatile; actual memory/PSI guards remain binding. Prior2104-rmeta
+proposal is conditional, not blanket cleanup clearance; existing locks/source
+provenance/exclusive kernel leases and exact owner action remain mandatory. No
+compiler-space retirement is counted as conversation-log recovery.
 
-45 focused tests and eight existing fence tests pass; full format/ops and final
-integration status are recorded in the readiness evidence. Local full check/lint
-fail at absent tsc/eslint; no Node install or Cargo build below capacity floor.
-Original six-file archive remains verified and retained. Only previously generated
-restore copies were retired. Current four-file subset defers legacy history;
-source/sidecar identities and inactive sessions need fresh fence-time checks.
-
-Private plans/graph/growth/tests/coordination receipts:
-`/mnt/vk-storage/vk-log-dedup-20261103-0815/`. Current B coverage is not proved by
-historical October28 recovery or this local archive. Shared Nightly question is
-unresolved; its owner is actively commissioning existing services. Vibe owner
-review is durable in Staging's `.restart-preparation` evidence. Disk owner was
-asked to recheck admitted preservation, without new deletion authorization. Its
-single resumed attempt stopped at memory PSI0.14>0.10; no SSD reclamation cleared.
-At23:30UTC free1,943,719,936B leaves a1,277,505,536B build-floor shortfall.
-Vibe's later read-only provenance review conditionally identified2,104 exact
-regenerable compiler-metadata files /1,811,595,264 allocated bytes;378 other files
-remain excluded. `compiler-metadata-retirement-plan.json` is a frozen proposal,
-not deletion authority. Existing owned-build/canonical Cargo locks and fresh
-resource/consumer/global non-use proof remain mandatory. Inaccessible proc views
-and unavailable passwordless sudo prevented global clearance; owner-described
-exact-file kernel leases are an unperformed alternative requiring separate action
-admission. No compiler metadata was removed. Do not reuse this review as clearance.
-
-Production NOT READY: old main/protected readers, current-B/normal-recall and
-fallback proofs missing, no live owner adapter, SSD ~1.9GiB<3GiB build floor.
-Required CI/private build, compatible current-data roundtrip, public/protected
-history/review/read/send QA and actual drained custody remain. Zero live logs
-converted or retired; zero production recovery claimed. Do not invent readiness
-or re-enable automatic cleanup. No background retry/monitoring claim is made.
-
-Full historical archive: [HANDOFF_HISTORY_20261017.md](HANDOFF_HISTORY_20261017.md).
+Historical scope: [HANDOFF_HISTORY_20261017.md](HANDOFF_HISTORY_20261017.md).

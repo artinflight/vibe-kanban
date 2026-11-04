@@ -254,3 +254,39 @@ Lost custody, partial reads, corruption, traversal and cross-session substitutio
 fail. Eight new fixture regressions cover those cases and the existing full
 original/sidecar verifier integration. This interface does not itself establish
 live B qualification, deployment admission or production recovery.
+
+## Current production checkpoint — 2026-11-04 15:06 UTC
+
+Production conversion and recovered log space remain **zero**. Main reader built
+and independently byte-hash verified; the protected reader requires its corrected
+build, exact production replay checks and current-data rehearsal. The existing
+Nightly owner is reconciling retained versions and qualifying normal restore;
+no replacement producer or schedule was created by this stream. Actual current
+B original/sidecar readback and the held owner/provider/writer boundary remain
+mandatory before any source replacement.
+
+The four unchanged canary logs occupy 1,053,085,696 allocated bytes. Their exact
+selected packed graph contains 30,339 members and occupies 222,183,424 allocated
+bytes including sidecars. The 830,902,272-byte difference (792.4 MiB) is a measured
+preparation margin across filesystems; it excludes directory/existing-store effects
+and is **not actual reclaimed space**. The earlier six-file 812.1 MiB sample remains
+a separate measurement. Final accounting must include complete affected session
+object stores, selected logs/sidecars and directory allocation, and report filesystem
+free space separately after the original descriptors are released.
+
+A subsequent 33-file batch (2,020,462,248 original bytes) is now packed, reopened,
+fully reconstructed and sealed, with all original identities/contents unchanged.
+It passed unchanged resource admission after prior pressure stops. An additional
+Rust readback was refused before child startup by a later resource check; no
+extra payload job or guard relaxation followed. These are prepared copies only.
+
+Source `e70732c92` passed hosted Test and Historical response recovery workflows;
+53 focused Python checks, formatting and ops checks passed. Seven additional
+reader call sites were reviewed: streamed history, capture validation, report/review
+and historical recovery hashes reach reconstructed original bytes. Fixtures and
+static review do not replace protected-reader/current-data or live B acceptance.
+
+At15:11UTC, the corrected protected executable also built successfully and was
+independently byte-hash verified; all eight exact production replay tests passed.
+Current-data rehearsal, actual selected B body/metadata recall, qualified owner
+admission and production conversion/recovery remain outstanding.

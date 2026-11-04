@@ -2665,3 +2665,14 @@ at actual memory/PSI admission, preserving all sources; no retry threshold relax
 - At15:11UTC, corrected protected v8 build and eight exact production replay tests
   pass; independent full-artifact hash verification also passes. Actual current-data
   rehearsal/admission and production conversion remain unaccepted.
+
+## 2026-11-04 — separate create-only object preparation from manifest retirement
+
+- Added bounded additive preparation for immutable session-local objects while raw
+  logs remain untouched. No fake writer fence or standalone manifest switch;
+  original B/reader/custody controller remains mandatory for any log replacement.
+- Checks include source/sidecar/session identity, complete packed body integrity,
+  original reconstruction reserve, real CLI memory/PSI/deadline admission and
+  create-only publication. Interrupted/foreign/corrupt inputs stay preserved.
+- Documented pre-addition allocation baseline and existing Nightly coordination.
+  No production invocation, manifest replacement or recovered-space claim.

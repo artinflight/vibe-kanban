@@ -290,3 +290,36 @@ At15:11UTC, the corrected protected executable also built successfully and was
 independently byte-hash verified; all eight exact production replay tests passed.
 Current-data rehearsal, actual selected B body/metadata recall, qualified owner
 admission and production conversion/recovery remain outstanding.
+
+## Create-only object preparation before maintenance
+
+`stage_objects.py` can publish verified, unreferenced objects before the drained
+window. It never replaces a log or sidecar, enables a reader, establishes a fence
+or claims recovered space. Record the allocation baseline **before** this step;
+otherwise the later manifest switch would overstate net recovery by ignoring
+these earlier object allocations. Partial additions remain preserved on failure.
+
+Coordinate the existing Nightly lane before adding production objects: its normal
+scope includes the entire session store, including unreferenced additions. Keep
+its current qualification/jobs intact. With a reviewed exact closed/inactive plan,
+a verified independent packed copy and current resource admission, run one finite
+preparation on the mounted storage:
+
+```bash
+python3 scripts/log-dedup/stage_objects.py --plan "$SELECTED_PLAN" --archive "$PACKED_ARCHIVE" --database "$CURRENT_DATABASE" > "$EVIDENCE/object-preparation.json"
+```
+
+The tool checks original/sidecar identities, terminal session binding, complete
+packed log reconstruction, object integrity, owned directories and original/raw
+reconstruction headroom. Publication is create-only, including concurrent-name
+collisions. Changed inputs, resource loss and foreign temporary inodes fail safely.
+Source logs remain raw and available. No source retirement or object cleanup occurs.
+
+The original guarded controller is still mandatory. It reopens current B originals,
+checks actual compatible/frozen readers and its held WriterFence, verifies every
+existing object and original again, and durably switches only the reviewed
+manifests. Measure that complete remaining critical path and exact raw fallback;
+preparation alone does not establish a brief or accepted maintenance window.
+This procedure has **not yet been run against production**. Detached failure and
+preservation regressions cover it; owner qualification and actual receipts govern
+activation.

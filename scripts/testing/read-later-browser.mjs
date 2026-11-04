@@ -165,6 +165,20 @@ try {
       geometry.top < geometry.mainBottom && geometry.bottom > geometry.mainTop,
       'Read Later must share the notification row'
     );
+    const sectionBounds = await page
+      .locator('[data-workspace-section]')
+      .evaluateAll((sections) =>
+        sections.map((section) => ({
+          contentBottom: section.getBoundingClientRect().bottom,
+          containerBottom: section.parentElement.getBoundingClientRect().bottom,
+        }))
+      );
+    assert(
+      sectionBounds.every(
+        (box) => box.contentBottom <= box.containerBottom + 1
+      ),
+      'Workspace section content must not overlap the following header'
+    );
     const beforeSeen = seen.length;
     await attention
       .locator('.mobile-workspace-card')

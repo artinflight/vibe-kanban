@@ -349,7 +349,7 @@ export function WorkspacesSidebar({
       .map((section) => (
         <CollapsibleSectionHeader
           key={section.id}
-          className="h-auto shrink-0"
+          className="!h-auto shrink-0"
           title={section.title}
           persistKey={section.persistKey}
           defaultExpanded={section.id !== 'later' || category !== 'all'}

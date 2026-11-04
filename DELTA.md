@@ -2601,3 +2601,20 @@ Disk's resumed source verification stopped at PSI0.14>0.10; no clearance. A
 separate exact compiler-metadata inventory is under Vibe-owner read-only review;
 no cleanup inferred from its suffix or size. Nightly's current-version B/adaptor
 question remains pending while it commissions its existing producer.
+
+
+## 2026-11-04 — reclamation owner handoff and capacity proposal
+
+Vibe's read-only shared-target assessment conditionally classified2,104 exact
+compiler-metadata files /1,811,595,264 allocated bytes as regenerable;378 files
+remain excluded. Existing build/Cargo locks, fresh resource/consumer/non-use
+proof and exact action authorization remain required. Global proc visibility was
+incomplete; passwordless sudo was unavailable. No compiler metadata was removed,
+no build floor cleared and no privilege/network/service setting changed.
+
+Corrected the unresolved shared Nightly question to the four-file candidate /
+30,339-member graph. Its existing commissioning remains active; no owner B
+acceptance is inferred. Current source is draft PR291; hosted checks are pending.
+Production remains blocked on compatible all-reader deployment/rollback,
+current-version independent B recall, the real owner adapter, capacity and
+current-data/drained-boundary acceptance. Originals and archive remain intact.

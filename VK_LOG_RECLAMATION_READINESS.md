@@ -41,8 +41,25 @@ SSD free space was1,943,719,936bytes:1,277,505,536bytes below the build floor. N
 source retirement or further automatic retry was authorized by that result.
 A separate frozen inventory found2,482 compiler-metadata files totaling2,463,285,248
 allocated bytes in the shared debug target. This is a proposed reproducible-output
-review, not disposal clearance. Vibe's owner is reviewing actual target ownership,
-consumer dependencies and the required lease; no metadata was removed.
+review, not disposal clearance. Vibe's completed provenance review conditionally releases only 2,104 exact files /
+1,811,595,264 allocated bytes as regenerable compiler metadata. The other 378 files
+remain excluded. This is not deletion authorization or global non-use clearance.
+The frozen private plan is `compiler-metadata-retirement-plan.json` in this task's
+evidence directory; its exact identities, header bytes and path-list digest must
+remain unchanged. Preserve all executable/test binaries, rlibs, shared libraries,
+fingerprints, dep-info, source/toolchains and private release inputs.
+
+Before that separate action, the Vibe owner requires exact action authorization,
+fresh resource/consumer checks and retained nonblocking exclusive locks on the
+**existing** Staging `authorized-release-20261021/owned-build.lock`, followed by
+`/mnt/vk-storage/cargo-target/debug/.cargo-lock`. Never create or replace either
+lock. Inaccessible process views prevent a global non-use clearance from this
+review; `sudo -n` also requires an operator password. The owner identifies an
+exact-file kernel-lease check as a possible separately authorized alternative,
+not an already performed clearance. Any contention, unavailable proof, changed
+file or lease break must preserve the candidate and stop. No compiler metadata
+was removed and no build-floor clearance is claimed. Even the full proposed
+saving is temporary build headroom; budget later artifact growth before a build.
 
 ## Runnable conversion interface
 

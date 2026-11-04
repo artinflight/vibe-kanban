@@ -1,7 +1,7 @@
-# Conversation-log reclamation — 2026-11-03
+# Conversation-log reclamation — 2026-11-04
 
 Branch `vk/0815-vk-deduplicate-c`; committed format base `0192b38de`.
-Guarded follow-up `52c5ea5bd` is pushed. Draft [PR #291](https://github.com/artinflight/vibe-kanban/pull/291)
+Guarded follow-up `52c5ea5bd` and metadata regression `e8d07f01a` are pushed. Draft [PR #291](https://github.com/artinflight/vibe-kanban/pull/291)
 targets staging; final-head checks and later deployment-owner receipts govern
 readiness. No merge or deployment is authorized by the draft. Final CI/coordination
 receipts are in `readiness-source-review.safe.json` beneath the evidence root. Read
@@ -34,6 +34,14 @@ review is durable in Staging's `.restart-preparation` evidence. Disk owner was
 asked to recheck admitted preservation, without new deletion authorization. Its
 single resumed attempt stopped at memory PSI0.14>0.10; no SSD reclamation cleared.
 At23:30UTC free1,943,719,936B leaves a1,277,505,536B build-floor shortfall.
+Vibe's later read-only provenance review conditionally identified2,104 exact
+regenerable compiler-metadata files /1,811,595,264 allocated bytes;378 other files
+remain excluded. `compiler-metadata-retirement-plan.json` is a frozen proposal,
+not deletion authority. Existing owned-build/canonical Cargo locks and fresh
+resource/consumer/global non-use proof remain mandatory. Inaccessible proc views
+and unavailable passwordless sudo prevented global clearance; owner-described
+exact-file kernel leases are an unperformed alternative requiring separate action
+admission. No compiler metadata was removed. Do not reuse this review as clearance.
 
 Production NOT READY: old main/protected readers, current-B/normal-recall and
 fallback proofs missing, no live owner adapter, SSD ~1.9GiB<3GiB build floor.

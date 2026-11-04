@@ -110,6 +110,11 @@
     "label": "Libellé"
   },
   "workspaces": {
+    "attention": "Attention",
+    "readLater": "Lire plus tard",
+    "returnToAttention": "Revenir à Attention",
+    "noReadLater": "Aucun élément enregistré pour plus tard",
+    "completed": "Terminé",
     "title": "Espaces de travail",
     "searchPlaceholder": "Rechercher...",
     "active": "Actif",

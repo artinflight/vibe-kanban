@@ -110,6 +110,11 @@
     "label": "标签"
   },
   "workspaces": {
+    "attention": "需要关注",
+    "readLater": "稍后阅读",
+    "returnToAttention": "返回需要关注",
+    "noReadLater": "没有稍后阅读的项目",
+    "completed": "已完成",
     "title": "工作区",
     "searchPlaceholder": "搜索...",
     "active": "活跃",

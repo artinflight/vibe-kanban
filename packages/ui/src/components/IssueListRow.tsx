@@ -1,6 +1,6 @@
 'use client';
 
-import type { MouseEvent } from 'react';
+import type { MouseEvent, ReactNode } from 'react';
 import { cn } from '../lib/cn';
 import { Draggable } from '@hello-pangea/dnd';
 import { DotsSixVerticalIcon } from '@phosphor-icons/react';
@@ -71,6 +71,7 @@ export interface IssueListRowProps {
   isMultiSelectActive?: boolean;
   isChecked?: boolean;
   onCheckboxChange?: (checked: boolean) => void;
+  action?: ReactNode;
   className?: string;
 }
 
@@ -86,6 +87,7 @@ export function IssueListRow({
   isMultiSelectActive = false,
   isChecked = false,
   onCheckboxChange,
+  action,
   className,
 }: IssueListRowProps) {
   const showCheckbox = isMultiSelectActive || isChecked;
@@ -156,6 +158,7 @@ export function IssueListRow({
             <span className="text-base text-high truncate">{issue.title}</span>
           </div>
 
+          {action}
           {/* Right side: Tags, Assignee, Age */}
           <div className="flex items-center gap-base shrink-0">
             {visibleTags.length > 0 && (

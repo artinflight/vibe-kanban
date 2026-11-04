@@ -1,48 +1,59 @@
-# Accepted scrolling PR integration — 2026-11-03
+# Read Later implementation — 2026-11-04
 
-The operator accepted the fix ("Good") and requested a PR/rebase merge into
-staging. [PR #292](https://github.com/artinflight/vibe-kanban/pull/292) is the
-integration record; its final checks/merge event give final status and rebased IDs.
-Original deployed identities remain immutable. Branch is rebased onto fork/staging c3c1dc9d6 with scrolling source bytes
-unchanged. Current live frontend is the newer workspace-visibility composition:
-JS index-CM79W1F0.js, CSS index-BDlsFLgm.css. Its three scrolling files match the
-accepted release exactly; preserve this runtime. No redeployment during PR work.
+Implemented VK Dev T91 on `vk/f57c-read-later` after the operator lifted the hold.
+The operator requested a local commit of the implementation and continuity notes;
+see Git history for its identity. No push, deployment or agent launch.
 
-The accepted scrolling publication was at 09:59:20 UTC with JS index-BRto7v9M.js. The operator
-reported no change because the later unread fix-release-4 omitted all three
-scrolling files. The original November 2 receipt describes a superseded release.
-Fresh reproduction confirmed 2850 px document height with 60 projects, and 1134 px
-with 19 real projects in a 600 px desktop window.
+Behavior:
+- Sidebar sections: Attention, Read Later, Running, then Completed/idle history.
+  Read Later starts folded; it has an item count and a dedicated phone filter.
+- Unread workspace rows, project notices, issue cards/list rows and inbox
+  notifications expose Read Later and Return to Attention. These actions stop
+  click/key propagation and never call mark-read, navigation or agent APIs.
+- A browser-local Zustand preference is scoped by host, user, entity kind and ID.
+  It survives reloads, retains unread badges and falls back to memory if browser
+  storage is denied. There is no cross-device synchronization or backend schema.
+- Issue preferences also defer linked workspace rows. Opening an item continues
+  to use the existing explicit navigation/read behavior. Read items leave the
+  deferred collection; unrelated attention/approval/running semantics are kept.
+- Completed is the existing idle collection, not an issue status transition.
 
-Restored the unchanged d0496eb1d scrolling files onto the actual latest live source
-9a45a3abf2d99eb44c14ef7a744d6f7bf0fbb73e. All other 1314 live inputs are exact.
-Source snapshot: `/mnt/vk-storage/vk-scrolling-projects-20261103-9cb7-correction/source`.
-Never rebuild from the older feature branch alone: it omits newer unread fixes.
-The correction passed five packaged/public desktop-touch browser sizes, 19-project
-public desktop/mobile scrolling through the list boundary, 27 unread/chat-notice
-regressions and five source-preservation tests. Real desktop document now stays
-600 px while its menu scrolls. No page errors or application writes. Physical
-S25 testing and full Rust/PR baseline were not run. Operator accepted; PR integration is authorized.
+Validation completed:
+- `pnpm run format`; touched UI and test files additionally formatted with the
+  web-core Prettier configuration (root format does not include packages/ui).
+- `pnpm run ops:check`, `pnpm run web-core:check`, `pnpm run local-web:check`,
+  `pnpm run ui:check`; all passed. Type checks required
+  `NODE_OPTIONS=--max-old-space-size=2048`; the inherited 768 MiB heap exhausted
+  before producing results. Existing SSD dependency caches were reused.
+- ESLint passed for all changed UI components and web-core files, using the
+  existing UI and local-web configurations respectively.
+- 11 Read Later interaction/persistence tests pass:
+  `VK_TEST_OUTPUT=<mounted-SSD-directory> node scripts/testing/run-read-later-tests.mjs`.
+- 12 existing tests pass with `node --experimental-strip-types --test` against
+  `workspaceSidebarPagination.test.ts`, `dotProjectNotices.test.ts`, and
+  `dotWorkspaceActivity.test.ts` in their existing directories.
+- Real Chromium at 1440 and 393 px passed defer, persisted reload, restore and
+  horizontal-overflow checks with zero read calls, zero application writes and
+  zero page errors. A desktop action overlay and phone section-height overlap
+  were found and fixed during these tests. All application writes were
+  intercepted; unread summaries were disposable browser response fixtures.
+  Reproduce using `scripts/testing/read-later-browser.mjs` with VK_TEST_BASE and
+  VK_TEST_OUTPUT. Results/screenshots: `/mnt/vk-storage/vk-read-later-20261104-f57c`.
+- `git diff --check` passed. No Rust/full workspace/remote deployment checks or
+  physical-device tests were needed/run for this frontend-only change. No
+  production unread records, conversations or provider turns were modified.
 
-All receipts are under `/mnt/vk-storage/vk-scrolling-projects-20261103-9cb7-correction`.
-`paired/candidate` is live; `paired/fallback` retains the previous unread frontend.
-926 assets retained; 88,674,581-byte recovery archive fully restored and independently
-read back from Desktop B. All five service identities, backend hash, DB inode and
-99 migrations unchanged. No backend restart, database restore, inference or device
-action; direct backend/history frontend roots and previews preserved.
+The lightweight branch frontend used the verified existing public gateway on
+4720. The preview guide's historical 4511 default is not listening; the current
+workflow/runtime record takes precedence. No isolated backend was started and no
+public preview route was replaced. The temporary frontend preview was stopped
+after browser validation. Preserve every other preview/service.
 
-Publication must run `scripts/deployment/check_frontend_preservation.py` against
-the resolved current live artifact/source and candidate, with only reviewed paths
-allowed to change. Recheck pointer ownership before activation. The new gate
-rejects the exact stale-source unread publication which dropped scrolling.
-Workflow and runbook include this requirement. See
-[release record](VK_SCROLLING_PROJECTS_DEPLOYMENT.md) and [manifest](LIVE_DEPLOYMENT.json).
-Integration checks: preservation tests pass. Full local check/lint/workspace
-Rust tests cannot complete because the offline registry lacks serde; SSD free
-space is under 2 GiB, so do not download/build around the storage guard. Full
-hosted Test validation is recorded at run 41740959926 (f75c2af9d); source code is
-unchanged by the later recovery-workflow/ledger correction. Recovery contracts
-pass at run 41741243530. Final PR checks must pass before rebase merge. Main promotion is separate.
+Next: review this diff and exercise the UI before promotion/publication. A PR into
+staging still requires the repository's full baseline, current staging freshness
+and the existing source-preservation gate for any production publication. Read
+STATE.md and LIVE_DEPLOYMENT.json before runtime work; this feature does not alter
+those deployed-source records.
 
-Prior pickup: [previous record](deployment-history/20261030-before-reconciliation/HANDOFF.md)
-and [HANDOFF history](HANDOFF_HISTORY_20261017.md).
+Prior continuity: [pre-reconciliation record](deployment-history/20261030-before-reconciliation/HANDOFF.md)
+and [full historical archive](HANDOFF_HISTORY_20261017.md).

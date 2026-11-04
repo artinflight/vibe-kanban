@@ -110,6 +110,11 @@
     "label": "라벨"
   },
   "workspaces": {
+    "attention": "확인 필요",
+    "readLater": "나중에 읽기",
+    "returnToAttention": "확인 필요로 되돌리기",
+    "noReadLater": "나중에 읽을 항목이 없습니다",
+    "completed": "완료",
     "title": "워크스페이스",
     "searchPlaceholder": "검색...",
     "active": "활성",

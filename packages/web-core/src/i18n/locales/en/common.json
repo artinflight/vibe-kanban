@@ -124,6 +124,11 @@
     "label": "Label"
   },
   "workspaces": {
+    "attention": "Attention",
+    "readLater": "Read Later",
+    "returnToAttention": "Return to Attention",
+    "noReadLater": "Nothing saved for later",
+    "completed": "Completed",
     "title": "Workspaces",
     "searchPlaceholder": "Search...",
     "active": "Active",

@@ -16,6 +16,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { usePhoneLayout } from '../lib/usePhoneLayout';
 import { cn } from '../lib/cn';
+import { ReadLaterButton } from './ReadLaterButton';
 import { RunningDots } from './RunningDots';
 import { DotManagedIndicator } from './DotManagedIndicator';
 
@@ -57,6 +58,8 @@ export interface WorkspaceSummaryProps extends DotActivityState {
   summary?: boolean;
   /** Whether this is a draft workspace (shows "Draft" instead of elapsed time) */
   isDraft?: boolean;
+  readLater?: boolean;
+  onToggleReadLater?: () => void;
   onOpenWorkspaceActions?: (workspaceId: string) => void;
 }
 
@@ -85,6 +88,8 @@ export function WorkspaceSummary({
   summary = false,
   isDraft = false,
   onOpenWorkspaceActions,
+  readLater,
+  onToggleReadLater,
 }: WorkspaceSummaryProps) {
   const { t } = useTranslation('common');
   const phone = usePhoneLayout();
@@ -166,6 +171,9 @@ export function WorkspaceSummary({
             </span>
           </span>
         </button>
+        {onToggleReadLater && (
+          <ReadLaterButton later={readLater} onToggle={onToggleReadLater} />
+        )}
         {workspaceId && onOpenWorkspaceActions && (
           <button
             type="button"
@@ -338,6 +346,12 @@ export function WorkspaceSummary({
           </div>
         )}
       </button>
+
+      {onToggleReadLater && (
+        <div className="relative z-10 flex justify-end px-half">
+          <ReadLaterButton later={readLater} onToggle={onToggleReadLater} />
+        </div>
+      )}
 
       {/* Right-side hover action - more options only */}
       {workspaceId && onOpenWorkspaceActions && (

@@ -5,6 +5,9 @@ import { useParams } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { useWorkspaceContext } from '@/shared/hooks/useWorkspaceContext';
 import { useAppNavigation } from '@/shared/hooks/useAppNavigation';
+import { useReadLater } from '@/shared/hooks/useReadLater';
+import { ReadLaterButton } from '@vibe/ui/components/ReadLaterButton';
+import { useDotNotifications } from '@/shared/hooks/useDotNotifications';
 import { useDotProjectNotifications } from '@/shared/hooks/useDotNotifications';
 import {
   projectDotNotices,
@@ -294,6 +297,8 @@ export function WorkspacesSidebarContainer({
   const isMobile = useIsMobile();
   const navigation = useAppNavigation();
   const projectNotifications = useDotProjectNotifications();
+  const issueNotifications = useDotNotifications();
+  const { items: readLaterItems, isReadLater, setReadLater } = useReadLater();
   const { hosts: remoteCloudHosts } = useRemoteCloudHostsAppBarModel();
   const {
     hostId: routeHostId,
@@ -416,7 +421,7 @@ export function WorkspacesSidebarContainer({
     enabled: isLocalAuthBypassed,
     staleTime: 60_000,
   });
-  const projectNotices = useMemo(
+  const rawProjectNotices = useMemo(
     () =>
       routeHostId
         ? []
@@ -425,6 +430,14 @@ export function WorkspacesSidebarContainer({
             ...(allRemoteProjects ?? []),
           ]),
     [routeHostId, projectNotifications, localProjects, allRemoteProjects]
+  );
+  const projectNotices = useMemo(
+    () =>
+      rawProjectNotices.map((notice) => ({
+        ...notice,
+        readLater: isReadLater('project', notice.projectId),
+      })),
+    [rawProjectNotices, isReadLater]
   );
   const localProjectWorkspaceQueries = useQueries({
     queries: localProjects.map((project) => ({
@@ -463,6 +476,20 @@ export function WorkspacesSidebarContainer({
     ? localProjectByLocalId
     : remoteProjectByLocalId;
 
+  const issueByWorkspaceId = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const workspace of remoteWorkspaces) {
+      if (workspace.local_workspace_id && workspace.issue_id)
+        map.set(workspace.local_workspace_id, workspace.issue_id);
+    }
+    for (const query of localProjectWorkspaceQueries) {
+      for (const workspace of query.data ?? []) {
+        if (workspace.local_workspace_id && workspace.issue_id)
+          map.set(workspace.local_workspace_id, workspace.issue_id);
+      }
+    }
+    return map;
+  }, [remoteWorkspaces, localProjectWorkspaceQueries]);
   // Build org name lookup
   const orgNameById = useMemo(() => {
     const map = new Map<string, string>();
@@ -691,8 +718,14 @@ export function WorkspacesSidebarContainer({
   );
 
   const sortedActiveWorkspaces = useMemo(
-    () => sortWorkspaces(filteredActiveWorkspaces),
-    [filteredActiveWorkspaces, sortWorkspaces]
+    () =>
+      sortWorkspaces(filteredActiveWorkspaces).map((workspace) => ({
+        ...workspace,
+        readLater:
+          isReadLater('workspace', workspace.id) ||
+          isReadLater('issue', issueByWorkspaceId.get(workspace.id) ?? ''),
+      })),
+    [filteredActiveWorkspaces, sortWorkspaces, isReadLater, issueByWorkspaceId]
   );
 
   const sortedArchivedWorkspaces = useMemo(
@@ -700,6 +733,41 @@ export function WorkspacesSidebarContainer({
     [filteredArchivedWorkspaces, sortWorkspaces]
   );
 
+  const laterIssues = Object.values(readLaterItems).filter(
+    (item) =>
+      item.kind === 'issue' &&
+      isReadLater('issue', item.id) &&
+      issueNotifications.some(
+        (notice) => notice.issue_id === item.id && notice.unread_count > 0
+      ) &&
+      (!searchQuery || item.name?.toLowerCase().includes(searchLower)) &&
+      (!workspaceFilters.projectIds.length ||
+        workspaceFilters.projectIds.includes(item.projectId ?? ''))
+  );
+  const readLaterIssueRows = laterIssues.map((item) => (
+    <div key={item.id} className="flex flex-col px-base">
+      <button
+        type="button"
+        className="min-h-11 px-base py-half text-left text-normal hover:bg-tertiary focus-visible:ring-1 focus-visible:ring-brand"
+        onClick={() => {
+          navigation.goToProjectIssue(item.projectId!, item.id);
+          if (isMobile) setMobileActiveTab('dot');
+        }}
+      >
+        {item.name ?? item.id}
+        <span className="block text-xs text-brand">
+          {
+            issueNotifications.find((notice) => notice.issue_id === item.id)
+              ?.unread_count
+          }{' '}
+          unread
+        </span>
+      </button>
+      <div className="flex justify-end">
+        <ReadLaterButton later onToggle={() => setReadLater(item, false)} />
+      </div>
+    </div>
+  ));
   // Keep every attention/running item available to the accordion sections.
   const paginatedActiveWorkspaces = useMemo(
     () =>
@@ -790,6 +858,7 @@ export function WorkspacesSidebarContainer({
 
   const sidebarPersistKeys: WorkspacesSidebarPersistKeys = {
     raisedHand: PERSIST_KEYS.workspacesSidebarRaisedHand,
+    readLater: 'workspaces-sidebar-read-later',
     notRunning: PERSIST_KEYS.workspacesSidebarNotRunning,
     running: PERSIST_KEYS.workspacesSidebarRunning,
   };
@@ -903,6 +972,20 @@ export function WorkspacesSidebarContainer({
   return (
     <WorkspacesSidebar
       projectDotNotices={projectNotices}
+      readLaterIssues={readLaterIssueRows}
+      readLaterIssueCount={laterIssues.length}
+      onToggleProjectReadLater={(id) =>
+        setReadLater({ kind: 'project', id }, !isReadLater('project', id))
+      }
+      onToggleWorkspaceReadLater={(id) => {
+        const issueId = issueByWorkspaceId.get(id);
+        const later =
+          isReadLater('workspace', id) ||
+          (!!issueId && isReadLater('issue', issueId));
+        if (later && issueId)
+          setReadLater({ kind: 'issue', id: issueId }, false);
+        setReadLater({ kind: 'workspace', id }, !later);
+      }}
       onOpenProjectChat={(projectId) => {
         if (isMobile) setMobileActiveTab('chat');
         openProjectDotChat(

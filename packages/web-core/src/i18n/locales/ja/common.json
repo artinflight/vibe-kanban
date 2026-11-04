@@ -110,6 +110,11 @@
     "label": "ラベル"
   },
   "workspaces": {
+    "attention": "要確認",
+    "readLater": "後で読む",
+    "returnToAttention": "要確認に戻す",
+    "noReadLater": "後で読む項目はありません",
+    "completed": "完了",
     "title": "ワークスペース",
     "searchPlaceholder": "検索...",
     "active": "アクティブ",

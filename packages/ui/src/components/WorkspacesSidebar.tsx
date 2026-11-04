@@ -1,3 +1,7 @@
+import {
+  hasUnreadSidebarActivity,
+  workspaceSidebarSections,
+} from '../lib/workspaceSidebarSections';
 import type { DotActivityState } from './DotActivityIndicators';
 import type { ReactNode } from 'react';
 import { useCallback, useMemo, useRef, useState } from 'react';
@@ -26,6 +30,7 @@ export type WorkspaceLayoutMode = 'flat' | 'accordion';
 
 export interface WorkspacesSidebarWorkspace extends DotActivityState {
   id: string;
+  readLater?: boolean;
   name: string;
   dotManaged?: boolean;
   filesChanged?: number;
@@ -45,18 +50,24 @@ export interface WorkspacesSidebarWorkspace extends DotActivityState {
 
 export interface WorkspacesSidebarPersistKeys {
   raisedHand: string;
+  readLater?: string;
   notRunning: string;
   running: string;
 }
 
 const DEFAULT_PERSIST_KEYS: WorkspacesSidebarPersistKeys = {
   raisedHand: 'workspaces-sidebar-raised-hand',
+  readLater: 'workspaces-sidebar-read-later',
   notRunning: 'workspaces-sidebar-not-running',
   running: 'workspaces-sidebar-running',
 };
 
 export interface WorkspacesSidebarProps {
   projectDotNotices?: ProjectDotNotice[];
+  onToggleProjectReadLater?: (projectId: string) => void;
+  onToggleWorkspaceReadLater?: (workspaceId: string) => void;
+  readLaterIssues?: ReactNode;
+  readLaterIssueCount?: number;
   onOpenProjectChat?: (projectId: string) => void;
   workspaces: WorkspacesSidebarWorkspace[];
   /** Complete filtered collection for phone activity counts before pagination. */
@@ -148,17 +159,25 @@ function WorkspaceList({
   selectedWorkspaceId,
   onSelectWorkspace,
   onOpenWorkspaceActions,
+  onToggleReadLater,
 }: {
   workspaces: WorkspacesSidebarWorkspace[];
   selectedWorkspaceId: string | null;
   onSelectWorkspace: (id: string) => void;
   onOpenWorkspaceActions: (workspaceId: string) => void;
+  onToggleReadLater?: (workspaceId: string) => void;
 }) {
   return (
     <>
       {workspaces.map((workspace) => (
         <WorkspaceSummary
           key={workspace.id}
+          readLater={workspace.readLater}
+          onToggleReadLater={
+            onToggleReadLater && hasUnreadSidebarActivity(workspace)
+              ? () => onToggleReadLater(workspace.id)
+              : undefined
+          }
           name={workspace.name}
           workspaceId={workspace.id}
           filesChanged={workspace.filesChanged}
@@ -188,6 +207,10 @@ function WorkspaceList({
 
 export function WorkspacesSidebar({
   projectDotNotices = [],
+  onToggleProjectReadLater,
+  onToggleWorkspaceReadLater,
+  readLaterIssues,
+  readLaterIssueCount = 0,
   onOpenProjectChat,
   workspaces,
   activityWorkspaces,
@@ -223,8 +246,25 @@ export function WorkspacesSidebar({
   const projectNotices = onOpenProjectChat
     ? projectDotNotices.filter((item) => item.unreadCount > 0)
     : [];
+  const attentionProjectNotices = projectNotices.filter(
+    (notice) => !notice.readLater
+  );
+  const laterProjectNotices = projectNotices.filter(
+    (notice) => notice.readLater
+  );
   const projectRows = (
-    <ProjectDotNotices notices={projectNotices} onOpen={onOpenProjectChat} />
+    <ProjectDotNotices
+      notices={attentionProjectNotices}
+      onOpen={onOpenProjectChat}
+      onToggleReadLater={onToggleProjectReadLater}
+    />
+  );
+  const laterProjectRows = (
+    <ProjectDotNotices
+      notices={laterProjectNotices}
+      onOpen={onOpenProjectChat}
+      onToggleReadLater={onToggleProjectReadLater}
+    />
   );
   const handleOpenWorkspaceActions = useCallback(
     (workspaceId: string) => {
@@ -247,31 +287,112 @@ export function WorkspacesSidebar({
     }
   };
 
-  // Categorize workspaces for accordion layout
-  const { raisedHandWorkspaces, idleWorkspaces, runningWorkspaces } =
-    useMemo(() => {
-      const collection = phone
-        ? (activityWorkspaces ?? workspaces)
-        : workspaces;
-      // Running is an activity view, independent of explicit actions/approvals.
-      // Ordinary unread stays a badge while active; idle unread is actionable.
-      const isActive = (ws: WorkspacesSidebarWorkspace) =>
-        !!ws.isRunning ||
-        (ws.activeSubagentCount ?? 0) + (ws.unresolvedSubagentCount ?? 0) > 0;
-      const needsAttention = (ws: WorkspacesSidebarWorkspace) =>
-        (ws.dotNeedsAttentionCount ?? 0) > 0 ||
-        ws.hasPendingApproval ||
-        (!isActive(ws) &&
-          (ws.hasUnseenActivity || (ws.dotUnreadCount ?? 0) > 0));
-
-      return {
-        raisedHandWorkspaces: collection.filter((ws) => needsAttention(ws)),
-        idleWorkspaces: collection.filter(
-          (ws) => !isActive(ws) && !needsAttention(ws)
-        ),
-        runningWorkspaces: collection.filter(isActive),
-      };
-    }, [workspaces, activityWorkspaces, phone]);
+  const {
+    raisedHandWorkspaces,
+    readLaterWorkspaces,
+    idleWorkspaces,
+    runningWorkspaces,
+  } = useMemo(
+    () => workspaceSidebarSections(activityWorkspaces ?? workspaces),
+    [workspaces, activityWorkspaces]
+  );
+  const renderWorkspaces = (rows: WorkspacesSidebarWorkspace[]) => (
+    <WorkspaceList
+      workspaces={rows}
+      selectedWorkspaceId={selectedWorkspaceId}
+      onSelectWorkspace={onSelectWorkspace}
+      onOpenWorkspaceActions={handleOpenWorkspaceActions}
+      onToggleReadLater={onToggleWorkspaceReadLater}
+    />
+  );
+  const laterCount =
+    readLaterWorkspaces.length +
+    laterProjectNotices.length +
+    readLaterIssueCount;
+  const sections = [
+    {
+      id: 'attention',
+      title: t('common:workspaces.attention'),
+      rows: raisedHandWorkspaces,
+      extra: projectRows,
+      count: raisedHandWorkspaces.length + attentionProjectNotices.length,
+      persistKey: persistKeys.raisedHand,
+    },
+    {
+      id: 'later',
+      title: t('common:workspaces.readLater'),
+      rows: readLaterWorkspaces,
+      extra: (
+        <>
+          {laterProjectRows}
+          {readLaterIssues}
+        </>
+      ),
+      count: laterCount,
+      persistKey: persistKeys.readLater,
+    },
+    {
+      id: 'running',
+      title: t('common:workspaces.running'),
+      rows: runningWorkspaces,
+      count: runningWorkspaces.length,
+      persistKey: persistKeys.running,
+    },
+    {
+      id: 'ready',
+      title: t('common:workspaces.completed'),
+      rows: idleWorkspaces,
+      count: idleWorkspaces.length,
+      persistKey: persistKeys.notRunning,
+    },
+  ];
+  const renderSections = (category = 'all') =>
+    sections
+      .filter((section) => category === 'all' || category === section.id)
+      .map((section) => (
+        <CollapsibleSectionHeader
+          key={section.id}
+          className="h-auto shrink-0"
+          title={section.title}
+          persistKey={section.persistKey}
+          defaultExpanded={section.id !== 'later' || category !== 'all'}
+          collapsible={
+            section.id === 'later'
+              ? category === 'all'
+              : !phone && layoutMode === 'accordion'
+          }
+          headerExtra={
+            <span className="text-xs text-low">{section.count}</span>
+          }
+        >
+          <div
+            className="flex flex-col gap-half py-half"
+            data-workspace-section={section.id}
+          >
+            {section.extra}
+            {section.id === 'attention' && draftTitle && (
+              <WorkspaceSummary
+                name={draftTitle}
+                isActive={isCreateMode}
+                isDraft
+                onClick={onSelectCreate}
+              />
+            )}
+            {renderWorkspaces(
+              section.id === 'ready'
+                ? section.rows.slice(0, workspaces.length)
+                : section.rows
+            )}
+            {section.count === 0 && (
+              <span className="text-sm text-low opacity-60 px-base">
+                {section.id === 'later'
+                  ? t('common:workspaces.noReadLater')
+                  : t('common:workspaces.noWorkspaces')}
+              </span>
+            )}
+          </div>
+        </CollapsibleSectionHeader>
+      ));
 
   const headerActions: SectionAction[] = [
     {
@@ -288,15 +409,6 @@ export function WorkspacesSidebar({
   ];
 
   if (phone) {
-    const rows = showArchive
-      ? archivedWorkspaces
-      : phoneCategory === 'attention'
-        ? raisedHandWorkspaces.slice(0, workspaces.length)
-        : phoneCategory === 'running'
-          ? runningWorkspaces.slice(0, workspaces.length)
-          : phoneCategory === 'ready'
-            ? idleWorkspaces.slice(0, workspaces.length)
-            : workspaces;
     return (
       <div className="phone-workspaces">
         <div className="phone-page-heading">
@@ -355,10 +467,15 @@ export function WorkspacesSidebar({
               [
                 'attention',
                 'Attention',
-                raisedHandWorkspaces.length + projectNotices.length,
+                raisedHandWorkspaces.length + attentionProjectNotices.length,
               ],
+              ['later', t('common:workspaces.readLater'), laterCount],
               ['running', 'Running', runningWorkspaces.length],
-              ['ready', 'Ready', idleWorkspaces.length],
+              [
+                'ready',
+                t('common:workspaces.completed'),
+                idleWorkspaces.length,
+              ],
             ].map(([id, label, count]) => (
               <button
                 key={id}
@@ -381,52 +498,9 @@ export function WorkspacesSidebar({
             <SpinnerIcon className="animate-spin m-4" size={24} />
           ) : (
             <>
-              {isCreateMode && draftTitle && (
-                <WorkspaceSummary
-                  name={draftTitle}
-                  isDraft
-                  isActive
-                  onClick={onSelectCreate}
-                />
-              )}
-              {!showArchive && phoneCategory === 'attention' && projectRows}
-              <WorkspaceList
-                workspaces={rows}
-                selectedWorkspaceId={selectedWorkspaceId}
-                onSelectWorkspace={onSelectWorkspace}
-                onOpenWorkspaceActions={handleOpenWorkspaceActions}
-              />
-              {!rows.length &&
-                !(
-                  phoneCategory === 'attention' &&
-                  !showArchive &&
-                  projectNotices.length
-                ) && (
-                  <div className="phone-empty-state">
-                    <StackIcon size={32} />
-                    <h3>
-                      {searchQuery
-                        ? 'No matching workspaces'
-                        : showArchive
-                          ? 'Your archive is empty'
-                          : phoneCategory === 'attention'
-                            ? 'You’re all caught up'
-                            : phoneCategory === 'running'
-                              ? 'No agents running'
-                              : 'No workspaces here yet'}
-                    </h3>
-                    <p>
-                      {searchQuery
-                        ? 'Try a different name or clear your search.'
-                        : 'Conversations and agent activity appear here.'}
-                    </p>
-                    {searchQuery && (
-                      <button type="button" onClick={() => onSearchChange('')}>
-                        Clear search
-                      </button>
-                    )}
-                  </div>
-                )}
+              {showArchive
+                ? renderWorkspaces(archivedWorkspaces)
+                : renderSections(phoneCategory)}
             </>
           )}
         </div>
@@ -572,136 +646,8 @@ export function WorkspacesSidebar({
               ))
             )}
           </div>
-        ) : layoutMode === 'accordion' ? (
-          /* Accordion layout view */
-          <div className="flex flex-col gap-base">
-            {/* Needs Attention section */}
-            <CollapsibleSectionHeader
-              title={t('common:workspaces.needsAttention')}
-              persistKey={persistKeys.raisedHand}
-              defaultExpanded={true}
-            >
-              <div className="flex flex-col gap-base py-half">
-                {projectRows}
-                {draftTitle && (
-                  <WorkspaceSummary
-                    name={draftTitle}
-                    isActive={isCreateMode}
-                    isDraft={true}
-                    onClick={onSelectCreate}
-                  />
-                )}
-                {raisedHandWorkspaces.length === 0 &&
-                !draftTitle &&
-                !projectNotices.length ? (
-                  <span className="text-sm text-low opacity-60 pl-base">
-                    {t('common:workspaces.noWorkspaces')}
-                  </span>
-                ) : (
-                  <WorkspaceList
-                    workspaces={raisedHandWorkspaces}
-                    selectedWorkspaceId={selectedWorkspaceId}
-                    onSelectWorkspace={onSelectWorkspace}
-                    onOpenWorkspaceActions={handleOpenWorkspaceActions}
-                  />
-                )}
-              </div>
-            </CollapsibleSectionHeader>
-
-            {/* Running section */}
-            <CollapsibleSectionHeader
-              title={t('common:workspaces.running')}
-              persistKey={persistKeys.running}
-              defaultExpanded={true}
-            >
-              <div className="flex flex-col gap-base py-half">
-                {runningWorkspaces.length === 0 ? (
-                  <span className="text-sm text-low opacity-60 pl-base">
-                    {t('common:workspaces.noWorkspaces')}
-                  </span>
-                ) : (
-                  <WorkspaceList
-                    workspaces={runningWorkspaces}
-                    selectedWorkspaceId={selectedWorkspaceId}
-                    onSelectWorkspace={onSelectWorkspace}
-                    onOpenWorkspaceActions={handleOpenWorkspaceActions}
-                  />
-                )}
-              </div>
-            </CollapsibleSectionHeader>
-
-            {/* Idle section */}
-            <CollapsibleSectionHeader
-              title={t('common:workspaces.idle')}
-              persistKey={persistKeys.notRunning}
-              defaultExpanded={true}
-            >
-              <div className="flex flex-col gap-base py-half">
-                {idleWorkspaces.length === 0 ? (
-                  <span className="text-sm text-low opacity-60 pl-base">
-                    {t('common:workspaces.noWorkspaces')}
-                  </span>
-                ) : (
-                  <WorkspaceList
-                    workspaces={idleWorkspaces}
-                    selectedWorkspaceId={selectedWorkspaceId}
-                    onSelectWorkspace={onSelectWorkspace}
-                    onOpenWorkspaceActions={handleOpenWorkspaceActions}
-                  />
-                )}
-              </div>
-            </CollapsibleSectionHeader>
-          </div>
         ) : (
-          /* Active workspaces flat view */
-          <div className="flex flex-col gap-base">
-            {projectNotices.length > 0 && (
-              <CollapsibleSectionHeader
-                title={t('common:workspaces.needsAttention')}
-                defaultExpanded
-              >
-                <div className="py-half">{projectRows}</div>
-              </CollapsibleSectionHeader>
-            )}
-            <div className="flex items-center justify-between px-base">
-              <span className="text-sm font-medium text-low">
-                {t('common:workspaces.active')}
-              </span>
-              <span className="text-xs text-low">{totalWorkspacesCount}</span>
-            </div>
-            {draftTitle && (
-              <WorkspaceSummary
-                name={draftTitle}
-                isActive={isCreateMode}
-                isDraft={true}
-                onClick={onSelectCreate}
-              />
-            )}
-            {workspaces.map((workspace) => (
-              <WorkspaceSummary
-                key={workspace.id}
-                name={workspace.name}
-                workspaceId={workspace.id}
-                filesChanged={workspace.filesChanged}
-                linesAdded={workspace.linesAdded}
-                linesRemoved={workspace.linesRemoved}
-                isActive={selectedWorkspaceId === workspace.id}
-                isRunning={workspace.isRunning}
-                isPinned={workspace.isPinned}
-                hasPendingApproval={workspace.hasPendingApproval}
-                hasRunningDevServer={workspace.hasRunningDevServer}
-                hasUnseenActivity={workspace.hasUnseenActivity}
-                dotManaged={workspace.dotManaged}
-                dotUnreadCount={workspace.dotUnreadCount}
-                dotNeedsAttentionCount={workspace.dotNeedsAttentionCount}
-                latestProcessCompletedAt={workspace.latestProcessCompletedAt}
-                latestProcessStatus={workspace.latestProcessStatus}
-                prStatus={workspace.prStatus}
-                onOpenWorkspaceActions={handleOpenWorkspaceActions}
-                onClick={() => onSelectWorkspace(workspace.id)}
-              />
-            ))}
-          </div>
+          <div className="flex flex-col gap-base">{renderSections()}</div>
         )}
       </div>
 

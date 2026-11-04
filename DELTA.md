@@ -2561,3 +2561,19 @@ historical-custody recovery run 41741243530 passes on a452d74ca. Final PR checks
 and merge event govern integration status and rebased IDs. Original deployed
 source/receipts and the later preserving live frontend remain unchanged. Main
 promotion is separate. Local Rust baseline remains blocked by offline serde.
+
+## 2026-11-04 — Read Later (VK Dev T91)
+
+The operator lifted the issue-only hold and requested implementation. Added
+browser-local, host/user-scoped Read Later actions for unread workspaces, issues,
+project notices and inbox notifications; ordered the sidebar as Attention, Read
+Later, Running, then Completed/idle. Deferred items preserve unread state and
+can return to Attention. Read Later starts folded to keep active work visible.
+11 new and 12 existing regressions, desktop/phone Chromium, focused TypeScript
+and lint checks, formatting and ops checks passed. Browser tests made no live
+application writes/read calls. No backend, production deployment, device work,
+agent launch, PR or commit/push. See HANDOFF.md for commands, limits and receipts.
+
+The operator subsequently requested staging and a local commit of the Read Later
+implementation, tests and continuity notes. See Git history for the commit
+identity. No push or deployment was requested.

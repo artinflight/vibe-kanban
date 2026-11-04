@@ -110,6 +110,11 @@
     "label": "Etiqueta"
   },
   "workspaces": {
+    "attention": "Atención",
+    "readLater": "Leer más tarde",
+    "returnToAttention": "Volver a Atención",
+    "noReadLater": "Nada guardado para más tarde",
+    "completed": "Completado",
     "title": "Espacios de trabajo",
     "searchPlaceholder": "Buscar...",
     "active": "Activo",

@@ -110,6 +110,11 @@
     "label": "標籤"
   },
   "workspaces": {
+    "attention": "需要關注",
+    "readLater": "稍後閱讀",
+    "returnToAttention": "返回需要關注",
+    "noReadLater": "沒有稍後閱讀的項目",
+    "completed": "已完成",
     "title": "工作區",
     "searchPlaceholder": "搜尋...",
     "active": "活躍",

@@ -1,28 +1,34 @@
-# Scrolling projects menu — 2026-11-02
+# Read Later — 2026-11-04
 
-Branch `vk/9cb7-vk-scrolling-pro`, original base `aceb355e9`, now rebased onto fork/staging `c3c1dc9d6`.
-Scope: bound the desktop shell's content row and AppBar so long project lists
-scroll internally, hide scrollbars, and contain overscroll. Keep the footer and
-project actions visible. Apply the same behavior to expanded project names and
-the mobile project drawer; its content layout override preserves other drawers'
-default scrolling. Preserve project selection, drag ordering and activity badges.
+Branch `vk/f57c-read-later`, based on fork/staging `ee2efee4d`.
+Issue: VK Dev T91 (`dde01894-a5fe-4f5e-81dd-8b8163acb598`).
+The operator explicitly lifted the issue-only execution hold on November 4 and
+requested implementation in this existing workspace. No additional agent launch.
 
-The operator accepted the restored fix ("Good") and authorized PR/rebase merge
-into staging. [PR #292](https://github.com/artinflight/vibe-kanban/pull/292) is the
-integration record; its final checks and merge event govern status/rebased IDs.
-Original deployed identities remain immutable. Preserve the newer live workspace-visibility frontend, which keeps
-all three scrolling source files exactly. Git integration does not redeploy.
+Scope: unread workspace/issue activity, project Dot notices and inbox notifications
+can be deferred without marking them read. Sidebar order is Attention, Read Later,
+Running, Completed (the existing idle/history collection). Read Later starts folded
+in the all-items view so deferred history does not bury running work. Desktop,
+flat, accordion and phone views share the grouping. Issue actions also work in
+Kanban and list views; issue lifecycle statuses are unaffected.
 
-The original publication passed on November 2, then a newer unread release
-omitted the three scrolling files. The operator reported no change. The November 3
-restoration preserves every other current live input and passes the exact failing
-public regression plus real-project boundary scrolling. Published at 09:59:20 UTC;
-JS index-BRto7v9M.js, CSS index-BDlsFLgm.css. Added a source-preservation gate and
-five regressions to reject omitted live fixes before publication. No backend,
-API, generated types, device work or service restart. See
-[release evidence](VK_SCROLLING_PROJECTS_DEPLOYMENT.md), [STATE](STATE.md),
-[manifest](LIVE_DEPLOYMENT.json) and [HANDOFF](HANDOFF.md).
+Read Later is a browser-local preference scoped by host and signed-in user, with
+separate IDs for workspaces, issues, projects and notification records. It survives
+reloads; unavailable browser storage falls back to memory. It does not synchronize
+between devices. Return to Attention removes the preference. An item whose unread
+activity is cleared no longer occupies Read Later; new inbox messages in a deferred
+thread bring the regrouped notification back to Attention.
 
-Prior stream history: [previous record](deployment-history/20261030-before-reconciliation/STREAM.md)
-and [STREAM history](STREAM_HISTORY_20261017.md). The preceding unread integration
-is recorded in STATE and DELTA.
+This is frontend-only source work. No API/migration/generated-type change, backend
+restart, production publication, PR, push or device action. The operator
+authorized a local commit of this implementation and its continuity notes. Current runtime
+truth remains in STATE and LIVE_DEPLOYMENT.json. Use the current live-source
+preservation gate before any future publication; this branch alone is not a
+replacement for newer live inputs.
+
+Validation and pickup details are in HANDOFF.md. Previous scrolling integration
+and runtime preservation history remain in STATE.md and
+VK_SCROLLING_PROJECTS_DEPLOYMENT.md.
+
+Prior continuity: [pre-reconciliation record](deployment-history/20261030-before-reconciliation/STREAM.md)
+and [full historical archive](STREAM_HISTORY_20261017.md).

@@ -315,6 +315,10 @@ reconstruction headroom. Publication is create-only, including concurrent-name
 collisions. Changed inputs, resource loss and foreign temporary inodes fail safely. An elapsed
 time budget is optional (`--seconds`); the default has no arbitrary total timeout.
 The file/byte limits and real memory/swap/PSI/capacity guards always apply.
+Shared memory pressure pauses additive I/O with explicit observations; it resumes
+only after the same thresholds pass, then rechecks originals before copying.
+Missing storage, changed originals, integrity/capacity failures and an explicit
+operator budget still stop safely. No source log writes occur during a pause.
 Source logs remain raw and available. No source retirement or object cleanup occurs.
 
 The original guarded controller is still mandatory. It reopens current B originals,

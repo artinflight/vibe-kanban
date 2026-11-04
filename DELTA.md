@@ -2679,3 +2679,7 @@ at actual memory/PSI admission, preserving all sources; no retry threshold relax
 - Additive preparation is bounded by its file/byte set and real resource guards.
   An optional operator-specified elapsed budget replaces an arbitrary default
   whole-preparation cutoff; this does not change existing backup job deadlines.
+- Actual additive attempts stopped at shared pressure after959then8310total
+  objects; originals remained raw. Own cgroup high events stayed224, no OOM.
+  Additive I/O now waits for the SAME memory/swap/PSI admission rather than
+  repeatedly restarting full packed verification; hard failures still stop.

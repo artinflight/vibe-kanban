@@ -145,6 +145,37 @@ def stage(plan, archive, database, guard, *, reserve_bytes=RESERVE):
             'note': 'Unreferenced objects retained. Full B/reader/WriterFence admission remains mandatory.'}
 
 
+def host_observation():
+    values = {line.split(':')[0]: int(line.split()[1]) * 1024
+              for line in Path('/proc/meminfo').read_text().splitlines()}
+    full = next(line for line in Path('/proc/pressure/memory').read_text().splitlines()
+                if line.startswith('full '))
+    avg = float(dict(token.split('=') for token in full.split()[1:])['avg10'])
+    return {'MemAvailable_bytes': values['MemAvailable'],
+            'SwapFree_bytes': values['SwapFree'], 'full_PSI_avg10': avg}
+
+
+def wait_for_resources(deadline):
+    """Pause additive I/O during shared pressure; never admit below the floor."""
+    waiting = False
+    while True:
+        if ((deadline is not None and time.monotonic() > deadline)
+                or not os.path.ismount('/mnt/vk-storage')):
+            raise logs.ArchiveError('Preparation budget or SSD mount unavailable')
+        observed = host_observation()
+        if (observed['MemAvailable_bytes'] >= RESERVE
+                and observed['SwapFree_bytes'] >= 1024**3
+                and observed['full_PSI_avg10'] <= .10):
+            if waiting:
+                print(json.dumps(dict(observed, phase='resource-admission-resumed')), flush=True)
+            return
+        if not waiting:
+            print(json.dumps(dict(observed, phase='waiting-for-resource-admission',
+                                  source_log_writes=0)), flush=True)
+            waiting = True
+        time.sleep(1)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     for name in ('plan', 'archive', 'database'):
@@ -158,16 +189,7 @@ def main():
     deadline = None if args.seconds is None else time.monotonic() + args.seconds
 
     def guard():
-        if ((deadline is not None and time.monotonic() > deadline)
-                or not os.path.ismount('/mnt/vk-storage')):
-            raise logs.ArchiveError('Preparation deadline or SSD mount unavailable')
-        values = {line.split(':')[0]: int(line.split()[1]) * 1024
-                  for line in Path('/proc/meminfo').read_text().splitlines()}
-        full = next(line for line in Path('/proc/pressure/memory').read_text().splitlines()
-                    if line.startswith('full '))
-        avg = float(dict(token.split('=') for token in full.split()[1:])['avg10'])
-        if values['MemAvailable'] < RESERVE or values['SwapFree'] < 1024**3 or avg > .10:
-            raise logs.ArchiveError('Actual memory/swap/PSI admission unavailable')
+        wait_for_resources(deadline)
     print(json.dumps(stage(json.loads(args.plan.read_bytes()), args.archive, args.database, guard), indent=2))
 
 

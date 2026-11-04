@@ -140,6 +140,36 @@ class StageTests(unittest.TestCase):
                 stage.stage(self.plan, self.archive, self.db, lambda: None)
         self.assertFalse(self.store.exists())
 
+    def test_resource_pressure_pauses_before_any_addition_then_admits(self):
+        blocked = {'MemAvailable_bytes': 10 * 1024**3,
+                   'SwapFree_bytes': 2 * 1024**3, 'full_PSI_avg10': .11}
+        ready = dict(blocked, full_PSI_avg10=0)
+        values = [blocked]
+        pauses = []
+        def pause(seconds):
+            pauses.append(seconds)
+            self.assertEqual(self.log.read_bytes(), self.raw)
+            self.assertFalse(self.store.exists())
+            values[0] = ready
+        with patch.object(stage, 'host_observation', side_effect=lambda: values[0]), \
+                patch.object(stage.os.path, 'ismount', return_value=True), \
+                patch.object(stage.time, 'sleep', side_effect=pause):
+            result = self.run_stage(lambda: stage.wait_for_resources(None))
+        self.assertTrue(pauses)
+        self.assertGreater(result['objects_created'], 0)
+        self.assertEqual(self.log.read_bytes(), self.raw)
+
+    def test_explicit_budget_still_stops_waiting_without_mutation(self):
+        blocked = {'MemAvailable_bytes': 0, 'SwapFree_bytes': 0, 'full_PSI_avg10': 1}
+        with patch.object(stage, 'host_observation', return_value=blocked), \
+                patch.object(stage.os.path, 'ismount', return_value=True), \
+                patch.object(stage.time, 'monotonic', side_effect=[0, 2]), \
+                patch.object(stage.time, 'sleep'):
+            with self.assertRaises(logs.ArchiveError):
+                self.run_stage(lambda: stage.wait_for_resources(1))
+        self.assertFalse(self.store.exists())
+        self.assertEqual(self.log.read_bytes(), self.raw)
+
     def test_guard_failure_does_not_mutate_originals(self):
         def guard():
             raise logs.ArchiveError('resource unavailable')

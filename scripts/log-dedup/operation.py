@@ -47,7 +47,7 @@ def prepare(manifest):
 
 
 def convert_held(*, assembly, manifest, operation, plan, archive, journal,
-                 fence, recovery, record):
+                 fence, recovery, record, minimum_reserve_bytes=0):
     """Activate and convert under the caller's real held host/B custody.
 
     Caller invokes its host release/acceptance after this returns. If conversion
@@ -56,6 +56,8 @@ def convert_held(*, assembly, manifest, operation, plan, archive, journal,
     held and propagates; it never silently falls back to an unaware reader.
     """
     import sys
+    if type(minimum_reserve_bytes) is not int or minimum_reserve_bytes < 0:
+        raise ValueError('Explicit nonnegative rollback reserve required')
     adapter, actions = assembly
     reclaim = sys.modules['reclaim']
     inputs = manifest['activation_inputs']
@@ -73,7 +75,8 @@ def convert_held(*, assembly, manifest, operation, plan, archive, journal,
             if custody['writer_fence'] is not fence or custody['recovery'] is not recovery:
                 raise ValueError('The SAME actual fence and B context must remain held')
             batch = reclaim.Batch(plan, archive, journal, fence, recovery,
-                                  custody['reader_guard'], reserve_bytes=custody['reserve_bytes'])
+                                  custody['reader_guard'],
+                                  reserve_bytes=max(custody['reserve_bytes'], minimum_reserve_bytes))
             try:
                 result = batch.run(after_replace=lambda path: record('manifest_readback_complete', {'path': path}))
             except BaseException:
@@ -92,7 +95,7 @@ def convert_held(*, assembly, manifest, operation, plan, archive, journal,
         record('reader_recovery_required', {'phase': phase, 'maintenance_retained': True})
         if batch is not None and batch.state is not None and not raw_recovered:
             raise  # Keep aware readers and maintenance after failed raw recovery.
-        actions.recover_before_conversion(
+        recovered = actions.recover_before_conversion(
             inputs['path'], inputs['sha256'], operation, fence, plan)
-        record('old_readers_recovered_frozen', {'maintenance_retained': True})
+        record('old_readers_recovered_frozen', recovered)
         raise

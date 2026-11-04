@@ -372,7 +372,7 @@ one class identity. Pass the SAME held fence and normal B context to
 `Batch`. It never releases maintenance or starts an agent. Partial conversion
 failure must complete guarded raw rollback before old-reader recovery. Lost
 reader custody refuses both rollback and old-reader selection, preserving the
-journal and archive-aware paths for controlled recovery. Five integration tests
+journal and archive-aware paths for controlled recovery. Six integration tests
 exercise actual fixture conversion, partial publication and lost custody;
-70 focused log-dedup tests pass. Host boundary, full public/UI acceptance and
+71 focused log-dedup tests pass. Host boundary, full public/UI acceptance and
 physical accounting are still separate mandatory parts of the finite operation.

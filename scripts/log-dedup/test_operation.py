@@ -34,6 +34,7 @@ class OperationTests(unittest.TestCase):
             self.fixture.assert_original()
             self.fixture.fence.check()
             self.recovery_called = True
+            return {'recovered_old_software_frozen': True}
         self.actions = SimpleNamespace(activate=activate, seal_controller_inputs=seal,
                                        recover_before_conversion=recover)
         @contextmanager
@@ -103,6 +104,20 @@ class OperationTests(unittest.TestCase):
                 self.run_operation()
         self.fixture.assert_original()
         self.assertFalse(self.fixture.journal.exists())
+
+    def test_exact_owner_no_change_result_reaches_host_recovery_callback(self):
+        proof = {'no_live_mutation': True, 'original_software_frozen': True}
+        def reject(*args):
+            raise ValueError('pre-mutation owner guard')
+        self.actions.activate = reject
+        self.actions.recover_before_conversion = lambda *args: proof
+        seen = []
+        self.record = lambda phase, detail: seen.append((phase, detail))
+        with self.fixture.fence.held():
+            with self.assertRaisesRegex(ValueError, 'pre-mutation'):
+                self.run_operation()
+        self.assertIs(seen[-1][1], proof)
+        self.fixture.assert_original()
 
     def test_sealed_loader_rejects_changed_source_before_execution(self):
         source = self.fixture.base / 'sealed.py'

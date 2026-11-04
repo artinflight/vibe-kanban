@@ -1,6 +1,13 @@
 # Nightly commissioning — November 3, 2026 (EST)
 
-The current file producer766070/start96188877 and collector511131/start96047691
+ACTIVE continuation: vk-nightly-serial-commissioning-v20-20261104.service,
+collector2318713/start97057855, producer2319719/start97058720, worker-v20-resource-resume.
+D/V20_FIRST_REAL_PROGRESS.private.json authenticates all69source hashes at
+3200564800296798a29909ca11a2e0def988202d,953hosted checks/118local checks, normal
+B frozen-input reopen,5outstanding paths/62MB requalification and0global scans.
+Original input/cohort/deadlines are preserved; do not launch another job.
+
+The former producer766070/start96188877 and collector511131/start96047691
 are TERMINAL. At21:54:59EST, a source-journal B connection failed native physical
 memory admission. It was incorrectly typed ValueError/fatal. No drive fault,
 access denial or integrity error was reported. Scheduling isOFF; next runNONE.
@@ -28,8 +35,8 @@ Only a complete authenticated B chunk/manifest checkpoint permits releasing that
 new duplicate; a different RAM inode must then pass full SQLite/hash/schema/
 Linux metadata verification. Old RAM recovery and source DBs remain untouched.
 115SQL/worker/native tests passed, then118native-resource/SQL/service/journal
-checks passed. Hosted952backup checks passed on SQL headcc4913f6c; final source
-head/hosted rerun and exact successor package must be recorded before handover.
+checks passed. Hosted952backup checks passed on SQL headcc4913f6c; final source3200564800 and exact successor package are now pinned;953hosted
+checks pass (41766781434). First real retained-input reopen passed after handover.
 Never modify loaded packages or start a duplicate. Details/receipts are in
 [NIGHTLY_RECOMMISSIONING_20261103.md](NIGHTLY_RECOMMISSIONING_20261103.md).
 

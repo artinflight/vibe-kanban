@@ -210,3 +210,28 @@ and B cohort, and set resume_qualified_input_sha256 to
 6ac090413487ca09a5795041342970af60a0d5faea86d1795306b0268d1722e1.
 It must reopen this exact qualified input, not replay a new suffix or hash the
 completed gap again. Final recorded delta/current SQL remain separate stages.
+
+## Actual V20 controlled continuation —22:30EST
+
+Full source3200564800296798a29909ca11a2e0def988202d passes953hosted recovery
+checks (41766781434,79.583s) and118focused resource/SQL/service checks.
+worker-v20-resource-resume contains69exactly authenticated modules. Normal
+serviceSHAe9e524beb9049becf750b9b5f67ec958e466e5c9f274deeb5462e3e2d38f5f09;
+bootstrapSHA7429ac94f6f7bc60a61247c9c05cef5267b944431d7538adfbb2f24081ab2012;
+calendarSHA87a3f2c2a86cd27520d4b63ae4ba90dd6d2b7fb7ad9e3d44a4e70c695da3b2f5.
+
+Old processes are absent, old unit inactive/no cgroup, and all original serial,
+controller and shared body leases were independently acquired/released before
+launch. Exactly one versioned continuation is active:
+vk-nightly-serial-commissioning-v20-20261104.service, collector2318713/start97057855,
+producer2319719/start97058720. CPU25percent/High9GiB/Max10GiB/Swap0/Tasks64 remain.
+Its original bootstrap cycle, B map/cohort,08:23:10UTC deadline and frozen input
+are unchanged. The normal recurring template retains Toronto22–04hard stop.
+
+Actual normal B metadata reopen confirmed the exact input. Only5outstanding
+names/62,038,157B were requalified;0global namespace scans or prior cold copies.
+Earlier545file points and all retained bodies remain reusable. Existing temporary
+journal unit now points to V20, preserving timer/resources/observer. No recurring
+body schedule is installed or accepted yet. D/V20_ACTIVATION_ADMISSION.private.json
+and V20_FIRST_REAL_PROGRESS.private.json preserve exact evidence. Source/contract
+preparation failures were confined to unstarted config files; P19 was never run.

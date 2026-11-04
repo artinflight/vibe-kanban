@@ -46,6 +46,25 @@ class NativeHealthTests(unittest.TestCase):
         exec(compile(ast.Module(body=functions,type_ignores=[]),'<actual-native-guard>','exec'),space)
         return space,calls,smart
 
+    def test_failed_identity_keeps_actual_bounded_cause_without_retry_or_drive_fault(self):
+        space,calls,_=self.guard(iter([]));space['admitted_identity']=None
+        denied=b'Access is denied'+b'x'*10000+b'identity provider unavailable'
+        def failed(*args,**kwargs):
+            return subprocess.CompletedProcess(args[0],1,stdout=b'',stderr=denied)
+        space['subprocess']=SimpleNamespace(run=failed,TimeoutExpired=subprocess.TimeoutExpired,
+            CalledProcessError=subprocess.CalledProcessError)
+        with self.assertRaisesRegex(RuntimeError,'identity observation unavailable.*data IO blocked'):
+            space['actual_guard'](0)
+        records=[json.loads(x) for x in space['sys'].stderr.getvalue().splitlines()]
+        self.assertEqual(len(records),1);record=records[0]
+        self.assertFalse(record['reported_drive_fault']);self.assertFalse(record['data_IO_permitted'])
+        self.assertTrue(record['stderr_prefix'].startswith('Access is denied'))
+        self.assertTrue(record['stderr_tail'].endswith('identity provider unavailable'))
+        self.assertLessEqual(len(record['stderr_prefix']),2048)
+        self.assertLessEqual(len(record['stderr_tail']),2048)
+        space['mm'].check_identity.assert_not_called();space['mm'].check_health.assert_not_called()
+        self.assertFalse(space['health_timeout_used'])
+
     def test_native_hard_stop_caps_slow_health_and_never_retries_after_four(self):
         values=[];space,calls,smart=self.guard(iter(values))
         class Clock(datetime.datetime):

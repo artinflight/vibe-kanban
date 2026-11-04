@@ -255,3 +255,28 @@ an explicitly versioned normal current-suffix continuation with the original
 cohort/deadline and tested successor. No global namespace scan or duplicate bulk
 producer is required. Real production closure/SQL/runtime/normal restore and
 ordinary incremental qualification remain necessary before calendar adoption.
+
+
+## Actual P21 terminal and identity diagnostic — November4,03:16EST
+
+P21 source8403da561 retained the earlier bodies and completed208file-version
+points in its second attempt:444,069,974B source read,9,236,058B encoded sent,
+354,294,882B independent object readback,21native receipts reused. These phase
+counters are not unique whole-backup totals. Its bounded649-name suffix had
+normal B metadata reopen; no global namespace scan or SSD index was started.
+During subsequent closure, the native identity PowerShell query exited1 and the
+collector stopped at03:16:30EST. Captured diagnostics omitted the actual query
+stderr; the exact historical provider cause is therefore unproven. The new
+source emits bounded stderr prefix/tail, exit code and explicit IO-blocked/no
+reported-drive-fault fields, then fails closed without new automatic retries.
+Fresh identical identity query passed at03:34:40EST. Earlier positive memory
+admission failure and current foreign/unattributed76GB PowerShell demand are
+separate evidence; no physicalOOM or causal attribution is asserted.
+
+The old bootstrap expired03:23:10EST and cannot be relabeled successful. Any
+successor uses a new explicitly named manual commissioning generation linked to
+the old failed binding, retains all old source epochs and reuses authenticated
+B data. It does not reset an interrupted night's clock or establish overnight
+performance. The actual ordinary six-hour qualification and accepted independent
+normal restore still precede calendar installation. The existing observer and
+journal-only timer remain active; body scheduleOFF, next runNONE.

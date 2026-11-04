@@ -104,7 +104,18 @@ def control_identity():
   p=subprocess.run(['powershell.exe','-NoProfile','-NonInteractive','-EncodedCommand',
      base64.b64encode(CONFIG['identity_ps'].encode('utf-16le')).decode()],capture_output=True,
      timeout=time_budget(CONFIG.get('identity_admission_timeout_seconds',15)))
-  p.check_returncode();identity=json.loads(p.stdout.decode('utf-8-sig'));mm.check_identity(identity)
+  try:p.check_returncode()
+  except subprocess.CalledProcessError as error:
+   # CalledProcessError normally prints the encoded command but omits the
+   # captured cause. Keep the real bounded observation error, never classify
+   # a missing identity as a reported disk fault or grant data IO/retry.
+   print(json.dumps(dict(event='native-identity-observation-unavailable',
+       query_exit=p.returncode,reported_drive_fault=False,data_IO_permitted=False,
+       stderr_prefix=p.stderr[:2048].decode('utf-8-sig',errors='replace'),
+       stderr_tail=p.stderr[-2048:].decode('utf-8-sig',errors='replace'),
+       UTC=datetime.datetime.now(datetime.timezone.utc).isoformat())),file=sys.stderr,flush=True)
+   raise RuntimeError('native B identity observation unavailable (exit '+str(p.returncode)+'); data IO blocked') from None
+  identity=json.loads(p.stdout.decode('utf-8-sig'));mm.check_identity(identity)
   if CONFIG.get('native_identity_mode')=='admission-plus-kernel-continuity-v1':
    actual=kernel_identity()
    assert all(identity[k]==v for k,v in actual.items()),'kernel/full admission identity mismatch'

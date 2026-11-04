@@ -14,7 +14,9 @@
   stale turns, stop, nested delegation, capacity and approval controls remain.
 - NODEs is already doing specialist work after pausing its goal; its running
   assignments were inspected but not modified, duplicated, or interrupted.
-- Source change requires managed backend deployment. Do not restart from here.
+- Source change is [PR #293](https://github.com/artinflight/vibe-kanban/pull/293).
+  Its checks and description identify the exact validated revision. It requires
+  managed backend deployment. Do not restart from here.
   Test results and exact release limitations are recorded in
   `VK_GOAL_SPECIALIST_DELEGATION.md`.
 

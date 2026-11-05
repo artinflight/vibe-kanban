@@ -254,5 +254,110 @@ CREATE TABLE turn_github_sync_user_queue(workspace_id BLOB);
         self.assertEqual(repair.apply_plan(self.plan, digest)['state'], 'reconciled')
 
 
+class RelocationReconciliationTests(unittest.TestCase):
+    def setUp(self):
+        ReconciliationTests.setUp(self)
+        self.old_root = self.fixture.root / 'old-workspace'
+        self.new_root = self.fixture.root / 'renamed-workspace'
+        self.old_root.mkdir()
+        self.new_root.mkdir()
+        old = self.old_root / 'repo'
+        current = self.new_root / 'repo'
+        fixtures.git(self.fixture.repo, 'worktree', 'add', '-qb', 'feat/relocated', str(old), 'HEAD')
+        record = read_json(self.ledger)
+        record['obligations'][self.repo_id]['path'] = str(old)
+        atomic_json(self.ledger, record)
+        self.request['repositories'][0]['path'] = str(old)
+        self.connection.executescript("""
+CREATE TABLE workspaces(id BLOB PRIMARY KEY,container_ref TEXT);
+CREATE TABLE repos(id BLOB PRIMARY KEY,name TEXT,path TEXT);
+CREATE TABLE workspace_repos(workspace_id BLOB,repo_id BLOB);
+""")
+        self.connection.execute('INSERT INTO workspaces VALUES(?,?)', (self.workspace.bytes, str(self.new_root)))
+        self.connection.execute('INSERT INTO repos VALUES(?,?,?)', (uuid.UUID(self.repo_id).bytes, 'repo', str(self.fixture.repo)))
+        self.connection.execute('INSERT INTO workspace_repos VALUES(?,?)', (self.workspace.bytes, uuid.UUID(self.repo_id).bytes))
+        self.connection.execute('UPDATE turn_github_sync SET request=?', (json.dumps(self.request),))
+        self.connection.commit()
+        fixtures.git(self.fixture.repo, 'worktree', 'move', str(old), str(current))
+        self.old_root.rmdir()
+
+    state = ReconciliationTests.state
+
+    def plan_repair(self):
+        return repair.create_plan(self.database, self.config, str(self.workspace), self.plan,
+                                  relocation=(self.old_root, self.new_root))['sha256']
+
+    def test_relocation_retains_originals_and_next_callback_observes_without_publication(self):
+        digest = self.plan_repair()
+        self.assertEqual(repair.apply_plan(self.plan, digest)['turns'], 1)
+        self.assertEqual(self.state(), ('observed', 'blocked'))
+        record = read_json(self.ledger)
+        self.assertEqual(record['obligations'][self.repo_id]['path'], str(self.new_root / 'repo'))
+        self.assertIn(self.b, record['obligations'][self.repo_id]['commits'])
+        self.assertEqual(read_json(self.plan)['scope'], repair.RELOCATED_SCOPE)
+        self.assertTrue(repair.apply_plan(self.plan, digest)['already_applied'])
+        next_request = dict(self.request, turn=str(uuid.uuid4()), repositories=[dict(id=self.repo_id, path=str(self.new_root / 'repo'))])
+        begun = self.fixture.engine.begin(next_request)
+        self.assertEqual(begun['admission_failure'], repair.NO_POLICY)
+        self.assertTrue(self.fixture.engine.observe_finished(next_request)['observation_complete'])
+        self.assertEqual(self.fixture.engine.checkpoint(next_request)['state'], 'pending')
+        self.assertFalse(self.fixture.prfile.exists())
+
+    def test_new_inventory_original_obligation_mismatch_is_repairable(self):
+        self.request['repositories'][0]['path'] = str(self.new_root / 'repo')
+        record = read_json(self.ledger)
+        record['observation_inventory'] = self.request['repositories']
+        record['admission_failure'] = 'original repository identity changed'
+        atomic_json(self.ledger, record)
+        self.connection.execute('UPDATE turn_github_sync SET request=?,observation_report=?',
+                                (json.dumps(self.request), json.dumps(dict(reason=repair.OBLIGATION_FAULT))))
+        self.connection.commit()
+        self.assertEqual(repair.apply_plan(self.plan, self.plan_repair())['state'], 'reconciled')
+
+    def test_extant_old_root_and_changed_native_destination_refuse_repair(self):
+        self.old_root.mkdir()
+        with self.assertRaisesRegex(Blocked, 'absent old root'):
+            self.plan_repair()
+        self.old_root.rmdir()
+        digest = self.plan_repair()
+        self.connection.execute('UPDATE workspaces SET container_ref=?', (str(self.fixture.root),))
+        self.connection.commit()
+        with self.assertRaisesRegex(Blocked, 'native workspace root'):
+            repair.apply_plan(self.plan, digest)
+        self.assertEqual(self.state(), ('failed', 'blocked'))
+
+    def test_missing_terminal_capture_and_unrelated_fault_are_not_cleared(self):
+        self.connection.execute('UPDATE execution_process_repo_states SET after_head_commit=NULL')
+        self.connection.commit()
+        with self.assertRaisesRegex(Blocked, 'provenance'):
+            self.plan_repair()
+        self.connection.execute('UPDATE execution_process_repo_states SET after_head_commit=?', (self.b,))
+        self.connection.execute('UPDATE turn_github_sync SET observation_report=?', (json.dumps(dict(reason='unknown failure')),))
+        self.connection.commit()
+        with self.assertRaisesRegex(Blocked, 'exact completed legacy'):
+            self.plan_repair()
+
+    def test_native_repository_and_worktree_backlink_must_match(self):
+        admin = self.new_root / 'repo'
+        git_dir = Path(fixtures.git(admin, 'rev-parse', '--absolute-git-dir'))
+        (git_dir / 'gitdir').write_text(str(self.fixture.repo / '.git'))
+        with self.assertRaisesRegex(Blocked, 'backlink'):
+            self.plan_repair()
+
+    def test_relocation_cannot_drop_originals_or_weaken_idle_boundary(self):
+        digest = self.plan_repair()
+        plan = read_json(self.plan)
+        plan['originals'][self.repo_id]['commits'].remove(self.b)
+        atomic_json(self.plan, plan)
+        with self.assertRaisesRegex(Blocked, 'dropped or invented'):
+            repair.apply_plan(self.plan, hashlib.sha256(self.plan.read_bytes()).hexdigest())
+        self.plan.unlink()
+        digest = self.plan_repair()
+        self.connection.execute("INSERT INTO turn_github_sync_incoming VALUES(?,'received')", (self.workspace.bytes,))
+        self.connection.commit()
+        with self.assertRaisesRegex(Blocked, 'user work has priority'):
+            repair.apply_plan(self.plan, digest)
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)

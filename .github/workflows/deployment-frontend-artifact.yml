@@ -29,6 +29,7 @@ jobs:
       - name: Build the exact source frontend
         env:
           NODE_OPTIONS: --max-old-space-size=8192
+          VITE_DOT_SIDECHAT: "0"
         run: pnpm --filter @vibe/local-web run build
       - name: Bind source and public asset bytes
         run: |

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Scoped repair of the legacy empty-admission observation fault.
+"""Scoped repair of legacy empty-admission and relocated-workspace observations.
 
 Plan first, then apply the exact SHA-bound plan at a genuine idle boundary. This
 uses historical native repo-state records, never today's HEAD. It grants no
@@ -26,6 +26,8 @@ FAULT = 'affected repository inventory differs from admitted turn'
 NO_POLICY = 'repository has no approved publication policy'
 COMPLETED_SCOPE = 'legacy-completion-observation-only'
 FAILED_SCOPE = 'legacy-failed-owner-observation-only'
+RELOCATED_SCOPE = 'relocated-workspace-observation-only'
+OBLIGATION_FAULT = 'completion observation has no matching original obligation'
 
 
 def sha(raw):
@@ -92,10 +94,11 @@ def check_original(repo, oid):
             'original commit object is missing')
 
 
-def eligible_job(job, failed_owner=False):
+def eligible_job(job, failed_owner=False, relocated=False):
     expected = 'failed' if failed_owner else 'completed'
     require(job['state'] != 'verified' and job['observation_state'] == 'failed' and
-            json.loads(job['observation_report'] or '{}').get('reason') == FAULT and
+            json.loads(job['observation_report'] or '{}').get('reason') in
+            ([FAULT, OBLIGATION_FAULT] if relocated else [FAULT]) and
             job['execution_status'] == expected and not job['dropped'],
             'only the exact ' + expected + ' legacy inventory fault can be reconciled')
 
@@ -112,10 +115,75 @@ def failed_execution_evidence(connection, job):
                 completed_at=row['completed_at'], dropped=bool(row['dropped']))
 
 
-def create_plan(database, config_path, workspace, output, turn=None, failed_owner=False):
+def relocation_binding(connection, workspace, old_root, new_root):
+    """Bind an explicit move to native ownership and the live Git worktree backlink.
+
+    This is observation repair authority only, never remote coverage. The old
+    path must be absent: a second extant checkout is ambiguous, even at equal HEAD.
+    """
+    old_root, new_root = Path(old_root), Path(new_root)
+    require(old_root.is_absolute() and new_root.is_absolute() and
+            not old_root.exists() and not old_root.is_symlink() and new_root.is_dir(),
+            'relocation requires an absent old root and an existing absolute destination')
+    old_root, new_root = old_root.resolve(), new_root.resolve()
+    key = uuid.UUID(workspace).bytes
+    row = connection.execute('SELECT container_ref FROM workspaces WHERE id=?', (key,)).fetchone()
+    require(row and Path(row[0]).resolve() == new_root,
+            'relocation destination is not the native workspace root')
+    repos = list(connection.execute('SELECT r.id,r.name,r.path FROM repos r JOIN workspace_repos wr ON wr.repo_id=r.id WHERE wr.workspace_id=? ORDER BY r.id', (key,)))
+    require(repos, 'relocation native repository inventory is missing')
+    entries = {}
+    for repo in repos:
+        ident = str(uuid.UUID(bytes=repo[0]))
+        name = repo[1]
+        require(name and Path(name).name == name and name not in ('.', '..'),
+                'invalid native repository name')
+        current = new_root / name
+        common = Path(git(current, 'rev-parse', '--path-format=absolute', '--git-common-dir').decode().strip()).resolve()
+        original_common = Path(git(repo[2], 'rev-parse', '--path-format=absolute', '--git-common-dir').decode().strip()).resolve()
+        admin = Path(git(current, 'rev-parse', '--path-format=absolute', '--git-dir').decode().strip()).resolve()
+        require(common == original_common and admin.parent == common / 'worktrees' and
+                (current / '.git').is_file() and
+                Path((admin / 'gitdir').read_text().strip()).resolve() == current / '.git',
+                'relocation Git worktree identity or backlink differs from native ownership')
+        entries[ident] = dict(old_path=str(old_root / name), path=str(current),
+                             common_dir=str(common), git_dir=str(admin))
+    return dict(old_root=str(old_root), new_root=str(new_root), repositories=entries)
+
+
+def capture_inventory(request, relocation=None):
+    inventory = {i['id']: str(Path(i['path']).resolve()) for i in request['repositories']}
+    require(inventory and len(inventory) == len(request['repositories']), 'duplicate or empty repository inventory')
+    if relocation:
+        require(set(inventory) == set(relocation['repositories']),
+                'relocation repository inventory differs from native ownership')
+        for ident, path in inventory.items():
+            binding = relocation['repositories'][ident]
+            require(path in (binding['old_path'], binding['path']),
+                    'request path is outside the exact relocation')
+            inventory[ident] = binding['path']
+    return inventory
+
+
+def original_path_matches(ident, original, inventory, relocation=None):
+    expected = relocation['repositories'][ident]['old_path'] if relocation else inventory[ident]
+    return original['path'] == expected
+
+
+def capture_authority(record, relocation=None):
+    if not relocation:
+        return not record.get('observation_inventory')
+    inventory = record.get('observation_inventory')
+    return (record.get('admission_failure') in (None, 'original repository identity changed', NO_POLICY)
+            and (not inventory or capture_inventory(dict(repositories=inventory), relocation) ==
+                 {i: r['path'] for i, r in relocation['repositories'].items()}))
+
+
+def create_plan(database, config_path, workspace, output, turn=None, failed_owner=False, relocation=None):
     workspace = str(uuid.UUID(workspace))
     selected_turn = None if turn is None else str(uuid.UUID(turn))
     require(not failed_owner or selected_turn is not None, 'failed-owner planning requires one exact --turn')
+    require(not (failed_owner and relocation), 'relocation repair requires completed owners')
     config = read_json(Path(config_path))
     mount = Path(config['storage_mount']).resolve()
     state_root = Path(config['state_root']).resolve()
@@ -126,6 +194,7 @@ def create_plan(database, config_path, workspace, output, turn=None, failed_owne
     with closing(connect(database)) as connection:
         connection.execute('BEGIN')
         idle(connection, workspace)
+        relocation = (relocation_binding(connection, workspace, *relocation) if relocation else None)
         selected = jobs(connection, workspace)
         require(selected, 'no scoped checkpoint rows')
         owner_inventory = sorted(str(uuid.UUID(bytes=j['execution_process_id'])) for j in selected)
@@ -135,7 +204,7 @@ def create_plan(database, config_path, workspace, output, turn=None, failed_owne
         entries = []
         originals = {}
         for job in selected:
-            eligible_job(job, failed_owner)
+            eligible_job(job, failed_owner, relocation is not None)
             failure_evidence = failed_execution_evidence(connection, job) if failed_owner else None
             request = json.loads(job['request'])
             turn = str(uuid.UUID(bytes=job['execution_process_id']))
@@ -146,10 +215,10 @@ def create_plan(database, config_path, workspace, output, turn=None, failed_owne
             record = json.loads(raw)
             require(record.get('version') == 2 and record['workspace'] == workspace and
                     record['turn'] == turn and record.get('config') == digest(config) and
-                    record['repositories'] == [] and not record.get('observation_inventory'),
+                    record['repositories'] == [] and capture_authority(record, relocation),
                     'legacy partial admission/config identity mismatch')
             states = native_states(connection, job)
-            inventory = {i['id']: str(Path(i['path']).resolve()) for i in request['repositories']}
+            inventory = capture_inventory(request, relocation)
             require(len(inventory) == len(request['repositories']) and inventory and
                     set(inventory) == {s['repo_id'] for s in states} == set(record['obligations']),
                     'original/request/native repository inventories differ')
@@ -161,7 +230,7 @@ def create_plan(database, config_path, workspace, output, turn=None, failed_owne
                 require(not output.is_relative_to(repo) and not state_root.is_relative_to(repo),
                         'repair evidence must be outside the source worktree')
                 obligation = record['obligations'][ident]
-                require(obligation['path'] == str(repo) and not obligation.get('unverifiable') and
+                require(original_path_matches(ident, obligation, inventory, relocation) and not obligation.get('unverifiable') and
                         state['before_head_commit'] in obligation['commits'],
                         'original admission HEAD/provenance mismatch')
                 known = originals.setdefault(ident, dict(path=str(repo), commits=[]))
@@ -178,10 +247,12 @@ def create_plan(database, config_path, workspace, output, turn=None, failed_owne
     for original in originals.values():
         for oid in original['commits']:
             check_original(Path(original['path']), oid)
-    plan = dict(version=1, scope=FAILED_SCOPE if failed_owner else COMPLETED_SCOPE,
+    plan = dict(version=1, scope=RELOCATED_SCOPE if relocation else FAILED_SCOPE if failed_owner else COMPLETED_SCOPE,
                 database=str(Path(database).resolve()), config=str(Path(config_path).resolve()),
                 config_digest=digest(config), workspace=workspace, originals=originals,
                 entries=entries, publication_permission=False, coverage_verified=False)
+    if relocation:
+        plan['relocation'] = relocation
     if selected_turn is not None:
         plan.update(selected_turn=selected_turn, workspace_owner_inventory=owner_inventory)
     atomic_json(output, plan)
@@ -193,16 +264,19 @@ def expected_ledger(entry, plan, plan_sha):
     record = json.loads(base64.b64decode(entry['ledger_before_base64']))
     for ident, original in plan['originals'].items():
         record['obligations'][ident]['commits'] = list(original['commits'])
+        if plan['scope'] == RELOCATED_SCOPE:
+            record['obligations'][ident]['path'] = original['path']
     if plan['scope'] == FAILED_SCOPE:
         record['failed_owner_observation_resolution'] = dict(
             native_failure=entry['failed_execution_evidence'],
             prior_ledger_reason=record.get('reason'),
             prior_observation_report=json.loads(entry['old_observation_report']),
             task_success_proven=False, coverage_verified=False)
+    if plan['scope'] == RELOCATED_SCOPE:
+        record['observation_inventory'] = [dict(id=i, path=r['path']) for i, r in sorted(plan['originals'].items())]
     record.update(observation_complete=True, admission_failure=NO_POLICY,
                   state='blocked', reason=NO_POLICY,
-                  reconciled_observation_inventory=[dict(id=i['id'], path=str(Path(i['path']).resolve()))
-                                                    for i in json.loads(entry['request'])['repositories']],
+                  reconciled_observation_inventory=[dict(id=i, path=r['path']) for i, r in sorted(plan['originals'].items())],
                   observation_reconciliation=dict(source='execution_process_repo_states',
                                                   plan_sha256=plan_sha,
                                                   native_states=entry['native_states']))
@@ -214,7 +288,7 @@ def apply_plan(plan_path, expected_sha):
     raw = plan_path.read_bytes()
     require(sha(raw) == expected_sha, 'repair plan SHA-256 differs from reviewed plan')
     plan = json.loads(raw)
-    require(plan.get('version') == 1 and plan.get('scope') in [COMPLETED_SCOPE, FAILED_SCOPE] and
+    require(plan.get('version') == 1 and plan.get('scope') in [COMPLETED_SCOPE, FAILED_SCOPE, RELOCATED_SCOPE] and
             plan.get('coverage_verified') is False and plan.get('publication_permission') is False,
             'unsupported repair authority')
     config = read_json(Path(plan['config']))
@@ -230,6 +304,11 @@ def apply_plan(plan_path, expected_sha):
             # this bounded metadata operation; never stop a running execution.
             connection.execute('BEGIN IMMEDIATE')
             idle(connection, plan['workspace'])
+            relocation = plan.get('relocation')
+            require((plan['scope'] == RELOCATED_SCOPE) == bool(relocation), 'relocation scope binding missing')
+            if relocation:
+                require(relocation_binding(connection, plan['workspace'], relocation['old_root'], relocation['new_root']) == relocation,
+                        'relocation identity changed after planning')
             current = jobs(connection, plan['workspace'])
             if 'selected_turn' in plan:
                 require(sorted(str(uuid.UUID(bytes=j['execution_process_id'])) for j in current) ==
@@ -268,7 +347,7 @@ def apply_plan(plan_path, expected_sha):
             retained = {}
             for entry in plan['entries']:
                 job = by_turn[entry['turn']]
-                eligible_job(job, failed_owner)
+                eligible_job(job, failed_owner, relocation is not None)
                 require(job['request'] == entry['request'] and
                         job['observation_report'] == entry['old_observation_report'] and
                         native_states(connection, job) == entry['native_states'],
@@ -284,11 +363,10 @@ def apply_plan(plan_path, expected_sha):
                 require(sha(base64.b64decode(entry['ledger_before_base64'])) ==
                         entry['ledger_before_sha256'], 'plan original ledger was changed')
                 old = json.loads(base64.b64decode(entry['ledger_before_base64']))
-                inventory = {i['id']: str(Path(i['path']).resolve())
-                             for i in json.loads(job['request'])['repositories']}
+                inventory = capture_inventory(json.loads(job['request']), relocation)
                 require(old.get('version') == 2 and old['workspace'] == plan['workspace'] and
                         old['turn'] == entry['turn'] and old.get('config') == digest(config) and
-                        old['repositories'] == [] and not old.get('observation_inventory') and
+                        old['repositories'] == [] and capture_authority(old, relocation) and
                         set(inventory) == set(old['obligations']) == set(plan['originals']) ==
                         {s['repo_id'] for s in entry['native_states']},
                         'plan omitted or changed original capture authority')
@@ -296,12 +374,12 @@ def apply_plan(plan_path, expected_sha):
                     ident = state['repo_id']
                     original = old['obligations'][ident]
                     require(ident not in config.get('repositories', {}) and
-                            original['path'] == inventory[ident] and not original.get('unverifiable') and
+                            original_path_matches(ident, original, inventory, relocation) and not original.get('unverifiable') and
                             state['before_head_commit'] in original['commits'] and
                             not plan_path.is_relative_to(Path(original['path'])),
                             'plan changed admission provenance')
-                    known = retained.setdefault(ident, dict(path=original['path'], commits=[]))
-                    require(known['path'] == original['path'], 'original path changed')
+                    known = retained.setdefault(ident, dict(path=inventory[ident], commits=[]))
+                    require(known['path'] == inventory[ident], 'original path changed')
                     known['commits'] = sorted(set(known['commits'] + original['commits'] +
                                                  [state['before_head_commit'], state['after_head_commit']]))
                 record = expected_ledger(entry, plan, expected_sha)
@@ -356,6 +434,8 @@ def main():
     parser.add_argument('--turn', help='Plan only this exact owner; retain every other observation gate')
     parser.add_argument('--failed-owner', action='store_true',
                         help='Plan one exact failed owner with unchanged terminal-provenance guards')
+    parser.add_argument('--relocated-from', help='Exact absent previous workspace root')
+    parser.add_argument('--relocated-to', help='Exact current native workspace root')
     parser.add_argument('--plan')
     parser.add_argument('--apply')
     parser.add_argument('--sha256')
@@ -367,7 +447,9 @@ def main():
             result = apply_plan(args.apply, args.sha256)
         else:
             require(all([args.database, args.config, args.workspace, args.plan]), 'incomplete plan arguments')
-            result = create_plan(args.database, args.config, args.workspace, args.plan, args.turn, args.failed_owner)
+            require(bool(args.relocated_from) == bool(args.relocated_to), 'relocation requires both exact roots')
+            relocation = (args.relocated_from, args.relocated_to) if args.relocated_from else None
+            result = create_plan(args.database, args.config, args.workspace, args.plan, args.turn, args.failed_owner, relocation)
         print(json.dumps(result, sort_keys=True))
         return 0
     except (Blocked, OSError, ValueError, KeyError, sqlite3.Error) as error:

@@ -252,6 +252,18 @@ export function KanbanFilterBar<
         </div>
       )}
 
+      {filters.searchQuery.trim() && (
+        <button
+          type="button"
+          className="flex items-center gap-half text-sm text-brand"
+          onClick={handleClearSearch}
+          aria-label={`Clear search: ${filters.searchQuery}`}
+        >
+          Search: {filters.searchQuery}
+          <XIcon className="size-icon-xs" />
+        </button>
+      )}
+
       {renderFiltersDialog?.({
         open: isFiltersDialogOpen,
         onOpenChange: onFiltersDialogOpenChange,

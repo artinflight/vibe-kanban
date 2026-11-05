@@ -18,6 +18,7 @@ import { useOrgContext } from '@/shared/hooks/useOrgContext';
 import { useWorkspaceContext } from '@/shared/hooks/useWorkspaceContext';
 import { useActions } from '@/shared/hooks/useActions';
 import { useAssignmentIdentity } from '@/shared/hooks/useLocalParticipants';
+import { resolvePhoneTaskStatus } from '../model/phoneTaskStatus';
 import { useUserSystem } from '@/shared/hooks/useUserSystem';
 import { useAppNavigation } from '@/shared/hooks/useAppNavigation';
 import { useIsMobile } from '@/shared/hooks/useIsMobile';
@@ -1638,25 +1639,17 @@ export function KanbanContainer() {
     [insertTag, projectId]
   );
 
-  // Untouched projects open at To do. Explicit selections survive navigating
+  // Untouched projects show all statuses. Explicit selections survive navigating
   // between tasks, workspaces and projects during this browser session.
   const phoneStatuses = (
     kanbanViewMode === 'kanban' ? visibleStatuses : sortedStatuses
   ).filter(
     (status) => !listViewStatusFilter || status.id === listViewStatusFilter
   );
-  const defaultPhoneStatus =
-    phoneStatuses.find((status) => /^to[\s_-]*do$/i.test(status.name.trim()))
-      ?.id ??
-    phoneStatuses[0]?.id ??
-    null;
-  const selectedPhoneStatus = phoneStatusByProject[projectId];
-  const phoneStatus =
-    selectedPhoneStatus === null
-      ? null
-      : phoneStatuses.some((status) => status.id === selectedPhoneStatus)
-        ? selectedPhoneStatus
-        : defaultPhoneStatus;
+  const phoneStatus = resolvePhoneTaskStatus(
+    phoneStatuses,
+    phoneStatusByProject[projectId]
+  );
   const setPhoneStatus = (statusId: string | null) => {
     setPhoneProjectStatus(projectId, statusId);
   };
@@ -2007,7 +2000,25 @@ export function KanbanContainer() {
               <div className="phone-empty-state">
                 <h3>No matching tasks</h3>
                 <p>Try another status or clear your filters.</p>
-                <button type="button" onClick={clearKanbanFilters}>
+                {(phoneStatus || listViewStatusFilter) && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPhoneStatus(null);
+                      setListViewStatusFilter(null);
+                    }}
+                  >
+                    Clear status filter
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    clearKanbanFilters();
+                    setPhoneStatus(null);
+                    setListViewStatusFilter(null);
+                  }}
+                >
                   Clear filters
                 </button>
               </div>

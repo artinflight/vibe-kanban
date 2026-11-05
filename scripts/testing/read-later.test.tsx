@@ -62,7 +62,7 @@ test('preference persists, restores independently and isolates host/user/kind', 
   setReadLater(scope, { kind: 'workspace', id: 'one' }, true);
   setReadLater('other-host', { kind: 'workspace', id: 'one' }, true);
   setReadLater(scope, { kind: 'project', id: 'one' }, true);
-  const saved = localStorage.getItem('vk-read-later-v1');
+  const saved = localStorage.getItem('vk-read-later-v2');
   assert.ok(saved);
   useReadLaterStore.setState({
     items: {},
@@ -70,7 +70,7 @@ test('preference persists, restores independently and isolates host/user/kind', 
     migratedScopes: {},
     syncErrors: {},
   });
-  localStorage.setItem('vk-read-later-v1', saved);
+  localStorage.setItem('vk-read-later-v2', saved);
   await useReadLaterStore.persist.rehydrate();
   assert.equal(Object.keys(useReadLaterStore.getState().items).length, 3);
   setReadLater(scope, { kind: 'workspace', id: 'one' }, false);

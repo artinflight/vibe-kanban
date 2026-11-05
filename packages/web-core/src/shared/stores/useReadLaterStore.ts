@@ -12,8 +12,22 @@ export type ReadLaterItem = {
 export const readLaterKey = (scope: string, kind: ReadLaterKind, id: string) =>
   JSON.stringify([scope, kind, id]);
 
+// A separate cache keeps older open tabs from overwriting the sync queue and
+// migration markers. Preserve v1 for those tabs; only import its saved choices.
+function legacyItems(storageName: string): Record<string, ReadLaterItem> {
+  if (storageName !== 'vk-read-later-v2') return {};
+  try {
+    return (
+      JSON.parse(localStorage.getItem('vk-read-later-v1') ?? 'null')?.state
+        ?.items ?? {}
+    );
+  } catch {
+    return {};
+  }
+}
+
 /** A presentation preference only: never writes read/seen/attention state. */
-export const createReadLaterStore = (storageName = 'vk-read-later-v1') =>
+export const createReadLaterStore = (storageName = 'vk-read-later-v2') =>
   create<{
     items: Record<string, ReadLaterItem>;
     pending: Record<
@@ -31,7 +45,7 @@ export const createReadLaterStore = (storageName = 'vk-read-later-v1') =>
   }>()(
     persist(
       (set) => ({
-        items: {},
+        items: legacyItems(storageName),
         pending: {},
         migratedScopes: {},
         syncErrors: {},

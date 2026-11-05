@@ -152,7 +152,7 @@ try {
   const scope = await desktop.page.evaluate(
     () =>
       Object.keys(
-        JSON.parse(localStorage.getItem('vk-read-later-v1')).state
+        JSON.parse(localStorage.getItem('vk-read-later-v2')).state
           .migratedScopes
       )[0]
   );
@@ -164,15 +164,15 @@ try {
   };
   const cacheKey = JSON.stringify([scope, item.kind, item.id]);
   const legacy = { state: { items: { [cacheKey]: item } }, version: 0 };
-  await desktop.page.evaluate(
-    (value) => localStorage.setItem('vk-read-later-v1', JSON.stringify(value)),
-    legacy
-  );
+  await desktop.page.evaluate((value) => {
+    localStorage.setItem('vk-read-later-v1', JSON.stringify(value));
+    localStorage.removeItem('vk-read-later-v2');
+  }, legacy);
   await desktop.page.reload({ waitUntil: 'domcontentloaded' });
   await header(desktop.page, 1).waitFor();
   await desktop.page.waitForFunction(() =>
     Object.values(
-      JSON.parse(localStorage.getItem('vk-read-later-v1')).state.migratedScopes
+      JSON.parse(localStorage.getItem('vk-read-later-v2')).state.migratedScopes
     ).includes(true)
   );
   const mobile = await context(393);
@@ -192,7 +192,7 @@ try {
   await header(stale.page, 0).waitFor();
   await stale.page.waitForFunction(() =>
     Object.values(
-      JSON.parse(localStorage.getItem('vk-read-later-v1')).state
+      JSON.parse(localStorage.getItem('vk-read-later-v2')).state
         .migratedScopes ?? {}
     ).includes(true)
   );

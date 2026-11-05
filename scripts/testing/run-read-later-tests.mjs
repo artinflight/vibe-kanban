@@ -52,7 +52,7 @@ const { JSDOM } = require(${JSON.stringify(require.resolve('jsdom'))});
 const dom = new JSDOM('<!doctype html><html><body></body></html>', { pretendToBeVisual: true, url: 'https://vk.test' });
 for (const key of ['window', 'document', 'navigator', 'Node', 'Element', 'HTMLElement', 'MutationObserver', 'getComputedStyle', 'localStorage']) Object.defineProperty(globalThis, key, { value: dom.window[key], configurable: true });
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
-globalThis.fetch = () => { throw new Error('Read Later must not call an API'); };
+globalThis.fetch = () => { throw new Error('Component tests must use fixtures; sync has a separate integration suite'); };
 require('node:test').after(() => dom.window.close());
 require(${JSON.stringify(outfile)});
 `

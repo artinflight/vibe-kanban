@@ -150,7 +150,7 @@ try {
   await header(stale.page, 0).waitFor();
   await stale.page.waitForFunction(() =>
     Object.values(
-      JSON.parse(localStorage.getItem('vk-read-later-v1')).state.migratedScopes
+      JSON.parse(localStorage.getItem('vk-read-later-v2')).state.migratedScopes
     ).includes(true)
   );
   assert.equal(

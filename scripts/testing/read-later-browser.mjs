@@ -50,7 +50,8 @@ try {
     const errors = [],
       writes = [],
       seen = [],
-      dotRequests = [];
+      dotRequests = [],
+      preferenceWrites = [];
     let target;
     let closing = false;
     // Pending polling requests can finish while a verified context is closing.
@@ -89,6 +90,20 @@ try {
       guard(async (route) => {
         const request = route.request();
         const path = new URL(request.url()).pathname;
+        if (
+          process.env.VK_TEST_READ_LATER_API &&
+          path.startsWith('/api/read-later/')
+        ) {
+          const parts = path.split('/');
+          parts[3] = `matrix-${width}-${unread}-${parts[3]}`;
+          if (request.method() !== 'GET')
+            preferenceWrites.push({ path, method: request.method() });
+          const response = await route.fetch({
+            url: new URL(parts.join('/'), process.env.VK_TEST_READ_LATER_API)
+              .href,
+          });
+          return route.fulfill({ response });
+        }
         if (path === '/api/dot-sidechat/notifications') dotRequests.push(path);
         if (
           request.method() === 'POST' &&
@@ -251,6 +266,7 @@ try {
       persisted: true,
       restored: true,
       readCallsFromActions: seen.length - beforeSeen,
+      sharedPreferenceWrites: preferenceWrites.length,
       blockedWrites: writes.length,
       pageErrors: errors,
     });

@@ -152,3 +152,27 @@ test('an in-flight save preserves a newer local removal and independent bookmark
     f.desktop.getState().items[readLaterKey(scope, 'issue', 'another')]
   );
 });
+
+test('older open tabs cannot erase the synchronized cache or offline queue', async () => {
+  localStorage.removeItem('vk-read-later-v2');
+  localStorage.setItem(
+    'vk-read-later-v1',
+    JSON.stringify({ state: { items: { [key]: premiere } }, version: 0 })
+  );
+  const current = createReadLaterStore();
+  assert.deepEqual(current.getState().items[key], premiere);
+  current.getState().setReadLater(scope, premiere, false);
+  const pending = current.getState().pending[key];
+  // An old tab writes its entire old-format cache after the new tab queued removal.
+  localStorage.setItem(
+    'vk-read-later-v1',
+    JSON.stringify({ state: { items: { [key]: premiere } }, version: 0 })
+  );
+  const reloaded = createReadLaterStore();
+  assert.equal(reloaded.getState().items[key], undefined);
+  assert.deepEqual(reloaded.getState().pending[key], pending);
+  assert.ok(
+    localStorage.getItem('vk-read-later-v1'),
+    'legacy cache is preserved'
+  );
+});

@@ -2,6 +2,7 @@ import { useSyncExternalStore } from 'react';
 import type { GroupedNotification } from '../../packages/web-core/src/shared/lib/notifications';
 
 export const useHostId = () => null;
+export const getCurrentHostId = () => null;
 export const useAuth = () => ({
   userId: 'owner',
   isSignedIn: true,

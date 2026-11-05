@@ -13,12 +13,17 @@ export function readLaterSync(host: string | null, user: string) {
   if (!entry) {
     entry = {
       users: 0,
-      client: new ReadLaterSync(useReadLaterStore, scope, {
-        list: () => readLaterApi.list(host, user),
-        import: (items) => readLaterApi.import(host, user, items),
-        set: (item, saved, changeId) =>
-          readLaterApi.set(host, user, item, saved, changeId),
-      }),
+      client: new ReadLaterSync(
+        useReadLaterStore,
+        scope,
+        {
+          list: () => readLaterApi.list(host, user),
+          import: (items) => readLaterApi.import(host, user, items),
+          set: (item, saved, changeId) =>
+            readLaterApi.set(host, user, item, saved, changeId),
+        },
+        () => navigator.onLine
+      ),
     };
     clients.set(scope, entry);
   }
@@ -41,15 +46,21 @@ export function useReadLaterSync(
       window.addEventListener('focus', refresh);
       window.addEventListener('pageshow', refresh);
       window.addEventListener('online', refresh);
+      const disconnected = () => {
+        void entry.client.refresh();
+      };
+      window.addEventListener('offline', disconnected);
       document.addEventListener('visibilitychange', refresh);
       entry.stop = () => {
         window.clearInterval(timer);
         window.removeEventListener('focus', refresh);
         window.removeEventListener('pageshow', refresh);
         window.removeEventListener('online', refresh);
+        window.removeEventListener('offline', disconnected);
         document.removeEventListener('visibilitychange', refresh);
       };
-      refresh();
+      if (navigator.onLine) refresh();
+      else disconnected();
     }
     return () => {
       if (--entry.users === 0) entry.stop?.();

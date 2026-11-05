@@ -63,8 +63,15 @@ async function context(width, seed) {
       const user = decodeURIComponent(p.split('/')[3]);
       serverUser ??= user;
       assert.equal(user, serverUser, 'same user on both devices');
-      if (request.method() === 'GET')
+      if (request.method() === 'GET' && !process.env.VK_TEST_READ_LATER_API)
         return route.fulfill(json([...records.values()]));
+      if (process.env.VK_TEST_READ_LATER_API) {
+        preferenceWrites.push({ method: request.method(), path: p });
+        const response = await route.fetch({
+          url: new URL(p, process.env.VK_TEST_READ_LATER_API).href,
+        });
+        return route.fulfill({ response });
+      }
       const input = request.postDataJSON();
       preferenceWrites.push({ method: request.method(), path: p });
       if (p.endsWith('/import')) {
@@ -189,7 +196,16 @@ try {
         .migratedScopes ?? {}
     ).includes(true)
   );
-  assert.equal([...records.values()].filter((r) => r.saved).length, 0);
+  const sharedRecords = process.env.VK_TEST_READ_LATER_API
+    ? (
+        await (
+          await fetch(
+            `${process.env.VK_TEST_READ_LATER_API}/api/read-later/${encodeURIComponent(serverUser)}`
+          )
+        ).json()
+      ).data
+    : [...records.values()];
+  assert.equal(sharedRecords.filter((r) => r.saved).length, 0);
   // A fresh desktop action must appear in the already-open phone session.
   await desktop.page
     .locator('[data-workspace-section="attention"]')
@@ -224,7 +240,9 @@ try {
     applicationWrites: writes.length,
     dotPolls,
     pageErrors: errors,
-    backend: 'disposable API fixture; not production persistence',
+    backend: process.env.VK_TEST_READ_LATER_API
+      ? 'actual Rust route and SQLite with isolated test state; deployment wrappers shimmed'
+      : 'disposable API fixture; not production persistence',
   };
   await writeFile(
     resolve(output, 'results.json'),

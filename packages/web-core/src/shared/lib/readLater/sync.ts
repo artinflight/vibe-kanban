@@ -19,7 +19,8 @@ export class ReadLaterSync {
   constructor(
     private store: Store,
     private scope: string,
-    private transport: ReadLaterTransport
+    private transport: ReadLaterTransport,
+    private isOnline: () => boolean = () => true
   ) {}
 
   refresh(): Promise<void> {
@@ -42,6 +43,7 @@ export class ReadLaterSync {
   private async run() {
     try {
       this.failed = false;
+      if (!this.isOnline()) throw new Error('offline');
       // Probe the capability before touching the browser's legacy cache.
       let records = await this.transport.list();
       if (!this.store.getState().migratedScopes[this.scope]) {
@@ -67,6 +69,7 @@ export class ReadLaterSync {
       this.store
         .getState()
         .applyServer(this.scope, await this.transport.list());
+      if (!this.isOnline()) throw new Error('offline');
       this.store.setState((state) => ({
         syncErrors: { ...state.syncErrors, [this.scope]: '' },
       }));

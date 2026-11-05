@@ -38,67 +38,80 @@ export function useWorkspaceSessions(
 ): UseWorkspaceSessionsResult {
   const hostId = useHostId();
   const { enabled = true } = options;
-  const [selection, setSelection] = useState<SessionSelection | undefined>(
-    undefined
-  );
-  const prevWorkspaceIdRef = useRef(workspaceId);
+  const scope = useMemo(() => ({ hostId, workspaceId }), [hostId, workspaceId]);
+  const activeScope = useRef(scope);
+  activeScope.current = scope;
+  const [selection, setSelection] = useState<{
+    scope: typeof scope;
+    value: SessionSelection;
+  }>();
 
-  const { data: sessions = [], isLoading } = useQuery<Session[]>({
+  const {
+    data: sessions = [],
+    isLoading,
+    isSuccess,
+  } = useQuery<Session[]>({
     queryKey: workspaceSessionKeys.byWorkspace(workspaceId, hostId),
-    queryFn: () => sessionsApi.getByWorkspace(workspaceId!),
+    queryFn: async () => {
+      const result = await sessionsApi.getByWorkspace(workspaceId!);
+      if (result.some((session) => session.workspace_id !== workspaceId)) {
+        throw new Error(
+          'Session response does not match the selected workspace'
+        );
+      }
+      return result;
+    },
     enabled: enabled && !!workspaceId,
   });
 
-  // Combined effect: handle workspace changes and auto-select sessions
-  // This replaces two separate effects that had a race condition where the reset
-  // effect would fire after auto-select when sessions were cached, undoing the selection.
+  // Derive the current selection during render, before any consumer can send or
+  // subscribe. Never expose a previous workspace's session for one effect cycle.
+  const currentSelection =
+    selection?.scope === scope ? selection.value : undefined;
+  const isNewSessionMode =
+    isSuccess &&
+    enabled &&
+    !!workspaceId &&
+    (currentSelection?.mode === 'new' || sessions.length === 0);
+  const selectedSession = isNewSessionMode
+    ? undefined
+    : ((currentSelection?.mode === 'existing'
+        ? sessions.find((session) => session.id === currentSelection.sessionId)
+        : undefined) ?? sessions[0]);
+  const selectedSessionId = selectedSession?.id;
+
+  // Pin the initial latest session so a reorder cannot silently change the
+  // recipient. Explicit selection of a just-created session can precede refetch.
   useEffect(() => {
-    const workspaceChanged = prevWorkspaceIdRef.current !== workspaceId;
-    prevWorkspaceIdRef.current = workspaceId;
-
-    if (sessions.length > 0) {
-      // Sessions are ordered by most recently used, so first is the most recently
-      // used. Preserve the current selection within the same workspace when it
-      // still exists, and only auto-jump to the latest session when the previous
-      // selection is no longer valid or the workspace itself changed.
-      setSelection((prev) => {
-        if (prev?.mode === 'new' && !workspaceChanged) return prev;
-        if (
-          prev?.mode === 'existing' &&
-          !workspaceChanged &&
-          sessions.some((session) => session.id === prev.sessionId)
-        ) {
-          return prev;
-        }
-        return { mode: 'existing', sessionId: sessions[0].id };
+    if (!currentSelection && sessions[0]) {
+      setSelection({
+        scope,
+        value: { mode: 'existing', sessionId: sessions[0].id },
       });
-    } else if (workspaceChanged) {
-      setSelection(undefined);
     }
-  }, [workspaceId, sessions]);
+  }, [scope, currentSelection, sessions]);
 
-  const isNewSessionMode = selection?.mode === 'new' || sessions.length === 0;
-  const selectedSessionId =
-    selection?.mode === 'existing' ? selection.sessionId : undefined;
-
-  const selectedSession = useMemo(
-    () => sessions.find((s) => s.id === selectedSessionId),
-    [sessions, selectedSessionId]
+  const updateSelection = useCallback(
+    (value: SessionSelection) => {
+      // A create/send started in A can finish after navigating to B. Its callback
+      // belongs to A and must not select a session or clear a draft in B.
+      if (activeScope.current === scope) setSelection({ scope, value });
+    },
+    [scope]
   );
-
-  const selectSession = useCallback((sessionId: string) => {
-    setSelection({ mode: 'existing', sessionId });
-  }, []);
-
+  const selectSession = useCallback(
+    (sessionId: string) => {
+      updateSelection({ mode: 'existing', sessionId });
+    },
+    [updateSelection]
+  );
   const selectLatestSession = useCallback(() => {
-    if (sessions.length > 0) {
-      setSelection({ mode: 'existing', sessionId: sessions[0].id });
-    }
-  }, [sessions]);
-
+    if (sessions[0])
+      updateSelection({ mode: 'existing', sessionId: sessions[0].id });
+  }, [sessions, updateSelection]);
   const startNewSession = useCallback(() => {
-    setSelection({ mode: 'new' });
-  }, []);
+    updateSelection({ mode: 'new' });
+  }, [updateSelection]);
 
   return {
     sessions,

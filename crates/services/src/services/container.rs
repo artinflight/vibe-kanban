@@ -24,6 +24,7 @@ use db::{
         repo::Repo,
         scratch::DraftFollowUpData,
         session::{CreateSession, Session, SessionError},
+        turn_github_sync::TurnGithubSync,
         workspace::{Workspace, WorkspaceError},
         workspace_repo::WorkspaceRepo,
     },
@@ -70,6 +71,35 @@ pub type ContainerRef = String;
 const IMMEDIATE_PR_MERGE_CLEANUP_TARGET_BRANCH: &str = "staging";
 const HISTORICAL_REPLAY_HISTORY_BYTES: usize = 4 * 1024 * 1024;
 const HISTORICAL_REPLAY_CHANNEL_CAPACITY: usize = 1024;
+
+// Raw EOF ends the normalizers, not the derived patch stream. The latter
+// closes only after the feeder and every normalizer release their store owner.
+// Never interpret an old EOF using a later global completion flag.
+fn historical_normalized_output(
+    store: &Arc<MsgStore>,
+) -> BoxStream<'static, Result<LogMsg, std::io::Error>> {
+    store
+        .history_plus_stream_recoverable()
+        .scan(HashSet::<String>::new(), move |sent_paths, msg| {
+            future::ready(match msg {
+                Ok(LogMsg::JsonPatch(patch)) => {
+                    let patch = match patch_entry_path(&patch) {
+                        Some(_) if is_add_or_replace(&patch) => fix_patch_ops(patch, sent_paths),
+                        _ => patch,
+                    };
+                    Some(Some(Ok(LogMsg::JsonPatch(patch))))
+                }
+                Ok(LogMsg::Finished) => Some(None),
+                Ok(_) => Some(None),
+                Err(e) => Some(Some(Err(e))),
+            })
+        })
+        .filter_map(future::ready)
+        .chain(futures::stream::once(async {
+            Ok::<_, std::io::Error>(LogMsg::Finished)
+        }))
+        .boxed()
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ArchiveScriptStartOutcome {
@@ -126,6 +156,10 @@ impl Drop for CancelOnDropStream {
 
 #[derive(Debug, Error)]
 pub enum ContainerError {
+    #[error("Storage response owner is already reserved")]
+    StorageOwnerBusy,
+    #[error("Storage response admission held: {0}")]
+    StorageAdmissionDeferred(&'static str),
     #[error(transparent)]
     GitServiceError(#[from] GitServiceError),
     #[error(transparent)]
@@ -144,18 +178,21 @@ pub enum ContainerError {
     Io(#[from] std::io::Error),
     #[error("Failed to kill process: {0}")]
     KillFailed(std::io::Error),
+    #[error("Execution readiness blocked: {0}")]
+    ReadinessBlocked(serde_json::Value),
     #[error(transparent)]
     Other(#[from] AnyhowError), // Catches any unclassified errors
 }
 
 impl ContainerError {
     pub fn is_execution_limit_reached(&self) -> bool {
-        matches!(self, Self::ExecutorError(err) if err.is_execution_limit_reached())
+        matches!(self, Self::StorageOwnerBusy)
+            || matches!(self, Self::ExecutorError(err) if err.is_execution_limit_reached())
     }
 }
 
 #[async_trait]
-pub trait ContainerService {
+pub trait ContainerService: Send + Sync {
     fn msg_stores(&self) -> &Arc<RwLock<HashMap<Uuid, Arc<MsgStore>>>>;
 
     fn db(&self) -> &DBService;
@@ -170,6 +207,132 @@ pub trait ContainerService {
         false
     }
 
+    /// Git/ownership readiness only. Caller retains permission/toolchain/quota admission.
+    /// Implementations must never start a provider while evaluating this contract.
+    async fn execution_git_readiness(
+        &self,
+        workspace: &Workspace,
+        execution: &ExecutionProcess,
+        _context: serde_json::Value,
+    ) -> Result<serde_json::Value, ContainerError> {
+        Err(ContainerError::ReadinessBlocked(serde_json::json!({
+            "version": 2, "readiness_version": 1, "state": "blocked",
+            "workspace": workspace.id, "turn": execution.id,
+            "code": "readiness_unsupported", "action": "adopt_matching_readiness_implementation",
+            "provider_started": false, "coverage_verified": false
+        })))
+    }
+
+    /// Zero-inference workspace/policy probe before semantic routing. No native
+    /// history or successful admission may be invented for this proposed row.
+    async fn pre_route_git_readiness(
+        &self,
+        workspace: &Workspace,
+        _session: &Session,
+        proposed_execution: Uuid,
+        _executor_action: &ExecutorAction,
+    ) -> Result<(), ContainerError> {
+        if self.requires_git_admission_fence() {
+            return Err(ContainerError::ReadinessBlocked(serde_json::json!({
+                "version":2,"state":"blocked","workspace":workspace.id,"turn":proposed_execution,
+                "code":"readiness_unsupported","action":"adopt_matching_readiness_implementation",
+                "provider_started":false,"coverage_verified":false
+            })));
+        }
+        Ok(())
+    }
+
+    /// Provider dispatch requires fresh existing preservation/process proof.
+    /// Backends without that lifecycle support cannot silently accept the adapter.
+    async fn verify_provider_checkpoint(
+        &self,
+        _checkpoint: &executors::provider_failover::Checkpoint,
+    ) -> Result<(), ContainerError> {
+        Err(ContainerError::Other(anyhow!(
+            "Provider checkpoint verification unsupported"
+        )))
+    }
+
+    /// Revalidate preserved source after the exact unspawned successor row exists.
+    /// Unsupported backends must not ignore arbitrary running rows.
+    async fn verify_provider_checkpoint_at(
+        &self,
+        checkpoint: &executors::provider_failover::Checkpoint,
+        own: Option<Uuid>,
+    ) -> Result<(), ContainerError> {
+        if own.is_some() {
+            return Err(ContainerError::Other(anyhow!(
+                "checkpoint_successor_recheck_unsupported"
+            )));
+        }
+        self.verify_provider_checkpoint(checkpoint).await
+    }
+
+    /// Defaults fail closed in deployments without an authoritative queue view.
+    fn provider_continuation_queue_pending(&self, _session: Uuid) -> bool {
+        true
+    }
+
+    /// Existing-provider continuation requires actual native/process/capture proof.
+    /// Unsupported deployments fail closed rather than treating a DB idle row as proof.
+    async fn verify_provider_continuation_boundary(
+        &self,
+        _workspace: &Workspace,
+        _own: Option<Uuid>,
+    ) -> Result<(), ContainerError> {
+        Err(ContainerError::Other(anyhow!(
+            "native_continuation_checkpoint_unsupported"
+        )))
+    }
+
+    /// Trusted integration boundary. No request/model can submit successful Git,
+    /// entitlement or budget booleans. Concrete Git/CU readers return
+    /// known missing authoritative evidence is returned BEFORE any provider process/inference.
+    async fn prepare_provider_activation(
+        &self,
+        execution: Uuid,
+    ) -> Result<
+        super::provider_failover::Activation,
+        executors::provider_failover::readiness::Readiness,
+    > {
+        Err(super::provider_receipts::preparation(self, execution).await)
+    }
+    async fn prepare_provider_dispatch(
+        &self,
+        _work: &str,
+        execution: Uuid,
+    ) -> Result<
+        super::provider_failover::DispatchRequest,
+        executors::provider_failover::readiness::Readiness,
+    > {
+        Err(super::provider_receipts::preparation(self, execution).await)
+    }
+    async fn prepare_provider_completion(
+        &self,
+        execution: Uuid,
+    ) -> Result<
+        super::provider_failover::Completion,
+        executors::provider_failover::readiness::Readiness,
+    > {
+        Err(super::provider_receipts::completion_preparation(self, execution).await)
+    }
+    async fn refresh_provider_readiness(
+        &self,
+        scope: &executors::provider_failover::readiness::Scope,
+    ) -> Result<
+        executors::provider_failover::readiness::Receipt,
+        executors::provider_failover::readiness::Readiness,
+    > {
+        let execution = Uuid::parse_str(&scope.execution_id).map_err(|_| {
+            executors::provider_failover::readiness::Readiness::Blocked {
+                code: "ownership_changed".into(),
+                action: "refresh_exact_owner_checkpoint".into(),
+                provider_started: false,
+            }
+        })?;
+        Err(super::provider_receipts::preparation(self, execution).await)
+    }
+
     fn status_worktree_cleanup_enabled(&self) -> bool {
         true
     }
@@ -180,6 +343,21 @@ pub trait ContainerService {
         &self,
         _session: &Session,
         _data: &DraftFollowUpData,
+    ) -> Result<bool, ContainerError> {
+        Ok(false)
+    }
+
+    /// Explicit steering never selects a replacement execution or starts work.
+    async fn steering_target(&self, _execution_id: Uuid) -> Option<(String, String)> {
+        None
+    }
+
+    async fn steer_bound_turn(
+        &self,
+        _execution_id: Uuid,
+        _thread_id: String,
+        _turn_id: String,
+        _message: String,
     ) -> Result<bool, ContainerError> {
         Ok(false)
     }
@@ -964,6 +1142,12 @@ pub trait ContainerService {
         perform_git_reset: bool,
         force_when_dirty: bool,
     ) -> Result<(), ContainerError> {
+        let bound_session = Session::find_by_id(&self.db().pool, session_id)
+            .await?
+            .ok_or_else(|| ContainerError::Other(anyhow!("Session not found")))?;
+        super::provider_admission::before_start(self, bound_session.workspace_id, session_id)
+            .await?;
+
         let pool = &self.db().pool;
 
         let process = ExecutionProcess::find_by_id(pool, target_process_id)
@@ -981,6 +1165,14 @@ pub trait ContainerService {
         let workspace = Workspace::find_by_id(pool, session.workspace_id)
             .await?
             .ok_or_else(|| ContainerError::Other(anyhow!("Workspace not found")))?;
+
+        // Keep this guard even with scheduling disabled: a retained obligation
+        // cannot be discarded by rollback, manual reset, or follow-up retry.
+        if TurnGithubSync::has_unobserved(pool, workspace.id).await? {
+            return Err(ContainerError::Other(anyhow!(
+                "Completed-turn observation is unproven; original obligation retained. Reset requires scoped reconciliation."
+            )));
+        }
 
         let repos = WorkspaceRepo::find_repos_for_workspace(pool, workspace.id).await?;
         let repo_states =
@@ -1073,6 +1265,11 @@ pub trait ContainerService {
 
     async fn is_container_clean(&self, workspace: &Workspace) -> Result<bool, ContainerError>;
 
+    /// Keep native repository capture and protected paid spawn under one admission fence.
+    fn requires_git_admission_fence(&self) -> bool {
+        false
+    }
+
     async fn start_execution_inner(
         &self,
         workspace: &Workspace,
@@ -1138,7 +1335,7 @@ pub trait ContainerService {
             if matches!(process_status, Some(ExecutionProcessStatus::Running)) {
                 return Some(
                     store
-                        .history_plus_stream_strict()
+                        .history_plus_stream_recoverable()
                         .filter(|msg| {
                             future::ready(matches!(
                                 msg,
@@ -1201,7 +1398,7 @@ pub trait ContainerService {
             if matches!(process_status, Some(ExecutionProcessStatus::Running)) {
                 return Some(
                     store
-                        .history_plus_stream_strict() // BoxStream<Result<LogMsg, io::Error>>
+                        .history_plus_stream_recoverable() // BoxStream<Result<LogMsg, io::Error>>
                         .filter(|msg| future::ready(matches!(msg, Ok(LogMsg::JsonPatch(..)))))
                         .chain(futures::stream::once(async {
                             Ok::<_, std::io::Error>(LogMsg::Finished)
@@ -1283,6 +1480,8 @@ pub trait ContainerService {
             HISTORICAL_REPLAY_CHANNEL_CAPACITY,
         ));
         let (cancel_tx, mut cancel_rx) = oneshot::channel::<()>();
+        // Subscribe before either producer can publish or evict a patch.
+        let stream = historical_normalized_output(&temp_store);
 
         // Spawn normalizer on populated store and collect JoinHandles
         let handles = match executor_action.typ() {
@@ -1336,15 +1535,14 @@ pub trait ContainerService {
             }
         };
 
-        let output_finished = Arc::new(std::sync::atomic::AtomicBool::new(false));
-        let output_finished_task = output_finished.clone();
-        let temp_store_for_finish = temp_store.clone();
+        let normalizer_owner = temp_store.clone();
         tokio::spawn(async move {
             for handle in handles {
                 let _ = handle.await;
             }
-            output_finished_task.store(true, std::sync::atomic::Ordering::SeqCst);
-            temp_store_for_finish.push_finished();
+            // Keep the broadcast sender alive until all derived patches exist.
+            // Receiver closure then drains queued patches before terminating.
+            drop(normalizer_owner);
         });
 
         let temp_store_for_feed = temp_store.clone();
@@ -1378,36 +1576,6 @@ pub trait ContainerService {
             temp_store_for_feed.push_finished();
         });
 
-        let stream = temp_store
-            .history_plus_stream_strict()
-            .scan(HashSet::<String>::new(), move |sent_paths, msg| {
-                let output_finished = output_finished.clone();
-                future::ready(match msg {
-                    Ok(LogMsg::JsonPatch(patch)) => {
-                        let patch = match patch_entry_path(&patch) {
-                            Some(_) if is_add_or_replace(&patch) => {
-                                fix_patch_ops(patch, sent_paths)
-                            }
-                            _ => patch,
-                        };
-                        Some(Some(Ok(LogMsg::JsonPatch(patch))))
-                    }
-                    Ok(LogMsg::Finished)
-                        if output_finished.load(std::sync::atomic::Ordering::SeqCst) =>
-                    {
-                        None
-                    }
-                    Ok(LogMsg::Finished) => Some(None),
-                    Ok(_) => Some(None),
-                    Err(e) => Some(Some(Err(e))),
-                })
-            })
-            .filter_map(future::ready)
-            .chain(futures::stream::once(async {
-                Ok::<_, std::io::Error>(LogMsg::Finished)
-            }))
-            .boxed();
-
         Some(Box::pin(CancelOnDropStream::new(stream, cancel_tx)))
     }
 
@@ -1419,8 +1587,6 @@ pub trait ContainerService {
     ) -> Result<ExecutionProcess, ContainerError> {
         // Create container
         self.create(workspace).await?;
-
-        let repos = WorkspaceRepo::find_repos_for_workspace(&self.db().pool, workspace.id).await?;
 
         let workspace = Workspace::find_by_id(&self.db().pool, workspace.id)
             .await?
@@ -1438,6 +1604,28 @@ pub trait ContainerService {
         )
         .await?;
 
+        self.start_workspace_session(&workspace, &session, executor_config, prompt)
+            .await
+    }
+
+    /// Same setup/cleanup/native admission path with an atomically reserved
+    /// session. The issue workflow prepares the container and claims launch
+    /// durably first. No provider policy or ordinary-input takeover is added.
+    async fn start_workspace_session(
+        &self,
+        workspace: &Workspace,
+        session: &Session,
+        executor_config: ExecutorConfig,
+        prompt: String,
+    ) -> Result<ExecutionProcess, ContainerError> {
+        if session.workspace_id != workspace.id
+            || session.executor.as_deref() != Some(executor_config.executor.to_string().as_str())
+        {
+            return Err(ContainerError::Other(anyhow!(
+                "Reserved session binding changed"
+            )));
+        }
+        let repos = WorkspaceRepo::find_repos_for_workspace(&self.db().pool, workspace.id).await?;
         let repos_with_setup: Vec<_> = repos.iter().filter(|r| r.setup_script.is_some()).collect();
 
         let all_parallel = repos_with_setup.iter().all(|r| r.parallel_setup_script);
@@ -1465,8 +1653,8 @@ pub trait ContainerService {
                 if let Some(action) = Self::setup_action_for_repo(repo)
                     && let Err(e) = self
                         .start_execution(
-                            &workspace,
-                            &session,
+                            workspace,
+                            session,
                             &action,
                             &ExecutionProcessRunReason::SetupScript,
                         )
@@ -1476,8 +1664,8 @@ pub trait ContainerService {
                 }
             }
             self.start_execution(
-                &workspace,
-                &session,
+                workspace,
+                session,
                 &coding_action,
                 &ExecutionProcessRunReason::CodingAgent,
             )
@@ -1486,8 +1674,8 @@ pub trait ContainerService {
             // Any sequential: chain ALL setups → coding agent via next_action
             let main_action = Self::build_sequential_setup_chain(&repos_with_setup, coding_action);
             self.start_execution(
-                &workspace,
-                &session,
+                workspace,
+                session,
                 &main_action,
                 &ExecutionProcessRunReason::SetupScript,
             )
@@ -1504,15 +1692,68 @@ pub trait ContainerService {
         executor_action: &ExecutorAction,
         run_reason: &ExecutionProcessRunReason,
     ) -> Result<ExecutionProcess, ContainerError> {
+        let admission = super::admission::owner(workspace.id, async {
+            super::fixed_baseline::with_request(
+                &self.db().pool,
+                workspace.id,
+                session.id,
+                executor_action,
+                run_reason,
+                self.start_execution_admitted(workspace, session, executor_action, run_reason),
+            )
+            .await
+            .map_err(|e| ContainerError::Other(anyhow!(e)))?
+        });
+        if executor_action.base_executor().is_some() {
+            super::admission::locked(admission).await
+        } else {
+            super::admission::run(admission).await
+        }
+    }
+
+    async fn start_execution_admitted(
+        &self,
+        workspace: &Workspace,
+        session: &Session,
+        executor_action: &ExecutorAction,
+        run_reason: &ExecutionProcessRunReason,
+    ) -> Result<ExecutionProcess, ContainerError> {
+        if *run_reason != ExecutionProcessRunReason::DevServer
+            && super::storage_admission::candidate_execution_id().is_none()
+            && super::storage_admission::owner_reserved(&self.db().pool, workspace.id).await?
+        {
+            return Err(ContainerError::StorageOwnerBusy);
+        }
+        super::provider_admission::before_start(self, workspace.id, session.id).await?;
+        super::provider_failover::before_start(self, workspace.id, session.id, executor_action)
+            .await?;
+        super::original_worker::before_start(session.id, executor_action)
+            .await
+            .map_err(|e| ContainerError::Other(anyhow!(e)))?;
         if matches!(run_reason, ExecutionProcessRunReason::CodingAgent)
             && let Some(error) = codex_execution_limit_error_for_action(executor_action)
         {
             return Err(ContainerError::ExecutorError(error));
         }
 
+        let reserved_execution = reconcile_execution_bindings(&[
+            super::storage_admission::candidate_execution_id(),
+            super::provider_admission::execution_id(workspace.id, session.id)?,
+            super::provider_failover::reserved_execution(
+                workspace.id,
+                session.id,
+                executor_action,
+            )?,
+        ])?;
+        let proposed_execution = reserved_execution.unwrap_or_else(Uuid::new_v4);
+        if executor_action.base_executor().is_some() && !super::fixed_baseline::in_request() {
+            self.pre_route_git_readiness(workspace, session, proposed_execution, executor_action)
+                .await?;
+        }
+
         // Route only here, after queue admission and before persisting the action.
         // A routing failure cannot reset Git or create another continuation loop.
-        let mut resolved_action = executor_action.clone();
+        let mut resolved_action = super::original_worker::routing_action(executor_action);
         if executors::routing::config(&resolved_action)
             .and_then(|c| c.routing.as_ref())
             .is_some_and(|p| p.mode != executors::routing::RoutingMode::Manual)
@@ -1560,7 +1801,22 @@ pub trait ContainerService {
         } else {
             resolved_action.routing_decision = None;
         }
+        super::original_worker::restore_raw_action(&mut resolved_action, executor_action)
+            .map_err(|e| ContainerError::Other(anyhow!(e)))?;
         let executor_action = &resolved_action;
+        let fixed_execution =
+            super::fixed_baseline::reserve_current(&self.db().pool, executor_action)
+                .await
+                .map_err(|e| ContainerError::Other(anyhow!(e)))?;
+        let proposed_execution =
+            reconcile_execution_bindings(&[fixed_execution, reserved_execution])?
+                .unwrap_or(proposed_execution);
+        if fixed_execution.is_some() {
+            self.pre_route_git_readiness(workspace, session, proposed_execution, executor_action)
+                .await?;
+        }
+
+        super::provider_admission::bind_resolved(&self.db().pool, executor_action).await?;
 
         // Create new execution process record
         // Capture current HEAD per repository as the "before" commit for this execution
@@ -1598,10 +1854,22 @@ pub trait ContainerService {
         let execution_process = ExecutionProcess::create(
             &self.db().pool,
             &create_execution_process,
-            Uuid::new_v4(),
+            reconcile_execution_bindings(&[
+                Some(proposed_execution),
+                super::storage_admission::candidate_execution_id(),
+                super::provider_failover::reserved_execution(
+                    workspace.id,
+                    session.id,
+                    executor_action,
+                )?,
+            ])?
+            .expect("proposed execution is present"),
             &repo_states,
         )
         .await?;
+        super::original_worker::record_execution(execution_process.id)
+            .await
+            .map_err(|e| ContainerError::Other(anyhow!(e)))?;
         if let Some(event) = executors::routing_telemetry::decision(
             executor_action,
             &execution_process.id.to_string(),
@@ -1612,7 +1880,7 @@ pub trait ContainerService {
         ) {
             executors::routing_telemetry::emit(event).await;
         }
-        if *run_reason != ExecutionProcessRunReason::ArchiveScript {
+        if *run_reason != ExecutionProcessRunReason::ArchiveScript && fixed_execution.is_none() {
             Workspace::set_archived(&self.db().pool, workspace.id, false).await?;
         }
 
@@ -1767,12 +2035,6 @@ pub trait ContainerService {
             }
         }
 
-        execution_process::spawn_stream_raw_logs_to_storage(
-            self.msg_stores().clone(),
-            self.db().clone(),
-            execution_process.id,
-            session.id,
-        );
         Ok(execution_process)
     }
 
@@ -1871,5 +2133,225 @@ mod tests {
         ];
 
         assert!(!has_merged_pr_to_target_branch(&pull_requests, "staging"));
+    }
+}
+
+#[cfg(test)]
+mod historical_replay_output_tests {
+    use std::{sync::atomic::AtomicBool, time::Duration};
+
+    use super::*;
+    fn original_output(
+        store: &Arc<MsgStore>,
+        output_finished: Arc<AtomicBool>,
+    ) -> BoxStream<'static, Result<LogMsg, std::io::Error>> {
+        store
+            .history_plus_stream_recoverable()
+            .scan(HashSet::<String>::new(), move |sent_paths, msg| {
+                let output_finished = output_finished.clone();
+                future::ready(match msg {
+                    Ok(LogMsg::JsonPatch(patch)) => {
+                        let patch = match patch_entry_path(&patch) {
+                            Some(_) if is_add_or_replace(&patch) => {
+                                fix_patch_ops(patch, sent_paths)
+                            }
+                            _ => patch,
+                        };
+                        Some(Some(Ok(LogMsg::JsonPatch(patch))))
+                    }
+                    Ok(LogMsg::Finished)
+                        if output_finished.load(std::sync::atomic::Ordering::SeqCst) =>
+                    {
+                        None
+                    }
+                    Ok(LogMsg::Finished) => Some(None),
+                    Ok(_) => Some(None),
+                    Err(e) => Some(Some(Err(e))),
+                })
+            })
+            .filter_map(future::ready)
+            .chain(futures::stream::once(async {
+                Ok::<_, std::io::Error>(LogMsg::Finished)
+            }))
+            .boxed()
+    }
+
+    fn patch(n: usize) -> LogMsg {
+        LogMsg::JsonPatch(ConversationPatch::add_normalized_entry(
+            n,
+            NormalizedEntry {
+                timestamp: None,
+                entry_type: NormalizedEntryType::AssistantMessage,
+                content: format!("preserved synthetic final {n}"),
+                metadata: None,
+            },
+        ))
+    }
+    fn count(v: &[Result<LogMsg, std::io::Error>]) -> usize {
+        v.iter()
+            .filter(|x| matches!(x, Ok(LogMsg::JsonPatch(_))))
+            .count()
+    }
+    fn run(f: impl std::future::Future<Output = ()>) {
+        tokio::runtime::Builder::new_current_thread()
+            .enable_time()
+            .build()
+            .unwrap()
+            .block_on(f)
+    }
+    #[test]
+    fn original_late_completion_flag_reproduces_dropped_final() {
+        run(async {
+            let s = Arc::new(MsgStore::with_limits(1024 * 1024, 32));
+            s.push_finished();
+            s.push(patch(0));
+            s.push_finished();
+            let out = original_output(&s, Arc::new(AtomicBool::new(true)));
+            drop(s);
+            let rows = out.collect::<Vec<_>>().await;
+            assert_eq!(
+                count(&rows),
+                0,
+                "original must reproduce the demonstrated ordering defect"
+            );
+        })
+    }
+    #[test]
+    fn completed_producer_is_drained_before_eof() {
+        run(async {
+            let s = Arc::new(MsgStore::with_limits(1024 * 1024, 32));
+            s.push_finished();
+            s.push(patch(0));
+            s.push_finished();
+            let out = historical_normalized_output(&s);
+            drop(s);
+            let rows = tokio::time::timeout(Duration::from_secs(1), out.collect::<Vec<_>>())
+                .await
+                .unwrap();
+            assert_eq!(count(&rows), 1);
+            assert!(format!("{:?}", rows).contains("preserved synthetic final 0"));
+            assert_eq!(
+                rows.iter()
+                    .filter(|x| matches!(x, Ok(LogMsg::Finished)))
+                    .count(),
+                1
+            );
+        })
+    }
+    #[test]
+    fn raw_eof_does_not_end_delayed_normalization() {
+        run(async {
+            let s = Arc::new(MsgStore::with_limits(1024 * 1024, 32));
+            let out = historical_normalized_output(&s);
+            s.push_finished();
+            let owner = s.clone();
+            tokio::spawn(async move {
+                tokio::time::sleep(Duration::from_millis(10)).await;
+                owner.push(patch(0));
+                drop(owner);
+            });
+            drop(s);
+            let rows = tokio::time::timeout(Duration::from_secs(1), out.collect::<Vec<_>>())
+                .await
+                .unwrap();
+            assert_eq!(count(&rows), 1);
+        })
+    }
+    #[test]
+    fn slow_output_consumer_preserves_late_final_order() {
+        run(async {
+            let s = Arc::new(MsgStore::with_limits(1024 * 1024, 32));
+            let out = historical_normalized_output(&s);
+            s.push_finished();
+            s.push(patch(0));
+            s.push(patch(1));
+            drop(s);
+            tokio::time::sleep(Duration::from_millis(10)).await;
+            let rows = out.collect::<Vec<_>>().await;
+            assert_eq!(count(&rows), 2);
+            let a = format!("{:?}", rows);
+            assert!(a.find("final 0").unwrap() < a.find("final 1").unwrap());
+        })
+    }
+    #[test]
+    fn evicted_raw_marker_does_not_hang_output() {
+        run(async {
+            let s = Arc::new(MsgStore::with_limits(4096, 32));
+            s.push_finished();
+            s.push_stdout("x".repeat(8192));
+            s.push(patch(0));
+            let out = historical_normalized_output(&s);
+            drop(s);
+            let rows = tokio::time::timeout(Duration::from_secs(1), out.collect::<Vec<_>>())
+                .await
+                .unwrap();
+            assert_eq!(count(&rows), 1);
+        })
+    }
+    #[test]
+    fn receiver_lag_still_reports_error() {
+        run(async {
+            let s = Arc::new(MsgStore::with_limits(1024 * 1024, 2));
+            let out = historical_normalized_output(&s);
+            for i in 0..16 {
+                s.push(patch(i));
+            }
+            drop(s);
+            let rows = out.collect::<Vec<_>>().await;
+            assert!(rows.iter().any(Result::is_err), "loss must remain explicit");
+        })
+    }
+    #[test]
+    fn empty_replay_finishes_once_without_invented_final() {
+        run(async {
+            let s = Arc::new(MsgStore::with_limits(1024 * 1024, 32));
+            let out = historical_normalized_output(&s);
+            s.push_finished();
+            drop(s);
+            let rows = out.collect::<Vec<_>>().await;
+            assert_eq!(count(&rows), 0);
+            assert_eq!(
+                rows.iter()
+                    .filter(|x| matches!(x, Ok(LogMsg::Finished)))
+                    .count(),
+                1
+            );
+        })
+    }
+}
+
+// Independent admission systems must agree on the execution they authorize.
+// Never replace a watcher receipt's binding with another continuation's ID.
+fn reconcile_execution_bindings(ids: &[Option<Uuid>]) -> Result<Option<Uuid>, ContainerError> {
+    let mut selected = None;
+    for id in ids.iter().flatten() {
+        if selected.is_some_and(|current| current != *id) {
+            return Err(ContainerError::Other(anyhow!(
+                "Conflicting native execution reservations"
+            )));
+        }
+        selected = Some(*id);
+    }
+    Ok(selected)
+}
+
+#[cfg(test)]
+mod combined_admission_tests {
+    use super::*;
+    #[test]
+    fn native_bindings_preserve_a_single_receipt_and_reject_conflicts() {
+        let watcher = Uuid::new_v4();
+        let other = Uuid::new_v4();
+        assert_eq!(
+            reconcile_execution_bindings(&[None, Some(watcher), None]).unwrap(),
+            Some(watcher)
+        );
+        assert_eq!(
+            reconcile_execution_bindings(&[Some(watcher), Some(watcher)]).unwrap(),
+            Some(watcher)
+        );
+        assert_eq!(reconcile_execution_bindings(&[None, None]).unwrap(), None);
+        assert!(reconcile_execution_bindings(&[Some(watcher), Some(other)]).is_err());
+        assert!(reconcile_execution_bindings(&[Some(other), Some(watcher)]).is_err());
     }
 }

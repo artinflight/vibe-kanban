@@ -1,0 +1,62 @@
+name: Native reviewer compatibility
+on:
+  pull_request:
+    branches: [staging]
+    paths:
+      - "crates/executors/src/executors/codex/**"
+      - "crates/executors/src/executors/codex.rs"
+      - "scripts/testing/export-native-review-artifacts.py"
+      - ".github/workflows/native-review-compatibility.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: native-review-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      CARGO_INCREMENTAL: "0"
+      CARGO_BUILD_JOBS: "2"
+      VK_EXPECTED_SOURCE: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ env.VK_EXPECTED_SOURCE }}
+          persist-credentials: false
+      - uses: ./.github/actions/cargo-checks-common-setup
+        with:
+          toolchain: nightly-2025-12-04
+          cache-key: native-review-compatibility-Linux
+      - name: Bind disposable build storage
+        run: echo "CARGO_TARGET_DIR=$RUNNER_TEMP/native-review-target" >> "$GITHUB_ENV"
+      - name: Typed await_response and existing history/error regressions
+        run: |
+          cargo test --locked --profile acceptance -p executors --lib executors::codex::jsonrpc::tests
+          cargo test --locked --profile acceptance -p executors --lib native_review
+      - name: Build source-bound isolated acceptance backend
+        env:
+          VK_BUILD_SOURCE_COMMIT: ${{ env.VK_EXPECTED_SOURCE }}
+        run: |
+          cargo build --locked --profile acceptance -p server --bin server
+          cargo test --locked --profile acceptance -p executors --lib --no-run --message-format=json > "$RUNNER_TEMP/native-review-tests.jsonl"
+      - name: Install hosted isolated startup boundary
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y bubblewrap apparmor-profiles
+          sudo apparmor_parser -r /usr/share/apparmor/extra-profiles/bwrap-userns-restrict
+          bwrap --unshare-all --ro-bind / / --proc /proc --dev /dev -- true
+      - name: Verify actual candidate startup isolation
+        run: python3 -B scripts/testing/startup-recovery-safety/server_sandbox.py --binary "$CARGO_TARGET_DIR/acceptance/server"
+      - name: Export immutable artifact receipt
+        env:
+          VK_NATIVE_REVIEW_ARTIFACT: ${{ runner.temp }}/native-review-artifact
+        run: python3 -B scripts/testing/export-native-review-artifacts.py "$RUNNER_TEMP/native-review-tests.jsonl"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: native-review-${{ env.VK_EXPECTED_SOURCE }}
+          path: ${{ runner.temp }}/native-review-artifact/
+          retention-days: 14
+          if-no-files-found: error

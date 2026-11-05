@@ -1,0 +1,8 @@
+{
+  "desktop_archive_sha256": "65ca093990ccacebe24da9872a61e80b1fde8c8eda87e40dceb8a27132a98bd1",
+  "journal_sha256": "54a4ac128ae42b36193834a70b99ea12482c97870aa2fc3b7be9b4e5728b6fa1",
+  "local_bytes_match": true,
+  "sequence": 23769,
+  "known_pre_baseline_deletion_candidates": 448,
+  "contents_and_authorized_retirement_proven": false
+}

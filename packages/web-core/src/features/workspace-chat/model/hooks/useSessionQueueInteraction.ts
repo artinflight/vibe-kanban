@@ -23,7 +23,7 @@ interface UseSessionQueueInteractionResult {
   sendFollowUp: (
     message: string,
     executorConfig: ExecutorConfig
-  ) => Promise<void>;
+  ) => Promise<QueueStatus | undefined>;
   /** Cancel the queued message */
   cancelQueue: () => Promise<void>;
   /** Refresh queue status from server */
@@ -95,7 +95,7 @@ export function useSessionQueueInteraction({
   const sendFollowUp = useCallback(
     async (message: string, executorConfig: ExecutorConfig) => {
       if (!sessionId) return;
-      await followUpMutation.mutateAsync({
+      return followUpMutation.mutateAsync({
         message,
         executorConfig,
       });

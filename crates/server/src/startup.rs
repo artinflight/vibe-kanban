@@ -132,6 +132,7 @@ pub async fn start_with_bind(
 pub async fn initialize_deployment(
     shutdown: CancellationToken,
 ) -> Result<DeploymentImpl, DeploymentError> {
+    local_deployment::validate_startup_identity().await?;
     // Create asset directory if it doesn't exist
     if !asset_dir().exists() {
         std::fs::create_dir_all(asset_dir()).map_err(|e| {
@@ -153,6 +154,7 @@ pub async fn initialize_deployment(
     }
 
     let deployment = DeploymentImpl::new(shutdown).await?;
+    configure_deployment(&deployment).await?;
     migrate_legacy_attachment_directories(&deployment).await?;
     deployment.update_sentry_scope().await?;
     deployment
@@ -182,6 +184,24 @@ pub async fn initialize_deployment(
     Ok(deployment)
 }
 
+/// Standalone and desktop entry points share this ordering. A failed or pending
+/// adoption never starts executable monitors, including PR archive scripts.
+pub async fn configure_deployment(deployment: &DeploymentImpl) -> Result<(), DeploymentError> {
+    configured_background(
+        deployment,
+        crate::original_worker::configure(deployment.clone()),
+    )
+    .await
+}
+
+pub(crate) async fn configured_background<D: Deployment>(
+    deployment: &D,
+    configure: impl std::future::Future<Output = io::Result<()>>,
+) -> Result<(), DeploymentError> {
+    configure.await?;
+    deployment.start_background_services().await
+}
+
 /// Gracefully shut down running execution processes.
 pub async fn perform_cleanup_actions(deployment: &DeploymentImpl) {
     deployment
@@ -190,6 +210,10 @@ pub async fn perform_cleanup_actions(deployment: &DeploymentImpl) {
         .await
         .expect("Failed to cleanly kill running execution processes");
 }
+
+// Human QA must precede any separately reviewed cleanup release. There is no
+// runtime environment/marker override for this compiled prohibition.
+pub const AUTOMATIC_ATTACHMENT_MIGRATION: bool = false;
 
 const LEGACY_ATTACHMENT_MIGRATION_MARKER: &str = ".attachment-directories-migrated-v1";
 
@@ -213,6 +237,10 @@ impl DirectoryMigrationStats {
 async fn migrate_legacy_attachment_directories(
     deployment: &DeploymentImpl,
 ) -> Result<(), DeploymentError> {
+    if !AUTOMATIC_ATTACHMENT_MIGRATION {
+        tracing::info!("Automatic legacy attachment migration is disabled pending human QA");
+        return Ok(());
+    }
     let marker_path = asset_dir().join(LEGACY_ATTACHMENT_MIGRATION_MARKER);
     if marker_path.exists() {
         return Ok(());

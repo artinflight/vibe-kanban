@@ -315,6 +315,15 @@ fn remote_client_error(err: &RemoteClientError) -> ErrorInfo {
 
 impl IntoResponse for ApiError {
     fn into_response(self) -> Response {
+        if let ApiError::Container(ContainerError::ReadinessBlocked(report)) = &self {
+            return (
+                StatusCode::CONFLICT,
+                Json(ApiResponse::<serde_json::Value>::error_with_data(
+                    report.clone(),
+                )),
+            )
+                .into_response();
+        }
         let info = match &self {
             ApiError::Repo(RepoError::Database(_)) => ErrorInfo::internal("RepoError"),
             ApiError::Repo(RepoError::NotFound) => {

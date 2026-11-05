@@ -15,6 +15,7 @@ import {
 export interface DerivedConversationEntriesResult {
   readonly entries: PatchTypeWithKey[];
   readonly hasRunningProcess: boolean;
+  readonly hasPendingApproval: boolean;
   readonly hasSetupScriptRun: boolean;
   readonly hasCleanupScriptRun: boolean;
   readonly latestTokenUsageInfo: TokenUsageInfo | null;
@@ -229,6 +230,7 @@ export function deriveConversationEntries({
   return {
     entries,
     hasRunningProcess,
+    hasPendingApproval,
     hasSetupScriptRun,
     hasCleanupScriptRun,
     latestTokenUsageInfo,

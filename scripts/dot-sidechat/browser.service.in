@@ -1,0 +1,20 @@
+# TEMPLATE ONLY. Requires explicit activation/access approval; never auto-installed.
+[Unit]
+Description=Private Vibe Dot browser API
+After=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 -B @BROWSER_RELEASE@/browser_api.py --data /home/mcp/.config/vibe-dot-connector/sidechat/threads.sqlite serve --vibe-db /home/mcp/.local/share/vibe-kanban-green-xdg/vibe-kanban/db.v2.sqlite --origin https://vibe.local --listen @SIDECAR_ADDRESS@ --proxy-address @PROXY_ADDRESS@ --port 18974 --tls-cert /home/mcp/.config/vibe-dot-connector/sidechat/browser-tls.crt --tls-key /home/mcp/.config/vibe-dot-connector/sidechat/browser-tls.key
+Restart=on-failure
+RestartSec=3
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/home/mcp/.config/vibe-dot-connector/sidechat
+Environment=PYTHONDONTWRITEBYTECODE=1
+
+[Install]
+WantedBy=default.target

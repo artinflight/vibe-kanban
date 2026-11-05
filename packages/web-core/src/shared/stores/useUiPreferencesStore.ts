@@ -19,6 +19,7 @@ export type LayoutMode = 'workspaces' | 'kanban';
 export type MobileTab =
   | 'workspaces'
   | 'chat'
+  | 'dot'
   | 'changes'
   | 'logs'
   | 'preview'
@@ -186,6 +187,25 @@ const cloneKanbanFilters = (filters: KanbanFilterState): KanbanFilterState => ({
   sortDirection: filters.sortDirection,
 });
 
+// Upgrade only the former built-in Personal assignee choice. Explicit custom
+// filters and every other criterion keep their existing meaning.
+export function resolveKanbanViewFilters(
+  viewId: string,
+  filters: KanbanFilterState
+): KanbanFilterState {
+  return viewId === KANBAN_PROJECT_VIEW_IDS.PERSONAL &&
+    filters.assigneeIds.length === 1 &&
+    filters.assigneeIds[0] === KANBAN_ASSIGNEE_FILTER_VALUES.SELF
+    ? {
+        ...filters,
+        assigneeIds: [
+          KANBAN_ASSIGNEE_FILTER_VALUES.SELF,
+          KANBAN_ASSIGNEE_FILTER_VALUES.UNASSIGNED,
+        ],
+      }
+    : filters;
+}
+
 const isKanbanProjectViewId = (
   viewId: string
 ): viewId is (typeof KANBAN_PROJECT_VIEW_IDS)[keyof typeof KANBAN_PROJECT_VIEW_IDS] =>
@@ -199,7 +219,10 @@ const getKanbanDefaultView = (viewId: string): KanbanProjectView => {
       name: 'Personal',
       filters: {
         ...cloneKanbanFilters(DEFAULT_KANBAN_FILTER_STATE),
-        assigneeIds: [KANBAN_ASSIGNEE_FILTER_VALUES.SELF],
+        assigneeIds: [
+          KANBAN_ASSIGNEE_FILTER_VALUES.SELF,
+          KANBAN_ASSIGNEE_FILTER_VALUES.UNASSIGNED,
+        ],
         sortField: 'priority',
         sortDirection: 'asc',
       },
@@ -393,6 +416,7 @@ type State = {
   // Kanban view mode state
   kanbanViewMode: KanbanViewMode;
   listViewStatusFilter: string | null;
+  phoneStatusByProject: Record<string, string | null>;
 
   // Mobile tab state
   mobileActiveTab: MobileTab;
@@ -491,6 +515,7 @@ type State = {
   // Kanban view mode actions
   setKanbanViewMode: (mode: KanbanViewMode) => void;
   setListViewStatusFilter: (statusId: string | null) => void;
+  setPhoneProjectStatus: (projectId: string, statusId: string | null) => void;
 
   // Mobile tab actions
   setMobileActiveTab: (tab: MobileTab) => void;
@@ -543,9 +568,10 @@ export const useUiPreferencesStore = create<State>()((set, get) => ({
   // Kanban view mode state
   kanbanViewMode: 'kanban' as KanbanViewMode,
   listViewStatusFilter: null,
+  phoneStatusByProject: {},
 
   // Mobile tab state
-  mobileActiveTab: 'chat' as MobileTab,
+  mobileActiveTab: 'workspaces' as MobileTab,
 
   // Mobile font scale
   mobileFontScale: loadMobileFontScale(),
@@ -928,6 +954,14 @@ export const useUiPreferencesStore = create<State>()((set, get) => ({
 
   setListViewStatusFilter: (statusId) =>
     set({ listViewStatusFilter: statusId }),
+
+  setPhoneProjectStatus: (projectId, statusId) =>
+    set((s) => ({
+      phoneStatusByProject: {
+        ...s.phoneStatusByProject,
+        [projectId]: statusId,
+      },
+    })),
 
   // Mobile tab actions
   setMobileActiveTab: (tab) => set({ mobileActiveTab: tab }),

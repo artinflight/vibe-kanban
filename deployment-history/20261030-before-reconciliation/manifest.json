@@ -1,0 +1,36 @@
+{
+  "schema": 1,
+  "records": [
+    {
+      "path": "STATE.md",
+      "bytes": 5249,
+      "sha256": "71e6150076ccf21b78db2de3ae6826d0b5119e9a1bbfb13f16ee227012104d18"
+    },
+    {
+      "path": "STREAM.md",
+      "bytes": 7019,
+      "sha256": "dc0e28ede51d75b32aece3cfbadacd68b46b795b8e275c427d4716af832643e9"
+    },
+    {
+      "path": "HANDOFF.md",
+      "bytes": 3186,
+      "sha256": "e31805e41b9776e3a894bd3a3a1a48afc2a2e3f30021be3a32ce6c5a47e66696"
+    },
+    {
+      "path": "VK_WORKFLOW.md",
+      "bytes": 12044,
+      "sha256": "afb06058c5dddf2bdc5d251c4b3f5bcef72fc51a88cddde5a5bf80b4c2bda89d"
+    },
+    {
+      "path": "VK_AGENT_DEPLOYMENT_RUNBOOK.md",
+      "bytes": 29520,
+      "sha256": "9b9923b3d9b33e7559a70b713c4edcd9c6fc69d053891c2e0cad827db0368138"
+    },
+    {
+      "path": "LIVE_DEPLOYMENT.json",
+      "bytes": 19469,
+      "sha256": "8d5dc48cbbeb4d630358e2114f699c68de98c7f9d08686abe695f850060b56b6"
+    }
+  ],
+  "status": "Historical records; not current deployment instructions"
+}

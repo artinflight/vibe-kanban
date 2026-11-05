@@ -2,6 +2,8 @@ interface WorkspaceActivity {
   isRunning?: boolean;
   hasPendingApproval?: boolean;
   hasUnseenActivity?: boolean;
+  dotUnreadCount?: number;
+  dotNeedsAttentionCount?: number;
   activeSubagentCount?: number;
   unresolvedSubagentCount?: number;
 }
@@ -22,6 +24,8 @@ export function paginateWorkspaceSidebar<T extends WorkspaceActivity>(
         (workspace.isRunning ||
           workspace.hasPendingApproval ||
           workspace.hasUnseenActivity ||
+          (workspace.dotUnreadCount ?? 0) > 0 ||
+          (workspace.dotNeedsAttentionCount ?? 0) > 0 ||
           (workspace.activeSubagentCount ?? 0) > 0 ||
           (workspace.unresolvedSubagentCount ?? 0) > 0))
   );

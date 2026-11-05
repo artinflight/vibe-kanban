@@ -364,6 +364,8 @@
     "noCommands": "No commands available for this agent."
   },
   "kanban": {
+    "collapseIssue": "Collapse issue {{displayId}}",
+    "expandIssue": "Expand issue {{displayId}}",
     "noVisibleStatuses": "All statuses are hidden. Use display settings or switch to another tab to view issues.",
     "noProjectFound": "No project found",
     "unassigned": "Unassigned",
@@ -391,6 +393,9 @@
     "issueDescriptionPlaceholder": "Enter task description here...",
     "createDraftWorkspaceImmediately": "Create draft workspace immediately",
     "createDraftWorkspaceDescription": "After creating the issue, open the workspace creation form pre-filled with the issue details",
+    "createdIssueSetupFailed": "Issue {{issueId}} was created, but setup could not finish. Retry finishes this issue without creating another.",
+    "unsavedAssignments": "Unsaved assignments: {{assignees}}.",
+    "retryIssueSetup": "Retry saving issue",
     "createIssue": "Create Issue",
     "newIssue": "New Issue",
     "previewCodeBlock": "[Code block]",
@@ -430,6 +435,9 @@
     "tags": "Tags",
     "sortBy": "Sort",
     "workspaceSidebar": {
+      "assignmentMine": "Mine",
+      "assignmentAll": "All",
+      "assignmentsUnavailable": "Assignment data unavailable. Use All to discover all work.",
       "sortDialogTitle": "Sort workspaces",
       "sortDialogDescription": "Choose how workspaces are ordered in the sidebar.",
       "sortByLabel": "Sort by",
@@ -439,6 +447,8 @@
       "filterDialogTitle": "Filter workspaces",
       "filterDialogDescription": "Narrow down workspaces by project and PR state.",
       "projectFilterLabel": "Project",
+      "allProjects": "All projects",
+      "projectsSelected": "Selected projects: {{count}}",
       "prFilterLabel": "PR",
       "prFilterAll": "All",
       "prFilterHasPr": "Has PR",

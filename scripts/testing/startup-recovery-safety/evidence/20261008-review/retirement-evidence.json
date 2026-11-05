@@ -1,0 +1,8 @@
+{
+  "merge_log_sha256": "f9b09783c4ec25a60ee927b748f50845b392db4a70cf69053fe2e836bcfe3e30",
+  "release_checkpoint_sha256": "49300f9d634c38f9cd967e775e2714d429fa0e01d37c2cfefb7f95e1b0b136ed",
+  "retained_sources_match_packet_hashes": true,
+  "baseline_backed_mutation_names": 228,
+  "unsupported_blanket_retirement_names": 448,
+  "claim_limit": "corroborated owner-retirement evidence, not independent sign-off or proof of 448 missing contents"
+}

@@ -1,0 +1,57 @@
+{
+  "verdict": "WITHHOLD_RECOVERY_SIGN_OFF",
+  "independent_reviewer_completed": false,
+  "parent_verification_only": true,
+  "independent_reviewer_block": {
+    "task": "independent_recovery_authentication",
+    "delegation_id": "ba88ac83-ec1a-4332-9a9f-27be046181d6",
+    "attempt": 2,
+    "native_thread_id": null,
+    "status": "blocked",
+    "reason": "Shadow recommendation exceeds inherited child qualification",
+    "recommended_model": "gpt-6-astra",
+    "recommended_effort": "high",
+    "escalation_allowed": false
+  },
+  "blockers": [
+    "Required separate reviewer was blocked by operator-controlled AutoSwitch qualification policy; parent checks are not an independent verdict.",
+    "One transcript parse failure at line 415, SHA256 17c828479a4803c0126d478ef14638189bc3f4a7f53fe86cf98d80153bd50ffd; strict overall replay returns failure despite 14 individually bound accepted calls, one rejected call and 11 matching files.",
+    "448 absent Hyrox names lack authenticated baseline contents and 08:53 audit rows; blanket later-retirement disposition is withdrawn. Local initial journal records deletion for 447 dist names and firebase-debug.log, but its hash is not authenticated by these Desktop packets.",
+    "Journal overflows, earlier 45-error journal and outside-root move history prevent universal post-backup coverage and zero-loss certification.",
+    "14,382 inventory names lack authenticated mode/type/link/directory metadata; three SQLite receipt rows lack mode evidence.",
+    "145 original Git-history rows remain unresolved: 86 vibe-kanban, 24 opNVLP, 21 hyroxready-app, 11 programming, 3 caspian-app; content reconstruction cannot clear them.",
+    "Private-dependency CI checks were skipped; previously passing public CI does not validate those paths.",
+    "Independent sign-off and Seamus human QA remain required; cleanup stays unavailable."
+  ],
+  "c31a_workspace": {
+    "path": "/home/mcp/code/worktrees/c31a-vk-git-sync-enfo/_vibe_kanban_repo",
+    "current_absence_observed": true,
+    "unavailable_since_approximately": "2026-10-08T12:40:00Z",
+    "time_provenance": "operator report",
+    "cause": "unknown",
+    "incident_loss_inferred": false,
+    "recreated_or_removed": false,
+    "pr": "https://github.com/artinflight/vibe-kanban/pull/223",
+    "remote_head": "cc203a035d24253814ac75c69b5874e2e390afcd",
+    "successful_checks": 11
+  },
+  "production": {
+    "service": "vibe-kanban-green-production-20261005.service",
+    "active": true,
+    "pid": 3027197,
+    "started": "2026-10-05T15:33:08Z",
+    "mutated": false
+  },
+  "authority": {
+    "restore": false,
+    "cleanup": false,
+    "restart": false,
+    "cutover": false,
+    "deployment": false,
+    "workspace_recreation": false,
+    "resume_original_conversation": false
+  },
+  "next_step": "Obtain a qualified separate reviewer and resolve evidence ambiguities. Only after sign-off, prepare fresh-backup/protected-fallback/writer-fencing/controller-acceptance as a separate authorized step. Cleanup requires Seamus human QA.",
+  "zero_loss_proven": false,
+  "raw_private_transcripts_published": false
+}

@@ -1,142 +1,147 @@
 # AutoSwitch updates without recurring VK restarts
 
-Implemented in development on `feat/autoswitch-reload-module`, based on staging
-`6af55a461`. Version remains 0.1.42. Recommend/Shadow remains the required live
-mode; this work does not authorize Auto activation or change existing defaults.
+## October 7 correction: a real policy boundary
 
-## What can update
+The first reload module was incomplete. VK first classified the prompt itself
+and treated that fallback guess as immutable protection. It also repeated the
+module's follow-up classification rules in its fixed validator. Consequently,
+changing module code could not fix those decisions. The earlier reload test
+proved only updates which agreed with the backend's duplicate rules; it did not
+prove the failure cases from actual work. That delivery did not meet the
+operator's instruction.
 
-A versioned release contains `worker`, `instructions.txt`, `models.json` and
-`manifest.json`. The worker is a stateless local classification program, not an
-agent or service. It handles deterministic/reference triage, semantic-result
-interpretation and soft follow-up qualification. Its code, classifier prompt and
-model/effort preferences/qualifications can be replaced independently of VK.
+Internal protocol **2** corrects this boundary. The selected worker now owns
+prompt interpretation, deterministic/reference triage, semantic eligibility,
+semantic-result interpretation and inferred historical qualification. The backend
+passes its built-in assessment as a fallback, not a floor. The worker recomputes
+fresh prompt classification before semantic assessment. Previously manual work
+without stored qualification is inferred through the same pinned module, with
+native inference disabled, rather than a separate backend keyword classifier.
 
-The stable backend still derives initial bounded repository/risk evidence. The
-worker receives that evidence, the current request, previous envelope and up to
-3,000 characters of the immediately completed reply. No repository root, broad
-conversation, credentials or environment is passed. Its narrow before/after
-protocol can request the existing semantic fallback; VK performs that native
-call using the release's classifier settings and prompt. Default remains
-GPT-5.6 Luna/low, standard service, with the existing inference restrictions,
-capacity checks, account/model/effort proof and usage accounting. The helper
-itself performs zero inference.
+VK separately reads bounded repository facts. Those facts, reported current/native
+risk, input-budget completeness, explicit manual/child floors, exclusions, observed failure, lifecycle safety
+and model/effort execution proof remain enforced by the backend. Its history guard
+checks uncertainty and native scope provenance; it does not repeat the worker's
+phrase interpretation or follow-up policy. Unknown prior qualification, observed
+failure and unresolved native continuation cannot be erased. A same-assignment
+bounded step requires completed context and a recorded surrounding assignment.
+Deterministic history release requires known validation, no unresolved
+safety-changing inspection, and cannot claim semantic evidence without native
+input. Generic resumes remain conservative in the default worker.
 
-Existing execution and controlled child/follow-up boundaries load one pinned
-release snapshot. Model policy and classifier settings use that snapshot too.
-Changing `current` takes effect at the next admission; an admitted request and
-active turn retain their settings. Native control/resume behavior remains pinned.
-Manual requests bypass the module. The default worker preserves existing V2
-classification; this release enables subsequent savings corrections without
-claiming those additional corrections are already implemented.
+This is a reviewed policy update mechanism, not permission for task instructions
+or a semantic model to rewrite safety policy. Adoption runs protected-intent
+contract probes for authentication, destructive migration and concurrency, then
+checks retention of the resulting current risks. A worker that labels every task
+cheap is rejected. These are bounded adoption checks, not another runtime
+classifier or model call. Current repository/native facts remain authoritative
+regardless of a worker's language interpretation.
 
-## Safety and failure handling
+## Reloadable contents and safe boundaries
 
-The worker runs through bubblewrap in new user/PID/network namespaces with only
-read-only system libraries and release files, private proc/dev, no host home,
-no repository mount, a read-only temporary directory and a cleared environment.
-Its address space is capped at 512 MiB, CPU time at one second, elapsed response
-at 750 ms and input/output at 64 KiB. Process-group/namespace cleanup terminates
-obsolete helper descendants. There is no retry loop or background scheduler.
+An immutable release contains `worker`, `instructions.txt`, `models.json` and
+`manifest.json`. The worker is a stateless local program, not an agent or service.
+Code, classifier prompt/model/effort and model preference/qualification policy can
+change independently of the backend. Default semantic classifier remains
+GPT-5.6 Luna/low, standard service, with existing inference restrictions, capacity
+checks, account/model/effort proof and usage attribution. The helper itself uses
+zero model inference. There is no new retry loop, scheduler or tool loop.
 
-Manifest/schema/asset hashes and a sandboxed protocol probe are checked on
-adoption. Immutable releases are prepared separately, then a single pointer is
-atomically changed. Invalid updates retain a compatible last-good release; if
-none exists, built-in safe routing remains available. Per-request worker failure
-uses built-in assessment and does not retry the worker in that admission.
-Failures produce warnings and decision evidence. File metadata changes invalidate
-cached immutable artifacts. The backend rejects erased current risks/failure
-signals, under-floor envelopes and discarded unknown/protected session history.
-Reference/diagnostic releases of historical protection still require the existing
-strict core guards; the surrounding assignment remains recorded.
+One module snapshot is pinned for each top-level or controlled child admission.
+Changing `current` affects the next execution/follow-up boundary; admitted work
+and active turns keep their settings. Manual requests bypass routing. Recommend
+shows a recommendation but preserves the actual selected model. Auto remains
+unauthorized for live use.
 
-The module cannot bypass explicit locks/floors, exclusions, inherited hard child
-floors, qualification, experimental-only restrictions, availability, escalation
-permission or native confirmation. Registry changes remain reviewed operator
-policy, not instructions supplied by a model or task. Protected-path checks,
-these hard guards, execution lifecycle and incompatible protocol changes still
-require normal backend updates. Changing only soft classification code does not.
+The helper receives at most 6,144 prompt characters, 3,000 characters of the last
+completed reply, previous envelope, policy, bounded repository observations and,
+when available, the captured native semantic result. It receives no repository
+root, broad conversation, credentials or host environment. Repository inspection
+uses the existing 768-entry/eight-file/40-ms budget, conventional UI roots and
+no source symlinks. Requests exceeding the visible prompt bound retain protection
+rather than silently hiding late requirements. Facts can identify protected component references even when
+a request contains harmless operational cautions.
 
-## Observability
+## Failure isolation and observability
 
-Top-level persisted triage/raw routing logs include release version, manifest hash,
-before/after elapsed milliseconds and fallback warnings. Controlled children carry
-the same identity in their existing classification-source telemetry. Native IDs,
-routing/execution relationships and classifier token usage stay authoritative.
-The CU `vk.routing.v1` contract and shared fixture are unchanged. Replayed policy
-selections are not native model execution or evidence of accepted-task savings.
+Bubblewrap isolates each helper with new user/PID/network namespaces, read-only
+system libraries/release files, private proc/dev, no host home or repository,
+a cleared environment and read-only temporary storage. Bounds remain 512 MiB
+address space, one second CPU, 750 ms response and 64 KiB input/output.
+Namespace/process-group termination prevents lingering helper descendants.
 
-## Prepare and adopt with the next restart
+Manifest, protocol, hashes, model settings and sandboxed contract checks run on
+adoption. Rejected updates retain a compatible last-good release. Without one,
+built-in routing is used visibly. A per-request helper failure falls back without
+retrying. Module version/hash, timings and warnings persist in triage/raw routing
+logs; controlled children carry the same classification-source identity. Native
+IDs and classifier usage remain authoritative. CU `vk.routing.v1` and its shared
+fixture are unchanged; internal module protocol 2 is separate from that wire
+contract. No public API/type/schema migration is introduced.
 
-VK::Staging owns candidate installation, restart, cutover and live acceptance.
-Development does none of those actions. The next candidate MUST include the new
-backend hook, a backend-matched trusted validator and a published initial module;
-merging the backend alone is insufficient. Candidate preparation must:
+## Required owner adoption and later updates
 
-1. Build `cargo build --release -p executors --bin vk-routing-module` with the
-   same source/toolchain as the server and the established SSD Cargo target.
-2. Run `python3 scripts/vk-autoswitch-module.py prepare --root <module-root>
-   --version <unique-version> --worker <built-worker>`. Optional `--models`,
-   `--instructions`, `--classifier-model`, `--classifier-effort` configure a
-   reviewed release. Root must be on mounted SSD, outside active worktrees.
-3. Run the tool's `publish --root <module-root> --version <unique-version>`.
-   It validates with the root's pinned trusted validator; update workers are
-   executed only inside the sandbox. Publish a previous version to roll back.
-4. Run `render --root <module-root> --output <candidate-drop-in>` and have the
-   deployment owner install it in the nominated candidate. It sets
-   `VK_CODEX_ROUTING_MODULE=<module-root>/current`. The module's registry takes
-   precedence over legacy routing-model/classifier environment overrides.
-5. Run `check --root <module-root> --unit <candidate.service>` before adoption.
-   It must reject a missing setting or invalid release. After authorized cutover,
-   use `check ... --live` to confirm the running process adopted that setting.
-   Also verify the candidate source/hash includes this hook and inspect the first
-   genuine Recommend decision for the expected release hash; environment presence
-   alone does not prove an old backend invokes the module.
+The current October 5 live backend contains the old vetoes. Publishing a new
+worker alone cannot remove those checks. **One backend-owner adoption of protocol
+2, its matching validator and initial worker is required.** Do not pass this
+package through the old protocol-1 validator or present it as live. The older
+`current-step-665d836db-20261007` package is superseded, preserved for evidence.
+Development does not install service settings, restart VK, cut over, enable Auto
+or contact a staging/deployment agent. VK::Staging owns that adoption.
 
-The tool neither installs service files nor restarts/services or changes routing
-mode. Validate updated worker code against existing request fixtures before
-publishing. Keep the stable validator matched to the adopted backend; do not
-replace it during routine worker updates. New hard-core releases may need a new
-module root/validator through normal candidate preparation.
+Prepare a separate root outside worktrees on mounted SSD, with the worker and
+validator built from the same source as the candidate server:
 
-## Focused acceptance and remaining readiness
+1. Build `cargo build --release -p executors --bin vk-routing-module` using the
+   shared SSD target and disabled incremental compilation.
+2. Run `python3 scripts/vk-autoswitch-module.py prepare --root <new-root>
+   --version <unique-version> --worker <built-worker>`. The tool reads protocol
+   from the root's pinned backend-matched validator. Optional policy/instructions
+   and classifier settings are reviewed inputs.
+3. Run `publish --root <new-root> --version <unique-version>` to atomically select
+   a verified release, then `render --root <new-root> --output <candidate-drop-in>`.
+   The owner adopts `VK_CODEX_ROUTING_MODULE=<new-root>/current` with the candidate.
+4. Run `check --root <new-root> --unit <candidate.service>` before adoption and
+   `check ... --live` after owner cutover. Confirm exact source/protocol and a
+   genuine Recommend decision's release hash; a setting alone proves neither.
 
-Run the normal routing regressions plus the zero-inference namespace acceptance:
-`VK_ROUTING_TEST_ROOT=<private-SSD-directory> cargo test -p executors
---test routing_module_reload -- --ignored --nocapture`.
-The opt-in test is ignored in generic CI because namespace/mount prerequisites
-are host-specific. It exercises a real Rust worker, different worker code and
-instructions, same-process admission/model-effort changes, pinned snapshots,
-last-good timeout/oversized/missing fallback, protected risk, manual/Shadow
-behavior, cheap/protected children, escalation and dirty-state preservation.
-Availability in this test is synthetic; it does not re-verify account execution.
+After that adoption, ordinary prompt/classification/history-policy corrections
+use `prepare` and `publish` in that same root. They do **not** require a backend
+restart. Publishing a previous verified version rolls back at the same boundary.
+Keep the validator pinned; do not replace it during ordinary policy updates.
+Changes to execution lifecycle, hard native/repository enforcement or incompatible
+protocols still require normal backend adoption.
 
-Local checks passed: 55 routing tests plus the same-process real-worker acceptance,
-all-target executor Clippy, formatting/governance and unchanged canonical CU
-contract/fixture. The initial measured before/after stages were 33/18 ms; worker
-inference usage is zero. These timings are local observations, not a production
-latency guarantee. Initial prepared package and logs are under
-`/mnt/vk-storage/vk-autoswitch-reload-design-20261005`; generic CI/integration
-results must still be recorded before release.
-Remaining live readiness: deployment-owner adoption with the module setting;
-one genuine complete V2 Recommend task including delegation where eligible;
-release/policy/model/native-turn/CU correlation and classifier overhead inspection;
-fix observed overclassification using this update path; demonstrate useful lower
-recommendations with review/validation intact. Auto needs separate authorization.
-No broad historical benchmark or additional paid synthetic workload is required.
+## Focused proof and limits
 
-## Deadline and ownership
+The opt-in local acceptance uses one running process, real sandboxed Rust worker
+code and an isolated root. It first reproduces the old negative-deployment and
+protected-history biases in a worker, then publishes the corrected worker into
+that same process. It tests actual admission/model selection, pinned in-flight
+policy, manual/Recommend behavior, exclusions, child floors/escalation, rollback,
+invalid/timeout/oversized/missing/unsafe updates and dirty-state preservation.
 
-Full useful Model AutoSwitch must be developed and running before **October 30,
-2026**, when the included allowance drops from **20x to 10x**. This is a usage
-readiness deadline, not permission to lower safety or enable Auto today.
-Development owns router corrections, packaging inputs and focused evidence.
-VK::Staging independently owns release installation, restarts/cutovers and live
-acceptance. Recommend remains required until separately authorized. Track net
-accepted-task usage including classifier/initial/recovery/children, not only
-cheaper recommendation counts.
+Run `VK_ROUTING_TEST_ROOT=<private-SSD-directory> cargo test -p executors
+--test routing_module_reload -- --ignored --nocapture`. With
+`VK_ROUTING_REPLAY_FILE=<private-captured-file>`, the same process also reuses
+completed real native assessments through the actual sandbox and core validator.
+No native execution or paid inference is generated. Availability fixtures and
+historical observation-time selection are not current executable-model evidence
+or accepted-task savings. `verify_active_case` is an offline diagnostic of the
+pinned helper/validator, not a service endpoint or alternative execution path.
 
-CU::Credit-aware overnight agents (`0aeb028e-2856-40c3-943b-aacf32ec4808`) separately
-owns bounded expiring-credit budgeting. Native apps have priority for overnight
-work while live web work also progresses. This module does not implement that
-budgeting or coordinate another agent.
+Current evidence is under
+`/mnt/vk-storage/vk-autoswitch-module-boundary-20261007`; HANDOFF records the
+completed checks, exact source/package and delivery status. Version is 0.1.42.
+
+## October 30 readiness
+
+Useful AutoSwitch must be running before **October 30, 2026**, when the included
+allowance falls from **20x to 10x**. Remaining dependencies are passing release CI,
+owner adoption once, genuine Recommend decisions proving cheaper resolved work
+without lost risk protection, and accepted-task quality/net-usage evidence.
+Subsequent policy corrections should use this proven reload path. Recommend stays
+required until separate Auto authorization. No broad benchmark or paid synthetic
+workload is needed. Count classifier, initial/recovery and children in total cost.
+CU's expiring-credit budgeting remains its separate issue; this module does not
+change credit settings or claim subscription cost from API prices.

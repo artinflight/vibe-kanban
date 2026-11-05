@@ -20,8 +20,8 @@ use crate::{DeploymentImpl, error::ApiError, middleware::load_session_middleware
 const PROMPT_JSON_BODY_LIMIT_BYTES: usize = 100 * 1024 * 1024;
 
 /// Request body for queueing a follow-up message
-#[derive(Debug, Deserialize, TS)]
-struct QueueMessageRequest {
+#[derive(Debug, serde::Serialize, Deserialize, TS)]
+pub(crate) struct QueueMessageRequest {
     pub message: String,
     pub executor_config: ExecutorConfig,
 }
@@ -32,6 +32,43 @@ async fn queue_message(
     State(deployment): State<DeploymentImpl>,
     Json(payload): Json<QueueMessageRequest>,
 ) -> Result<ResponseJson<ApiResponse<QueueStatus>>, ApiError> {
+    let pool = deployment.db().pool.clone();
+    let received = services::services::queued_message::QueuedMessageService::receive(
+        &pool,
+        session.id,
+        serde_json::json!({"kind": "steering", "payload": &payload}),
+    )
+    .await?;
+    let result = services::services::admission::run(services::services::admission::owner(
+        session.workspace_id,
+        queue_message_admitted(Extension(session), State(deployment), Json(payload)),
+    ))
+    .await;
+    if result.is_ok() {
+        services::services::queued_message::QueuedMessageService::acknowledge(&pool, received)
+            .await?;
+    }
+    result
+}
+
+pub(crate) async fn queue_message_admitted<D: Deployment>(
+    Extension(session): Extension<Session>,
+    State(deployment): State<D>,
+    Json(payload): Json<QueueMessageRequest>,
+) -> Result<ResponseJson<ApiResponse<QueueStatus>>, ApiError> {
+    services::services::provider_admission::before_start(
+        deployment.container(),
+        session.workspace_id,
+        session.id,
+    )
+    .await?;
+    services::services::original_worker::record_input(&deployment.db().pool, session.id, false)
+        .await
+        .map_err(|e| ApiError::Conflict(e.to_string()))?;
+    // Steering is an amendment even when the text resembles a native resume.
+    services::services::original_worker::ordinary_input(session.id, "active_turn_steering")
+        .await
+        .map_err(|e| ApiError::Conflict(e.to_string()))?;
     let scheduled = if let Ok(Some(controller)) = executors::capacity::controller::configured() {
         controller
             .lock()
@@ -46,7 +83,7 @@ async fn queue_message(
     if scheduled {
         // The active-turn send UI uses this route. A manual message must take
         // over from scheduled work, rather than steer inside its restricted lease.
-        let response = super::follow_up(
+        let response = super::follow_up_admitted(
             Extension(session),
             State(deployment),
             Json(super::CreateFollowUpAttempt {
@@ -71,9 +108,11 @@ async fn queue_message(
     if !ExecutionProcess::has_running_queue_consumer_for_session(&deployment.db().pool, session.id)
         .await?
     {
-        deployment
-            .queued_message_service()
-            .cancel_queued(session.id);
+        if !services::services::admission::automatic_git_sync() {
+            deployment
+                .queued_message_service()
+                .cancel_queued(session.id);
+        }
         return Err(ApiError::Conflict(
             "Cannot queue a follow-up because this session is not currently running".to_string(),
         ));
@@ -114,6 +153,12 @@ async fn queue_message(
     let queued = deployment
         .queued_message_service()
         .queue_message(session.id, data);
+    if services::services::admission::automatic_git_sync() {
+        deployment
+            .queued_message_service()
+            .persist(&deployment.db().pool, session.id)
+            .await?;
+    }
 
     deployment
         .track_if_analytics_allowed(
@@ -139,9 +184,21 @@ async fn cancel_queued_message(
     Extension(session): Extension<Session>,
     State(deployment): State<DeploymentImpl>,
 ) -> Result<ResponseJson<ApiResponse<QueueStatus>>, ApiError> {
+    services::services::admission::run(services::services::admission::owner(
+        session.workspace_id,
+        cancel_queued_message_admitted(Extension(session), State(deployment)),
+    ))
+    .await
+}
+
+async fn cancel_queued_message_admitted(
+    Extension(session): Extension<Session>,
+    State(deployment): State<DeploymentImpl>,
+) -> Result<ResponseJson<ApiResponse<QueueStatus>>, ApiError> {
     deployment
         .queued_message_service()
-        .cancel_queued(session.id);
+        .cancel_durable(&deployment.db().pool, session.id)
+        .await?;
 
     deployment
         .track_if_analytics_allowed(

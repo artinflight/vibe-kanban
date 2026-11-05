@@ -1,3 +1,4 @@
+import { requestWorkspaceRead } from '@/shared/lib/workspaceReadIntent';
 // VS Code webview integration - install keyboard/clipboard bridge
 import '@/integrations/vscode/bridge';
 
@@ -188,7 +189,10 @@ export function VSCodeWorkspacePage() {
                     <div className="w-chat max-w-full relative">
                       <button
                         type="button"
-                        onClick={() => handleScrollToBottom('auto')}
+                        onClick={() => {
+                          handleScrollToBottom('auto');
+                          requestWorkspaceRead(workspaceWithSession.id);
+                        }}
                         className="absolute bottom-2 right-4 z-10 pointer-events-auto flex items-center justify-center size-8 rounded-full bg-secondary/80 backdrop-blur-sm border border-secondary text-low hover:text-normal hover:bg-secondary shadow-md transition-all"
                         aria-label="Scroll to bottom"
                         title="Scroll to bottom"

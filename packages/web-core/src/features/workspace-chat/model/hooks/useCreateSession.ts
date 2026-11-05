@@ -41,6 +41,12 @@ export function useCreateSession() {
         workspace_id: workspaceId,
       });
 
+      if (session.workspace_id !== workspaceId) {
+        throw new Error(
+          'Created session does not match the requested workspace'
+        );
+      }
+
       const body: CreateFollowUpAttempt = {
         prompt,
         executor_config: executorConfig,

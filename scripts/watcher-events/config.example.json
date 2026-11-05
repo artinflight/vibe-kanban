@@ -1,0 +1,46 @@
+{
+  "activation_approved": false,
+  "ssd_tuning_approved": false,
+  "admission_protocol": "storage-admission-v2",
+  "workspace_id": "00000000-0000-4000-8000-000000000001",
+  "session_id": "00000000-0000-4000-8000-000000000002",
+  "notification_env": "/private/existing-notification.env",
+  "state_file": "/mnt/vk-storage/t26-disk-space-watcher/incidents.sqlite",
+  "state_volume": {
+    "path": "/mnt/vk-storage",
+    "uuid": "REPLACE_SSD_UUID",
+    "source": "/dev/example-ssd",
+    "fstype": "ext4"
+  },
+  "volumes": {
+    "os": {
+      "policy": "t26_os_available_lt_10GB_v1",
+      "path": "/",
+      "uuid": "REPLACE_OS_UUID",
+      "source": "/dev/example-os",
+      "fstype": "ext4",
+      "phone": false
+    },
+    "ssd": {
+      "policy": "t26_ssd_available_lt_25GB_v1",
+      "path": "/mnt/vk-storage",
+      "uuid": "REPLACE_SSD_UUID",
+      "source": "/dev/example-ssd",
+      "fstype": "ext4",
+      "phone": true,
+      "phone_reminder_seconds": 21600
+    }
+  },
+  "native_transport": {
+    "enabled": false,
+    "route": "existing_local_gateway_v1",
+    "executor_config_sha256": null,
+    "max_validation_age_seconds": null
+  },
+  "vibe_db": "/private/existing-vibe-db.sqlite",
+  "owner_roots": [
+    "/private/existing-disk-space-owner-worktree"
+  ],
+  "ntfy_wake": true,
+  "root_notification_state_dir": "/private/existing-resource-guard-state"
+}

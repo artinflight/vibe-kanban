@@ -156,9 +156,18 @@ impl Codex {
         let command_parts = self.build_command_builder()?.build_initial()?;
         let session_id = session_id.map(|s| s.to_string());
         let (_, session_fast) = resolve_model(self.model.as_deref());
-        let thread_start_params = self.build_thread_start_params(current_dir);
+        let mut thread_start_params = self.build_thread_start_params(current_dir);
+        let routing = env
+            .get("VK_ROUTING_DECISION")
+            .map(|value| serde_json::from_str::<crate::routing::RoutingDecision>(value))
+            .transpose()?;
+        if matches!(command, CodexSlashCommand::Goal { .. }) {
+            Self::prepare_delegation(&mut thread_start_params, routing.as_ref(), env);
+        }
+        let child_params = thread_start_params.clone();
         let plan_mode = self.plan;
         let capacity = env.capacity.clone();
+        let continuation_env = env.clone();
 
         self.spawn_app_server(
             current_dir,
@@ -187,7 +196,7 @@ impl Codex {
                             if arguments != "resume" && arguments.chars().count() > 4000 {
                                 return Err(ExecutorError::Io(std::io::Error::other("Native goal objectives are limited to 4,000 characters. Keep the full success criteria in the conversation and provide a concise objective.")));
                             }
-                            let (thread_id, model) = match session_id {
+                            let (thread_id, model, effort) = match session_id {
                                 Some(id) => {
                                     // Do not let an old active objective launch while
                                     // we are preparing an explicit replacement/resume.
@@ -208,16 +217,20 @@ impl Codex {
                                     } else {
                                         client.thread_resume(params).await?
                                     };
-                                    (response.thread.id, response.model)
+                                    (response.thread.id, response.model, response.reasoning_effort)
                                 }
                                 None if arguments == "resume" => {
                                     return Err(ExecutorError::Io(std::io::Error::other("No goal to resume")));
                                 }
                                 None => {
                                     let response = client.thread_start(thread_start_params).await?;
-                                    (response.thread.id, response.model)
+                                    (response.thread.id, response.model, response.reasoning_effort)
                                 }
                             };
+                            crate::original_worker::native_started(&continuation_env, &thread_id, &model, &serde_json::to_value(effort)?).await?;
+                            if let Some(effort) = effort { client.set_routed_effort(effort); }
+                            Self::configure_delegation(&client, routing.as_ref(), child_params,
+                                &continuation_env, thread_id.clone(), json!({"model":model,"reasoningEffort":effort})).await?;
                             client.set_resolved_model(model);
                             client.register_session(&thread_id).await?;
                             client.refresh_goal().await?;
@@ -227,7 +240,11 @@ impl Codex {
                             } else {
                                 json!({"threadId": thread_id, "objective": arguments, "status":"active"})
                             };
-                            client.goal_request("thread/goal/set", params).await?;
+                            if let Some(capacity) = &capacity {
+                                client.activate_capacity_goal(capacity, &thread_id).await?;
+                            } else {
+                                client.goal_request("thread/goal/set", params).await?;
+                            }
                             // Native goals start their own continuation; no synthetic user turn.
                         }
                     }

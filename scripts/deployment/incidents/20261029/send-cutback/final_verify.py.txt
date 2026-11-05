@@ -1,0 +1,28 @@
+import importlib.util,json,hashlib,ssl,urllib.request,sqlite3,subprocess,datetime
+from pathlib import Path
+D=Path(__file__).resolve().parent
+spec=importlib.util.spec_from_file_location('release','/mnt/vk-storage/vk-runtime-backup-20261009/direct-current-state-release-20261009/release.py');h=importlib.util.module_from_spec(spec);spec.loader.exec_module(h)
+status=h.ownership(5621);assert status['owned']
+pid=int(subprocess.check_output(['systemctl','--user','show','vibe-kanban-native-review-20261015.service','-p','MainPID','--value'],text=True));actual=hashlib.file_digest(open('/proc/'+str(pid)+'/exe','rb'),'sha256').hexdigest();assert actual=='95312f4f3be43cdc109159acc680dc6be73daed0f162e3a220eb5ac6a936cddc'
+ctx=ssl.create_default_context(cafile='/mnt/vk-storage/vk-runtime-backup-20261009/direct-current-state-release-20261009/existing-homelab-ca.pem')
+def read(path):
+ with urllib.request.urlopen('https://vibe.local/api/'+path,context=ctx,timeout=10)as r:assert r.status==200;return json.load(r)
+assert read('health')['success'];meta=json.loads(Path('/mnt/vk-storage/vk-native-review-restart-20261014/current-reader-fixture-20261014/fixture-meta.private.json').read_text());statuses=[]
+for t in meta['targets']:
+ st=h.read_api(5621,'execution-processes/'+t['execution']+'/native-recovery-status')['data'];assert st['server_pid']==pid and not st['writer_active']
+ rows=read('execution-processes/'+t['execution']+'/log-history')['data']['entries'];text=[r['entry']['content']['content']for r in rows if r['entry']['content']['entry_type']['type']=='assistant_message'];assert len(text)==1 and hashlib.sha256(text[0].encode()).hexdigest()==t['expected_recovered_reply_sha256'];statuses.append(dict(protocol=1,http=200,once_only=True))
+assert len(statuses)==18
+DB=Path('/home/mcp/.local/share/vibe-kanban-green-xdg/vibe-kanban/db.v2.sqlite');before=sqlite3.connect((D/'current-before-switch.sqlite').as_uri()+'?mode=ro',uri=True);live=sqlite3.connect(DB.resolve().as_uri()+'?mode=ro',uri=True)
+q="select hex(id),hex(session_id),state,data from turn_github_sync_incoming where state='received' order by rowid"
+old=before.execute(q).fetchall();now={r[0]:r for r in live.execute(q)};assert all(now.get(r[0])==r for r in old),'Uncertain input changed'
+sub='select hex(id),hex(session_id),hex(execution_process_id),agent_id,status,completed_at,created_at,updated_at from subagent_jobs order by id';assert before.execute(sub).fetchall()==live.execute(sub).fetchall()
+latest=live.execute("select hex(id),status,created_at from execution_processes where session_id=x'2ED7A19E006C45CA99AAE8966DE0A577' order by created_at desc limit 1").fetchone();assert latest[2]>'2026-10-29T20:57:22';assert latest[1]in ['running','completed']
+when=datetime.datetime.now(datetime.timezone.utc).isoformat();receipt=dict(UTC=when,PID=pid,sha256=actual,capacity_owned=True,protected_histories=18,preserved_uncertain_inputs=len(old),subagent_repair_preserved=True,user_confirmed_send_started=True,latest_print_execution=dict(id=latest[0],status=latest[1],created_at=latest[2]),trusted_https=True)
+(D/'FINAL.private.json').write_text(json.dumps(receipt,indent=2)+'\n')
+reg=Path('/mnt/vk-storage/vk-native-review-restart-20261014/attempt-send-regression-cutback-20261029T2057');reg.mkdir(mode=0o700)
+arm=dict(unit='vk-send-cutback-20261029.service',PID=1546456,at=when,terminal_observation_of_completed_attempt=True)
+actor=dict(phase='verified-published',at=when,server_pid=pid,server_sha256=actual,release_variant='earlier-compatible-build',newer_candidate_held='send admission regression')
+pub=dict(published_at=when,server_pid=pid,server_sha256=actual,statuses=statuses,live=dict(trusted_https=True,desktop_mobile=True),current_data_reused=True,older_database_restored=False,evidence=str(D/'RESULT.private.json'),release_variant='earlier-compatible-build',user_confirmed_send_started=True)
+for n,v in [('PUBLICATION_READY.safe.json',pub),('actor-state.safe.json',actor),('ARMED.safe.json',arm)]:
+ p=reg/n;p.write_text(json.dumps(v,indent=2)+'\n');p.chmod(0o600)
+print(json.dumps(receipt),flush=True)

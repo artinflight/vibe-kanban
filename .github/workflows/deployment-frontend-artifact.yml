@@ -1,0 +1,53 @@
+name: Deployment frontend artifact
+on:
+  pull_request:
+    branches: [staging, main]
+    paths:
+      - packages/**
+      - shared/**
+      - pnpm-lock.yaml
+      - .github/workflows/deployment-frontend-artifact.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: deployment-frontend-${{ github.ref }}
+  cancel-in-progress: true
+env:
+  NODE_VERSION: 22
+  PNPM_VERSION: 10.13.1
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: ./.github/actions/setup-node
+      - run: pnpm install --frozen-lockfile
+      - name: Build the exact source frontend
+        env:
+          NODE_OPTIONS: --max-old-space-size=8192
+        run: pnpm --filter @vibe/local-web run build
+      - name: Bind source and public asset bytes
+        run: |
+          python3 - <<'PY'
+          import hashlib, json, pathlib, subprocess
+          root = pathlib.Path('packages/local-web/dist')
+          files = sorted(p for p in root.rglob('*') if p.is_file())
+          assert files and (root / 'index.html').is_file()
+          assert (root / 'vk-artifact-viewer.html').read_bytes() == pathlib.Path('packages/public/vk-artifact-viewer.html').read_bytes()
+          receipt = dict(schema=1, source_commit=subprocess.check_output(['git','rev-parse','HEAD'], text=True).strip(),
+                         files=[dict(path=p.relative_to(root).as_posix(), bytes=p.stat().st_size,
+                                     sha256=hashlib.sha256(p.read_bytes()).hexdigest()) for p in files])
+          pathlib.Path('frontend-source.json').write_text(json.dumps(receipt, indent=2) + '\n')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: deployment-frontend
+          path: |
+            frontend-source.json
+            packages/local-web/dist
+          retention-days: 14
+          if-no-files-found: error

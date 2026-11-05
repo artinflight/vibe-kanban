@@ -1,0 +1,37 @@
+import copy,hashlib,json,os,sys,time
+from pathlib import Path
+D=Path(__file__).resolve().parent
+
+def sha(p):
+ with Path(p).open('rb')as f:return hashlib.file_digest(f,'sha256').hexdigest()
+def guard():
+ if not os.path.ismount('/mnt/vk-storage'):raise ValueError('SSD unavailable')
+ for root in ['/',str(D)]:
+  s=os.statvfs(root)
+  if s.f_bavail*s.f_frsize<2*1024**3:raise ValueError('Insufficient storage')
+ available=int(next(l.split()[1]for l in Path('/proc/meminfo').read_text().splitlines()if l.startswith('MemAvailable:')))*1024
+ if available<4*1024**3:raise ValueError('Insufficient host memory')
+
+def main():
+ guard();p=Path('/mnt/vk-storage/vk-staging-catchup-20261028/cutover-v5-20261029/MANIFEST.private.json')
+ assert sha(p)=='703488c3caa16d48336049e9be23e60967cccb95c4a48b10466b896200d0c961'
+ cfg=json.loads(p.read_text());assert sha(cfg['plan']['path'])==cfg['plan']['sha256']
+ plan=json.loads(Path(cfg['plan']['path']).read_text());sys.path.insert(0,plan['source_folder'])
+ from vk_nightly_desktop_objects import DesktopObjects
+ control=copy.deepcopy(plan['workers']['files']['desktop']);control.pop('whole_cycle_deadline_UTC',None)
+ records=[]
+ with DesktopObjects(control,guard=guard)as remote:
+  for name in ['current-before.sqlite','native-before.sqlite','AUDIT.private.json']:
+   file=D/name;expected=sha(file);restored=hashlib.sha256();segments=[]
+   class Sink:
+    def write(self,raw):restored.update(raw);return len(raw)
+   with file.open('rb')as f:
+    while block:=f.read(control['maximum_object_bytes']):segments.append(remote.client.ensure(block,readback_sink=Sink()))
+   assert expected==restored.hexdigest()
+   descriptor=dict(format='vk-stale-activity-before-v1',file=name,bytes=file.stat().st_size,sha256=expected,segments=segments)
+   descriptor_ref=remote.client.ensure((json.dumps(descriptor,sort_keys=True)+'\n').encode())
+   (D/(name+'.DESCRIPTOR.private.json')).write_text(json.dumps(descriptor,indent=2)+'\n')
+   records.append(dict(name=name,sha256=expected,bytes=file.stat().st_size,descriptor=descriptor_ref,independent_native_readback_verified=True))
+   print(json.dumps(dict(file=name,bytes=file.stat().st_size,verified=True)),flush=True)
+ (D/'BACKUP.private.json').write_text(json.dumps(dict(complete=True,UTC=time.strftime('%Y-%m-%dT%H:%M:%SZ',time.gmtime()),B_root=control['B_root'],files=records),indent=2)+'\n')
+if __name__=='__main__':main()

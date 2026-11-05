@@ -1,0 +1,73 @@
+{
+  "implementation_commit": "984f5ee79d575df0066c6a3afc2ee49fe02e4d0e",
+  "run": "https://github.com/artinflight/vibe-kanban/actions/runs/37785140694",
+  "status": "completed",
+  "conclusion": "success",
+  "python_regressions_passed": 35,
+  "cargo_tests_passed": 405,
+  "cargo_tests_skipped": 7,
+  "private_dependency_paths_exercised": false,
+  "checks": [
+    {
+      "name": "changes",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/artinflight/vibe-kanban/actions/runs/37785140694/job/113337839503"
+    },
+    {
+      "name": "ops-governance",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/artinflight/vibe-kanban/actions/runs/37785140694/job/113337839578"
+    },
+    {
+      "name": "branch-freshness",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/artinflight/vibe-kanban/actions/runs/37785140694/job/113337839610"
+    },
+    {
+      "name": "branch-policy",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/artinflight/vibe-kanban/actions/runs/37785140694/job/113337839715"
+    },
+    {
+      "name": "tauri-checks",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/artinflight/vibe-kanban/actions/runs/37785140694/job/113337962448"
+    },
+    {
+      "name": "frontend-checks",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/artinflight/vibe-kanban/actions/runs/37785140694/job/113337962455"
+    },
+    {
+      "name": "backend-clippy",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/artinflight/vibe-kanban/actions/runs/37785140694/job/113337962480"
+    },
+    {
+      "name": "backend-remote-checks",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/artinflight/vibe-kanban/actions/runs/37785140694/job/113337962594"
+    },
+    {
+      "name": "backend-schema-checks",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/artinflight/vibe-kanban/actions/runs/37785140694/job/113337962665"
+    },
+    {
+      "name": "backend-test",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/artinflight/vibe-kanban/actions/runs/37785140694/job/113337962883"
+    }
+  ],
+  "subsequent_follow_up_scope": "documentation and redacted validation/delivery receipts only; checker/test/application code unchanged"
+}

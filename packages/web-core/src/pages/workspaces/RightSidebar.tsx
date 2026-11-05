@@ -1,4 +1,6 @@
 import { memo, useMemo } from 'react';
+import { DotSidechat } from './DotSidechat';
+import { isDotSidechatEnabled } from '@/shared/lib/dotSidechat';
 import { useTranslation } from 'react-i18next';
 import { FileTreeContainer } from './FileTreeContainer';
 import { ProcessListContainer } from './ProcessListContainer';
@@ -36,12 +38,14 @@ export interface RightSidebarProps {
   rightMainPanelMode: RightMainPanelMode | null;
   selectedWorkspace: Workspace | undefined;
   repos: RepoWithTargetBranch[];
+  showDot?: boolean;
 }
 
 export const RightSidebar = memo(function RightSidebar({
   rightMainPanelMode,
   selectedWorkspace,
   repos,
+  showDot = isDotSidechatEnabled,
 }: RightSidebarProps) {
   const { t } = useTranslation(['tasks', 'common']);
   const diffs = useDiffs();
@@ -193,8 +197,20 @@ export const RightSidebar = memo(function RightSidebar({
   ]);
 
   return (
-    <div className="h-full border-l bg-secondary overflow-y-auto">
-      <div className="divide-y border-b">
+    <div
+      className={
+        showDot
+          ? 'h-full border-l bg-secondary flex flex-col overflow-hidden'
+          : 'h-full border-l bg-secondary overflow-y-auto'
+      }
+    >
+      <div
+        className={
+          showDot
+            ? 'divide-y border-b overflow-auto max-h-[40%] shrink-0'
+            : 'divide-y border-b'
+        }
+      >
         {sections
           .filter((section) => section.visible)
           .map((section) => (
@@ -215,6 +231,11 @@ export const RightSidebar = memo(function RightSidebar({
             </div>
           ))}
       </div>
+      {showDot && (
+        <div className="flex-1 min-h-0 overflow-hidden">
+          <DotSidechat workspaceId={selectedWorkspace?.id} />
+        </div>
+      )}
     </div>
   );
 });

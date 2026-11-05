@@ -1,48 +1,32 @@
-# Read Later pickup — 2026-11-05
+# Workspace status-row actions pickup — 2026-11-05
 
-VK Dev T91 is deployed at <https://vibe.local>. Latest feature `449819b1e` on
-`vk/f57c-read-later` was published 2026-11-05T10:18:22.737137+00:00; reload open tabs.
-Local commits only; no push/PR, main promotion, agent launch or backend restart.
+Feature `ee435a75c` is live at <https://vibe.local>, published
+2026-11-05T10:46:08.024061+00:00. Reload tabs. Read Later and the three-dot menu
+share the status/time line on desktop and phone; titles use full available width.
+All prior bookmark behavior, unread state, section heights and Dot-disabled build
+setting remain. No backend restart, push, PR or agent/device launch.
 
-Current behavior:
-- Attention → Read Later → Running → Completed/idle history. Read Later initially
-  folded; desktop/phone and accordion/flat layouts preserve the same grouping.
-- All ordinary workspace rows offer an accessible inline bookmark, including
-  already-read workspaces. Saving preserves read/unread state. A saved workspace
-  stays through reading/polling/reload until explicitly removed; read workspaces
-  then return to Completed. Saved items survive idle-history pagination.
-- Removal tooltip/keyboard label: "Remove from Read Later", translated in all
-  seven locales. Existing issue/project/inbox actions use the same icon/label;
-  their unread eligibility is unchanged.
-- Preferences remain browser-local, scoped by host/user/kind/ID. No cross-device
-  synchronization, backend/API/schema/generated-type change or implicit read.
-- VITE_DOT_SIDECHAT=0 is preserved. The first deployment accidentally enabled it
-  and exposed stored notices; the earlier correction restored disabled polling.
-  Never infer unchanged runtime flags from unchanged source hashes alone.
+Current evidence: `/mnt/vk-storage/vk-read-later-20261105-status-row`.
+1,324 verified inputs, one changed production file, 417 output files, 1,190 paired
+assets. 15 interactions, UI types/lint, format/ops, bounded production build,
+four candidate/public geometry/persistence cases and five scrolling layouts pass.
+Zero read/application writes/Dot polls; stable five services/backend/DB inode and
+99 migrations. Full software restore and independent Desktop B readback passed.
+See LIVE_DEPLOYMENT.json and VK_WORKSPACE_STATUS_ACTIONS_DEPLOYMENT.md.
 
-Validation:
-- Required format/ops/diff checks; UI/web-core/local-web types; focused ESLint.
-- Exact composed source: 15 Read Later, 15 conversation-read and 10 notice tests;
-  additionally 12 pagination/Dot and five preservation regressions.
-- Candidate/public browser at 1440 and 393 px, each with read/unread workspaces:
-  inline icon, save, reload, remove, no overflow/errors, zero Dot polls and zero
-  read/application writes. Five scrolling layouts pass candidate/public.
-- Bounded production tsc/Vite build; all 1,324 source inputs and 417 outputs
-  hashed, only 11 reviewed production files changed. Paired roots retain
-  1,137 assets. Full isolated software restore and independent
-  Desktop B readback verified before a 0.016386s atomic switch.
-- Five service identities, backend hash and DB inode/99 migrations unchanged.
-  No physical-device, provider-inference or full Rust/hosted PR baseline run.
+Pending: user reports desktop Read Later not reflected on mobile. The current
+store is browser-local, scoped by host/user. No synchronization exists. The
+async question asks whether to add shared sync; no answer received at this record.
+Durable preferences currently support project order/colors only; scratch has no
+Read Later payload. Do not send unknown fields (they are dropped), hijack read
+flags, or overwrite unrelated preferences. A proper shared-store implementation
+needs backend work and its deployment protocol; this frontend release adds none.
+Preserve existing local bookmarks during any future migration, and test two
+independent browser contexts plus removal without resurrecting stale bookmarks.
 
-Current evidence: `/mnt/vk-storage/vk-read-later-20261104-f57c/save-read-fixed`. See STATE.md, LIVE_DEPLOYMENT.json and
-VK_READ_LATER_DEPLOYMENT.md for exact manifests/recovery. Existing preview routes
-are preserved. The fallback retains the immediately prior inline-icon frontend;
-any fallback/publication requires fresh pointer ownership and preservation checks.
-The previously blocked Desktop B copy completed and passed independent readback
-on November 5 before publication; no backup waiver was used. Fresh source/output
-and 5,071 restored-file hashes passed again in readiness-20261105.json.
-No deployment remains pending. Optional staging integration still requires branch
-freshness and the full hosted/repository baseline; user acceptance follows reload.
+Current layout publication is complete. Source integration still requires a
+fresh branch/full staging baseline. Physical device/provider/Rust baseline was
+not exercised. Existing preview routes and previous software remain retained.
 
-Prior continuity: [pre-reconciliation record](deployment-history/20261030-before-reconciliation/HANDOFF.md)
-and [full historical archive](HANDOFF_HISTORY_20261017.md).
+Prior continuity: [full historical archive](HANDOFF_HISTORY_20261017.md) and
+[pre-reconciliation record](deployment-history/20261030-before-reconciliation/HANDOFF.md).

@@ -1,39 +1,38 @@
-# Current frontend — save read workspaces for later, 2026-11-05
+# Current frontend — workspace actions on status/time row, 2026-11-05
 
-Read Later now accepts already-read and unread workspaces at <https://vibe.local>.
-Published 2026-11-05T10:18:22.737137+00:00; reload existing tabs. Version stays 0.1.42.
-Entry assets: JS `index-B2rzzhh-.js` and CSS `index-C9CeMCZN.css`.
+Published 2026-11-05T10:46:08.024061+00:00 at <https://vibe.local>; reload tabs.
+Read Later and three-dot actions now share the status/last-updated line on desktop
+and phone, leaving the workspace title its full width. Bookmark/read-state and
+section ordering behavior are unchanged. Version remains 0.1.42.
+Entry assets: JS `index-Ux0VX78J.js`, CSS `index-DeUaYq-8.css`.
 
-The inline bookmark is available on ordinary workspace rows regardless of read
-state. A saved workspace stays in Read Later through reading, polling and reload;
-only explicit removal removes its bookmark. Removing a read workspace returns it
-to Completed/idle history; unread/running work follows its existing grouping.
-Read/unread flags are never changed by bookmarking. The removal label is now
-"Remove from Read Later" in all seven supported locales. Issue/inbox eligibility
-is otherwise unchanged; preferences remain browser-local and host/user-scoped.
+Feature `ee435a75c` changes one reviewed production input among 1,324 pinned live
+source files. The 417-file build and paired roots retain 1,190 assets. Pointer:
+`/mnt/vk-storage/vk-read-later-20261105-status-row/paired/candidate`.
+VITE_DOT_SIDECHAT=0 is preserved. No backend, service, DB, read-state or stored Dot
+acknowledgement change. All five service identities, executable hash and database
+inode/99 migrations remain unchanged.
 
-Feature `449819b1e` changes 11 reviewed production inputs among 1,324 pinned
-files from the exact prior live source; every other input matches. The 417-file
-build and paired roots retain 1,137 assets. Current pointer:
-`/mnt/vk-storage/vk-read-later-20261104-f57c/save-read-fixed/paired/candidate`.
-VITE_DOT_SIDECHAT=0 remains preserved; this does not re-enable Dot polling or
-modify stored acknowledgements. Prior flag correction history remains in
-VK_READ_LATER_DEPLOYMENT.md and LIVE_DEPLOYMENT.json.
+15 composed Read Later interactions, UI types/focused lint, required format/ops,
+production tsc/Vite and source preservation passed. Four candidate/public
+1440/393px read/unread browser cases verify both actions on the metadata line,
+full title width, persistence/removal and zero read/application writes or Dot
+polls. Five scrolling layouts passed each phase. The 121,107,862-byte
+software archive passed full isolated restore (5,177 files) and
+independent Desktop B readback before the 0.012697s switch.
+Full Rust/hosted baseline, physical-device QA and provider inference were not run.
 
-UI/web-core/local-web types, focused lint, format/ops, 15 Read Later interactions,
-15 conversation-read, 10 notice, 12 pagination/Dot and five preservation tests
-pass. Candidate and public browser checks pass four desktop/phone × read/unread
-cases: inline icons, save/reload/remove, no overflow/errors, zero read/application
-writes and no Dot polling. Five scrolling layouts pass in both phases.
-Recovery (116,678,639 bytes, 5,071 files) passed full
-isolated restore and independent Desktop B readback before activation. Services,
-backend hash, database inode and 99 migrations are unchanged. No service restart,
-DB restore, provider inference, physical-device QA or full Rust/hosted baseline.
+The operator reported a desktop bookmark missing on mobile. Confirmed cause:
+Read Later is still browser-local (`vk-read-later-v1`), scoped by host/user. It
+changes presentation only, not the shared workspace read state. The inspected
+shared preference APIs have no Read Later field. Cross-device sync is not
+implemented; the explicit sync-scope question is pending. Do not claim this
+layout deployment fixes it or silently reuse unrelated preference fields.
 
-[LIVE_DEPLOYMENT.json](LIVE_DEPLOYMENT.json) and
-[Read Later deployment](VK_READ_LATER_DEPLOYMENT.md) hold exact provenance and
-recovery. Local commits only; no push, PR or main promotion. Historical IDs below
-remain immutable.
+See LIVE_DEPLOYMENT.json and VK_WORKSPACE_STATUS_ACTIONS_DEPLOYMENT.md for exact
+provenance/recovery. Local commits only; no push/PR/main promotion. Existing
+preview routes are preserved. Earlier Read Later history remains in
+VK_READ_LATER_DEPLOYMENT.md and DELTA.md.
 
 # Previous source integration and production — 2026-11-03
 

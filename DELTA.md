@@ -2633,3 +2633,19 @@ migrations unchanged. Native-provider inference/full hosted baseline not run.
 - Full software restore and independent Desktop B readback verified. Services,
   backend/database and VITE_DOT_SIDECHAT=0 preserved. No push/PR/backend restart.
 - Exact provenance/recovery in LIVE_DEPLOYMENT.json and VK_READ_LATER_DEPLOYMENT.md.
+
+## 2026-11-05 — workspace actions on status/time row
+
+- `ee435a75c`: full-width workspace titles, bookmark and more actions on the
+  status/time line for desktop/phone; independent buttons preserve navigation.
+- Published 2026-11-05T10:46:08.024061+00:00 from exact current live source with
+  one reviewed production input; VITE_DOT_SIDECHAT=0 remains preserved.
+- 15 interactions, UI types/lint, format/ops, production build, four
+  candidate/public geometry/persistence cases and five scrolling layouts pass.
+- 121,107,862-byte software archive, 5,177 restored-file hashes and independent
+  Desktop B readback verified. Five services/backend/DB inode/99 migrations
+  unchanged; no read/application writes or Dot polls. No push/PR/backend restart.
+- Cross-device mismatch traced to existing browser-local store; no sync/API exists.
+  Sync preference question pending, backend work not implemented/deployed.
+- Exact provenance/recovery: LIVE_DEPLOYMENT.json and
+  VK_WORKSPACE_STATUS_ACTIONS_DEPLOYMENT.md.

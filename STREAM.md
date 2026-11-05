@@ -47,3 +47,13 @@ workspace unread eligibility from the action/grouping, retains saved read entrie
 beyond pagination, and labels removal accurately in all locales. Saved workspaces
 remain until explicitly removed. Published 2026-11-05T10:18:22.737137+00:00, with current inline design,
 source preservation and VITE_DOT_SIDECHAT=0 unchanged. No read-state writes.
+
+The operator requested moving Read Later and the three-dot menu onto the existing
+status/last-updated line. `ee435a75c` implements full-width titles and independent
+metadata/action controls on desktop and phone. Published 2026-11-05T10:46:08.024061+00:00;
+see VK_WORKSPACE_STATUS_ACTIONS_DEPLOYMENT.md. No read-state or Dot flag change.
+
+The operator also reported a bookmark missing on mobile. Browser-local storage
+is confirmed; cross-device sync is absent. Existing shared preferences lack a
+Read Later field. A sync-scope question is pending; no backend change/restart or
+shared-storage workaround has been made.

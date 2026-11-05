@@ -150,21 +150,47 @@ try {
       'Read Later is icon-only'
     );
     const geometry = await action.evaluate((button) => {
-      const row = button.closest('.mobile-workspace-card');
-      const main = row.querySelector('button');
-      const a = button.getBoundingClientRect(),
-        b = main.getBoundingClientRect();
+      const card = button.closest('.mobile-workspace-card');
+      const title = card.querySelector('[data-workspace-title]');
+      const status = card.querySelector('[data-workspace-status-row]');
+      const more = status.querySelector(
+        'button[aria-label="More actions"], .phone-row-more'
+      );
+      const rect = (element) => {
+        const r = element.getBoundingClientRect();
+        return {
+          top: r.top,
+          bottom: r.bottom,
+          left: r.left,
+          right: r.right,
+          width: r.width,
+        };
+      };
       return {
-        top: a.top,
-        bottom: a.bottom,
-        mainTop: b.top,
-        mainBottom: b.bottom,
+        action: rect(button),
+        title: rect(title),
+        status: rect(status),
+        more: rect(more),
+        card: rect(card),
+        nestedButtons: card.querySelectorAll('button button').length,
       };
     });
+    assert.equal(geometry.nestedButtons, 0);
     assert(
-      geometry.top < geometry.mainBottom && geometry.bottom > geometry.mainTop,
-      'Read Later must share the notification row'
+      geometry.title.width >= geometry.card.width - 1,
+      'Workspace title must use the full card width'
     );
+    for (const control of [geometry.action, geometry.more]) {
+      assert(
+        control.top >= geometry.title.bottom - 1,
+        'Workspace controls must be below the title'
+      );
+      assert(
+        control.top >= geometry.status.top - 1 &&
+          control.bottom <= geometry.status.bottom + 1,
+        'Workspace controls must share the status/time row'
+      );
+    }
     const sectionBounds = await page
       .locator('[data-workspace-section]')
       .evaluateAll((sections) =>
@@ -219,6 +245,8 @@ try {
       initiallyUnread: unread,
       iconOnly: true,
       inline: true,
+      actionsOnStatusRow: true,
+      titleUsesFullWidth: true,
       dotNotificationRequests: dotRequests.length,
       persisted: true,
       restored: true,

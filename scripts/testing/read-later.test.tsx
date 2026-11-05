@@ -133,6 +133,7 @@ for (const phone of [false, true])
         removeEventListener() {},
       })) as typeof window.matchMedia;
       let selections = 0;
+      let menus = 0;
       const source = [
         {
           id: 'done',
@@ -161,6 +162,7 @@ for (const phone of [false, true])
             totalWorkspacesCount={rows.length}
             selectedWorkspaceId={null}
             onSelectWorkspace={() => selections++}
+            onOpenWorkspaceActions={() => menus++}
             searchQuery=""
             onSearchChange={() => {}}
             onToggleWorkspaceReadLater={(id) =>
@@ -186,6 +188,14 @@ for (const phone of [false, true])
       }
       const { host, close } = await mount(<Sidebar />);
       try {
+        assert.equal(host.querySelectorAll('button button').length, 0);
+        await click(
+          host.querySelector(
+            '.mobile-workspace-card [data-workspace-status-row] button[aria-label="More actions"], .phone-row-more'
+          )
+        );
+        assert.equal(menus, 1);
+        assert.equal(selections, 0);
         assert.ok(host.querySelector('[data-workspace-section="running"]'));
         // Deferred work starts folded so it cannot push running work down.
         assert.equal(

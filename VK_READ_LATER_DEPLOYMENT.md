@@ -1,31 +1,55 @@
-<!-- save-read-pending-start -->
-# Already-read workspace candidate — not deployed
+# Already-read workspace bookmarks — 2026-11-05
 
-Status 2026-11-04T21:20:55.397887+00:00: `8aa46ba36` adds already-read workspace bookmarks;
-`449819b1e` fixes long-list phone section overlap and adds a browser bounds check.
-Saved workspaces preserve read state and remain until explicitly removed.
-The icon stays inline; removal labels are translated in all seven locales.
+Published **2026-11-05T10:18:22.737137+00:00** at <https://vibe.local>. Reload existing tabs.
+Version 0.1.42; JS `index-B2rzzhh-.js`, CSS `index-C9CeMCZN.css`.
+Feature `449819b1e024ce1e54a419d9bfe1794af1c38f76` is applied to the exact preceding inline-icon live source.
+Eleven reviewed production inputs change; all other pinned sources match.
 
-Candidate evidence: `/mnt/vk-storage/vk-read-later-20261104-f57c/save-read-fixed`. Types/lint/format/ops, 57 focused regressions,
-four desktop/phone × read/unread packaged cases, and five scrolling layouts pass.
-The bounded tsc/Vite build passed. All 1,324 source inputs and 417 outputs are
-hashed; only 11 reviewed production inputs differ from the exact live source.
-Paired roots retain 1,137 assets. VITE_DOT_SIDECHAT=0 remains preserved.
-No live acceptance for this candidate is claimed; it has not been activated.
-Full Rust/hosted CI, physical devices and real provider sends were not exercised.
+Workspace Read Later is now independent of unread activity. Already-read rows
+have the inline icon, saved workspaces remain after being read, and pagination
+retains saved read entries. Removal uses "Remove from Read Later" in all seven
+locales, then follows the workspace's existing read/running/attention grouping.
+No bookmark action changes read flags. Section containers now explicitly use
+natural height, preventing the inherited h-full rule from overlapping later
+headers on long phone lists; browser acceptance asserts section bounds. Scope does not broaden standalone issue
+or inbox eligibility. Host/user-scoped browser storage and section order remain.
+VITE_DOT_SIDECHAT=0 is explicitly retained; no Dot acknowledgement is modified.
 
-The 116,678,639-byte software recovery archive passed full isolated restore with
-5,071 files checked; SHA-256
-`d3495e68585b46d33439754601cd94a6899b8e143e5a06c68709cb395357885c`.
-Desktop B copy has not started because another owner holds the shared native
-backup lane. Step 6 of VK_AGENT_DEPLOYMENT_RUNBOOK.md requires that verified
-copy before publication. An explicit copy waiver/continuation decision is pending;
-no waiver was received. The owned idle waiter was stopped, preserving the other
-backup. Nothing will publish automatically. Current live assets/backend/data
-remain unchanged. See HANDOFF.md for safe resume and ownership checks.
-<!-- save-read-pending-end -->
+UI/web-core/local-web types, focused lint, format/ops, 15 Read Later interactions,
+15 conversation-read, 10 notice, 12 pagination/Dot and five preservation tests
+pass. Candidate/public browser tests pass all four desktop/phone × read/unread
+cases, including same-row icon, saving, persisted reload and removal. Zero read
+calls, application writes, Dot notification polls, overflow or page errors. Five
+scrolling layouts pass in each phase. Trusted health/capability/asset and runtime
+identity verification pass. Full Rust/hosted baseline, ordinary sends, real
+provider execution and physical devices were not exercised.
 
-# Inline icon correction — 2026-11-04
+Evidence: `/mnt/vk-storage/vk-read-later-20261104-f57c/save-read-fixed`.
+The November 4 backup dependency cleared on November 5. The Desktop B copy passed
+independent native readback before activation; no waiver was used. Fresh ownership,
+all source/output hashes and 5,071 restored-file hashes passed again in
+`readiness-20261105.json`. All 1,324 source inputs and 417 outputs are hashed; paired
+roots retain 1,137 assets. The 116,678,639-byte software
+archive passed full isolated restore (5,071 files) and independent
+Desktop B readback before publication. Archive SHA-256:
+`d3495e68585b46d33439754601cd94a6899b8e143e5a06c68709cb395357885c`. Atomic switch: 0.016386s.
+All five service identities, backend hash and database inode/99 migrations are
+unchanged. No restart, database restore or read-state mutation. Local commits
+only; no push/PR. Existing previews are preserved. Fallback is the prior inline
+frontend; use fresh ownership/source checks before any later switch.
+
+Receipts in this evidence root: `activation.json`, `frontend-artifact.json`,
+`source-composition.json`, `preservation-after-build.json`, `pair-receipt.json`,
+`recovery-restore-check.json`, `Desktop-B-recovery-verified.json`,
+`browser-candidate-verified/browser-results.json`, `browser-live/browser-results.json`,
+`scrolling-browser-candidate/results.json`, `scrolling-browser-live/results.json`,
+`live-before-verified.json` and `live-after-verified.json`.
+
+The records below are historical. Their unread-only workspace eligibility and
+return labels are superseded by this release; their runtime identities remain
+immutable recovery provenance.
+
+## Inline icon correction — 2026-11-04
 
 Published **2026-11-04T20:16:46.412428+00:00** at <https://vibe.local>; reload existing tabs.
 Version 0.1.42, JS `index-BT-0CtGx.js`, CSS `index-CIK7OAX6.css`.

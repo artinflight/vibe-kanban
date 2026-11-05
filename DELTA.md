@@ -2620,3 +2620,16 @@ migrations unchanged. Native-provider inference/full hosted baseline not run.
   stopped; no automatic deployment, other backup untouched.
 - Live pointer, backend, data/read-state and VITE_DOT_SIDECHAT=0 unchanged.
   No PR/push or new live-browser acceptance. Resume evidence/steps in HANDOFF.md.
+
+## 2026-11-05 — already-read workspace bookmarks
+
+- `449819b1e`: Read Later works on already-read workspaces, remains through
+  reading/polling/reload and pagination, and preserves read state. Removal labels
+  updated in all seven locales. Issue/inbox eligibility unchanged.
+- Published 2026-11-05T10:18:22.737137+00:00 on exact prior live source, 11 reviewed production inputs.
+- Types/lint/format/ops, 15+15+10 interaction, 12 pagination/Dot and five
+  preservation tests; four candidate/public read/unread × desktop/phone browser
+  cases and five scrolling layouts pass. Zero read/application writes or Dot polls.
+- Full software restore and independent Desktop B readback verified. Services,
+  backend/database and VITE_DOT_SIDECHAT=0 preserved. No push/PR/backend restart.
+- Exact provenance/recovery in LIVE_DEPLOYMENT.json and VK_READ_LATER_DEPLOYMENT.md.

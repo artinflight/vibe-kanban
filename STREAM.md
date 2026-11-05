@@ -1,17 +1,3 @@
-<!-- save-read-pending-start -->
-Current task: already-read workspace bookmarks are implemented in `8aa46ba36`,
-with the phone section-height correction in `449819b1e`. The corrected candidate
-passed four read/unread × desktop/phone browser cases, five scrolling layouts,
-types/lint/format/ops and focused regressions. Full SSD software recovery restore
-passed. Publication is pending the shared Desktop B backup lane; no activation
-has occurred. The owned idle waiter was stopped; no automatic publication or
-backup is running for this task. The explicit Desktop B waiver/continuation
-decision is pending. Live remains the preceding inline-icon release. Evidence:
-`/mnt/vk-storage/vk-read-later-20261104-f57c/save-read-fixed`.
-The first attempted candidate (`save-read`) failed phone overlap acceptance and
-was never published; retain its diagnostic evidence.
-<!-- save-read-pending-end -->
-
 # Read Later — 2026-11-04
 
 Branch `vk/f57c-read-later`, based on fork/staging `ee2efee4d`.
@@ -19,8 +5,8 @@ Issue: VK Dev T91 (`dde01894-a5fe-4f5e-81dd-8b8163acb598`).
 The operator explicitly lifted the issue-only execution hold on November 4 and
 requested implementation in this existing workspace. No additional agent launch.
 
-Scope: unread workspace/issue activity, project Dot notices and inbox notifications
-can be deferred without marking them read. Sidebar order is Attention, Read Later,
+Scope: read or unread workspaces, unread issue activity, project Dot notices and
+inbox notifications can be deferred without marking them read. Sidebar order is Attention, Read Later,
 Running, Completed (the existing idle/history collection). Read Later starts folded
 in the all-items view so deferred history does not bury running work. Desktop,
 flat, accordion and phone views share the grouping. Issue actions also work in
@@ -29,9 +15,9 @@ Kanban and list views; issue lifecycle statuses are unaffected.
 Read Later is a browser-local preference scoped by host and signed-in user, with
 separate IDs for workspaces, issues, projects and notification records. It survives
 reloads; unavailable browser storage falls back to memory. It does not synchronize
-between devices. Return to Attention removes the preference. An item whose unread
-activity is cleared no longer occupies Read Later; new inbox messages in a deferred
-thread bring the regrouped notification back to Attention.
+between devices. Remove from Read Later removes the preference. Saved workspaces
+remain until explicitly removed, even after their unread activity clears; new
+inbox messages in a deferred thread bring the regrouped notification back to Attention.
 
 The operator authorized deployment. Read Later was published on November 4 at
 15:11:24 UTC using a separate composition of the exact current live source plus
@@ -55,3 +41,9 @@ The operator also reported resurfaced cleared Dot notices. Exact bundle/browser
 comparison found accidental build-flag drift (disabled before, enabled in first
 Read Later release). The correction restores VITE_DOT_SIDECHAT=0 without modifying
 stored acknowledgement state. Future builds must preserve runtime flags too.
+
+The operator requested bookmarking already-read workspaces. `449819b1e` removes
+workspace unread eligibility from the action/grouping, retains saved read entries
+beyond pagination, and labels removal accurately in all locales. Saved workspaces
+remain until explicitly removed. Published 2026-11-05T10:18:22.737137+00:00, with current inline design,
+source preservation and VITE_DOT_SIDECHAT=0 unchanged. No read-state writes.

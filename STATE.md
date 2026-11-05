@@ -1,35 +1,38 @@
-# Current frontend — inline Read Later, 2026-11-04
+# Current frontend — save read workspaces for later, 2026-11-05
 
-Read Later is live at <https://vibe.local> with inline bookmark icons, published
-at 2026-11-04T20:16:46.412428+00:00. Reload existing tabs. Version remains 0.1.42;
-entry assets: JS `index-BT-0CtGx.js` and CSS `index-CIK7OAX6.css`.
+Read Later now accepts already-read and unread workspaces at <https://vibe.local>.
+Published 2026-11-05T10:18:22.737137+00:00; reload existing tabs. Version stays 0.1.42.
+Entry assets: JS `index-B2rzzhh-.js` and CSS `index-C9CeMCZN.css`.
 
-The active pointer resolves to `/mnt/vk-storage/vk-read-later-20261104-f57c/inline-icons/paired/candidate`.
-Feature `b1f609719` changes six reviewed UI files on the exact current live
-source; all other pinned inputs are byte-identical. All 1,324 inputs and 417
-outputs are hashed; paired roots retain 1,084 assets.
-Visibility, scrolling and unread protections remain preserved.
+The inline bookmark is available on ordinary workspace rows regardless of read
+state. A saved workspace stays in Read Later through reading, polling and reload;
+only explicit removal removes its bookmark. Removing a read workspace returns it
+to Completed/idle history; unread/running work follows its existing grouping.
+Read/unread flags are never changed by bookmarking. The removal label is now
+"Remove from Read Later" in all seven supported locales. Issue/inbox eligibility
+is otherwise unchanged; preferences remain browser-local and host/user-scoped.
 
-The first Read Later publication at 15:11 accidentally built with
-`VITE_DOT_SIDECHAT=1`, whereas the preceding visibility release compiled polling
-disabled. That exposed stored notices; no acknowledgement reset was performed.
-The correction explicitly restores `VITE_DOT_SIDECHAT=0`. A three-release browser
-comparison confirms no polling before the feature, polling in its first release,
-and no polling in this correction. Stored messages/acknowledgements are untouched.
+Feature `449819b1e` changes 11 reviewed production inputs among 1,324 pinned
+files from the exact prior live source; every other input matches. The 417-file
+build and paired roots retain 1,137 assets. Current pointer:
+`/mnt/vk-storage/vk-read-later-20261104-f57c/save-read-fixed/paired/candidate`.
+VITE_DOT_SIDECHAT=0 remains preserved; this does not re-enable Dot polling or
+modify stored acknowledgements. Prior flag correction history remains in
+VK_READ_LATER_DEPLOYMENT.md and LIVE_DEPLOYMENT.json.
 
-UI/web-core/local-web types, focused lint, required formatting/ops, 11 Read Later,
-15 conversation-read, 10 notice and five preservation regressions pass. Candidate
-and live browser checks pass desktop/phone icon-only same-row geometry, defer,
-persistence, restore, zero Dot polls, zero read/application writes and no errors.
-Five scrolling layouts pass in both phases. Recovery archive (112,244,120
-bytes, 4,966 verified files) passed full isolated restore and
-independent Desktop B readback before publication. Service identities, backend
-hash and database inode/99 migrations are unchanged; no restart or DB restore.
-No full Rust/hosted PR baseline, physical-device or provider-inference QA was run.
+UI/web-core/local-web types, focused lint, format/ops, 15 Read Later interactions,
+15 conversation-read, 10 notice, 12 pagination/Dot and five preservation tests
+pass. Candidate and public browser checks pass four desktop/phone × read/unread
+cases: inline icons, save/reload/remove, no overflow/errors, zero read/application
+writes and no Dot polling. Five scrolling layouts pass in both phases.
+Recovery (116,678,639 bytes, 5,071 files) passed full
+isolated restore and independent Desktop B readback before activation. Services,
+backend hash, database inode and 99 migrations are unchanged. No service restart,
+DB restore, provider inference, physical-device QA or full Rust/hosted baseline.
 
 [LIVE_DEPLOYMENT.json](LIVE_DEPLOYMENT.json) and
-[Read Later deployment](VK_READ_LATER_DEPLOYMENT.md) record exact evidence.
-Local commits only; no push, PR or main promotion. Historical source IDs below
+[Read Later deployment](VK_READ_LATER_DEPLOYMENT.md) hold exact provenance and
+recovery. Local commits only; no push, PR or main promotion. Historical IDs below
 remain immutable.
 
 # Previous source integration and production — 2026-11-03

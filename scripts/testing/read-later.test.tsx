@@ -47,7 +47,12 @@ async function mount(element: React.ReactNode) {
 }
 const reset = () => {
   localStorage.clear();
-  useReadLaterStore.setState({ items: {} });
+  useReadLaterStore.setState({
+    items: {},
+    pending: {},
+    migratedScopes: {},
+    syncErrors: {},
+  });
 };
 const scope = JSON.stringify(['local', 'owner']);
 
@@ -59,7 +64,12 @@ test('preference persists, restores independently and isolates host/user/kind', 
   setReadLater(scope, { kind: 'project', id: 'one' }, true);
   const saved = localStorage.getItem('vk-read-later-v1');
   assert.ok(saved);
-  useReadLaterStore.setState({ items: {} });
+  useReadLaterStore.setState({
+    items: {},
+    pending: {},
+    migratedScopes: {},
+    syncErrors: {},
+  });
   localStorage.setItem('vk-read-later-v1', saved);
   await useReadLaterStore.persist.rehydrate();
   assert.equal(Object.keys(useReadLaterStore.getState().items).length, 3);

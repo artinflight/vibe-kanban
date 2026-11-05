@@ -11,7 +11,9 @@ const require = createRequire(import.meta.url);
 const outfile = resolve(output, 'read-later-tests.cjs');
 const fixture = resolve('scripts/testing/read-later.fixture.tsx');
 await build({
-  entryPoints: ['scripts/testing/read-later.test.tsx'],
+  entryPoints: [
+    process.env.VK_TEST_SUITE ?? 'scripts/testing/read-later.test.tsx',
+  ],
   outfile,
   bundle: true,
   platform: 'node',
@@ -34,7 +36,7 @@ await build({
         builder.onResolve(
           {
             filter:
-              /^(@tanstack\/react-router|@\/shared\/(hooks\/(useNotifications|useNotificationMembers|auth\/useAuth)|providers\/HostIdProvider)|@vibe\/ui\/components\/UserAvatar)$/,
+              /^(@tanstack\/react-router|@\/shared\/(hooks\/(useNotifications|useNotificationMembers|auth\/useAuth|useReadLaterSync)|providers\/HostIdProvider)|@vibe\/ui\/components\/UserAvatar)$/,
           },
           () => ({ path: fixture })
         );

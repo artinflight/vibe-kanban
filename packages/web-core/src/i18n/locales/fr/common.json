@@ -111,6 +111,7 @@
   },
   "workspaces": {
     "attention": "Attention",
+    "readLaterSyncError": "À lire plus tard n’est pas synchronisé. Vos choix sont enregistrés dans ce navigateur et seront réessayés à la reconnexion.",
     "readLater": "Lire plus tard",
     "removeFromReadLater": "Retirer de Lire plus tard",
     "noReadLater": "Aucun élément enregistré pour plus tard",

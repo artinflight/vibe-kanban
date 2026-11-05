@@ -1,4 +1,8 @@
 import { useCallback, useMemo } from 'react';
+import {
+  readLaterSync,
+  useReadLaterSync,
+} from '@/shared/hooks/useReadLaterSync';
 import { useHostId } from '@/shared/providers/HostIdProvider';
 import { useAuth } from '@/shared/hooks/auth/useAuth';
 import {
@@ -10,7 +14,9 @@ import {
 
 export function useReadLater() {
   const hostId = useHostId();
-  const { userId } = useAuth();
+  const { userId, isLoaded } = useAuth();
+  const user = userId ?? 'local';
+  useReadLaterSync(hostId, user, isLoaded);
   const scope = JSON.stringify([hostId ?? 'local', userId ?? 'local']);
   const allItems = useReadLaterStore((state) => state.items);
   const items = useMemo(
@@ -28,8 +34,12 @@ export function useReadLater() {
     [items, scope]
   );
   const setReadLater = useCallback(
-    (item: ReadLaterItem, later: boolean) => set(scope, item, later),
-    [set, scope]
+    (item: ReadLaterItem, later: boolean) => {
+      set(scope, item, later);
+      if (isLoaded) void readLaterSync(hostId, user).client.refresh();
+    },
+    [set, scope, isLoaded, hostId, user]
   );
-  return { items, isReadLater, setReadLater };
+  const syncError = useReadLaterStore((state) => state.syncErrors[scope]);
+  return { items, isReadLater, setReadLater, syncError };
 }

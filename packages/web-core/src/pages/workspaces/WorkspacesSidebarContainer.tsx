@@ -298,7 +298,12 @@ export function WorkspacesSidebarContainer({
   const navigation = useAppNavigation();
   const projectNotifications = useDotProjectNotifications();
   const issueNotifications = useDotNotifications();
-  const { items: readLaterItems, isReadLater, setReadLater } = useReadLater();
+  const {
+    items: readLaterItems,
+    isReadLater,
+    setReadLater,
+    syncError,
+  } = useReadLater();
   const { hosts: remoteCloudHosts } = useRemoteCloudHostsAppBarModel();
   const {
     hostId: routeHostId,
@@ -972,6 +977,7 @@ export function WorkspacesSidebarContainer({
       projectDotNotices={projectNotices}
       readLaterIssues={readLaterIssueRows}
       readLaterIssueCount={laterIssues.length}
+      readLaterSyncError={!!syncError}
       onToggleProjectReadLater={(id) =>
         setReadLater({ kind: 'project', id }, !isReadLater('project', id))
       }

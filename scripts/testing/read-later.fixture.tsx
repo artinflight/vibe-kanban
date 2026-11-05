@@ -40,3 +40,7 @@ export function useNotifications() {
     unseenCount: current.filter((group) => !group.seen).length,
   };
 }
+
+// Component tests isolate synchronization; separate sync tests use two stores.
+export const useReadLaterSync = () => {};
+export const readLaterSync = () => ({ client: { refresh: async () => {} } });

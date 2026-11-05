@@ -1927,3 +1927,51 @@ export const searchApi = {
     return handleApiResponse<SearchResult[]>(response);
   },
 };
+
+export type ReadLaterRecord = {
+  item: import('@/shared/stores/useReadLaterStore').ReadLaterItem;
+  saved: boolean;
+  revision: number;
+};
+
+export const readLaterApi = {
+  list: async (
+    hostId: string | null,
+    user: string
+  ): Promise<ReadLaterRecord[]> => {
+    const response = await makeHostAwareRequest(
+      `/api/read-later/${encodeURIComponent(user)}`,
+      hostId
+    );
+    return handleApiResponse<ReadLaterRecord[]>(response);
+  },
+  import: async (
+    hostId: string | null,
+    user: string,
+    items: ReadLaterRecord['item'][]
+  ): Promise<void> => {
+    const response = await makeHostAwareRequest(
+      `/api/read-later/${encodeURIComponent(user)}/import`,
+      hostId,
+      { method: 'POST', body: JSON.stringify({ items }) }
+    );
+    await handleApiResponse<void>(response);
+  },
+  set: async (
+    hostId: string | null,
+    user: string,
+    item: ReadLaterRecord['item'],
+    saved: boolean,
+    changeId: string
+  ): Promise<void> => {
+    const response = await makeHostAwareRequest(
+      `/api/read-later/${encodeURIComponent(user)}`,
+      hostId,
+      {
+        method: 'PUT',
+        body: JSON.stringify({ item, saved, change_id: changeId }),
+      }
+    );
+    await handleApiResponse<void>(response);
+  },
+};

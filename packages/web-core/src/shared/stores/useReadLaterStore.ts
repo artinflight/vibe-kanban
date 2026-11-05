@@ -13,48 +13,107 @@ export const readLaterKey = (scope: string, kind: ReadLaterKind, id: string) =>
   JSON.stringify([scope, kind, id]);
 
 /** A presentation preference only: never writes read/seen/attention state. */
-export const useReadLaterStore = create<{
-  items: Record<string, ReadLaterItem>;
-  setReadLater: (scope: string, item: ReadLaterItem, later: boolean) => void;
-}>()(
-  persist(
-    (set) => ({
-      items: {},
-      setReadLater: (scope, item, later) =>
-        set((state) => {
-          const items = { ...state.items };
-          const key = readLaterKey(scope, item.kind, item.id);
-          if (later) items[key] = item;
-          else delete items[key];
-          return { items };
+export const createReadLaterStore = (storageName = 'vk-read-later-v1') =>
+  create<{
+    items: Record<string, ReadLaterItem>;
+    pending: Record<
+      string,
+      { item: ReadLaterItem; later: boolean; changeId: string }
+    >;
+    migratedScopes: Record<string, boolean>;
+    syncErrors: Record<string, string>;
+    applyServer: (
+      scope: string,
+      records: { item: ReadLaterItem; saved: boolean }[]
+    ) => void;
+    acknowledge: (key: string, changeId: string) => void;
+    setReadLater: (scope: string, item: ReadLaterItem, later: boolean) => void;
+  }>()(
+    persist(
+      (set) => ({
+        items: {},
+        pending: {},
+        migratedScopes: {},
+        syncErrors: {},
+        applyServer: (scope, records) =>
+          set((state) => {
+            const items = Object.fromEntries(
+              Object.entries(state.items).filter(
+                ([key, item]) => key !== readLaterKey(scope, item.kind, item.id)
+              )
+            );
+            for (const { item, saved } of records)
+              if (saved) items[readLaterKey(scope, item.kind, item.id)] = item;
+            for (const [key, { item, later }] of Object.entries(
+              state.pending
+            )) {
+              if (key === readLaterKey(scope, item.kind, item.id)) {
+                if (later) items[key] = item;
+                else delete items[key];
+              }
+            }
+            return { items };
+          }),
+        acknowledge: (key, changeId) =>
+          set((state) => {
+            if (state.pending[key]?.changeId !== changeId) return state;
+            const pending = { ...state.pending };
+            delete pending[key];
+            return { pending };
+          }),
+        setReadLater: (scope, item, later) =>
+          set((state) => {
+            const items = { ...state.items };
+            const key = readLaterKey(scope, item.kind, item.id);
+            if (later) items[key] = item;
+            else delete items[key];
+            return {
+              items,
+              pending: {
+                ...state.pending,
+                [key]: {
+                  item,
+                  later,
+                  changeId:
+                    globalThis.crypto?.randomUUID?.() ??
+                    `${Date.now()}-${Math.random()}`,
+                },
+              },
+            };
+          }),
+      }),
+      {
+        name: storageName,
+        storage: createJSONStorage(() => ({
+          getItem: (key) => {
+            try {
+              return localStorage.getItem(key);
+            } catch {
+              return null;
+            }
+          },
+          setItem: (key, value) => {
+            try {
+              localStorage.setItem(key, value);
+            } catch {
+              /* Keep the preference in memory. */
+            }
+          },
+          removeItem: (key) => {
+            try {
+              localStorage.removeItem(key);
+            } catch {
+              /* Keep the preference in memory. */
+            }
+          },
+        })),
+        partialize: ({ items, pending, migratedScopes }) => ({
+          items,
+          pending,
+          migratedScopes,
         }),
-    }),
-    {
-      name: 'vk-read-later-v1',
-      storage: createJSONStorage(() => ({
-        getItem: (key) => {
-          try {
-            return localStorage.getItem(key);
-          } catch {
-            return null;
-          }
-        },
-        setItem: (key, value) => {
-          try {
-            localStorage.setItem(key, value);
-          } catch {
-            /* Keep the preference in memory. */
-          }
-        },
-        removeItem: (key) => {
-          try {
-            localStorage.removeItem(key);
-          } catch {
-            /* Keep the preference in memory. */
-          }
-        },
-      })),
-      partialize: ({ items }) => ({ items }),
-    }
-  )
-);
+      }
+    )
+  );
+
+export const useReadLaterStore = createReadLaterStore();

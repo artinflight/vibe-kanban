@@ -111,6 +111,7 @@
   },
   "workspaces": {
     "attention": "要確認",
+    "readLaterSyncError": "後で読むが同期されていません。選択はこのブラウザーに保存され、接続時に再試行されます。",
     "readLater": "後で読む",
     "removeFromReadLater": "あとで読むから削除",
     "noReadLater": "後で読む項目はありません",

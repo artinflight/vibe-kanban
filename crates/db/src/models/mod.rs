@@ -11,6 +11,7 @@ pub mod project;
 pub mod provider_admission;
 pub mod provider_handoff;
 pub mod pull_request;
+pub mod read_later;
 pub mod repo;
 pub mod requests;
 pub mod saved_chat_message;

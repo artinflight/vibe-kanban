@@ -14,6 +14,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { usePhoneLayout } from '../lib/usePhoneLayout';
 import { cn } from '../lib/cn';
+import { ErrorAlert } from './ErrorAlert';
 import { InputField } from './InputField';
 import { WorkspaceSummary } from './WorkspaceSummary';
 import { ProjectDotNotices, type ProjectDotNotice } from './ProjectDotNotices';
@@ -65,6 +66,7 @@ export interface WorkspacesSidebarProps {
   onToggleWorkspaceReadLater?: (workspaceId: string) => void;
   readLaterIssues?: ReactNode;
   readLaterIssueCount?: number;
+  readLaterSyncError?: boolean;
   onOpenProjectChat?: (projectId: string) => void;
   workspaces: WorkspacesSidebarWorkspace[];
   /** Complete filtered collection for phone activity counts before pagination. */
@@ -208,6 +210,7 @@ export function WorkspacesSidebar({
   onToggleWorkspaceReadLater,
   readLaterIssues,
   readLaterIssueCount = 0,
+  readLaterSyncError = false,
   onOpenProjectChat,
   workspaces,
   activityWorkspaces,
@@ -306,6 +309,9 @@ export function WorkspacesSidebar({
     readLaterWorkspaces.length +
     laterProjectNotices.length +
     readLaterIssueCount;
+  const syncWarning = readLaterSyncError ? (
+    <ErrorAlert message={t('common:workspaces.readLaterSyncError')} />
+  ) : null;
   const sections = [
     {
       id: 'attention',
@@ -408,6 +414,7 @@ export function WorkspacesSidebar({
   if (phone) {
     return (
       <div className="phone-workspaces">
+        {syncWarning}
         <div className="phone-page-heading">
           <div>
             <h1>{showArchive ? 'Archive' : t('common:workspaces.title')}</h1>
@@ -521,6 +528,7 @@ export function WorkspacesSidebar({
 
   return (
     <div className="w-full h-full bg-secondary flex flex-col">
+      {syncWarning}
       {/* Header + Search */}
       <div className="flex flex-col gap-base">
         <CollapsibleSectionHeader

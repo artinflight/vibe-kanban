@@ -27,6 +27,7 @@ pub mod organizations;
 pub mod preview;
 pub mod projects;
 pub mod provider_admission;
+pub mod read_later;
 pub mod relay_auth;
 pub mod releases;
 pub mod remote;
@@ -61,6 +62,7 @@ pub fn router(deployment: DeploymentImpl) -> IntoMakeService<Router> {
         .merge(scratch::router(&deployment))
         .merge(saved_chat_messages::router())
         .merge(durable_ui_preferences::router())
+        .merge(read_later::router())
         .merge(search::router(&deployment))
         .merge(preview::api_router())
         .merge(releases::router())

@@ -111,6 +111,7 @@
   },
   "workspaces": {
     "attention": "需要关注",
+    "readLaterSyncError": "稍后阅读尚未同步。你的选择已保存在此浏览器中，连接后将重试。",
     "readLater": "稍后阅读",
     "removeFromReadLater": "从稍后阅读中移除",
     "noReadLater": "没有稍后阅读的项目",

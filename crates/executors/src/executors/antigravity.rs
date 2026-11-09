@@ -55,6 +55,9 @@ pub struct Antigravity {
     /// Exact ACP-advertised model ID. No guessed models or fallback substitutions.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub model: Option<String>,
+    /// Auto-approve tool calls via the ACP yolo session mode. Defaults to false (supervised).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub yolo: Option<bool>,
     #[serde(skip)]
     #[ts(skip)]
     #[derivative(Debug = "ignore", PartialEq = "ignore")]
@@ -65,6 +68,18 @@ pub struct Antigravity {
 }
 
 impl Antigravity {
+    fn is_auto_approve(&self) -> bool {
+        self.yolo.unwrap_or(false)
+    }
+
+    fn permission_policy(&self) -> PermissionPolicy {
+        if self.is_auto_approve() {
+            PermissionPolicy::Auto
+        } else {
+            PermissionPolicy::Supervised
+        }
+    }
+
     fn command(&self) -> Result<CommandParts, ExecutorError> {
         // A service-scoped default avoids rewriting saved profiles at deployment.
         // Explicit user profile values always win; an invalid value never falls back.
@@ -137,12 +152,13 @@ impl Antigravity {
             return Err(ExecutorError::AuthRequired(GATE.into()));
         }
         if self.unsupported_override
-            || !self
-                .approvals
-                .as_ref()
-                .is_some_and(|a| a.supports_interactive_approvals())
+            || (!self.is_auto_approve()
+                && !self
+                    .approvals
+                    .as_ref()
+                    .is_some_and(|a| a.supports_interactive_approvals()))
         {
-            return Err(ExecutorError::AuthRequired("Antigravity requires interactive supervised approvals; mode and reasoning overrides are unsupported".into()));
+            return Err(ExecutorError::AuthRequired("Antigravity requires interactive supervised approvals unless automatic approval mode is explicitly selected; plan, agent and reasoning overrides are unsupported".into()));
         }
         Ok(())
     }
@@ -155,8 +171,9 @@ impl Antigravity {
         env: &ExecutionEnv,
     ) -> Result<SpawnedChild, ExecutorError> {
         self.check_activation()?;
-        let mut harness =
-            AcpAgentHarness::with_session_namespace("antigravity-acp").with_personal_auth();
+        let mut harness = AcpAgentHarness::with_session_namespace("antigravity-acp")
+            .with_personal_auth()
+            .with_auto_approve(self.is_auto_approve());
         if let Some(model) = self.selected_model() {
             harness = harness.with_model(model);
         }
@@ -179,12 +196,20 @@ impl StandardCodingAgentExecutor for Antigravity {
         if let Some(model) = &config.model_id {
             self.model = Some(model.clone());
         }
-        self.unsupported_override = config
-            .permission_policy
-            .as_ref()
-            .is_some_and(|p| *p != PermissionPolicy::Supervised)
-            || config.agent_id.is_some()
-            || config.reasoning_id.is_some();
+        let unsupported_policy = match config.permission_policy {
+            Some(PermissionPolicy::Supervised) => {
+                self.yolo = Some(false);
+                false
+            }
+            Some(PermissionPolicy::Auto) => {
+                self.yolo = Some(true);
+                false
+            }
+            Some(PermissionPolicy::Plan) => true,
+            None => false,
+        };
+        self.unsupported_override =
+            unsupported_policy || config.agent_id.is_some() || config.reasoning_id.is_some();
     }
     fn use_approvals(&mut self, approvals: Arc<dyn ExecutorApprovalService>) {
         self.approvals = Some(approvals);
@@ -234,7 +259,7 @@ impl StandardCodingAgentExecutor for Antigravity {
             model_id: self.selected_model(),
             agent_id: None,
             reasoning_id: None,
-            permission_policy: Some(PermissionPolicy::Supervised),
+            permission_policy: Some(self.permission_policy()),
             routing: None,
         }
     }
@@ -248,7 +273,7 @@ impl StandardCodingAgentExecutor for Antigravity {
             model_selector: ModelSelectorConfig {
                 models,
                 default_model,
-                permissions: vec![PermissionPolicy::Supervised],
+                permissions: vec![PermissionPolicy::Supervised, PermissionPolicy::Auto],
                 ..Default::default()
             },
             ..Default::default()
@@ -305,6 +330,7 @@ mod tests {
             serde_json::from_value(doc["options"].clone()).unwrap();
         options.model_selector
     }
+
     #[tokio::test]
     async fn antigravity_unconfigured_or_without_approval_owner_cannot_launch() {
         let agent = Antigravity::default();
@@ -414,5 +440,101 @@ mod tests {
             custom_agent.get_preset_options().model_id.as_deref(),
             Some("gemini-4-argon-medium")
         );
+    }
+
+    #[tokio::test]
+    async fn antigravity_approval_mode_defaults_to_supervised_and_supports_explicit_auto_override()
+    {
+        let mut agent = Antigravity::default();
+        assert_eq!(
+            agent.get_preset_options().permission_policy,
+            Some(PermissionPolicy::Supervised)
+        );
+        let selector = discovered_model_selector(&agent).await;
+        assert_eq!(
+            selector.permissions,
+            vec![PermissionPolicy::Supervised, PermissionPolicy::Auto]
+        );
+        assert!(
+            agent.check_activation().is_err(),
+            "supervised mode must require interactive approvals"
+        );
+
+        agent.apply_overrides(&ExecutorConfig {
+            executor: BaseCodingAgent::Antigravity,
+            variant: None,
+            model_id: None,
+            agent_id: None,
+            reasoning_id: None,
+            permission_policy: Some(PermissionPolicy::Auto),
+            routing: None,
+        });
+        assert_eq!(
+            agent.get_preset_options().permission_policy,
+            Some(PermissionPolicy::Auto)
+        );
+        assert!(
+            agent.check_activation().is_ok(),
+            "explicit automatic approval mode should not require interactive approvals"
+        );
+
+        agent.apply_overrides(&ExecutorConfig {
+            executor: BaseCodingAgent::Antigravity,
+            variant: None,
+            model_id: None,
+            agent_id: None,
+            reasoning_id: None,
+            permission_policy: Some(PermissionPolicy::Supervised),
+            routing: None,
+        });
+        assert_eq!(
+            agent.get_preset_options().permission_policy,
+            Some(PermissionPolicy::Supervised)
+        );
+        assert!(
+            agent.check_activation().is_err(),
+            "switching back to supervised mode must re-enforce interactive approvals"
+        );
+
+        let mut plan_agent = Antigravity {
+            yolo: Some(true),
+            ..Default::default()
+        };
+        assert_eq!(
+            plan_agent.get_preset_options().permission_policy,
+            Some(PermissionPolicy::Auto)
+        );
+        plan_agent.apply_overrides(&ExecutorConfig {
+            executor: BaseCodingAgent::Antigravity,
+            variant: None,
+            model_id: None,
+            agent_id: None,
+            reasoning_id: None,
+            permission_policy: Some(PermissionPolicy::Plan),
+            routing: None,
+        });
+        assert!(
+            plan_agent.check_activation().is_err(),
+            "plan permission policy remains unsupported"
+        );
+
+        let decl = format!("export {}", Antigravity::decl());
+        assert!(
+            decl.contains("yolo?: boolean | null"),
+            "TypeScript declaration must expose optional yolo field: {decl}"
+        );
+        let mut settings = schemars::generate::SchemaSettings::draft07();
+        settings.inline_subschemas = true;
+        let schema = settings
+            .into_generator()
+            .into_root_schema_for::<Antigravity>();
+        let mut schema_value = serde_json::to_value(&schema).unwrap();
+        if let Some(obj) = schema_value.as_object_mut() {
+            obj.remove("title");
+        }
+        let expected_schema: serde_json::Value =
+            serde_json::from_str(include_str!("../../../../shared/schemas/antigravity.json"))
+                .unwrap();
+        assert_eq!(schema_value, expected_schema);
     }
 }

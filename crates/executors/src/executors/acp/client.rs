@@ -17,6 +17,7 @@ use crate::{
 pub struct AcpClient {
     event_tx: mpsc::UnboundedSender<AcpEvent>,
     approvals: Option<Arc<dyn ExecutorApprovalService>>,
+    prefer_allow_once: bool,
     feedback_queue: Arc<Mutex<Vec<String>>>,
     cancel: CancellationToken,
 }
@@ -31,9 +32,17 @@ impl AcpClient {
         Self {
             event_tx,
             approvals,
+            prefer_allow_once: false,
             feedback_queue: Arc::new(Mutex::new(Vec::new())),
             cancel,
         }
+    }
+
+    /// Prefer `AllowOnce` when auto-approving without an interactive approval service,
+    /// avoiding sticky sidecar `allow_always` persistence if a session later resumes supervised.
+    pub fn with_prefer_allow_once(mut self) -> Self {
+        self.prefer_allow_once = true;
+        self
     }
 
     pub fn record_user_prompt_event(&self, prompt: &str) {
@@ -72,17 +81,30 @@ impl acp::Client for AcpClient {
         self.send_event(AcpEvent::RequestPermission(args.clone()));
 
         if self.approvals.is_none() {
-            // Auto-approve with best available option when no approval service is configured
-            let chosen_option = args
-                .options
-                .iter()
-                .find(|o| matches!(o.kind, acp::PermissionOptionKind::AllowAlways))
-                .or_else(|| {
-                    args.options
-                        .iter()
-                        .find(|o| matches!(o.kind, acp::PermissionOptionKind::AllowOnce))
-                })
-                .or_else(|| args.options.first());
+            // Auto-approve with best available option when no approval service is configured.
+            // Personal-auth auto-approval prefers AllowOnce so session sidecars never
+            // persist sticky allow_always rules across a later return to Supervised mode.
+            let chosen_option = if self.prefer_allow_once {
+                args.options
+                    .iter()
+                    .find(|o| matches!(o.kind, acp::PermissionOptionKind::AllowOnce))
+                    .or_else(|| {
+                        args.options
+                            .iter()
+                            .find(|o| matches!(o.kind, acp::PermissionOptionKind::AllowAlways))
+                    })
+                    .or_else(|| args.options.first())
+            } else {
+                args.options
+                    .iter()
+                    .find(|o| matches!(o.kind, acp::PermissionOptionKind::AllowAlways))
+                    .or_else(|| {
+                        args.options
+                            .iter()
+                            .find(|o| matches!(o.kind, acp::PermissionOptionKind::AllowOnce))
+                    })
+                    .or_else(|| args.options.first())
+            };
 
             let outcome = if let Some(opt) = chosen_option {
                 debug!("Auto-approving permission with option: {}", opt.option_id);

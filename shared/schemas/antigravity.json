@@ -27,6 +27,13 @@
         "string",
         "null"
       ]
+    },
+    "yolo": {
+      "description": "Auto-approve tool calls via the ACP yolo session mode. Defaults to false (supervised).",
+      "type": [
+        "boolean",
+        "null"
+      ]
     }
   }
 }

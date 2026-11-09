@@ -248,6 +248,22 @@ pub(crate) async fn follow_up_admitted<D: Deployment>(
     }
 
     let latest_session_info = CodingAgentTurn::find_latest_session_info(pool, session.id).await?;
+    let latest_session_config =
+        ExecutionProcess::latest_executor_config_for_session(pool, session.id)
+            .await?
+            .map(|(config, _)| config);
+    let mut executor_config = payload.executor_config.clone();
+    if executor_config.executor == executors::executors::BaseCodingAgent::Antigravity
+        && executor_config.permission_policy.is_none()
+        && let Some(prev_config) = &latest_session_config
+    {
+        executor_config.permission_policy = Some(
+            prev_config
+                .permission_policy
+                .clone()
+                .unwrap_or(executors::model_selector::PermissionPolicy::Supervised),
+        );
+    }
     let interrupted_context =
         CodingAgentTurn::find_interrupted_context_since_latest_success(pool, session.id).await?;
 
@@ -255,8 +271,7 @@ pub(crate) async fn follow_up_admitted<D: Deployment>(
     // recovery prose before /goal resume turns it into an ordinary user turn.
     // The native thread already retains its objective/history; ordinary prompts
     // still receive all recovered instructions below.
-    let native_command = payload.executor_config.executor
-        == executors::executors::BaseCodingAgent::Codex
+    let native_command = executor_config.executor == executors::executors::BaseCodingAgent::Codex
         && executors::executors::codex::slash_commands::CodexSlashCommand::parse(&payload.prompt)
             .is_some();
     let prompt = if native_command {
@@ -284,14 +299,14 @@ pub(crate) async fn follow_up_admitted<D: Deployment>(
             prompt: prompt.clone(),
             session_id: info.session_id,
             reset_to_message_id: if is_reset { info.message_id } else { None },
-            executor_config: payload.executor_config.clone(),
+            executor_config: executor_config.clone(),
             working_dir: working_dir.clone(),
         })
     } else {
         ExecutorActionType::CodingAgentInitialRequest(
             executors::actions::coding_agent_initial::CodingAgentInitialRequest {
                 prompt: prompt.clone(),
-                executor_config: payload.executor_config.clone(),
+                executor_config: executor_config.clone(),
                 working_dir,
             },
         )
@@ -320,7 +335,7 @@ pub(crate) async fn follow_up_admitted<D: Deployment>(
                 session.id,
                 DraftFollowUpData {
                     message: prompt,
-                    executor_config: payload.executor_config.clone(),
+                    executor_config: executor_config.clone(),
                 },
             );
             if services::services::admission::automatic_git_sync() {

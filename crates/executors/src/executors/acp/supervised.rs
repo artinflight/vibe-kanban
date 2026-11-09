@@ -133,6 +133,7 @@ pub(super) async fn spawn(
     namespace: String,
     model: Option<String>,
     personal_auth: bool,
+    auto_approve: bool,
     cwd: &Path,
     prompt: String,
     existing: Option<&str>,
@@ -140,11 +141,19 @@ pub(super) async fn spawn(
     env: &ExecutionEnv,
     approvals: Option<Arc<dyn ExecutorApprovalService>>,
 ) -> Result<SpawnedChild, ExecutorError> {
-    let approvals = approvals
-        .filter(|a| a.supports_interactive_approvals())
-        .ok_or_else(|| {
-            ExecutorError::AuthRequired("ACP requires interactive supervised approvals".into())
-        })?;
+    let approvals = if auto_approve {
+        None
+    } else {
+        Some(
+            approvals
+                .filter(|a| a.supports_interactive_approvals())
+                .ok_or_else(|| {
+                    ExecutorError::AuthRequired(
+                        "ACP requires interactive supervised approvals".into(),
+                    )
+                })?,
+        )
+    };
     let (executable, args) = parts.into_resolved().await?;
     let executable = executable.canonicalize()?;
     let cwd = cwd.canonicalize()?;
@@ -192,7 +201,8 @@ pub(super) async fn spawn(
             return;
         };
         rt.block_on(tokio::task::LocalSet::new().run_until(async move {
-            let client = AcpClient::new(events.clone(), Some(approvals), task_cancel.clone());
+            let client = AcpClient::new(events.clone(), approvals, task_cancel.clone())
+                .with_prefer_allow_once();
             let (conn, io) = proto::ClientSideConnection::new(client, stdin.compat_write(), stdout.compat(), |f| { tokio::task::spawn_local(f); });
             let conn = Rc::new(conn);
             let mut auth_stream = personal_auth.then(|| conn.subscribe());
@@ -228,14 +238,20 @@ pub(super) async fn spawn(
                     };
                     if session.is_empty() { return Err("ACP returned an empty session identity".into()); }
                     *active_session.borrow_mut() = Some(session.clone());
-                    // Antigravity's default mode is the advertised interactive permission flow.
-                    // Reassert it on load too: saved auto_edit/yolo must never be inherited.
+                    // Antigravity's default mode is the advertised interactive permission flow;
+                    // explicit auto-approve selects yolo. Always assert the selected mode on both
+                    // session/new and session/load so a saved sidecar mode is never silently inherited.
                     if personal_auth {
-                        if !modes.as_ref().is_some_and(|m| m.available_modes.iter().any(|mode| mode.id.0.as_ref() == "default")) {
-                            return Err("ACP supervised default mode was not advertised; no prompt was sent".into());
+                        let (requested_mode, mode_label) = if auto_approve {
+                            ("yolo", "automatic-approval yolo")
+                        } else {
+                            ("default", "supervised default")
+                        };
+                        if !modes.as_ref().is_some_and(|m| m.available_modes.iter().any(|mode| mode.id.0.as_ref() == requested_mode)) {
+                            return Err(format!("ACP {mode_label} mode was not advertised; no prompt was sent"));
                         }
-                        conn.set_session_mode(proto::SetSessionModeRequest::new(session.clone(), "default")).await
-                            .map_err(|e| format!("ACP supervised mode selection failed (code {}); no prompt was sent", e.code))?;
+                        conn.set_session_mode(proto::SetSessionModeRequest::new(session.clone(), requested_mode)).await
+                            .map_err(|e| format!("ACP {mode_label} mode selection failed (code {}); no prompt was sent", e.code))?;
                     }
                     if let Some(model) = model {
                         if !models.as_ref().is_some_and(|m| m.available_models.iter().any(|item| item.model_id.0.as_ref() == model)) {

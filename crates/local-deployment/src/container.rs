@@ -2082,12 +2082,16 @@ impl LocalContainerService {
     ) -> Result<ExecutionProcess, ContainerError> {
         let executor_profile_id = queued_data.executor_config.profile_id();
 
-        // Validate executor matches session if session has prior executions
-        let expected_executor: Option<String> =
-            ExecutionProcess::latest_executor_profile_for_session(&self.db.pool, session.id)
+        let latest_session_config =
+            ExecutionProcess::latest_executor_config_for_session(&self.db.pool, session.id)
                 .await?
-                .map(|profile| profile.executor.to_string())
-                .or_else(|| session.executor.clone());
+                .map(|(config, _)| config);
+
+        // Validate executor matches session if session has prior executions
+        let expected_executor: Option<String> = latest_session_config
+            .as_ref()
+            .map(|config| config.executor.to_string())
+            .or_else(|| session.executor.clone());
 
         if let Some(expected) = expected_executor {
             let actual = executor_profile_id.executor.to_string();
@@ -2103,6 +2107,19 @@ impl LocalContainerService {
                 &executor_profile_id.executor.to_string(),
             )
             .await?;
+        }
+
+        let mut executor_config = queued_data.executor_config.clone();
+        if executor_config.executor == BaseCodingAgent::Antigravity
+            && executor_config.permission_policy.is_none()
+            && let Some(prev_config) = &latest_session_config
+        {
+            executor_config.permission_policy = Some(
+                prev_config
+                    .permission_policy
+                    .clone()
+                    .unwrap_or(executors::model_selector::PermissionPolicy::Supervised),
+            );
         }
 
         // Get latest agent turn for session continuity (from coding agent turns)
@@ -2124,13 +2141,13 @@ impl LocalContainerService {
                 prompt: queued_data.message.clone(),
                 session_id: info.session_id,
                 reset_to_message_id: None,
-                executor_config: queued_data.executor_config.clone(),
+                executor_config,
                 working_dir: working_dir.clone(),
             })
         } else {
             ExecutorActionType::CodingAgentInitialRequest(CodingAgentInitialRequest {
                 prompt: queued_data.message.clone(),
-                executor_config: queued_data.executor_config.clone(),
+                executor_config,
                 working_dir,
             })
         };

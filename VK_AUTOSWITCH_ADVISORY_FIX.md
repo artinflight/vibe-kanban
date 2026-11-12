@@ -104,3 +104,65 @@ No such workaround, module publication, profile change, service action or pilot
 execution was performed. The source fix remains prepared for the next separately
 authorized backend release; no-restart deployment is blocked by that installed
 code boundary, not by a missing publication approval.
+
+## Enabled operational workaround — 2026-11-12
+
+The compiled `vk_delegate` correction is still not live. A bounded alternative for
+independently authorized read-only work is now available without replacing Vibe:
+ordinary dedicated Vibe workers started through the existing atomic
+`create_issue_and_start_workspace` workflow, in Recommend mode, using the new
+`RECOMMEND_READ_ONLY` profile. This is a different existing orchestration path,
+not an automatic redirect of failed child requests or a replacement scheduler.
+
+The profile was added through the supported `PUT /api/profiles` route and verified
+both through API readback and its persisted file. Every previously existing
+profile is unchanged. The new profile copies the existing Sol 6.1/high defaults
+and inherited instructions, with native `sandbox=read-only` and
+`ask_for_approval=never`: it does not grant write access or permit escalation out
+of that sandbox. Existing selected model/effort, routing policies, queues, hot
+module and active executions were not changed. The backend stayed healthy with
+its original process/start identity. No worker, pilot, or provider probe ran.
+
+Use the worker's exact already-authorized model and effort explicitly; the new
+profile is not permission to change them. Use one stable workflow request UUID
+for each distinct authorized assignment. Retain it and reconcile native receipts
+on uncertainty; never substitute legacy follow-up or a fresh ID after a refusal.
+The existing workflow atomically binds issue, workspace, repository, owner and
+session, and claims launch once. Existing executor permission/capacity/admission
+checks remain on that path. Root/dot must retain the task's explicit owner limits,
+approved repository scope and read-only assignment; this route is not a blanket
+fallback for tasks with incompatible restrictions, shared writes, or uncertain
+prior execution. Do not switch providers, activate Auto, or select Astra.
+
+The normal top-level routing path records its stronger recommendation/reason but
+does not mutate the requested execution pair in Shadow, including when a
+recommendation is unavailable. No task qualification catalog was weakened. Keep
+these workers as bounded leaf assignments, with compact relevant context; native
+`vk_delegate` still uses the old admission code until the compiled fix is adopted.
+
+The original pilot's separate safe-continuation readback currently reports
+`checkpoint_required` / `native_terminal_capture_unverified`, despite no running
+execution, queued input or conflicting jobs. This hold was not cleared and the
+new profile is not permission to evade it by recreating an existing task. The
+responsible owner must reconcile its terminal/capture evidence before continuing
+that original session. Independently authorized new workers use fresh native
+sessions and do not copy or replace that session's history.
+
+Validation: nine lightweight offline tests passed in
+`python3 -B scripts/testing/test_advisory_worker_profile.py`. They cover additive
+profile preservation, idempotent preparation, collision/default-change refusal,
+readback mismatch, the existing connector's exact Recommend transformation,
+unknown policy refusal and the actual launch-claim SQL's duplicate/uncertain,
+owner, repository, chat, existing-execution and link-revision guards. SQL uses
+small synthetic in-memory tables; it is not a full backend/native acceptance run.
+The tested claim SQL, issue-workflow server and top-level routing source match
+the installed backend commit. The earlier 13 delegation regressions remain the
+source-fix evidence. No paid inference was used to validate this workaround.
+
+Rollback: through the supported profiles settings route, remove only the added
+`RECOMMEND_READ_ONLY` entry after checking that its settings still match this
+addition and that it is not in use. Preserve all current other entries; do not
+restore an old whole-profile snapshot over later changes. No backend restart is
+required for that profile removal. Private deployment/readback receipts remain
+outside tracked source. Full live worker acceptance remains unperformed because
+the owner explicitly prohibited starting the pilot tests in this task.

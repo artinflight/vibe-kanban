@@ -2,8 +2,10 @@
 
 Current isolated branch: `fix/autoswitch-recommend-advisory`. Review
 [the focused correction](VK_AUTOSWITCH_ADVISORY_FIX.md) for cause, exact scope,
-13 offline tests, preserved guards, context hygiene and pending native validation.
-Source only; no deployment, restart or pilot execution. Provider work is separate.
+13 delegation regressions, preserved guards and pending native validation.
+The compiled fix remains source only. The isolated `RECOMMEND_READ_ONLY` profile
+is live through supported settings reload, with nine additional offline checks.
+No backend restart or pilot execution. Provider work is separate.
 
 ## Inherited stream notes
 

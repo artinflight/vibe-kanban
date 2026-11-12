@@ -2,7 +2,7 @@
 
 Current isolated branch: `fix/autoswitch-recommend-advisory`; draft [PR #296](https://github.com/artinflight/vibe-kanban/pull/296) targets staging. Review
 [the focused correction](VK_AUTOSWITCH_ADVISORY_FIX.md) for cause, exact scope,
-16 delegation regressions, preserved guards and pending native validation.
+19 delegation regressions, preserved guards and pending native validation.
 The owner requires all workers, including writable ones. The source fix covers
 both; the earlier read-only profile is an insufficient workaround, not adoption.
 Ten additional Python checks pass. The installed embedded-child veto remains;

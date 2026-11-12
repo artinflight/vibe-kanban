@@ -66,10 +66,10 @@ observation of ordinary work, without generating a paid benchmark.
 ## Validation and review
 
 - `python3 -B scripts/testing/check-recommend-delegation.py --output <mounted-SSD-check-directory>`:
-  16 tests passed, including the exact production launch-selection branch with
+  19 tests passed, including the exact production launch-selection branch with
   fixture catalog/clock inputs. The original immutable veto returns false for
   the same stronger-Astra/inherited-Sol case, and the corrected branch retains
-  Sol/xhigh and the stronger advice. Ten tests also belong to the normal Rust
+  Sol/xhigh and the stronger advice. Twelve tests also belong to the normal Rust
   executor suite. No dependency installation or Cargo compilation was required.
 - The harness separately compares three unchanged launch/fence code regions and
   verifies the production call site. Those are static preservation checks, not
@@ -219,3 +219,22 @@ fail-closed probes remain. Targeted actual Rust policy and synthetic pipe fixtur
 run separately from tests that require an isolated backend; this does not waive
 the latter's sandbox prerequisite. Read the exact-head CI receipts for results;
 dispatching CI or opening the PR does not establish acceptance or deploy the fix.
+
+## Unavailable advisory choice — 2026-11-12
+
+A second advisory-only veto was found before transport admission: `choose_assessed`
+returned an error when the stronger candidate was excluded or unavailable, even
+if the selected worker itself was permitted. Shadow now retains the assessment,
+reasoning and an explicit `recommendation_error` with null advisory model/effort.
+It then runs the same independent selected-worker checks. It does not fabricate a
+recommendation or execution setting. Auto still requires a qualified recommendation
+and fails if either model/effort is absent. Existing catalog/availability-load,
+owner restrictions, observed-failure and launch protections remain fail-closed.
+
+Existing journal records with model/effort strings remain compatible with the
+optional fields. A normal Rust serialization regression covers their roundtrip
+and the new explicit unknown record; execution of that serde test is pending
+compiled CI. Nineteen source-extracted tests and ten Python checks passed locally,
+including denied-Astra/available-Sol writable launch, Auto refusal without a
+choice, advisory reason visibility, and later recommendation recovery. No native
+or live launch is inferred from those fixtures.

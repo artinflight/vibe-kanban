@@ -270,3 +270,63 @@ fn shadow_brief_keeps_only_explicit_floor_while_recommendation_stays_separate() 
         CapabilityFloor::Frontier
     );
 }
+
+#[test]
+fn absent_advice_is_visible_without_becoming_execution_authority() {
+    let (mut policy, models, availability) = fixture();
+    policy.denied_models.push("gpt-6-astra".into());
+    let recommendation = choose_assessed(
+        &policy,
+        CapabilityFloor::Frontier,
+        "protected",
+        &models,
+        &availability,
+        100,
+    );
+    assert!(recommendation.is_err());
+    let choice = ChildChoice {
+        envelope: "protected".into(),
+        floor: CapabilityFloor::Frontier,
+        model: None,
+        effort: None,
+        recommendation_error: None,
+        source: "deterministic".into(),
+        semantic: None,
+        escalated: false,
+    };
+    let visible =
+        with_recommendation(choice.clone(), RoutingMode::Shadow, recommendation.clone()).unwrap();
+    assert!(visible.model.is_none() && visible.effort.is_none());
+    assert_eq!(visible.recommendation_error, recommendation.clone().err());
+    assert_eq!(visible.floor, CapabilityFloor::Frontier);
+    assert_eq!(visible.source, "deterministic");
+    assert!(advisory_pair("gpt-6.1-sol", "xhigh", &policy, &models, &availability, 100).is_ok());
+    assert!(
+        with_recommendation(choice.clone(), RoutingMode::Auto, recommendation.clone()).is_err()
+    );
+    assert!(with_recommendation(choice, RoutingMode::Manual, recommendation).is_err());
+}
+
+#[test]
+fn a_current_recommendation_clears_only_the_previous_advisory_error() {
+    let choice = ChildChoice {
+        envelope: "normal".into(),
+        floor: CapabilityFloor::Workhorse,
+        model: None,
+        effort: None,
+        recommendation_error: Some("previous unavailable".into()),
+        source: "semantic".into(),
+        semantic: None,
+        escalated: false,
+    };
+    let selected = with_recommendation(
+        choice,
+        RoutingMode::Shadow,
+        Ok(("gpt-6.1-sol".into(), "high".into())),
+    )
+    .unwrap();
+    assert_eq!(selected.model.as_deref(), Some("gpt-6.1-sol"));
+    assert_eq!(selected.effort.as_deref(), Some("high"));
+    assert!(selected.recommendation_error.is_none());
+    assert_eq!(selected.source, "semantic");
+}

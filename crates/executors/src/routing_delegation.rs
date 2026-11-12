@@ -115,8 +115,10 @@ impl Assignment {
 pub struct ChildChoice {
     pub envelope: String,
     pub floor: CapabilityFloor,
-    pub model: String,
-    pub effort: String,
+    pub model: Option<String>,
+    pub effort: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub recommendation_error: Option<String>,
     pub source: String,
     pub semantic: Option<SemanticTrace>,
     pub escalated: bool,
@@ -194,29 +196,55 @@ pub fn choose(
     }
     let models = crate::routing::model_policies()?;
     let availability = crate::routing::load_availability()?;
-    let (model, effort) = crate::routing::choose_assessed(
+    let recommendation = crate::routing::choose_assessed(
         &child_policy,
         floor,
         assessment.envelope,
         &models,
         &availability,
         chrono::Utc::now().timestamp(),
-    )?;
-    Ok(ChildChoice {
-        envelope: assessment.envelope.into(),
-        floor,
-        model,
-        effort,
-        source: crate::routing_module::source(&assessment),
-        semantic,
-        escalated: failed || expanded,
-    })
+    );
+    with_recommendation(
+        ChildChoice {
+            envelope: assessment.envelope.into(),
+            floor,
+            model: None,
+            effort: None,
+            recommendation_error: None,
+            source: crate::routing_module::source(&assessment),
+            semantic,
+            escalated: failed || expanded,
+        },
+        policy.mode,
+        recommendation,
+    )
 }
 
 // A new advisory floor does not change execution. Observed failure still keeps
 // its explicit retry-consent boundary in every mode.
 fn escalation_requires_consent(mode: RoutingMode, failed: bool, expanded: bool) -> bool {
     failed || (mode == RoutingMode::Auto && expanded)
+}
+
+fn with_recommendation(
+    mut choice: ChildChoice,
+    mode: RoutingMode,
+    recommendation: Result<(String, String), String>,
+) -> Result<ChildChoice, String> {
+    match recommendation {
+        Ok((model, effort)) => {
+            choice.model = Some(model);
+            choice.effort = Some(effort);
+            choice.recommendation_error = None;
+        }
+        Err(error) if mode == RoutingMode::Shadow => {
+            choice.model = None;
+            choice.effort = None;
+            choice.recommendation_error = Some(error);
+        }
+        Err(error) => return Err(error),
+    }
+    Ok(choice)
 }
 
 /// Do not turn an advisory assessment into a hard instruction in the child brief.
@@ -391,6 +419,28 @@ mod tests {
         assert!(a.validate(&root).is_err());
     }
     #[test]
+    fn delegation_advice_journal_preserves_old_records_and_explicit_unknowns() {
+        let old = serde_json::json!({"envelope":"normal", "floor":"workhorse",
+            "model":"gpt-6.1-sol", "effort":"high", "source":"deterministic",
+            "semantic":null, "escalated":false});
+        let retained: ChildChoice = serde_json::from_value(old.clone()).unwrap();
+        assert_eq!(serde_json::to_value(&retained).unwrap(), old);
+        let unavailable = with_recommendation(
+            retained,
+            RoutingMode::Shadow,
+            Err("No advisory candidate".into()),
+        )
+        .unwrap();
+        let encoded = serde_json::to_value(&unavailable).unwrap();
+        assert!(encoded["model"].is_null() && encoded["effort"].is_null());
+        let restored: ChildChoice = serde_json::from_value(encoded).unwrap();
+        assert_eq!(
+            restored.recommendation_error.as_deref(),
+            Some("No advisory candidate")
+        );
+    }
+
+    #[test]
     fn delegation_failure_needs_consent_and_never_retries_frontier() {
         let root = std::env::current_dir().unwrap();
         let mut policy = policy();
@@ -398,8 +448,9 @@ mod tests {
         let mut prior = ChildChoice {
             envelope: "mechanical".into(),
             floor: CapabilityFloor::Routine,
-            model: "gpt-5.6-luna".into(),
-            effort: "low".into(),
+            model: Some("gpt-5.6-luna".into()),
+            effort: Some("low".into()),
+            recommendation_error: None,
             source: "fixture".into(),
             semantic: None,
             escalated: false,

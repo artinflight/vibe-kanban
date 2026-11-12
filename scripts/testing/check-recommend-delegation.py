@@ -60,7 +60,7 @@ harness.write_text('#![allow(dead_code)]\nmod routing {\n' + types + availabilit
     + '\n#[path=' + json.dumps(str(test_path)) + '] mod tests;\n')
 # Exercise the actual model/effort branch in launch_choice. Only its I/O sources
 # (catalog and clock) and protocol parameter carrier are fixtures. No RPC/worker.
-selection = wire[wire.index('        let (model, effort) = if self.policy.mode'):wire.index('        let brief_floor =')]
+selection = wire[re.search(r'        let \(model, effort\)\s*=\s*if self.policy.mode', wire).start():wire.index('        let brief_floor =')]
 permission_setup = wire[wire.index('        if assignment.read_only {'):wire.index('        let task = &assignment.task;')]
 legacy = subprocess.check_output(['git', 'show', f'{a.baseline}:{delegation_path.relative_to(ROOT)}'], cwd=ROOT, text=True)
 legacy = legacy[legacy.index('pub fn actual_pair_qualified('):legacy.index('\n#[cfg(test)]')]
@@ -97,13 +97,13 @@ mod launch_fixture {
         }
     }
     fn params() -> Params { Params { sandbox:Some(SandboxMode::WorkspaceWrite), approval_policy:"on-request".into(), cwd:"/fixture/owned-repo".into(), model: Some("gpt-6.1-sol".into()), config: Some(HashMap::from([("model_reasoning_effort".into(),Value("xhigh".into()))])) } }
-    fn advice() -> ChildChoice { ChildChoice { envelope:"protected".into(), floor:CapabilityFloor::Frontier, model:"gpt-6-astra".into(), effort:"high".into(), source:"protected task assessment".into(), semantic:None, escalated:false } }
+    fn advice() -> ChildChoice { ChildChoice { envelope:"protected".into(), floor:CapabilityFloor::Frontier, model:Some("gpt-6-astra".into()), effort:Some("high".into()), recommendation_error:None, source:"protected task assessment".into(), semantic:None, escalated:false } }
     #[test] fn real_launch_branch_preserves_selected_pair_and_stronger_advice() {
         let (policy, models, availability) = tests::fixture(); routing::set_sources(models,availability);
         let choice=advice();
         assert!(!legacy::actual_pair_qualified(&choice,"gpt-6.1-sol","xhigh",&policy).unwrap(), "original veto reproduced");
         assert_eq!(Control{policy}.select(params(),&choice).unwrap(),("gpt-6.1-sol".into(),"xhigh".into()));
-        assert_eq!(choice.model,"gpt-6-astra"); assert_eq!(choice.source,"protected task assessment");
+        assert_eq!(choice.model,Some("gpt-6-astra".into())); assert_eq!(choice.source,"protected task assessment");
     }
     fn assignment(read_only:bool) -> Assignment {
         Assignment { task:"worker".into(), message:"Authorized bounded task".into(), context:"Retain owner limits".into(), paths:vec!["src".into()], independent:true, size:"batch".into(), read_only }
@@ -140,6 +140,17 @@ mod launch_fixture {
         policy.denied_models.push("gpt-6.1-sol".into());
         assert!(Control{policy}.select(params(),&advice()).unwrap_err().contains("excluded"));
     }
+    #[test] fn unavailable_advice_keeps_writable_worker_but_auto_cannot_launch_without_choice() {
+        let (mut policy,models,availability)=tests::fixture(); policy.denied_models.push("gpt-6-astra".into());
+        let recommendation=routing::choose_assessed(&policy,CapabilityFloor::Frontier,"protected",&models,&availability,100);
+        assert!(recommendation.is_err()); routing::set_sources(models,availability);
+        let choice=with_recommendation(advice(),RoutingMode::Shadow,recommendation).unwrap();
+        assert!(choice.model.is_none()); assert!(choice.effort.is_none()); assert!(choice.recommendation_error.is_some());
+        assert_eq!(choice.source,"protected task assessment");
+        assert_eq!(Control{policy:policy.clone()}.prepare(&params(),&assignment(false),&choice).unwrap(),params());
+        policy.mode=RoutingMode::Auto;
+        assert!(Control{policy}.select(params(),&choice).is_err());
+    }
     #[test] fn real_auto_launch_branch_keeps_its_qualified_choice() {
         let (mut policy,models,availability)=tests::fixture(); routing::set_sources(models,availability); policy.mode=RoutingMode::Auto;
         assert_eq!(Control{policy}.select(params(),&advice()).unwrap(),("gpt-6-astra".into(),"high".into()));
@@ -167,12 +178,19 @@ launch_marker = '    /// Transport boundary isolated from assessment'
 assert wire[:wire.index('    async fn launch(')] == old[:old.index('    async fn launch(')]
 transport = wire[wire.index('        params.model = Some(model.clone());'):wire.index('\n    async fn bind(')]
 transport = transport.replace('assignment.brief(brief_floor)', 'assignment.brief(crate::routing_delegation::hard_floor(&self.policy,&self.parent))')
+transport = transport.replace(',"recommendationError":choice.recommendation_error', '')
 assert transport == old[old.index('        params.model = Some(model.clone());'):old.index('\n    async fn bind(')]
-assert wire[wire.index('\n    async fn bind('):] == old[old.index('\n    async fn bind('):]
+tail = wire[wire.index('\n    async fn bind('):]
+for model, effort in [('gpt-5.6-luna', 'low'), ('gpt-6.1-sol', 'medium')]:
+    tail = tail.replace(f'model: Some("{model}".into()),', f'model: "{model}".into(),')
+    tail = tail.replace(f'effort: Some("{effort}".into()),', f'effort: "{effort}".into(),')
+tail = re.sub(r'^ +recommendation_error: None,\n', '', tail, flags=re.MULTILINE)
+assert tail == old[old.index('\n    async fn bind('):]
 assert 'actual_pair_qualified' not in wire
 selection = wire[wire.index(launch_marker):wire.index('        params.model = Some(model.clone());')]
 assert 'if self.policy.mode == RoutingMode::Auto' in selection
-assert '(choice.model.clone(), choice.effort.clone())' in selection
+assert '.zip(choice.effort.clone())' in selection
+assert 'Automatic delegation requires a qualified model/effort recommendation' in selection
 assert 'crate::routing_delegation::advisory_pair(' in selection
 assert 'self.policy' in selection and 'load_availability()?' in selection
 print('PASS: production call site and three unchanged launch/fence regions (static checks, not native acceptance)')

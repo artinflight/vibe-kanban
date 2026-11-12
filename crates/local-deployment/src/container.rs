@@ -1054,6 +1054,7 @@ impl LocalContainerService {
         exec_id: &Uuid,
         exit_signal: Option<ExecutorExitSignal>,
         group_id: Option<u32>,
+        run_context: Option<crate::run_context::RunContext>,
     ) -> JoinHandle<()> {
         let exec_id = *exec_id;
         let child_store = self.child_store.clone();
@@ -1127,6 +1128,11 @@ impl LocalContainerService {
                 }
                 Err(_) => (None, ExecutionProcessStatus::Failed),
             };
+
+            // Observe before commit/cleanup/follow-up can change instruction files.
+            if let Some(context) = run_context {
+                let _ = tokio::task::spawn_blocking(move || context.finish()).await;
+            }
 
             services::services::admission::run(async {
                 // Durable admission, rather than the current flag, determines whether
@@ -3020,6 +3026,52 @@ impl ContainerService for LocalContainerService {
             env.original_worker = Some(pin);
         }
 
+        // Independent of routing/AutoSwitch. Telemetry failures cannot block
+        // authorized work, alter permissions, or change existing ownership gates.
+        let run_context = if paid_owner {
+            let (effective_dir, resumed) = match executor_action.typ() {
+                ExecutorActionType::CodingAgentInitialRequest(r) => {
+                    (r.effective_dir(&current_dir), false)
+                }
+                ExecutorActionType::CodingAgentFollowUpRequest(r) => {
+                    (r.effective_dir(&current_dir), true)
+                }
+                ExecutorActionType::ReviewRequest(r) => {
+                    (r.effective_dir(&current_dir), r.session_id.is_some())
+                }
+                ExecutorActionType::ScriptRequest(_) => unreachable!(),
+            };
+            let root = current_dir.clone();
+            let roots = repos
+                .iter()
+                .map(|repo| current_dir.join(&repo.name))
+                .collect();
+            let workspace_id = workspace.id;
+            let session_id = execution_process.session_id;
+            let execution_id = execution_process.id;
+            match tokio::task::spawn_blocking(move || {
+                crate::run_context::RunContext::start(
+                    root,
+                    roots,
+                    effective_dir,
+                    workspace_id,
+                    session_id,
+                    execution_id,
+                    resumed,
+                )
+            })
+            .await
+            {
+                Ok(Ok(context)) => Some(context),
+                _ => {
+                    tracing::warn!(%execution_id, "Run context unavailable; audit coverage is unknown");
+                    None
+                }
+            }
+        } else {
+            None
+        };
+
         if let Some(request) = admitted_request {
             // Recheck native ownership and policy after any asynchronous setup.
             self.execution_git_readiness(workspace, execution_process, json!({}))
@@ -3155,7 +3207,12 @@ impl ContainerService for LocalContainerService {
         }
 
         // Spawn unified exit monitor: watches OS exit and optional executor signal
-        let hn = self.spawn_exit_monitor(&execution_process.id, spawned.exit_signal, group_id);
+        let hn = self.spawn_exit_monitor(
+            &execution_process.id,
+            spawned.exit_signal,
+            group_id,
+            run_context,
+        );
         self.add_exit_monitor_handle(execution_process.id, hn).await;
 
         Ok(())

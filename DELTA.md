@@ -2563,3 +2563,17 @@ source/receipts and the later preserving live frontend remain unchanged. Main
 promotion is separate. Local Rust baseline remains blocked by offline serde.
 
 2026-11-04: Investigated the exact NODEs active-goal delegation rejection. Prepared bounded specialist support with parent goal ownership retained, an explicit existing-session route for old threads lacking dynamic tools, and preserved budget/capacity/stop/admission fences. No production mutation or restart.
+
+## 2026-11-12 — VK::Run Provenance source preparation
+
+- Add automatic workspace-local context records to normal provider start/resume/
+  review and the existing exit monitor, independently of AutoSwitch. Reuse Media
+  Management staging `4b27836` field names in an extended lifecycle envelope.
+- Bounded hashes/version labels, exact run IDs, native event mixed detection,
+  terminal snapshots and explicit unknown/inherited context; no model-read claim,
+  prompt/history/credential capture, provider tests, polling service or migration.
+- Thirteen actual-module tests pass in a bounded SSD harness. Governance/Rust fmt
+  pass; full offline Cargo lacks serde and frontend tools are absent. Full backend
+  integration stays with normal PR CI. See VK_RUN_PROVENANCE.md for exact limits,
+  CU ordinary implementation usage evidence and future activation procedure.
+- No merge, deploy, asset swap, restart or running-job/permission changes.

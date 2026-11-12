@@ -513,10 +513,8 @@ jobs:
       - name: Install isolated server test boundary
         run: |
           sudo apt-get update
-          sudo apt-get install -y bubblewrap apparmor-profiles
-          # Ubuntu restricts namespace capabilities for unprofiled executables.
-          # Load the packaged bwrap profile only on this ephemeral CI runner.
-          sudo apparmor_parser -r /usr/share/apparmor/extra-profiles/bwrap-userns-restrict
+          sudo apt-get install -y bubblewrap
+          # Fail closed under the runner's existing security settings.
           bwrap --unshare-all --ro-bind / / --proc /proc --dev /dev -- true
 
       - name: Prepare owned recovery fixture roots

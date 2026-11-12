@@ -45,8 +45,8 @@ jobs:
       - name: Install hosted isolated startup boundary
         run: |
           sudo apt-get update
-          sudo apt-get install -y bubblewrap apparmor-profiles
-          sudo apparmor_parser -r /usr/share/apparmor/extra-profiles/bwrap-userns-restrict
+          sudo apt-get install -y bubblewrap
+          # Fail closed under the runner's existing security settings.
           bwrap --unshare-all --ro-bind / / --proc /proc --dev /dev -- true
       - name: Verify actual candidate startup isolation
         run: python3 -B scripts/testing/startup-recovery-safety/server_sandbox.py --binary "$CARGO_TARGET_DIR/acceptance/server"

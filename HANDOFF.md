@@ -1,3 +1,12 @@
+# Recommend launch correction — 2026-11-12
+
+Current isolated branch: `fix/autoswitch-recommend-advisory`. Review
+[the focused correction](VK_AUTOSWITCH_ADVISORY_FIX.md) for cause, exact scope,
+13 offline tests, preserved guards, context hygiene and pending native validation.
+Source only; no deployment, restart or pilot execution. Provider work is separate.
+
+## Inherited stream notes
+
 # Active-goal delegation correction — 2026-11-04
 
 - NODEs orchestration session `fe65418e-fe3d-4bc2-b3be-f9b663cb1880`, native

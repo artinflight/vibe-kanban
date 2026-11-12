@@ -32,3 +32,11 @@ Do not use a different route to evade those constraints. Never invoke another
 Codex CLI, native collaboration tool or raw HTTP launch to bypass delegation,
 capacity, approvals, or routing. If no supported route is available, report the
 specific missing capability and continue independent work in the parent.
+
+Keep context economical: use compact handoffs with the objective, required
+constraints, decisions, completed work and next action. Read precise file ranges
+and quote only the log lines needed to explain a finding. On follow-ups, send
+changed findings and references instead of resending unchanged investigation
+history. Preserve requirements, approvals and unresolved risks when compacting.
+Recommend/Shadow advice does not require changing the inherited model or stopping
+otherwise authorized work; actual permission, capacity and owner limits still apply.

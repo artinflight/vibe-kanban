@@ -187,7 +187,7 @@ pub fn choose(
             "normal"
         };
     }
-    if (failed || expanded) && !policy.allow_escalation {
+    if escalation_requires_consent(policy.mode, failed, expanded) && !policy.allow_escalation {
         return Err(
             "Child escalation requires the operator's existing allow_escalation policy".into(),
         );
@@ -213,38 +213,61 @@ pub fn choose(
     })
 }
 
-pub fn actual_pair_qualified(
-    choice: &ChildChoice,
+// A new advisory floor does not change execution. Observed failure still keeps
+// its explicit retry-consent boundary in every mode.
+fn escalation_requires_consent(mode: RoutingMode, failed: bool, expanded: bool) -> bool {
+    failed || (mode == RoutingMode::Auto && expanded)
+}
+
+/// Do not turn an advisory assessment into a hard instruction in the child brief.
+pub fn instruction_floor(
+    policy: &RoutingPolicy,
+    assessed_floor: CapabilityFloor,
+) -> CapabilityFloor {
+    if policy.mode == RoutingMode::Auto {
+        assessed_floor
+    } else {
+        policy.floor
+    }
+}
+
+/// Check the selected worker independently of the advisory task classification.
+/// Explicit owner constraints and actual executable-pair evidence remain binding.
+/// Envelope qualification/minimum-required rows govern AUTO selection, not whether
+/// an otherwise permitted inherited worker may execute in Recommend/Shadow.
+pub fn advisory_pair(
     model: &str,
     effort: &str,
     policy: &RoutingPolicy,
-) -> Result<bool, String> {
-    let mut policy = policy.clone();
-    policy.mode = RoutingMode::Auto;
-    let mut models = crate::routing::model_policies()?;
-    // Preserve the GLOBAL minimum-required allowlist even when checking one inherited pair.
-    let protected = models.iter().any(|m| {
-        m.qualifications.iter().any(|q| {
-            q.envelope == choice.envelope
-                && q.status == crate::routing::QualificationStatus::MinimumRequired
-        })
-    });
-    models.retain(|m| m.id == model);
-    for model in &mut models {
-        model.qualifications.retain(|q| {
-            q.effort == effort
-                && (!protected || q.status == crate::routing::QualificationStatus::MinimumRequired)
-        });
+    models: &[crate::routing::ModelPolicy],
+    availability: &crate::routing::Availability,
+    now: i64,
+) -> Result<(String, String), String> {
+    if policy.mode != RoutingMode::Shadow {
+        return Err("Advisory admission requires Recommend/Shadow mode".into());
     }
-    Ok(crate::routing::choose_assessed(
-        &policy,
-        choice.floor,
-        &choice.envelope,
-        &models,
-        &crate::routing::load_availability()?,
-        chrono::Utc::now().timestamp(),
-    )
-    .is_ok())
+    if policy.denied_models.iter().any(|denied| denied == model) {
+        return Err("Selected child model is explicitly excluded by the owner".into());
+    }
+    let selected = models
+        .iter()
+        .find(|m| m.id == model && m.released)
+        .ok_or("Selected child model is not released in the configured catalog")?;
+    if selected.floor < policy.floor {
+        return Err("Selected child model is below the owner's explicit capability floor".into());
+    }
+    let proof = availability
+        .models
+        .iter()
+        .find(|m| m.id == model && availability.has_execution_proof(m, now))
+        .ok_or("Selected child model has no current availability proof")?;
+    if !selected.efforts.iter().any(|e| e == effort)
+        || !proof.verified_efforts.iter().any(|e| e == effort)
+        || (proof.discovered && !proof.supported_efforts.iter().any(|e| e == effort))
+    {
+        return Err("Selected child reasoning effort is unavailable or unverified".into());
+    }
+    Ok((model.to_owned(), effort.to_owned()))
 }
 
 #[cfg(test)]
@@ -411,3 +434,7 @@ mod tests {
         );
     }
 }
+
+#[cfg(test)]
+#[path = "routing_delegation_advisory_tests.rs"]
+mod advisory_tests;

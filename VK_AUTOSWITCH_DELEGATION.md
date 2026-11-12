@@ -40,16 +40,21 @@ These fields are supplied by the parent agent, not by the operator.
 Only this delta and its scoped references enter existing deterministic/bounded
 triage. Uncertain deltas may use the existing bounded semantic fallback. Parent
 classification is not rerun. Identical follow-ups retain prior classification;
-changed scope is reassessed. Parent protected classification and explicit manual
-floor remain hard minimums, but a merely complex Workhorse parent can delegate
-mechanical work downward. Prior child floors cannot decrease across follow-ups.
+changed scope is reassessed. In Auto, parent protected classification and explicit owner floors remain hard
+minimums, but a merely complex Workhorse parent can delegate mechanical work
+downward. Prior assessed child floors cannot decrease across follow-ups. In
+Recommend/Shadow, assessed floors remain advice; explicit owner floors still bind
+the selected worker and child instructions.
 
 Candidates use the same model/effort/envelope qualifications, configurable ranks,
 exclusions, current launcher/home/account proof and supported/verified efforts as
 root routing. Auto selects the qualified pair with the lowest configured preference rank. Standard tier
-is explicit. No new model ladder or billing assumptions were added. Shadow records
-the recommendation and retains the parent's actual model/effort only if that pair
-qualifies for this child; otherwise it refuses the child with a visible reason.
+is explicit. No new model ladder or billing assumptions were added. Recommend/Shadow
+records the recommendation and retains the parent's actual model/effort. A stronger
+recommendation or missing task-envelope qualification does not veto that worker.
+Explicit owner floors/exclusions, released-model and supported/verified effort
+evidence still apply independently. Native permissions, repository/read-only
+boundaries, capacity, spending and ownership guards are unchanged.
 
 Native thread/start or resume must confirm the exact model, effort, OpenAI provider,
 standard tier and stable child identity **before** turn/start. Native model rerouting
@@ -63,6 +68,9 @@ Each message and context brief is capped at 4,000 bytes. Children receive the br
 scope references, inherited hard floor, existing custom developer/repository
 instructions, and their own follow-up history. Parent conversation history is not
 forked. Root-only goal/delegation instructions are removed from the child template.
+Handoffs carry only necessary constraints/decisions and changes since the prior
+turn. Use file/line references and relevant log excerpts instead of repeating
+unchanged investigation history. Do not omit approvals or unresolved risks.
 Native tool catalogs and repository instructions still consume input; no claim is
 made that an 8 KB brief equals total input usage.
 
@@ -91,7 +99,8 @@ observed failing validation commands. Initially recognized commands are direct
 and `tsc --noEmit`; arbitrary output text, shell wrappers and duplicate item IDs do
 not count. This intentionally conservative signal is not a claim that every test
 failure proves insufficient intelligence. Existing `allow_escalation` consent is
-required; Frontier failure pauses further admission for operator diagnosis. A refused escalation retains the previous failure evidence. There
+required for observed failures; a new advisory classification alone does not
+require escalation consent. Frontier failure pauses further admission for operator diagnosis. A refused escalation retains the previous failure evidence. There
 is no automatic retry and no downward bounce. Changed assignments can independently
 raise the floor through protected scope or greater complexity.
 

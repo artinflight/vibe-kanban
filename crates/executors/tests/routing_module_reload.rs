@@ -527,8 +527,8 @@ fn same_process_adopts_code_and_settings_then_rolls_back_safely() {
     )
     .unwrap();
     assert_eq!(
-        (child.model.as_str(), child.effort.as_str()),
-        ("gpt-5.6-luna", "low")
+        (child.model.as_deref(), child.effort.as_deref()),
+        (Some("gpt-5.6-luna"), Some("low"))
     );
     assert!(child.source.contains("routing_module:a:"));
     let mut protected = strong_parent.clone();
@@ -544,7 +544,25 @@ fn same_process_adopts_code_and_settings_then_rolls_back_safely() {
         false,
     )
     .unwrap();
-    assert_eq!(protected_child.model, "gpt-6-astra");
+    assert_eq!(protected_child.model.as_deref(), Some("gpt-6-astra"));
+    let mut advisory = policy.clone();
+    advisory.mode = RoutingMode::Shadow;
+    advisory.denied_models.push("gpt-6-astra".into());
+    let unavailable_advice = executors::routing_delegation::choose(
+        &assignment,
+        &root,
+        &advisory,
+        &protected,
+        None,
+        false,
+        false,
+    )
+    .unwrap();
+    assert!(unavailable_advice.model.is_none());
+    assert!(unavailable_advice.effort.is_none());
+    assert!(unavailable_advice.recommendation_error.is_some());
+    assert_eq!(unavailable_advice.floor, CapabilityFloor::Frontier);
+    assert!(unavailable_advice.source.contains("routing_module:a:"));
     let mut escalation = policy.clone();
     escalation.allow_escalation = true;
     let recovery = executors::routing_delegation::choose(
@@ -558,8 +576,8 @@ fn same_process_adopts_code_and_settings_then_rolls_back_safely() {
     )
     .unwrap();
     assert_eq!(
-        (recovery.model.as_str(), recovery.effort.as_str()),
-        ("gpt-6.1-sol", "medium")
+        (recovery.model.as_deref(), recovery.effort.as_deref()),
+        (Some("gpt-6.1-sol"), Some("medium"))
     );
     assert!(recovery.escalated);
     let mut manual = policy.clone();

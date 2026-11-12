@@ -2,6 +2,9 @@
 
 Source-only change on `vk/a507-vk-run-provenanc`, current fork/staging base
 `bc3b89dee`. Existing production runtime and running work remain untouched.
+Draft [PR #297](https://github.com/artinflight/vibe-kanban/pull/297) targets
+staging. [Normal PR CI](https://github.com/artinflight/vibe-kanban/actions/runs/43321271406)
+was queued when the PR opened; check the final head/CI before integration.
 
 - `crates/local-deployment/src/run_context.rs` implements workspace-local private
   records, bounded hashes/config labels, native file events and terminal capture.

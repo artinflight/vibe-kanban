@@ -258,8 +258,10 @@ impl State {
                     .iter()
                     .any(|path| self.paths.iter().any(|p| p.starts_with(path)))
                 {
+                    if !self.changed {
+                        self.record["changeObservedAt"] = json!(Utc::now().to_rfc3339());
+                    }
                     self.changed = true;
-                    self.record["changeObservedAt"] = json!(Utc::now().to_rfc3339());
                 }
             }
             Err(_) => {

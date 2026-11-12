@@ -1,3 +1,16 @@
+# Recommend launch correction — 2026-11-12
+
+Current isolated branch: `fix/autoswitch-recommend-advisory`; draft [PR #296](https://github.com/artinflight/vibe-kanban/pull/296) targets staging. Review
+[the focused correction](VK_AUTOSWITCH_ADVISORY_FIX.md) for cause, exact scope,
+19 delegation regressions, preserved guards and pending native validation.
+The owner requires all workers, including writable ones. The source fix covers
+both; the earlier read-only profile is an insufficient workaround, not adoption.
+Ten additional Python checks pass. The installed embedded-child veto remains;
+no universal no-restart override has been established. No backend restart,
+live mutation or pilot execution in this correction. Provider work is separate.
+
+## Inherited stream notes
+
 # Active-goal specialist delegation
 
 Branch: `fix/active-goal-specialist-delegation`, based on current `fork/staging`.

@@ -115,8 +115,10 @@ impl Assignment {
 pub struct ChildChoice {
     pub envelope: String,
     pub floor: CapabilityFloor,
-    pub model: String,
-    pub effort: String,
+    pub model: Option<String>,
+    pub effort: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub recommendation_error: Option<String>,
     pub source: String,
     pub semantic: Option<SemanticTrace>,
     pub escalated: bool,
@@ -187,64 +189,113 @@ pub fn choose(
             "normal"
         };
     }
-    if (failed || expanded) && !policy.allow_escalation {
+    if escalation_requires_consent(policy.mode, failed, expanded) && !policy.allow_escalation {
         return Err(
             "Child escalation requires the operator's existing allow_escalation policy".into(),
         );
     }
     let models = crate::routing::model_policies()?;
     let availability = crate::routing::load_availability()?;
-    let (model, effort) = crate::routing::choose_assessed(
+    let recommendation = crate::routing::choose_assessed(
         &child_policy,
         floor,
         assessment.envelope,
         &models,
         &availability,
         chrono::Utc::now().timestamp(),
-    )?;
-    Ok(ChildChoice {
-        envelope: assessment.envelope.into(),
-        floor,
-        model,
-        effort,
-        source: crate::routing_module::source(&assessment),
-        semantic,
-        escalated: failed || expanded,
-    })
+    );
+    with_recommendation(
+        ChildChoice {
+            envelope: assessment.envelope.into(),
+            floor,
+            model: None,
+            effort: None,
+            recommendation_error: None,
+            source: crate::routing_module::source(&assessment),
+            semantic,
+            escalated: failed || expanded,
+        },
+        policy.mode,
+        recommendation,
+    )
 }
 
-pub fn actual_pair_qualified(
-    choice: &ChildChoice,
+// A new advisory floor does not change execution. Observed failure still keeps
+// its explicit retry-consent boundary in every mode.
+fn escalation_requires_consent(mode: RoutingMode, failed: bool, expanded: bool) -> bool {
+    failed || (mode == RoutingMode::Auto && expanded)
+}
+
+fn with_recommendation(
+    mut choice: ChildChoice,
+    mode: RoutingMode,
+    recommendation: Result<(String, String), String>,
+) -> Result<ChildChoice, String> {
+    match recommendation {
+        Ok((model, effort)) => {
+            choice.model = Some(model);
+            choice.effort = Some(effort);
+            choice.recommendation_error = None;
+        }
+        Err(error) if mode == RoutingMode::Shadow => {
+            choice.model = None;
+            choice.effort = None;
+            choice.recommendation_error = Some(error);
+        }
+        Err(error) => return Err(error),
+    }
+    Ok(choice)
+}
+
+/// Do not turn an advisory assessment into a hard instruction in the child brief.
+pub fn instruction_floor(
+    policy: &RoutingPolicy,
+    assessed_floor: CapabilityFloor,
+) -> CapabilityFloor {
+    if policy.mode == RoutingMode::Auto {
+        assessed_floor
+    } else {
+        policy.floor
+    }
+}
+
+/// Check the selected worker independently of the advisory task classification.
+/// Explicit owner constraints and actual executable-pair evidence remain binding.
+/// Envelope qualification/minimum-required rows govern AUTO selection, not whether
+/// an otherwise permitted inherited worker may execute in Recommend/Shadow.
+pub fn advisory_pair(
     model: &str,
     effort: &str,
     policy: &RoutingPolicy,
-) -> Result<bool, String> {
-    let mut policy = policy.clone();
-    policy.mode = RoutingMode::Auto;
-    let mut models = crate::routing::model_policies()?;
-    // Preserve the GLOBAL minimum-required allowlist even when checking one inherited pair.
-    let protected = models.iter().any(|m| {
-        m.qualifications.iter().any(|q| {
-            q.envelope == choice.envelope
-                && q.status == crate::routing::QualificationStatus::MinimumRequired
-        })
-    });
-    models.retain(|m| m.id == model);
-    for model in &mut models {
-        model.qualifications.retain(|q| {
-            q.effort == effort
-                && (!protected || q.status == crate::routing::QualificationStatus::MinimumRequired)
-        });
+    models: &[crate::routing::ModelPolicy],
+    availability: &crate::routing::Availability,
+    now: i64,
+) -> Result<(String, String), String> {
+    if policy.mode != RoutingMode::Shadow {
+        return Err("Advisory admission requires Recommend/Shadow mode".into());
     }
-    Ok(crate::routing::choose_assessed(
-        &policy,
-        choice.floor,
-        &choice.envelope,
-        &models,
-        &crate::routing::load_availability()?,
-        chrono::Utc::now().timestamp(),
-    )
-    .is_ok())
+    if policy.denied_models.iter().any(|denied| denied == model) {
+        return Err("Selected child model is explicitly excluded by the owner".into());
+    }
+    let selected = models
+        .iter()
+        .find(|m| m.id == model && m.released)
+        .ok_or("Selected child model is not released in the configured catalog")?;
+    if selected.floor < policy.floor {
+        return Err("Selected child model is below the owner's explicit capability floor".into());
+    }
+    let proof = availability
+        .models
+        .iter()
+        .find(|m| m.id == model && availability.has_execution_proof(m, now))
+        .ok_or("Selected child model has no current availability proof")?;
+    if !selected.efforts.iter().any(|e| e == effort)
+        || !proof.verified_efforts.iter().any(|e| e == effort)
+        || (proof.discovered && !proof.supported_efforts.iter().any(|e| e == effort))
+    {
+        return Err("Selected child reasoning effort is unavailable or unverified".into());
+    }
+    Ok((model.to_owned(), effort.to_owned()))
 }
 
 #[cfg(test)]
@@ -368,6 +419,28 @@ mod tests {
         assert!(a.validate(&root).is_err());
     }
     #[test]
+    fn delegation_advice_journal_preserves_old_records_and_explicit_unknowns() {
+        let old = serde_json::json!({"envelope":"normal", "floor":"workhorse",
+            "model":"gpt-6.1-sol", "effort":"high", "source":"deterministic",
+            "semantic":null, "escalated":false});
+        let retained: ChildChoice = serde_json::from_value(old.clone()).unwrap();
+        assert_eq!(serde_json::to_value(&retained).unwrap(), old);
+        let unavailable = with_recommendation(
+            retained,
+            RoutingMode::Shadow,
+            Err("No advisory candidate".into()),
+        )
+        .unwrap();
+        let encoded = serde_json::to_value(&unavailable).unwrap();
+        assert!(encoded["model"].is_null() && encoded["effort"].is_null());
+        let restored: ChildChoice = serde_json::from_value(encoded).unwrap();
+        assert_eq!(
+            restored.recommendation_error.as_deref(),
+            Some("No advisory candidate")
+        );
+    }
+
+    #[test]
     fn delegation_failure_needs_consent_and_never_retries_frontier() {
         let root = std::env::current_dir().unwrap();
         let mut policy = policy();
@@ -375,8 +448,9 @@ mod tests {
         let mut prior = ChildChoice {
             envelope: "mechanical".into(),
             floor: CapabilityFloor::Routine,
-            model: "gpt-5.6-luna".into(),
-            effort: "low".into(),
+            model: Some("gpt-5.6-luna".into()),
+            effort: Some("low".into()),
+            recommendation_error: None,
             source: "fixture".into(),
             semantic: None,
             escalated: false,
@@ -411,3 +485,7 @@ mod tests {
         );
     }
 }
+
+#[cfg(test)]
+#[path = "routing_delegation_advisory_tests.rs"]
+mod advisory_tests;

@@ -508,30 +508,36 @@ impl Delegation {
         choice: ChildChoice,
     ) -> Result<Value, String> {
         let mut params = self.params.clone();
-        let (model, effort) = if self.policy.mode == RoutingMode::Auto {
-            (choice.model.clone(), choice.effort.clone())
-        } else {
-            let model = params
-                .model
-                .clone()
-                .ok_or("Shadow child requires resolved parent model")?;
-            let effort = params
-                .config
-                .as_ref()
-                .and_then(|c| c.get("model_reasoning_effort"))
-                .and_then(Value::as_str)
-                .ok_or("Shadow child requires resolved parent effort")?
-                .to_owned();
-            if !crate::routing_delegation::actual_pair_qualified(
-                &choice,
-                &model,
-                &effort,
-                &self.policy,
-            )? {
-                return Err("Shadow recommendation exceeds inherited child qualification; do this work in the parent or change the explicit policy".into());
-            }
-            (model, effort)
-        };
+        let (model, effort) =
+            if self.policy.mode == RoutingMode::Auto {
+                choice.model.clone().zip(choice.effort.clone()).ok_or(
+                    "Automatic delegation requires a qualified model/effort recommendation",
+                )?
+            } else {
+                let model = params
+                    .model
+                    .clone()
+                    .ok_or("Shadow child requires resolved parent model")?;
+                let effort = params
+                    .config
+                    .as_ref()
+                    .and_then(|c| c.get("model_reasoning_effort"))
+                    .and_then(Value::as_str)
+                    .ok_or("Shadow child requires resolved parent effort")?
+                    .to_owned();
+                crate::routing_delegation::advisory_pair(
+                    &model,
+                    &effort,
+                    &self.policy,
+                    &crate::routing::model_policies()?,
+                    &crate::routing::load_availability()?,
+                    chrono::Utc::now().timestamp(),
+                )?
+            };
+        let brief_floor = crate::routing_delegation::instruction_floor(
+            &self.policy,
+            crate::routing_delegation::hard_floor(&self.policy, &self.parent),
+        );
         params.model = Some(model.clone());
         params.service_tier = Some(None);
         params
@@ -653,8 +659,8 @@ impl Delegation {
             r
         };
         self.event(client,"decision",&record,json!({"selected":{"model":choice.model,"reasoningEffort":choice.effort,"serviceTier":"standard"},"effective":record.effective,
-            "envelope":choice.envelope,"floor":choice.floor,"classificationSource":choice.source,"classifierId":choice.semantic.as_ref().map(|s|&s.id),"semanticStatus":choice.semantic.as_ref().map(|s|&s.status),"semanticClassification":choice.semantic.as_ref().and_then(|s|s.classification.as_ref()),"escalated":choice.escalated,
-            "contextMode":"brief_no_parent_history","contextBytes":assignment.brief(crate::routing_delegation::hard_floor(&self.policy,&self.parent)).len(),"assignmentHash":record.fingerprint})).await;
+            "envelope":choice.envelope,"floor":choice.floor,"classificationSource":choice.source,"recommendationError":choice.recommendation_error,"classifierId":choice.semantic.as_ref().map(|s|&s.id),"semanticStatus":choice.semantic.as_ref().map(|s|&s.status),"semanticClassification":choice.semantic.as_ref().and_then(|s|s.classification.as_ref()),"escalated":choice.escalated,
+            "contextMode":"brief_no_parent_history","contextBytes":assignment.brief(brief_floor).len(),"assignmentHash":record.fingerprint})).await;
         if !client.delegation_turn_current(&parent_turn).await {
             return Err("Parent turn ended before child inference".into());
         }
@@ -666,7 +672,7 @@ impl Delegation {
             state.records.get_mut(task).unwrap().status = "launching".into();
             self.save(&state).await?;
         }
-        let turn=client.delegation_request("turn/start",json!({"threadId":native,"model":model,"effort":effort,"serviceTier":null,"input":[{"type":"text","text":assignment.brief(crate::routing_delegation::hard_floor(&self.policy,&self.parent)),"text_elements":[]}]})).await.map_err(|e|e.to_string())?;
+        let turn=client.delegation_request("turn/start",json!({"threadId":native,"model":model,"effort":effort,"serviceTier":null,"input":[{"type":"text","text":assignment.brief(brief_floor),"text_elements":[]}]})).await.map_err(|e|e.to_string())?;
         let turn_id = turn["turn"]["id"]
             .as_str()
             .ok_or("Missing native child turn ID")?
@@ -1173,8 +1179,9 @@ for line in sys.stdin:
         let choice = ChildChoice {
             envelope: "mechanical".into(),
             floor: crate::routing::CapabilityFloor::Routine,
-            model: "gpt-5.6-luna".into(),
-            effort: "low".into(),
+            model: Some("gpt-5.6-luna".into()),
+            effort: Some("low".into()),
+            recommendation_error: None,
             source: "fixture".into(),
             semantic: None,
             escalated: false,
@@ -1224,8 +1231,9 @@ for line in sys.stdin:
                 ChildChoice {
                     envelope: "normal".into(),
                     floor: crate::routing::CapabilityFloor::Workhorse,
-                    model: "gpt-6.1-sol".into(),
-                    effort: "medium".into(),
+                    model: Some("gpt-6.1-sol".into()),
+                    effort: Some("medium".into()),
+                    recommendation_error: None,
                     source: "fixture".into(),
                     semantic: None,
                     escalated: true,

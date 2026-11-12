@@ -80,3 +80,27 @@ then the usual backend check. These protocol fixtures use synthetic peers, not
 real providers. Staging owns integration and a separately authorized release.
 The corrected veto is compiled executor code; publishing just the routing hot
 module cannot replace it. Nothing here authorizes restarting Vibe or the pilot.
+
+## No-restart deployment investigation — 2026-11-12
+
+The owner subsequently authorized deployment without restarting Vibe. Read-only
+verification matched the live executable hash to the recorded October 30 backend
+and found the original refusal text in the running binary. Its exact source still
+calls `actual_pair_qualified` from `Delegation::launch_choice`. The active module
+remains `astra-hold-a71fb2b2b-20261021`; all three payload hashes match its manifest.
+Backend health returned HTTP 200 and the service identity/start time was unchanged.
+
+The supported protocol-2 worker returns only assessment and semantic-classification
+need. Its reloadable catalog and classifier instructions do not replace the
+compiled delegation admission check. The profile reload endpoint reloads saved
+executor settings only. The delegation instructions are also compiled with
+`include_str!`; classifier instructions are a different prompt. No supported
+no-restart admission override was found in the deployed source.
+
+Publishing a module cannot install this correction. Altering assessment/catalog
+qualifications to make the old veto pass would change routing policy, including
+Auto behavior, instead of preserving advisory recommendations and hard guards.
+No such workaround, module publication, profile change, service action or pilot
+execution was performed. The source fix remains prepared for the next separately
+authorized backend release; no-restart deployment is blocked by that installed
+code boundary, not by a missing publication approval.

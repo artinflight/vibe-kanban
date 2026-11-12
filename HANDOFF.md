@@ -1,6 +1,6 @@
 # Recommend launch correction — 2026-11-12
 
-Current isolated branch: `fix/autoswitch-recommend-advisory`. Review
+Current isolated branch: `fix/autoswitch-recommend-advisory`; draft [PR #296](https://github.com/artinflight/vibe-kanban/pull/296) targets staging. Review
 [the focused correction](VK_AUTOSWITCH_ADVISORY_FIX.md) for cause, exact scope,
 16 delegation regressions, preserved guards and pending native validation.
 The owner requires all workers, including writable ones. The source fix covers

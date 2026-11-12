@@ -209,3 +209,13 @@ and deployment remain unperformed. A backend restart is prohibited by the owner;
 there is no permission here to substitute a restart, memory patch, new backend,
 weakened model qualification, or unrelated launcher. Do not report this feature
 as deployed from the existence of a read-only profile or passing source fixtures.
+
+## Review preservation and clean CI — 2026-11-12
+
+Draft PR #296 preserves this all-worker correction for staging review. Its hosted
+validation leaves runner security settings unchanged: inherited AppArmor profile
+loading was removed before the first push. Official Bubblewrap installation and
+fail-closed probes remain. Targeted actual Rust policy and synthetic pipe fixtures
+run separately from tests that require an isolated backend; this does not waive
+the latter's sandbox prerequisite. Read the exact-head CI receipts for results;
+dispatching CI or opening the PR does not establish acceptance or deploy the fix.

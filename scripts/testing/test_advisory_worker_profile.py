@@ -76,6 +76,20 @@ class ExistingGuardTests(unittest.TestCase):
                               "denied_models": ["gpt-6-astra"], "allow_escalation": False}}
         self.assertEqual(self.recommend(config), config)
 
+    def test_advisory_transformation_does_not_impose_read_only_on_any_worker_profile(self):
+        # The normal configuration transform preserves a supplied configuration;
+        # this does not prove every connector tool can express all these fields.
+        for variant in ("DEFAULT", "NATIVE_APPROVE_FOR_ME", module.NAME):
+            for permission in ("SUPERVISED", "AUTO", "PLAN"):
+                with self.subTest(variant=variant, permission=permission):
+                    config = {"executor": "CODEX", "variant": variant,
+                              "model_id": "gpt-6.1-sol", "reasoning_id": "xhigh",
+                              "permission_policy": permission,
+                              "routing": {"mode": "shadow", "floor": "workhorse",
+                                          "denied_models": ["gpt-6-astra"],
+                                          "allow_escalation": False}}
+                    self.assertEqual(self.recommend(config), config)
+
     def test_unknown_policy_is_rejected(self):
         with self.assertRaises(ValueError):
             self.recommend({"executor": "CODEX", "routing": {"unknown": True}})

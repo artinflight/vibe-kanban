@@ -2,10 +2,12 @@
 
 Current isolated branch: `fix/autoswitch-recommend-advisory`. Review
 [the focused correction](VK_AUTOSWITCH_ADVISORY_FIX.md) for cause, exact scope,
-13 delegation regressions, preserved guards and pending native validation.
-The compiled fix remains source only. The isolated `RECOMMEND_READ_ONLY` profile
-is live through supported settings reload, with nine additional offline checks.
-No backend restart or pilot execution. Provider work is separate.
+16 delegation regressions, preserved guards and pending native validation.
+The owner requires all workers, including writable ones. The source fix covers
+both; the earlier read-only profile is an insufficient workaround, not adoption.
+Ten additional Python checks pass. The installed embedded-child veto remains;
+no universal no-restart override has been established. No backend restart,
+live mutation or pilot execution in this correction. Provider work is separate.
 
 ## Inherited stream notes
 

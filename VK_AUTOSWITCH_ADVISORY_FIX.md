@@ -33,6 +33,16 @@ consent; existing observed-failure consent and frontier-failure protection remai
 The Shadow child brief states the explicit owner floor rather than presenting the
 advisory parent assessment as an execution requirement.
 
+This boundary applies to **all otherwise-authorized workers**, including workers
+allowed to edit. It has no read-only eligibility condition. The focused harness
+now exercises the actual launch selection and sandbox assignment blocks across
+read-only, workspace-write, already-authorized full-access and inherited/default
+sandboxes, with never/on-request/untrusted approvals. Writable assignments retain
+the exact inherited sandbox, approval, working directory and extra configuration;
+a read-only assignment still restricts the sandbox. Explicit owner restrictions
+and unavailable models still block both worker types. These are source-extracted
+fixtures, not proof of native enforcement or deployed behavior.
+
 The actual launch code for permissions, read-only sandbox, repo scope, job leases,
 spending/capacity, cancellation, duplicate admission, parent-turn ownership, native
 provider/model/effort/tier confirmation and uncertain outcomes is preserved. No
@@ -56,7 +66,7 @@ observation of ordinary work, without generating a paid benchmark.
 ## Validation and review
 
 - `python3 -B scripts/testing/check-recommend-delegation.py --output <mounted-SSD-check-directory>`:
-  13 tests passed, including the exact production launch-selection branch with
+  16 tests passed, including the exact production launch-selection branch with
   fixture catalog/clock inputs. The original immutable veto returns false for
   the same stronger-Astra/inherited-Sol case, and the corrected branch retains
   Sol/xhigh and the stronger advice. Ten tests also belong to the normal Rust
@@ -166,3 +176,36 @@ restore an old whole-profile snapshot over later changes. No backend restart is
 required for that profile removal. Private deployment/readback receipts remain
 outside tracked source. Full live worker acceptance remains unperformed because
 the owner explicitly prohibited starting the pilot tests in this task.
+
+## Owner correction: all workers — 2026-11-12
+
+The owner rejected the read-only-only workaround as insufficient. That profile
+is historical, unused-by-this-task configuration; it is **not** the completed fix
+and is not a requirement for normal writable work. It has not been widened or
+silently assigned to any existing session. The actual source fix already applies
+to writable and read-only children. Current validation is 16 source-extracted
+Rust tests and 10 lightweight Python tests, with no provider or pilot execution.
+
+The installed normal Vibe worker route supports writable profiles and keeps
+Shadow recommendations advisory. However, it is not an interchangeable redirect
+for every embedded child: the current atomic issue-workflow connector exposes
+variant/model/effort, but not the child's complete routing restrictions or explicit
+permission override. Its new-workspace ownership semantics also cannot replace
+an uncertain existing native child or session. A configuration transform retaining
+fields does not prove its public caller accepts those fields. Do not discard those
+restrictions, recreate held work, or substitute a default profile to use the route.
+
+The running backend still owns the embedded `vk_delegate` veto. The protocol-2
+module cannot change that launch branch; ordinary profile reload changes executor
+settings, not executable code. No universal no-restart deployment was established.
+The healthy original backend process, persisted profile configuration and atomic
+workflow capability were re-read at 14:14:52 UTC; configuration exactly matches
+the prior limited-profile receipt. No live mutation was made in this correction.
+
+Acceptance remains: all worker types, unchanged selected pair and real guards,
+advice visible, and actual runtime adoption. The source fix and focused tests
+satisfy only the source portion. Full backend compilation/native fixture acceptance
+and deployment remain unperformed. A backend restart is prohibited by the owner;
+there is no permission here to substitute a restart, memory patch, new backend,
+weakened model qualification, or unrelated launcher. Do not report this feature
+as deployed from the existence of a read-only profile or passing source fixtures.

@@ -61,6 +61,7 @@ harness.write_text('#![allow(dead_code)]\nmod routing {\n' + types + availabilit
 # Exercise the actual model/effort branch in launch_choice. Only its I/O sources
 # (catalog and clock) and protocol parameter carrier are fixtures. No RPC/worker.
 selection = wire[wire.index('        let (model, effort) = if self.policy.mode'):wire.index('        let brief_floor =')]
+permission_setup = wire[wire.index('        if assignment.read_only {'):wire.index('        let task = &assignment.task;')]
 legacy = subprocess.check_output(['git', 'show', f'{a.baseline}:{delegation_path.relative_to(ROOT)}'], cwd=ROOT, text=True)
 legacy = legacy[legacy.index('pub fn actual_pair_qualified('):legacy.index('\n#[cfg(test)]')]
 with harness.open('a') as out:
@@ -70,16 +71,32 @@ mod chrono { pub struct Utc; impl Utc { pub fn now() -> Self { Self } pub fn tim
 mod launch_fixture {
     use super::*;
     use std::collections::HashMap;
-    struct Value(String); impl Value { fn as_str(&self) -> Option<&str> { Some(&self.0) } }
-    struct Params { model: Option<String>, config: Option<HashMap<String, Value>> }
+    #[derive(Clone, Debug, PartialEq)] struct Value(String); impl Value { fn as_str(&self) -> Option<&str> { Some(&self.0) } }
+    mod codex_app_server_protocol {
+        #[derive(Clone, Debug, PartialEq)] pub enum SandboxMode { ReadOnly, WorkspaceWrite, DangerFullAccess }
+    }
+    use codex_app_server_protocol::SandboxMode;
+    #[derive(Clone, Debug, PartialEq)]
+    struct Params {
+        model: Option<String>, config: Option<HashMap<String, Value>>,
+        sandbox: Option<SandboxMode>, approval_policy: String, cwd: String,
+    }
     struct Control { policy: RoutingPolicy }
     impl Control {
         fn select(&self, params: Params, choice: &ChildChoice) -> Result<(String,String),String> {
 """ + selection + """
             Ok((model, effort))
         }
+        fn prepare(&self, inherited: &Params, assignment: &Assignment, choice: &ChildChoice) -> Result<Params,String> {
+            let mut params = inherited.clone();
+            let (model, effort) = self.select(params.clone(), choice)?;
+            params.model = Some(model);
+            params.config.as_mut().unwrap().insert("model_reasoning_effort".into(),Value(effort));
+""" + permission_setup + """
+            Ok(params)
+        }
     }
-    fn params() -> Params { Params { model: Some("gpt-6.1-sol".into()), config: Some(HashMap::from([("model_reasoning_effort".into(),Value("xhigh".into()))])) } }
+    fn params() -> Params { Params { sandbox:Some(SandboxMode::WorkspaceWrite), approval_policy:"on-request".into(), cwd:"/fixture/owned-repo".into(), model: Some("gpt-6.1-sol".into()), config: Some(HashMap::from([("model_reasoning_effort".into(),Value("xhigh".into()))])) } }
     fn advice() -> ChildChoice { ChildChoice { envelope:"protected".into(), floor:CapabilityFloor::Frontier, model:"gpt-6-astra".into(), effort:"high".into(), source:"protected task assessment".into(), semantic:None, escalated:false } }
     #[test] fn real_launch_branch_preserves_selected_pair_and_stronger_advice() {
         let (policy, models, availability) = tests::fixture(); routing::set_sources(models,availability);
@@ -87,6 +104,36 @@ mod launch_fixture {
         assert!(!legacy::actual_pair_qualified(&choice,"gpt-6.1-sol","xhigh",&policy).unwrap(), "original veto reproduced");
         assert_eq!(Control{policy}.select(params(),&choice).unwrap(),("gpt-6.1-sol".into(),"xhigh".into()));
         assert_eq!(choice.model,"gpt-6-astra"); assert_eq!(choice.source,"protected task assessment");
+    }
+    fn assignment(read_only:bool) -> Assignment {
+        Assignment { task:"worker".into(), message:"Authorized bounded task".into(), context:"Retain owner limits".into(), paths:vec!["src".into()], independent:true, size:"batch".into(), read_only }
+    }
+    #[test] fn writable_workers_keep_permissions_despite_stronger_advice() {
+        let (policy,models,availability)=tests::fixture(); routing::set_sources(models,availability);
+        let control=Control{policy};
+        for sandbox in [None, Some(SandboxMode::WorkspaceWrite), Some(SandboxMode::DangerFullAccess), Some(SandboxMode::ReadOnly)] {
+            for approval in ["never","on-request","untrusted"] {
+                let mut before=params(); before.sandbox=sandbox.clone(); before.approval_policy=approval.into();
+                before.config.as_mut().unwrap().insert("sandbox_workspace_write.writable_roots".into(),Value("/fixture/approved-only".into()));
+                before.config.as_mut().unwrap().insert("sandbox_workspace_write.network_access".into(),Value("false".into()));
+                assert_eq!(control.prepare(&before,&assignment(false),&advice()).unwrap(),before);
+            }
+        }
+    }
+    #[test] fn read_only_assignments_restrict_without_widening_other_permissions() {
+        let (policy,models,availability)=tests::fixture(); routing::set_sources(models,availability);
+        let before=params(); let mut expected=before.clone(); expected.sandbox=Some(SandboxMode::ReadOnly);
+        assert_eq!(Control{policy}.prepare(&before,&assignment(true),&advice()).unwrap(),expected);
+    }
+    #[test] fn genuine_owner_and_availability_restrictions_apply_to_both_worker_types() {
+        for read_only in [false,true] {
+            for restriction in ["exclusion","floor","unavailable"] {
+                let (mut policy,models,mut availability)=tests::fixture();
+                match restriction { "exclusion"=>policy.denied_models.push("gpt-6.1-sol".into()), "floor"=>policy.floor=CapabilityFloor::Frontier, _=>availability.models.clear() }
+                routing::set_sources(models,availability);
+                assert!(Control{policy}.prepare(&params(),&assignment(read_only),&advice()).is_err(),"{read_only}/{restriction}");
+            }
+        }
     }
     #[test] fn real_launch_branch_still_rejects_explicit_exclusion() {
         let (mut policy,models,availability)=tests::fixture(); routing::set_sources(models,availability);

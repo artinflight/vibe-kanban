@@ -611,7 +611,7 @@ impl ObservationFixture {
         tokio::time::timeout(
             Duration::from_secs(15),
             self.container
-                .spawn_exit_monitor(&execution, None, Some(group)),
+                .spawn_exit_monitor(&execution, None, Some(group), None),
         )
         .await
         .unwrap()

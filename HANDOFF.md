@@ -1,40 +1,22 @@
-# VK::Run Provenance — review corrections, 2026-11-13
+# Provenance merged; activation preparation only — 2026-11-13
 
-Source-only change on `vk/a507-vk-run-provenanc`, current fork/staging base
-`bc3b89dee`. Existing production runtime and running work remain untouched.
-Draft [PR #297](https://github.com/artinflight/vibe-kanban/pull/297) targets
-staging. [Previous CI](https://github.com/artinflight/vibe-kanban/actions/runs/43321606696)
-failed backend test compilation (E0061); the review correction fixes the omitted
-context argument in `github_sync_tests.rs`. Check the corrected head's CI before
-integration.
+VK [PR #297](https://github.com/artinflight/vibe-kanban/pull/297) merged into
+staging as `dbcbfbe4e641cc7e79ec3275397940319689e868`. The tree equals reviewed
+head `70381108f36baf51bd8cc327690ee5dbee150c8e`; Test run 43416444956 was rechecked
+successful before merging. Private remote and release-only checks were skipped.
+CU PR #56 merged into main as `4a190f19a399392d9ca80d04832a8f31fe208e81`.
 
-- `crates/local-deployment/src/run_context.rs` implements workspace-local private
-  records, bounded hashes/config labels, native file events and terminal capture.
-  The normal spawn path creates the guard; the existing exit monitor owns it.
-- [VK_RUN_PROVENANCE.md](VK_RUN_PROVENANCE.md) defines the extended Media
-  Management schema, CU::Audit exact-ID joins, unknown/mixed/inherited context,
-  storage/privacy limits, activation and rollback. A file hash never proves a
-  model read. Records appear only for future executions after separately
-  authorised managed backend activation, with no AutoSwitch requirement.
-- Eighteen focused tests pass against the actual module in a small mounted-SSD
-  harness, with direct dependency versions pinned to Cargo.lock. Governance and
-  Rust formatting pass. Whole-repo offline Cargo cannot resolve serde; required
-  frontend format/check/lint stop on missing Prettier/TypeScript/ESLint. Full CI
-  and actual post-activation ordinary-run evidence remain distinct validation.
-- CU exact-execution query succeeded during this normal implementation work;
-  the guide records its partial lower bound and lack of automatic start coverage.
-  No provider tests, workers, deployment, merge, restart or device action.
-- A confirmed-empty scope (every selected `fileState` is `missing`) now has
-  `instructionVersion: null` and no unversioned reason, while retaining hashes,
-  states and watches. Real unversioned instructions and unavailable files remain
-  unknown. Five regressions cover this distinction, start/resume and later
-  instruction appearance. No new scope fields; see the guide's pinned v1 contract.
-  The separate CU PR #56 owner is aligning consumption; this branch changes no CU
-  code, attribution or usage evidence, and starts no comparison agents.
+The [guide](VK_RUN_PROVENANCE.md) retains the producer/CU contract and integration
+record. A detailed activation plan is retained privately for the operator, covering
+current bindings, live-change preservation, backup/rehearsal gates, process
+reloads, normal-job evidence, skipped checks and rollback. No deployment,
+restart, agent turn or separate usage experiment was performed.
 
-Review the focused staging PR and its CI before integration. Do not activate
-from this task. Use the existing deployment runbook when separately authorised;
-observe future ordinary starts/resumptions for usage evidence.
+The current branch only updates documentation. Activation remains future
+separately authorised work under the established deployment/restart runbooks.
+Use the next normal job after activation for exact-ID producer-to-CU acceptance;
+unknown/mixed/inherited context and missing attribution remain explicit.
+Preserve others' uncommitted work. No live acceptance is inferred from the merge.
 
 Previous handoff/source evidence: [specialist delegation](VK_GOAL_SPECIALIST_DELEGATION.md),
 [scrolling deployment](VK_SCROLLING_PROJECTS_DEPLOYMENT.md),

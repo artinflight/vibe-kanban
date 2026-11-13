@@ -228,3 +228,34 @@ bound excluding later work, not savings or provider billing. This running backen
 does not contain the new hook: there is no automatic start record for this run,
 and its instruction provenance cannot be reconstructed from current files.
 No separate agent comparisons or test model calls were launched.
+
+## Integration and future activation — 2026-11-13
+
+[PR #297](https://github.com/artinflight/vibe-kanban/pull/297) merged into staging
+as `dbcbfbe4e641cc7e79ec3275397940319689e868`. Its tree equals reviewed head
+`70381108f36baf51bd8cc327690ee5dbee150c8e`.
+[Reviewed-head CI](https://github.com/artinflight/vibe-kanban/actions/runs/43416444956)
+was rechecked successful immediately before integration. Private remote checks
+and release-only combined acceptance/candidate-build steps remained skipped.
+Source integration does not qualify a deployment artifact or live acceptance.
+
+CU [PR #56](https://github.com/artinflight/codexusage/pull/56) is already merged
+into main at `4a190f19a399392d9ca80d04832a8f31fe208e81`, including reporting
+base #57. Its documented acceptance is 23 Node and 42 Python tests, plus syntax
+and diff checks. That acceptance was inspected, not rerun by this planning task.
+The nullable-version producer contract above remains unchanged.
+
+A detailed activation handoff was prepared privately for the operator. It covers
+coordinated producer/consumer packaging, preservation of existing live changes,
+backup/rehearsal gates, required backend/server/report-worker reloads, normal-job
+verification and rollback. Follow the existing deployment and restart runbooks;
+activation requires separate approval and fresh readiness. No deployment,
+restart or separate usage experiment was performed by this integration task.
+
+After future activation, use the next independently authorised ordinary job.
+Check its exact workspace/session/execution record and terminal classification,
+then the existing CU scan's collection freshness/coverage and exact-execution
+report/export. Confirm empty-parent null labels, real unversioned/unknown cases,
+inherited context, union(start,end), unchanged token accounting and private
+retention. Do not invent fresh cohorts, split tokens by timestamps, backfill
+unmatched usage, or start a comparison worker. Live acceptance remains pending.

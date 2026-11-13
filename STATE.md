@@ -1,3 +1,13 @@
+# Run provenance integrated into staging — 2026-11-13
+
+[PR #297](https://github.com/artinflight/vibe-kanban/pull/297) merged as
+`dbcbfbe4e641cc7e79ec3275397940319689e868`; its tree equals reviewed head
+`70381108f36baf51bd8cc327690ee5dbee150c8e`, whose Test run 43416444956 passed.
+CU PR #56 is merged into main at `4a190f19a399392d9ca80d04832a8f31fe208e81`.
+See [integration and future activation](VK_RUN_PROVENANCE.md#integration-and-future-activation--2026-11-13).
+This integration task prepared an activation handoff but performed no deployment,
+restart or separate usage experiment. Existing runtime records below are unchanged.
+
 # Active-goal delegation source correction — 2026-11-04
 
 The focused branch corrects a goal/delegation instruction and capability mismatch;

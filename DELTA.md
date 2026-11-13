@@ -2591,3 +2591,14 @@ promotion is separate. Local Rust baseline remains blocked by offline serde.
 - Document exact v1 semantics for the separate CU PR #56 consumer, including
   start/end union visibility without assigning later labels to earlier usage.
   No CU edits, model experiments, merge, deployment or restart.
+
+## 2026-11-13 — PR #297 source integration; activation plan retained privately
+
+- Rechecked head 70381108f and successful Test run 43416444956; merged to staging
+  as dbcbfbe4e641cc7e79ec3275397940319689e868 with an exact-head guard. Merge tree
+  matches reviewed source; main unchanged. Remote/release-only skips remain.
+- CU PR #56 is merged as 4a190f19a399392d9ca80d04832a8f31fe208e81. Prepared the
+  joint activation and normal-job verification steps privately; public guide
+  retains the contract and integration status without internal deployment notes.
+- No deployment, restart, agent usage experiment or change to runtime permissions.
+  Future activation requires separate approval and established readiness gates.

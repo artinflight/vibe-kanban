@@ -1,0 +1,96 @@
+"""Exact deployed-binary test of orphan reconciliation on detached data."""
+import hashlib,importlib.util,json,os,shutil,sqlite3,subprocess,sys,time
+from pathlib import Path
+D=Path(__file__).resolve().parent;K=Path('/mnt/vk-storage/vk-cutback-ready-20261029');B=K/'bundle';F=D/'fixture-v2'
+sys.path.insert(0,'/mnt/vk-storage/vk-cutover-repair-20261029/source/scripts/deployment')
+from vk_reconcile_orphaned_subagents import apply
+from vk_restart_history_acceptance import bind_database
+
+def load(name,path):
+ s=importlib.util.spec_from_file_location(name,path);m=importlib.util.module_from_spec(s);s.loader.exec_module(m);return m
+H=load('sandbox',B/'rehearsal/server_sandbox.py');A=load('auditor',B/'rehearsal/latest_data_audit.py')
+def sha(p):
+ with Path(p).open('rb')as f:return hashlib.file_digest(f,'sha256').hexdigest()
+def save(n,x):(D/n).write_text(json.dumps(x,indent=2)+'\n')
+def tables(p):
+ with sqlite3.connect(p.as_uri()+'?mode=ro',uri=True)as c:
+  assert c.execute('pragma integrity_check').fetchall()==[('ok',)]
+  return {r[0]:A.table_digest(c,r[0])for r in c.execute("select name from sqlite_master where type='table' and name not like 'sqlite_%' order by name").fetchall()}
+def main():
+ assert os.path.ismount('/mnt/vk-storage');F.mkdir(mode=0o700)
+ for name in ('assets','home/.codex','workspaces','external','tmp','capacity'):(F/name).mkdir(parents=True,exist_ok=True)
+ working=F/'assets/db.v2.sqlite';shutil.copy2(D/'current-before.sqlite',working);shutil.copy2(D/'native-before.sqlite',F/'home/.codex/state_5.sqlite')
+ cfg=json.loads((B/'rehearsal/private-config.json').read_text());cfg['workspace_dir']='/run/fixture/workspaces';(F/'assets/config.json').write_text(json.dumps(cfg))
+ native='/home/mcp/.local/share/vibe-kanban-green-codex-home'
+ binary=B/'candidate/server';assert sha(binary)=='469f5959b1b7488876bd9d0f76df834fb00c3819af6fee5fe64dfd9cce636753'
+ info=json.loads((K/'candidate_return-BUILD.json').read_text());assets=info['assetDirectory']
+ with sqlite3.connect(working)as c:dataset=c.execute('select dataset_id from vk_runtime_identity where singleton=1').fetchone()[0]
+ (F/'identity').write_text(H.pin(assets+'/db.v2.sqlite','/run/fixture/workspaces',working,F/'workspaces',dataset))
+ recent=json.loads((B/'reference/recent-history.private.json').read_text())['recent_histories'];save('RECENT.private.json',bind_database(working,[r['execution']for r in recent]))
+ plan=json.loads((D/'AUDIT.private.json').read_text());baseline=tables(working);save('TABLES_BEFORE.private.json',baseline)
+ for phase in ['before','after']:
+  if phase=='after':
+   receipt=apply(working,D/'AUDIT.private.json',verify_external=lambda _:None,expected_sha256=sha(D/'AUDIT.private.json'));save('DETACHED_CHANGESET.private.json',receipt)
+   repaired=tables(working)
+   changed=[n for n in baseline if baseline[n]!=repaired[n]];assert changed==['subagent_jobs'],changed
+   assert len(receipt['changes'])==69
+  extra='''        import sys,sqlite3,datetime
+        sys.path.insert(0,'/run/controls')
+        from vk_restart_history_acceptance import verify_history
+        plan=json.loads(pathlib.Path('/run/audit.json').read_text())
+        def read(path,payload=None):
+            request=urllib.request.Request('http://127.0.0.1:39001/api/'+path,data=json.dumps(payload).encode() if payload is not None else None,headers={'Content-Type':'application/json'})
+            with urllib.request.urlopen(request,timeout=15)as r:result=json.load(r)
+            assert result['success'];return result
+        summaries=[]
+        for archived in [False,True]:summaries+=read('workspaces/summaries',{'archived':archived})['data']['summaries']
+        expected={r['workspace_id']:r for r in plan['summaries']}
+        assert len(summaries)==len(expected)==1201
+        for row in summaries:
+            old=expected[row['workspace_id']]
+            for key in ['latest_session_id','latest_process_status','has_unseen_turns','pr_status']:
+                assert row[key]==old[key],('Workspace state changed',key)
+            for key in ['active_subagent_count','unresolved_subagent_count']:
+                assert row[key]==(old[key] if PHASE=='before' else 0),(PHASE,row['workspace_id'],key,row[key])
+        count=0
+        for sid in sorted({r['job']['session_id']for r in plan['records']}):
+            jobs={j['agent_id']:j for j in read('execution-processes/subagents/session?session_id='+sid)['data']}
+            for r in plan['records']:
+                if r['job']['session_id']!=sid:continue
+                assert jobs[r['job']['agent_id']]['status']==(r['job']['status'] if PHASE=='before' else 'failed')
+                count+=1
+        assert count==69
+        targets=json.loads(pathlib.Path('/run/protected.json').read_text())['targets']
+        for r in targets:
+            st=read('execution-processes/'+r['execution']+'/native-recovery-status')['data']
+            assert st['server_pid']==child.pid and not st['writer_active']
+            entries=read('execution-processes/'+r['execution']+'/log-history')['data']['entries']
+            replies=[x['entry']['content']['content']for x in entries if x['entry']['content']['entry_type']['type']=='assistant_message']
+            assert len(replies)==1 and hashlib.sha256(replies[0].encode()).hexdigest()==r['expected_recovered_reply_sha256']
+        for r in json.loads(pathlib.Path('/run/recent.json').read_text()):verify_history(read,r)
+        if PHASE=='after':
+            r=next(r for r in plan['records']if r['workspace']=='INCIDENT_UUID_90E3EB9CE593D650')
+            followup=pathlib.Path('/run/fixture/followup.jsonl');now=datetime.datetime.now(datetime.timezone.utc).isoformat()
+            event=lambda kind:json.dumps({'timestamp':now,'type':'event_msg','payload':{'type':kind,'turn_id':'detached-followup'}})+'\\n'
+            followup.write_text(event('task_started'))
+            with sqlite3.connect('/run/fixture/home/.codex/state_5.sqlite')as db:db.execute('update threads set rollout_path=? where id=?',(str(followup),r['job']['agent_id']))
+            def status():return next(j['status']for j in read('execution-processes/subagents/session?session_id='+r['job']['session_id'])['data']if j['agent_id']==r['job']['agent_id'])
+            assert status()=='running','New child turn hidden by repair'
+            with followup.open('a')as out:out.write(event('task_complete'))
+            assert status()=='completed','New child completion not observed'
+        print(json.dumps(dict(phase=PHASE,workspaces=1201,checked_orphans=count,protected_histories=18,recent_histories=3,future_child_turn_visible=PHASE=='after')),flush=True)
+'''
+  runner=H.RUNNER.replace("('assets','workspaces','external','home')","('workspaces','external')").replace('time.monotonic()+15','time.monotonic()+60')
+  marker='        # All untracked/shared-shaped sentinels must survive normal startup too.';assert marker in runner
+  runner='PHASE='+repr(phase)+'\n'+runner.replace(marker,extra+marker)
+  cmd=['/usr/bin/bwrap','--unshare-all','--new-session','--die-with-parent','--ro-bind','/','/','--tmpfs','/home','--tmpfs','/mnt','--tmpfs','/run','--tmpfs','/tmp','--proc','/proc','--dev','/dev','--bind',str(F),'/run/fixture','--ro-bind',str(binary),'/run/test-server','--bind',str(F/'assets'),assets,'--ro-bind','/home/mcp/.local/share/vibe-kanban-green-xdg/vibe-kanban/sessions',assets+'/sessions','--ro-bind',native+'/sessions','/run/fixture/home/.codex/sessions','--ro-bind',native+'/sessions',native+'/sessions','--ro-bind',str(B/'controls'),'/run/controls','--ro-bind',str(B/'reference/protected-history.private.json'),'/run/protected.json','--ro-bind',str(D/'RECENT.private.json'),'/run/recent.json','--ro-bind',str(D/'AUDIT.private.json'),'/run/audit.json','--clearenv']
+  env=dict(HOME='/run/fixture/home',PATH='/usr/bin:/bin',TMPDIR='/run/fixture/tmp',BACKEND_PORT='39001',PREVIEW_PROXY_PORT='39002',RUST_LOG='error',VK_DISABLE_PR_MONITOR='1',VK_CAPACITY_START_PAUSED='1',VK_CAPACITY_STATE_DIR='/run/fixture/capacity',VK_RUNTIME_IDENTITY_FILE='/run/fixture/identity')
+  for k,v in env.items():cmd+=['--setenv',k,v]
+  cmd+=['--chdir','/run/fixture','/usr/bin/python3','-B','-c',runner,'[]','serve','']
+  with (D/(phase+'-v2.log')).open('x')as log:result=subprocess.run(cmd,stdout=log,stderr=subprocess.STDOUT,timeout=150)
+  assert result.returncode==0,phase+' test failed; inspect log'
+  actual=tables(working);save('TABLES_'+phase.upper()+'.private.json',actual)
+  assert actual==(baseline if phase=='before'else repaired),'Native startup changed unrelated data'
+ save('REHEARSAL.private.json',dict(passed=True,backend_sha256=sha(binary),workspaces=1201,reconciled_orphans=69,affected_workspaces=len({r['workspace']for r in plan['records']}),tables_unchanged_except_subagent_jobs=True,protected_histories=18,recent_histories=3,future_followup_and_completion_passed=True,production_changed=False,UTC=time.strftime('%Y-%m-%dT%H:%M:%SZ',time.gmtime())))
+ print('Detached before/after test passed',flush=True)
+if __name__=='__main__':main()

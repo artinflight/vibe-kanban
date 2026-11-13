@@ -1,0 +1,29 @@
+from pathlib import Path
+import hashlib,json,sqlite3,ssl,subprocess,time,urllib.request
+D=Path(__file__).resolve().parent
+CA='/mnt/vk-storage/vk-runtime-backup-20261009/direct-current-state-release-20261009/existing-homelab-ca.pem'
+ctx=ssl.create_default_context(cafile=CA);binding=json.loads((D/'BINDING.private.json').read_text());expected=binding['candidate']['sha256']
+unit='vibe-kanban-native-review-20261015.service';pid=subprocess.check_output(['systemctl','--user','show',unit,'-p','MainPID','--value'],text=True).strip()
+with open('/proc/'+pid+'/exe','rb') as f:actual=hashlib.file_digest(f,'sha256').hexdigest()
+assert actual==expected
+paths=['health','issue-workflows/capabilities','provider-admission/capabilities','sessions/INCIDENT_UUID_6A50B3C0C31D6D7E/steer/target?execution_id=INCIDENT_UUID_7653CBCDD0DA3DC4','execution-processes/INCIDENT_UUID_7653CBCDD0DA3DC4/stop-exact']
+results=[]
+for origin in ['http://127.0.0.1:5621','https://vibe.local']:
+ for path in paths:
+  with urllib.request.urlopen(origin+'/api/'+path,context=ctx,timeout=20)as r:
+   assert r.headers.get_content_type()=='application/json';v=json.load(r);assert v['success'];results.append(dict(origin=origin,path=path,http=r.status,data=v['data']))
+summaries=[]
+for archived in [False,True]:
+ req=urllib.request.Request('https://vibe.local/api/workspaces/summaries',data=json.dumps({'archived':archived}).encode(),headers={'Content-Type':'application/json'})
+ with urllib.request.urlopen(req,context=ctx,timeout=30)as r:summaries+=json.load(r)['data']['summaries']
+counts={k:sum(r.get(k,0) for r in summaries)for k in ['active_subagent_count','unresolved_subagent_count']}
+units={}
+for name in [unit,'vibe-dot-connector.service','vibe-dot-sidechat-publisher.service','fitrdy-manager.service','codexusage-preview.service','vk-chat-history-readonly-20261010.service']:
+ v=dict(x.split('=',1)for x in subprocess.check_output(['systemctl','--user','show',name,'-p','MainPID','-p','InvocationID','-p','ActiveState','-p','FreezerState','-p','RefuseManualStart'],text=True).splitlines());assert v['ActiveState']=='active'and v['FreezerState']=='running';units[name]=v
+p=Path('/home/mcp/.local/share/vibe-kanban-green-xdg/vibe-kanban/db.v2.sqlite').resolve()
+with sqlite3.connect(p.as_uri()+'?mode=ro',uri=True)as c:
+ migration_count=c.execute('select count(*) from _sqlx_migrations').fetchone()[0];assert migration_count==99
+ message=c.execute("select status,exit_code from execution_processes where id=x'9E62FCFC9A664D77A988BEBCFF330779'").fetchone();assert message==('completed',0)
+ native=c.execute("select count(*) from subagent_jobs where status in ('running','unresolved','not_found')").fetchone()[0]
+result=dict(UTC=time.strftime('%Y-%m-%dT%H:%M:%SZ',time.gmtime()),server_pid=int(pid),server_sha256=actual,source=binding['candidate']['source_commit'],routes=results,workspace_count=len(summaries),subagent_badges=counts,durable_unresolved_jobs=native,migrations=migration_count,latest_print_message_status=message,units=units,passed=True)
+(D/'LIVE_VERIFIED.private.json').write_text(json.dumps(result,indent=2)+'\n');print(json.dumps({k:v for k,v in result.items() if k not in ['units','routes']}))

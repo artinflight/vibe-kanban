@@ -1,0 +1,50 @@
+name: Large history verification
+on:
+  pull_request:
+    branches: [staging]
+    paths:
+      - 'crates/services/src/services/original_worker*'
+      - 'crates/services/src/services/original_worker/**'
+      - 'crates/server/src/original_worker*'
+      - 'crates/server/src/original_worker/**'
+      - 'scripts/testing/export-history-verifier.py'
+      - '.github/workflows/large-history-verification.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: large-history-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      CARGO_INCREMENTAL: '0'
+      CARGO_BUILD_JOBS: '2'
+      CARGO_PROFILE_DEV_DEBUG: '0'
+      CARGO_PROFILE_TEST_DEBUG: '0'
+      CARGO_PROFILE_TEST_OPT_LEVEL: '3'
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: ./.github/actions/cargo-checks-common-setup
+        with:
+          toolchain: nightly-2025-12-04
+          cache-key: large-history-verification-Linux
+      - name: Test indexed streaming verification
+        run: cargo test --locked -p services --lib original_worker::inputs -- --test-threads=1
+      - name: Export read-only verifier for private local acceptance
+        env:
+          VK_VERIFY_ARTIFACT: ${{ runner.temp }}/history-verifier
+        run: |
+          cargo test --locked -p services --lib --no-run --message-format=json > "$RUNNER_TEMP/history-test-binary.jsonl"
+          python3 scripts/testing/export-history-verifier.py "$RUNNER_TEMP/history-test-binary.jsonl"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: history-verifier-${{ github.event.pull_request.head.sha || github.sha }}
+          path: ${{ runner.temp }}/history-verifier/
+          retention-days: 14
+          if-no-files-found: error

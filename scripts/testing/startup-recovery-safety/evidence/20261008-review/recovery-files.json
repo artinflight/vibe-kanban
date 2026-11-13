@@ -1,0 +1,112 @@
+{
+  "owner_head": "f36e6f10df9b5e66951c4e47c6dedbdf4f54944a",
+  "owner_clean": true,
+  "files": [
+    {
+      "path": "HANDOFF.md",
+      "original_reconstruction_sha256": "d3206f61452d70a836522cf3fb5d715084ccdf42ff09d68528298feeee8118b9",
+      "current_sha256": "b3b6eba837cc9888b16a1aaad18e407ad6e608feec8670c1c8ab61f754677f84",
+      "matches_current_commit": true,
+      "matches_reconstruction": false,
+      "ancestor_matches_reconstruction": "422fe5ba0a406f03dd3a658d25e2f632f66d49ab"
+    },
+    {
+      "path": "VK_COMBINED_RELEASE_PREPARATION_20261007.md",
+      "original_reconstruction_sha256": "66a103da32d891c8feab87c4eec48a65e5ff22b59116a325f30b46811c83b54b",
+      "current_sha256": "66a103da32d891c8feab87c4eec48a65e5ff22b59116a325f30b46811c83b54b",
+      "matches_current_commit": true,
+      "matches_reconstruction": true
+    },
+    {
+      "path": "VK_RUNTIME_BACKUP_RECOVERY_20261007.md",
+      "original_reconstruction_sha256": "6c5b3d6cc713c308b4d01248cdc9f7e2c8b9010bdf84966f30db16f5a19526ef",
+      "current_sha256": "6c5b3d6cc713c308b4d01248cdc9f7e2c8b9010bdf84966f30db16f5a19526ef",
+      "matches_current_commit": true,
+      "matches_reconstruction": true
+    },
+    {
+      "path": "dev_assets_seed/db.sqlite",
+      "original_reconstruction_sha256": "467d0b477c490d398f522d64939e9db47202073d24e71d62da137c1cc2591eec",
+      "current_sha256": "467d0b477c490d398f522d64939e9db47202073d24e71d62da137c1cc2591eec",
+      "matches_current_commit": true,
+      "matches_reconstruction": true
+    },
+    {
+      "path": "scripts/testing/combined_handover_20261007.py",
+      "original_reconstruction_sha256": "82918434301534ea746f2b6131cdb69e3ddd209f7dedb95c1ea179baeab1fc29",
+      "current_sha256": "82918434301534ea746f2b6131cdb69e3ddd209f7dedb95c1ea179baeab1fc29",
+      "matches_current_commit": true,
+      "matches_reconstruction": true
+    },
+    {
+      "path": "scripts/testing/combined_release_20261007.py",
+      "original_reconstruction_sha256": "15e7d70c54e4c5057938553568ef0cd0d66a8295443b43b8d14e7f5882eb80ee",
+      "current_sha256": "15e7d70c54e4c5057938553568ef0cd0d66a8295443b43b8d14e7f5882eb80ee",
+      "matches_current_commit": true,
+      "matches_reconstruction": true
+    },
+    {
+      "path": "scripts/testing/retire_failed_rehearsal_20261007.py",
+      "original_reconstruction_sha256": "b642f7e7a3707c8d651257727fc8155f97beddaa1ffc87f3edc808ec842ce703",
+      "current_sha256": "b642f7e7a3707c8d651257727fc8155f97beddaa1ffc87f3edc808ec842ce703",
+      "matches_current_commit": true,
+      "matches_reconstruction": true
+    },
+    {
+      "path": "scripts/testing/verify_connector_repair_20261007.py",
+      "original_reconstruction_sha256": "305d48aef4c69571620be532d7a3ed92f6325b42792e34b68f97ce202453410d",
+      "current_sha256": "305d48aef4c69571620be532d7a3ed92f6325b42792e34b68f97ce202453410d",
+      "matches_current_commit": true,
+      "matches_reconstruction": true
+    },
+    {
+      "path": "scripts/testing/staging-first-run-20261006/delay-provider.py",
+      "original_reconstruction_sha256": "6da5ff0ad9875edfdf5878a1d614d95923d3817b2106dce8b4565a072459052d",
+      "current_sha256": "6da5ff0ad9875edfdf5878a1d614d95923d3817b2106dce8b4565a072459052d",
+      "matches_current_commit": true,
+      "matches_reconstruction": true
+    },
+    {
+      "path": "scripts/testing/staging-first-run-20261006/stall-provider.py",
+      "original_reconstruction_sha256": "680743f8f77e7f1e1c89309e4ad898b9ffcf539237730774eadcdbaaa8d0fb84",
+      "current_sha256": "680743f8f77e7f1e1c89309e4ad898b9ffcf539237730774eadcdbaaa8d0fb84",
+      "matches_current_commit": true,
+      "matches_reconstruction": true
+    },
+    {
+      "path": "scripts/testing/staging-first-run-20261006/combined.py",
+      "original_reconstruction_sha256": "7277d742ae80828de8e059c022bb467280d816ea3fd1ea82e987b2d1db8e3396",
+      "current_sha256": "7277d742ae80828de8e059c022bb467280d816ea3fd1ea82e987b2d1db8e3396",
+      "matches_current_commit": true,
+      "matches_reconstruction": true
+    },
+    {
+      "path": "scripts/testing/staging-low-peak-20261007/scratch_retirement.py",
+      "original_reconstruction_sha256": "ee1f1e4edc57f79640f081f7cd40543c125cb0e1e5fc1cea89c91031e4f51bda",
+      "current_sha256": "ee1f1e4edc57f79640f081f7cd40543c125cb0e1e5fc1cea89c91031e4f51bda",
+      "matches_current_commit": true,
+      "matches_reconstruction": true
+    },
+    {
+      "path": "scripts/testing/staging-low-peak-20261007/test_scratch_retirement.py",
+      "original_reconstruction_sha256": "e2b9eef2a65908ccfa3abca8950c52d570e85143f64d8bb22ddd83714f5e88fa",
+      "current_sha256": "e2b9eef2a65908ccfa3abca8950c52d570e85143f64d8bb22ddd83714f5e88fa",
+      "matches_current_commit": true,
+      "matches_reconstruction": true
+    },
+    {
+      "path": "scripts/testing/historical-review-20261007/record.py",
+      "original_reconstruction_sha256": "e602e158bcad0a178b0477d8ec125685e192dc53d732c1424921b79e272a3be9",
+      "current_sha256": "e602e158bcad0a178b0477d8ec125685e192dc53d732c1424921b79e272a3be9",
+      "matches_current_commit": true,
+      "matches_reconstruction": true
+    },
+    {
+      "path": "scripts/testing/historical-review-20261007/src/main.rs",
+      "original_reconstruction_sha256": "7aa49442f0abf521e114df833958cdbaea1ea7be35bb89aa3803137204dac01e",
+      "current_sha256": "7aa49442f0abf521e114df833958cdbaea1ea7be35bb89aa3803137204dac01e",
+      "matches_current_commit": true,
+      "matches_reconstruction": true
+    }
+  ]
+}

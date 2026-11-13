@@ -1,0 +1,207 @@
+{
+  "backend_dependency": "https://github.com/artinflight/vibe-kanban/pull/277",
+  "backend_head": "8534a6a655e03e4903e4e517cfea21c3b91c4636",
+  "changes": {
+    "resource-guard.sh": "Owner wording only; retained host fixture, never activated.",
+    "t26_watch.py": "Owner IDs must come from explicit private local config, with no compiled deployment default.",
+    "tests/test_t26.py": "Public synthetic owner IDs replace deployment constants.",
+    "tests/test_watch_events.py": "Synthetic IDs plus two owner-binding portability checks; all previous cases retained.",
+    "watch_events.py": "Disk registry target must match the separately supplied private Disk configuration owner.",
+    "watchers.example.json": "Synthetic example target identities only."
+  },
+  "destination_base": "5b43524ea35b2eb5dd80d0881dc8445489f4442f",
+  "destination_repository": "artinflight/vibe-kanban",
+  "files": [
+    {
+      "from": "tasks/storage-alert-response/.gitignore",
+      "migrated_sha256": "0f78e0a0cc1fbe0d9f4a81a623530e6828607bd87f4bbd033b010543af68c310",
+      "original_sha256": "0f78e0a0cc1fbe0d9f4a81a623530e6828607bd87f4bbd033b010543af68c310",
+      "to": "scripts/watcher-events/.gitignore"
+    },
+    {
+      "from": "tasks/storage-alert-response/accounting.py",
+      "migrated_sha256": "0d868d149fdc98daae447348bbaac402ec73c4f486ba84f27de26310f2108c35",
+      "original_sha256": "0d868d149fdc98daae447348bbaac402ec73c4f486ba84f27de26310f2108c35",
+      "to": "scripts/watcher-events/accounting.py"
+    },
+    {
+      "from": "tasks/storage-alert-response/admission.py",
+      "migrated_sha256": "9e1e5db300834da4c7d8e7496913b277cba174d79ed7eb0d68a53d307d6a08e1",
+      "original_sha256": "9e1e5db300834da4c7d8e7496913b277cba174d79ed7eb0d68a53d307d6a08e1",
+      "to": "scripts/watcher-events/admission.py"
+    },
+    {
+      "from": "tasks/storage-alert-response/config.example.json",
+      "migrated_sha256": "bdc1e0f00ff43c1bb215e987e2f5f91ca8cfe06f8710b15c9f5531784f3f4dae",
+      "original_sha256": "bdc1e0f00ff43c1bb215e987e2f5f91ca8cfe06f8710b15c9f5531784f3f4dae",
+      "to": "scripts/watcher-events/config.example.json"
+    },
+    {
+      "from": "tasks/storage-alert-response/monitor.py",
+      "migrated_sha256": "ab077377ec21b5f4170020155b97b334b2f3e2c7d5a612d764420b28f44b7d6b",
+      "original_sha256": "ab077377ec21b5f4170020155b97b334b2f3e2c7d5a612d764420b28f44b7d6b",
+      "to": "scripts/watcher-events/monitor.py"
+    },
+    {
+      "from": "tasks/storage-alert-response/native-overlay/registry_tests.rs",
+      "migrated_sha256": "b9a538667e81b868e597580014f222d2dad5bcbcce9dc439b620430f29757c8d",
+      "original_sha256": "b9a538667e81b868e597580014f222d2dad5bcbcce9dc439b620430f29757c8d",
+      "to": "scripts/watcher-events/native-overlay/registry_tests.rs"
+    },
+    {
+      "from": "tasks/storage-alert-response/native-overlay/storage-alert-owner-registry.patch",
+      "migrated_sha256": "c5967dece2d39f4fec4e41c416e2e8758ad332675eb256f46370e823a664d1c9",
+      "original_sha256": "c5967dece2d39f4fec4e41c416e2e8758ad332675eb256f46370e823a664d1c9",
+      "to": "scripts/watcher-events/native-overlay/storage-alert-owner-registry.patch"
+    },
+    {
+      "from": "tasks/storage-alert-response/native-overlay/storage_alerts.rs",
+      "migrated_sha256": "44367177e28ce39c730aa92159f9c2ca094cd10f900c58b5ad555c7a33306022",
+      "original_sha256": "44367177e28ce39c730aa92159f9c2ca094cd10f900c58b5ad555c7a33306022",
+      "to": "scripts/watcher-events/native-overlay/storage_alerts.rs"
+    },
+    {
+      "from": "tasks/storage-alert-response/native_adapter.py",
+      "migrated_sha256": "823a1908984f76c60403d11bd9b643b4c0cec2569bed2b9a242a4e8ea1040ede",
+      "original_sha256": "823a1908984f76c60403d11bd9b643b4c0cec2569bed2b9a242a4e8ea1040ede",
+      "to": "scripts/watcher-events/native_adapter.py"
+    },
+    {
+      "from": "tasks/storage-alert-response/native_http.py",
+      "migrated_sha256": "e98fcf21ae75f0d62c9417b2c7e5392bccf4b4c16f18f25cb9c19ad1fe626fe2",
+      "original_sha256": "e98fcf21ae75f0d62c9417b2c7e5392bccf4b4c16f18f25cb9c19ad1fe626fe2",
+      "to": "scripts/watcher-events/native_http.py"
+    },
+    {
+      "from": "tasks/storage-alert-response/native_integration.py",
+      "migrated_sha256": "7aac2f1a1574ee98d5ec020bf9ba9ab85122411c3fea47a1703f562b9bff4f19",
+      "original_sha256": "7aac2f1a1574ee98d5ec020bf9ba9ab85122411c3fea47a1703f562b9bff4f19",
+      "to": "scripts/watcher-events/native_integration.py"
+    },
+    {
+      "from": "tasks/storage-alert-response/pressure.py",
+      "migrated_sha256": "86acdadba773c225c196ed8f3b73453cb0d2a2935904e180abab1916d0ce282a",
+      "original_sha256": "86acdadba773c225c196ed8f3b73453cb0d2a2935904e180abab1916d0ce282a",
+      "to": "scripts/watcher-events/pressure.py"
+    },
+    {
+      "from": "tasks/storage-alert-response/resource-guard-t26.conf",
+      "migrated_sha256": "74e8ffc6e064837c1a58274bd451ab12647816dac5ede82bc068bb76205849b5",
+      "original_sha256": "74e8ffc6e064837c1a58274bd451ab12647816dac5ede82bc068bb76205849b5",
+      "to": "scripts/watcher-events/resource-guard-t26.conf"
+    },
+    {
+      "from": "tasks/storage-alert-response/resource-guard-t26.patch",
+      "migrated_sha256": "e559fbb3395c103c52ccc975ba7e70e063e3c700a125ebff16cb98646fe37af6",
+      "original_sha256": "e559fbb3395c103c52ccc975ba7e70e063e3c700a125ebff16cb98646fe37af6",
+      "to": "scripts/watcher-events/resource-guard-t26.patch"
+    },
+    {
+      "from": "tasks/storage-alert-response/resource-guard.sh",
+      "migrated_sha256": "fdd402c675059b51316b9aab8bc2ccd41d2c087183ef4629a07137bd09478019",
+      "original_sha256": "03842f68d0ef2214ceeae1013a18e208fa735cf1ac7d8fcbd59360ffc7bd4aaf",
+      "to": "scripts/watcher-events/resource-guard.sh"
+    },
+    {
+      "from": "tasks/storage-alert-response/status.py",
+      "migrated_sha256": "b4d770a10c81db6cb2f7691c499bb8f049f0b1f640279a56d0f824243e71860a",
+      "original_sha256": "b4d770a10c81db6cb2f7691c499bb8f049f0b1f640279a56d0f824243e71860a",
+      "to": "scripts/watcher-events/status.py"
+    },
+    {
+      "from": "tasks/storage-alert-response/storage-alert-response.service",
+      "migrated_sha256": "ea07e3d144c6dd96863e721762908238cbd9b660d62198323fb60ebf548603c2",
+      "original_sha256": "ea07e3d144c6dd96863e721762908238cbd9b660d62198323fb60ebf548603c2",
+      "to": "scripts/watcher-events/storage-alert-response.service"
+    },
+    {
+      "from": "tasks/storage-alert-response/storage-alert-response.timer",
+      "migrated_sha256": "c0b6b2dc715ae76ae9df51cd8fcd10a90096f4bfa7d50aa0ef2e06765d20dadc",
+      "original_sha256": "c0b6b2dc715ae76ae9df51cd8fcd10a90096f4bfa7d50aa0ef2e06765d20dadc",
+      "to": "scripts/watcher-events/storage-alert-response.timer"
+    },
+    {
+      "from": "tasks/storage-alert-response/t26_watch.py",
+      "migrated_sha256": "6020d9c6e8316dac4d99d2c173ac29b7b2c3762ffe64acb5f899e8575cfb165b",
+      "original_sha256": "7b389fbc06689033341222e853449a72849ca0d4092279cf3e5ec29d5930ba76",
+      "to": "scripts/watcher-events/t26_watch.py"
+    },
+    {
+      "from": "tasks/storage-alert-response/tests/test_headroom.py",
+      "migrated_sha256": "10463de9d0f27ce47ed9be94792a76eb2e7b776752623f9fa52a98735d44828f",
+      "original_sha256": "10463de9d0f27ce47ed9be94792a76eb2e7b776752623f9fa52a98735d44828f",
+      "to": "scripts/watcher-events/tests/test_headroom.py"
+    },
+    {
+      "from": "tasks/storage-alert-response/tests/test_monitor.py",
+      "migrated_sha256": "930dd74c14d4776221328733ca1d0e399fbdf4a43dc5bf402b4205ad266bebfe",
+      "original_sha256": "930dd74c14d4776221328733ca1d0e399fbdf4a43dc5bf402b4205ad266bebfe",
+      "to": "scripts/watcher-events/tests/test_monitor.py"
+    },
+    {
+      "from": "tasks/storage-alert-response/tests/test_native_adapter.py",
+      "migrated_sha256": "51b197009129936973c458b62d836eec92713bf6f31a074b22a37b92bafe0a56",
+      "original_sha256": "51b197009129936973c458b62d836eec92713bf6f31a074b22a37b92bafe0a56",
+      "to": "scripts/watcher-events/tests/test_native_adapter.py"
+    },
+    {
+      "from": "tasks/storage-alert-response/tests/test_native_http.py",
+      "migrated_sha256": "069cfbe762f0f2ac63614d098b6e4f995baa28cad5dd4f7f48cbf6211b36b487",
+      "original_sha256": "069cfbe762f0f2ac63614d098b6e4f995baa28cad5dd4f7f48cbf6211b36b487",
+      "to": "scripts/watcher-events/tests/test_native_http.py"
+    },
+    {
+      "from": "tasks/storage-alert-response/tests/test_ntfy_wake.py",
+      "migrated_sha256": "900baa00cf4cab279ab88fb79caed0111bbf8bdeec5a2fceefb07d19cbd92ba2",
+      "original_sha256": "900baa00cf4cab279ab88fb79caed0111bbf8bdeec5a2fceefb07d19cbd92ba2",
+      "to": "scripts/watcher-events/tests/test_ntfy_wake.py"
+    },
+    {
+      "from": "tasks/storage-alert-response/tests/test_physical.py",
+      "migrated_sha256": "47e6cbc28b1d758342ce1a602682738cc5f8f650ea6342d84936e75b009ef54e",
+      "original_sha256": "47e6cbc28b1d758342ce1a602682738cc5f8f650ea6342d84936e75b009ef54e",
+      "to": "scripts/watcher-events/tests/test_physical.py"
+    },
+    {
+      "from": "tasks/storage-alert-response/tests/test_receipts.py",
+      "migrated_sha256": "101543da0b8a7542717e5118afcd842896e7d60c259e1a215ecd7f2b90b4c9f0",
+      "original_sha256": "101543da0b8a7542717e5118afcd842896e7d60c259e1a215ecd7f2b90b4c9f0",
+      "to": "scripts/watcher-events/tests/test_receipts.py"
+    },
+    {
+      "from": "tasks/storage-alert-response/tests/test_t26.py",
+      "migrated_sha256": "373f9a9d4c5b0141c8f699fea2da2c23c929fa72fa484c6989972fca2f84f4a8",
+      "original_sha256": "c0846e37828359bf47df59f63515a320be6adb5e58c83c235091a744cfe329b5",
+      "to": "scripts/watcher-events/tests/test_t26.py"
+    },
+    {
+      "from": "tasks/storage-alert-response/tests/test_transport.py",
+      "migrated_sha256": "1700cefb2ba496c03a327ca9b97a6c143e6c82d7f02b4682a5a6802966e48ba1",
+      "original_sha256": "1700cefb2ba496c03a327ca9b97a6c143e6c82d7f02b4682a5a6802966e48ba1",
+      "to": "scripts/watcher-events/tests/test_transport.py"
+    },
+    {
+      "from": "tasks/storage-alert-response/tests/test_watch_events.py",
+      "migrated_sha256": "d514f86cf3012ee92c023c58bbd68c395a68226d689d12e965d76d7d3669d276",
+      "original_sha256": "f9654195995b0a0635b741d450a595bc054106e1384c2d89b7d91278be6bd732",
+      "to": "scripts/watcher-events/tests/test_watch_events.py"
+    },
+    {
+      "from": "tasks/storage-alert-response/watch_events.py",
+      "migrated_sha256": "3f37be58657df507ab5e815061a222da47683b96ca00e35ce3ce56983ff5575a",
+      "original_sha256": "843fdb3a699c33947ddcde0f0469aa83e1e8780c9eddc6ecc7173587555d8632",
+      "to": "scripts/watcher-events/watch_events.py"
+    },
+    {
+      "from": "tasks/storage-alert-response/watchers.example.json",
+      "migrated_sha256": "d9819d10f4e96e6313b6ee1a5e4384bb9ac1abc80237ffb394dfb140837b748d",
+      "original_sha256": "f13793d089809f9121e1c8307dff6f62b831220e69a3e2b012f9fb3fac606db1",
+      "to": "scripts/watcher-events/watchers.example.json"
+    }
+  ],
+  "misplaced_merge": "aca115d9310384744c3c38682778b67a4549611e",
+  "schema": "watcher-events-source-migration-v1",
+  "source_commit": "a017bd276929a1c677e067567f42d50affe6037e",
+  "source_policy": "Original Operations commits, history and private deployment identities remain preserved. Public destination reads explicit owner identities from private configuration; native binding/admission remains authoritative.",
+  "source_repository": "artinflight/Operations"
+}

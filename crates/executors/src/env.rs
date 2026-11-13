@@ -77,6 +77,8 @@ impl RepoContext {
 /// Environment variables to inject into executor processes
 #[derive(Debug, Clone)]
 pub struct ExecutionEnv {
+    pub job_admission: Option<crate::workspace_admission::JobAdmission>,
+    pub original_worker: Option<std::sync::Arc<dyn crate::original_worker::LaunchGuard>>,
     pub capacity: Option<crate::capacity::PreparedCapacity>,
     pub vars: HashMap<String, String>,
     pub repo_context: RepoContext,
@@ -91,6 +93,8 @@ impl ExecutionEnv {
         commit_reminder_prompt: String,
     ) -> Self {
         Self {
+            job_admission: None,
+            original_worker: None,
             capacity: None,
             vars: HashMap::new(),
             repo_context,

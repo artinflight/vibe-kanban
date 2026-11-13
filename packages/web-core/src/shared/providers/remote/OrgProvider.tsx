@@ -9,6 +9,7 @@ import {
 import type { OrganizationMemberWithProfile } from 'shared/types';
 import { organizationsApi } from '@/shared/lib/api';
 import { organizationKeys } from '@/shared/hooks/organizationKeys';
+import { useLocalParticipants } from '@/shared/hooks/useLocalParticipants';
 import { OrgContext, type OrgContextValue } from '@/shared/hooks/useOrgContext';
 
 interface OrgProviderProps {
@@ -17,6 +18,7 @@ interface OrgProviderProps {
 }
 
 export function OrgProvider({ organizationId, children }: OrgProviderProps) {
+  const participants = useLocalParticipants();
   const params = useMemo(
     () => ({ organization_id: organizationId }),
     [organizationId]
@@ -33,7 +35,7 @@ export function OrgProvider({ organizationId, children }: OrgProviderProps) {
   const membersQuery = useQuery({
     queryKey: organizationKeys.members(organizationId),
     queryFn: () => organizationsApi.getMembers(organizationId),
-    enabled: Boolean(organizationId),
+    enabled: Boolean(organizationId) && !participants.isLocalOnlySession,
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
@@ -60,11 +62,13 @@ export function OrgProvider({ organizationId, children }: OrgProviderProps) {
 
   const membersWithProfilesById = useMemo(() => {
     const map = new Map<string, OrganizationMemberWithProfile>();
-    for (const member of membersQuery.data ?? []) {
+    for (const member of (participants.isLocalOnlySession
+      ? participants.data?.members
+      : membersQuery.data) ?? []) {
       map.set(member.user_id, member);
     }
     return map;
-  }, [membersQuery.data]);
+  }, [membersQuery.data, participants.isLocalOnlySession, participants.data]);
 
   // Lookup helpers
   const getProject = useCallback(

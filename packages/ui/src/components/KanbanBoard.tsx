@@ -135,9 +135,19 @@ export const KanbanCard = ({
             onMouseUp={
               !isMobile
                 ? (e) => {
-                    if (e.button === 0 && !snapshot.isDragging) {
-                      onClick?.(e);
-                    }
+                    if (e.button !== 0 || snapshot.isDragging) return;
+                    // Nested workspace cards and controls handle their own click.
+                    // Opening the issue on mouse-up first can change the layout
+                    // before that click is delivered to its intended target.
+                    const target = e.target;
+                    const control =
+                      target instanceof Element
+                        ? target.closest(
+                            'button, a, input, select, textarea, [role="button"], [contenteditable="true"]'
+                          )
+                        : null;
+                    if (control && control !== e.currentTarget) return;
+                    onClick?.(e);
                   }
                 : undefined
             }

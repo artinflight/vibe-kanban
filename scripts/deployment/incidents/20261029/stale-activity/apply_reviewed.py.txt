@@ -1,0 +1,32 @@
+"""One-shot application of the tested, backed-up October 29 orphan plan."""
+import fcntl,hashlib,json,os,sqlite3,sys,time
+from pathlib import Path
+D=Path(__file__).resolve().parent
+sys.path[:0]=[str(D),'/mnt/vk-storage/vk-cutover-repair-20261029/source/scripts/deployment']
+from vk_reconcile_orphaned_subagents import apply
+from live_guard import verify,sha,DB
+
+def save(name,value):
+ p=D/name;t=p.with_name(p.name+'.next');fd=os.open(t,os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600)
+ with os.fdopen(fd,'w')as out:json.dump(value,out,indent=2);out.write('\n');out.flush();os.fsync(out.fileno())
+ t.replace(p)
+
+def main():
+ if sys.argv[1:]!=['--apply-reviewed']:raise ValueError('Explicit reviewed apply mode required')
+ if (D/'LIVE_CHANGESET.private.json').exists()or(D/'APPLY_INTENT.private.json').exists():raise ValueError('Operation already attempted; reconcile receipts rather than retry')
+ proof=json.loads((D/'REHEARSAL.private.json').read_text());assert proof['passed']and proof['future_followup_and_completion_passed']and proof['reconciled_orphans']==69
+ plan_sha=sha(D/'AUDIT.private.json')
+ detached=json.loads((D/'DETACHED_CHANGESET.private.json').read_text());assert detached['plan_sha256']==plan_sha
+ backup=json.loads((D/'BACKUP.private.json').read_text());assert backup['complete']
+ for row in backup['files']:assert row['independent_native_readback_verified']and sha(D/row['name'])==row['sha256']
+ plan=json.loads((D/'AUDIT.private.json').read_text());assert len(plan['records'])==69
+ lease=Path('/mnt/vk-storage/worktrees/4e18-vk-staging-check/_vibe_kanban_repo/.restart-preparation/recovery-resume-20261024/final-cutover-v1/cutover-owner.lock')
+ fd=os.open(lease,os.O_RDONLY|os.O_NOFOLLOW);fcntl.flock(fd,fcntl.LOCK_EX|fcntl.LOCK_NB)
+ try:
+  verify(plan)
+  save('APPLY_INTENT.private.json',dict(plan_sha256=plan_sha,repair_source_sha256=sha('/mnt/vk-storage/vk-cutover-repair-20261029/source/scripts/deployment/vk_reconcile_orphaned_subagents.py'),external_guard_sha256=sha(D/'live_guard.py'),backend_PID=758531,native_threads_modified=False,scope='69 proven pre-boot orphan activity records; 67 inserts and 2 updates only',UTC=time.strftime('%Y-%m-%dT%H:%M:%SZ',time.gmtime())))
+  receipt=apply(DB,D/'AUDIT.private.json',verify_external=verify,expected_sha256=plan_sha)
+  save('LIVE_CHANGESET.private.json',receipt)
+  print(json.dumps(dict(committed=True,inserted=sum(r['before']is None for r in receipt['changes']),updated=sum(r['before']is not None for r in receipt['changes']),status='failed/interrupted',history_modified=False,native_thread_graph_modified=False,backend_restarted=False)),flush=True)
+ finally:os.close(fd)
+if __name__=='__main__':main()

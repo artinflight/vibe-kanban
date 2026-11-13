@@ -1,0 +1,49 @@
+name: Bounded native final repair
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "crates/server/src/bin/repair_native_final.rs"
+      - "crates/server/src/routes/execution_processes/historical_response/local_repair.rs"
+      - "crates/server/src/routes/execution_processes/historical_response/*-request.json"
+      - ".github/workflows/native-final-repair.yml"
+jobs:
+  repair:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    permissions:
+      contents: read
+    env:
+      CARGO_INCREMENTAL: "0"
+      CARGO_BUILD_JOBS: "2"
+      CARGO_PROFILE_DEV_DEBUG: "0"
+      CARGO_PROFILE_TEST_DEBUG: "0"
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/cargo-checks-common-setup
+        with:
+          toolchain: nightly-2025-12-04
+          components: clippy,rustfmt
+          cache-key: combined-capture-consent-Linux
+      - name: Bind disposable hosted storage
+        run: mkdir -p dev_assets
+      - name: Only affected CLI and authoritative status tests
+        run: cargo test --locked -p server --lib historical_response::local_repair -- --test-threads=1
+      - name: Compile the operator CLI and lint affected targets
+        run: |
+          cargo build --locked -p server --bin repair_native_final
+          cargo clippy --locked -p server --lib --bin repair_native_final --tests -- -D warnings
+          cargo fmt --all -- --check
+      - name: Export bounded CLI and read-only incident verifier
+        env:
+          VK_VERIFY_ARTIFACT: ${{ runner.temp }}/native-recovery-verifier
+        run: |
+          cargo test --locked -p server --lib --no-run --message-format=json > "$RUNNER_TEMP/recovery-test-binary.jsonl"
+          python3 scripts/testing/export-native-recovery-verifier.py "$RUNNER_TEMP/recovery-test-binary.jsonl"
+          cp target/debug/repair_native_final "$VK_VERIFY_ARTIFACT/repair_native_final"
+          sha256sum "$VK_VERIFY_ARTIFACT/repair_native_final" > "$VK_VERIFY_ARTIFACT/repair_native_final.sha256"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bounded-native-final-repair-${{ github.sha }}
+          path: ${{ runner.temp }}/native-recovery-verifier/
+          retention-days: 14

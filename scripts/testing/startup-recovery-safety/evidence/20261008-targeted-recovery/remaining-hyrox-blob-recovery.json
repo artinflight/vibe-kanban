@@ -1,0 +1,10 @@
+{
+  "oid": "cd5ca5de0e5deea79a75c48867500d2289151ed8",
+  "kind": "blob",
+  "source_response_sha256": "2f89e948f594e030412f9cf5eccb05fdb20114714c5ec8db7da48981050b95f5",
+  "compressed_object_sha256": "ea890cd359420f0e5c3847944ea9dd4acfc3f1ea63d78391d52c3915e2af8fb7",
+  "bytes": 319490,
+  "original_git_identity_verified": true,
+  "response_preserved": "B:\\vk-backups\\vk-targeted-recovery-investigation-20261008\\september-original-object-stores-20261008T174030Z\\private-api-response-2f89e948f594e030412f9cf5eccb05fdb20114714c5ec8db7da48981050b95f5.json",
+  "observed_at": "2026-10-08T18:48:36.030442+00:00"
+}

@@ -14,6 +14,7 @@ import {
   RowsIcon,
   TextAlignLeftIcon,
   EyeSlashIcon,
+  ChecksIcon,
   SidebarSimpleIcon,
   ChatsTeardropIcon,
   GitDiffIcon,
@@ -438,6 +439,20 @@ export const Actions = {
       await StartReviewDialog.show({
         workspaceId,
       });
+    },
+  },
+
+  MarkWorkspaceRead: {
+    id: 'mark-workspace-read',
+    label: 'Mark all replies read',
+    icon: ChecksIcon,
+    requiresTarget: ActionTargetType.WORKSPACE,
+    isVisible: (ctx) => ctx.hasWorkspace,
+    getTooltip: () =>
+      'Mark all agent replies across this workspace’s sessions as read',
+    execute: async (ctx, workspaceId) => {
+      await workspacesApi.markSeen(workspaceId);
+      invalidateWorkspaceQueries(ctx.queryClient, workspaceId);
     },
   },
 

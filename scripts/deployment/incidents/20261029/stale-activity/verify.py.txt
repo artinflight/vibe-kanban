@@ -1,0 +1,30 @@
+import hashlib,importlib.util,json,sqlite3,sys,urllib.request
+from pathlib import Path
+D=Path(__file__).resolve().parent
+sys.path[:0]=[str(D),'/mnt/vk-storage/vk-cutover-repair-20261029/source/scripts/deployment']
+from vk_restart_history_acceptance import verify_history
+from live_guard import verify
+spec=importlib.util.spec_from_file_location('rows',Path('/mnt/vk-storage/vk-cutback-ready-20261029/bundle/rehearsal/latest_data_audit.py'));a=importlib.util.module_from_spec(spec);spec.loader.exec_module(a)
+plan=json.loads((D/'AUDIT.private.json').read_text());owner=verify(plan)
+def read(p):
+ with urllib.request.urlopen('http://127.0.0.1:5621/api/'+p,timeout=15)as r:return json.load(r)
+meta=json.loads(Path('/mnt/vk-storage/vk-cutback-ready-20261029/bundle/reference/protected-history.private.json').read_text())
+for row in meta['targets']:
+ state=read('execution-processes/'+row['execution']+'/native-recovery-status')['data'];assert state['server_pid']==758531 and not state['writer_active']
+ data=read('execution-processes/'+row['execution']+'/log-history')['data']
+ replies=[x['entry']['content']['content']for x in data['entries']if x['entry']['content']['entry_type']['type']=='assistant_message']
+ assert len(replies)==1 and hashlib.sha256(replies[0].encode()).hexdigest()==row['expected_recovered_reply_sha256']
+for row in json.loads((D/'RECENT.private.json').read_text()):verify_history(read,row)
+old=sqlite3.connect((D/'current-before.sqlite').as_uri()+'?mode=ro&immutable=1',uri=True)
+now=sqlite3.connect('file:/home/mcp/.local/share/vibe-kanban-green-xdg/vibe-kanban/db.v2.sqlite?mode=ro',uri=True)
+old.row_factory=now.row_factory=sqlite3.Row
+receipt=json.loads((D/'LIVE_CHANGESET.private.json').read_text());touched={r['after']['id']for r in receipt['changes']}
+oldjobs={r['id'].hex():tuple(r)for r in old.execute('select * from subagent_jobs')};newjobs={r['id'].hex():tuple(r)for r in now.execute('select * from subagent_jobs')}
+assert all(newjobs[k]==v for k,v in oldjobs.items()if k not in touched)
+assert len(newjobs)-len(oldjobs)==67
+for table in ['projects','tasks','sessions','execution_processes','coding_agent_turns','execution_process_logs','saved_chat_messages','workspace_review_events']:
+ assert a.table_digest(old,table)==a.table_digest(now,table),table
+nold=sqlite3.connect((D/'native-before.sqlite').as_uri()+'?mode=ro&immutable=1',uri=True);nnow=sqlite3.connect('file:/home/mcp/.local/share/vibe-kanban-green-codex-home/state_5.sqlite?mode=ro',uri=True)
+for table in ['threads','thread_spawn_edges']:assert a.table_digest(nold,table)==a.table_digest(nnow,table),table
+v=dict(passed=True,protected_histories=18,recent_histories=3,core_rows_preserved=True,native_threads_and_edges_unchanged=True,only_reviewed_subagent_rows_changed=True,backend_PID=758531)
+(D/'LIVE_PRESERVATION.private.json').write_text(json.dumps(v,indent=2)+'\n');print(json.dumps(v))

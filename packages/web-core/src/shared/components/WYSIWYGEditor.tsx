@@ -49,6 +49,7 @@ import { SlashCommandTypeaheadPlugin } from '@vibe/ui/components/SlashCommandTyp
 import { KeyboardCommandsPlugin } from '@vibe/ui/components/KeyboardCommandsPlugin';
 import { ImageKeyboardPlugin } from '@vibe/ui/components/ImageKeyboardPlugin';
 import { ComponentInfoKeyboardPlugin } from '@vibe/ui/components/ComponentInfoKeyboardPlugin';
+import { ReadOnlyWebLinkPlugin } from '@vibe/ui/components/ReadOnlyWebLinkPlugin';
 import { ReadOnlyLinkPlugin } from '@vibe/ui/components/ReadOnlyLinkPlugin';
 import { ClickableCodePlugin } from '@vibe/ui/components/ClickableCodePlugin';
 import { ToolbarPlugin } from '@vibe/ui/components/ToolbarPlugin';
@@ -565,6 +566,7 @@ const WYSIWYGEditor = forwardRef<WYSIWYGEditorRef, WysiwygProps>(
                 <LexicalComposer initialConfig={initialConfig}>
                   <EditorRefPlugin editorRef={editorInstanceRef} />
                   {compactSummaryMetadata && <CompactSummaryMetadataPlugin />}
+                  {disabled && <ReadOnlyWebLinkPlugin />}
                   <MarkdownSyncPlugin
                     value={value}
                     onChange={onChange}

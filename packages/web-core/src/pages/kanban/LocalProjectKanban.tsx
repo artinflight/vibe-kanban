@@ -15,6 +15,7 @@ import {
   ProjectMutationsRegistration,
 } from '@/pages/kanban/ProjectKanban';
 import { projectsApi } from '@/shared/lib/api';
+import { useLocalParticipants } from '@/shared/hooks/useLocalParticipants';
 
 function createLocalProjectView(
   projectId: string,
@@ -33,6 +34,7 @@ function createLocalProjectView(
 }
 
 export function LocalProjectKanban() {
+  const participants = useLocalParticipants();
   const { t } = useTranslation('common');
   const { projectId, hostId, hasInvalidWorkspaceCreateDraftId } =
     useCurrentKanbanRouteState();
@@ -106,9 +108,14 @@ export function LocalProjectKanban() {
       removeProject: () => ({ persisted: Promise.resolve() }),
       getProject: (candidateProjectId) => projectsById.get(candidateProjectId),
       projectsById,
-      membersWithProfilesById: new Map(),
+      membersWithProfilesById: new Map(
+        (participants.data?.members ?? []).map((member) => [
+          member.user_id,
+          member,
+        ])
+      ),
     };
-  }, [projectId, project?.name]);
+  }, [projectId, project?.name, participants.data]);
 
   if (!projectId) {
     return (

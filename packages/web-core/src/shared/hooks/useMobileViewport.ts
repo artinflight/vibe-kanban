@@ -11,6 +11,7 @@ export function useMobileViewport(
     const element = ref.current;
     if (!enabled || !element) return;
     const viewport = window.visualViewport;
+    let keyboardOpen = false;
     const update = () => {
       if (viewport && viewport.scale !== 1) return;
       const height = viewport?.height ?? window.innerHeight;
@@ -28,9 +29,11 @@ export function useMobileViewport(
       const editing =
         focused instanceof HTMLElement &&
         (focused.isContentEditable || focused.matches('input, textarea'));
-      element.dataset.keyboardOpen = String(
-        editing && window.innerHeight - height > 150
-      );
+      // Focus can leave the editor before the keyboard closes (including when
+      // Send disables it). Restore navigation only once the viewport expands.
+      keyboardOpen =
+        window.innerHeight - height > 150 && (editing || keyboardOpen);
+      element.dataset.keyboardOpen = String(keyboardOpen);
     };
     const updateAfterFocus = () => queueMicrotask(update);
     update();

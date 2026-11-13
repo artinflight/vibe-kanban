@@ -692,15 +692,21 @@ function GenericToolApprovalEntry({
       onToggle={toggle}
       workspaceId={workspaceId}
       status={status}
-      renderMarkdown={({ content, workspaceId }) => (
-        <AppChatMarkdown
-          content={content}
-          workspaceId={workspaceId}
-          sessionId={sessionId}
-          className={undefined}
-          maxWidth={undefined}
-        />
-      )}
+      renderMarkdown={({ content, workspaceId }) =>
+        toolName === 'codex.mcp_approval' ? (
+          <pre className="whitespace-pre-wrap break-words text-sm">
+            {content}
+          </pre>
+        ) : (
+          <AppChatMarkdown
+            content={content}
+            workspaceId={workspaceId}
+            sessionId={sessionId}
+            className={undefined}
+            maxWidth={undefined}
+          />
+        )
+      }
     />
   );
 }

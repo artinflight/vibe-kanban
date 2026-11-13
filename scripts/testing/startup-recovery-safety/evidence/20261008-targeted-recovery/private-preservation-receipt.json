@@ -1,0 +1,10 @@
+{
+  "destination": "B:/vk-backups/vk-targeted-recovery-investigation-20261008/private-evidence-20261008T184453Z.tar.gz",
+  "bytes": 32893614,
+  "sha256": "1bbb86ad4c39c27abac720ad65790a4a8c6cce1857b26ca5aad1e828f6cb66b9",
+  "desktop_readback_verified": true,
+  "members": 497,
+  "source_bytes": 79907306,
+  "manifest_sha256": "a6af6685055562b0913aeb35cce8ab74a444aa6d74ea26f86c19e61f76cf44d5",
+  "scope": "Private originals/responses/candidate bytes and provenance; large source backups/object database referenced separately. No raw payload published."
+}

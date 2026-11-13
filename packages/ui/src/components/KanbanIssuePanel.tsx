@@ -124,6 +124,9 @@ export interface KanbanIssuePanelProps {
 
   // Loading states
   isSubmitting?: boolean;
+  isFormLocked?: boolean;
+  submitLabel?: string;
+  submitFeedback?: ReactNode;
 
   // Save status for description field
   descriptionSaveStatus?: 'idle' | 'saved';
@@ -180,6 +183,9 @@ export function KanbanIssuePanel({
   renderAddTagControl,
   renderDescriptionEditor,
   isSubmitting,
+  isFormLocked = false,
+  submitLabel,
+  submitFeedback,
   descriptionSaveStatus,
   titleInputRef,
   onCopyLink,
@@ -198,6 +204,7 @@ export function KanbanIssuePanel({
 }: KanbanIssuePanelProps) {
   const { t } = useTranslation('common');
   const phone = usePhoneLayout();
+  const isFormDisabled = isSubmitting || isFormLocked;
   const [tagsOpen, setTagsOpen] = useState(false);
   const isCreateMode = mode === 'create';
   const breadcrumbTextClass =
@@ -267,11 +274,11 @@ export function KanbanIssuePanel({
           placeholder="Issue Title..."
           autoFocus={isCreateMode && !phone}
           aria-label="Issue title"
-          disabled={isSubmitting}
+          disabled={isFormDisabled}
           className={cn(
             'px-base text-lg font-medium text-high',
             'placeholder:text-high/50',
-            isSubmitting && 'opacity-50 pointer-events-none'
+            isFormDisabled && 'opacity-50 pointer-events-none'
           )}
         />
 
@@ -353,7 +360,7 @@ export function KanbanIssuePanel({
             onAssigneeClick={() =>
               onFormChange('assigneeIds', formData.assigneeIds)
             }
-            disabled={isSubmitting}
+            disabled={isFormDisabled}
           />
         </div>
 
@@ -378,7 +385,7 @@ export function KanbanIssuePanel({
             onCreateTag={onCreateTag}
             renderAddTagControl={renderAddTagControl}
             onLinkPr={!isCreateMode ? onLinkPr : undefined}
-            disabled={isSubmitting}
+            disabled={isFormDisabled}
           />
         </div>
 
@@ -395,7 +402,7 @@ export function KanbanIssuePanel({
               !isDescriptionEditing && !isCreateMode && 'cursor-text'
             )}
             onClick={() => {
-              if (!isDescriptionEditing && !isCreateMode && !isSubmitting) {
+              if (!isDescriptionEditing && !isCreateMode && !isFormDisabled) {
                 // Don't enter edit mode if the user was selecting text
                 const selection = window.getSelection();
                 if (selection && selection.toString().length > 0) return;
@@ -430,7 +437,7 @@ export function KanbanIssuePanel({
               onChange: (value) => onFormChange('description', value || null),
               onCmdEnter: onCmdEnterSubmit,
               onPasteFiles: isDescriptionEditing ? onPasteFiles : undefined,
-              disabled: !isDescriptionEditing || isSubmitting,
+              disabled: !isDescriptionEditing || isFormDisabled,
               autoFocus: false,
               className: cn(
                 'px-base',
@@ -454,11 +461,11 @@ export function KanbanIssuePanel({
                             type="button"
                             onMouseDown={(e) => {
                               e.preventDefault();
-                              if (!isSubmitting && !isUploading) {
+                              if (!isFormDisabled && !isUploading) {
                                 onBrowseAttachment();
                               }
                             }}
-                            disabled={isSubmitting || isUploading}
+                            disabled={isFormDisabled || isUploading}
                             className={cn(
                               'p-half rounded-sm transition-colors',
                               'text-low hover:text-normal hover:bg-panel/50',
@@ -517,16 +524,18 @@ export function KanbanIssuePanel({
               }
               label={t('kanban.createDraftWorkspaceImmediately')}
               description={t('kanban.createDraftWorkspaceDescription')}
-              disabled={isSubmitting}
+              disabled={isFormDisabled}
             />
           </div>
         )}
+
+        {isCreateMode && submitFeedback}
 
         {/* Create Issue Button (Create mode only) */}
         {isCreateMode && (
           <div className="px-base pb-base flex items-center gap-half">
             <PrimaryButton
-              value={t('kanban.createIssue')}
+              value={submitLabel ?? t('kanban.createIssue')}
               onClick={onSubmit}
               disabled={isSubmitting || isUploading || !formData.title.trim()}
               actionIcon={isSubmitting ? 'spinner' : undefined}
@@ -536,7 +545,7 @@ export function KanbanIssuePanel({
               <IconButton
                 icon={TrashIcon}
                 onClick={onDeleteDraft}
-                disabled={isSubmitting}
+                disabled={isFormDisabled}
                 aria-label="Delete draft"
                 title="Delete draft"
                 className="hover:text-error hover:bg-error/10"

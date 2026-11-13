@@ -1,0 +1,48 @@
+from pathlib import Path
+import copy,datetime,hashlib,json,os,shutil,sqlite3,sys,time
+D=Path(__file__).resolve().parent;N=D/'native-recovery-fenced';ROOT=Path('/home/mcp/.local/share/vibe-kanban-green-codex-home');SINCE=datetime.datetime(2026,10,29,20,55,tzinfo=datetime.timezone.utc).timestamp()
+sys.path.insert(0,'/mnt/vk-storage/vk-stale-activity-20261029');from backup import guard,sha
+
+def sig(p):
+ if not p.exists():return None
+ s=p.stat();return [s.st_dev,s.st_ino,s.st_size,s.st_mtime_ns,s.st_ctime_ns]
+def sessions():
+ return sorted(p for p in (ROOT/'sessions').rglob('*.jsonl') if p.stat().st_mtime>=SINCE)
+def save(v):
+ p=N/'RECEIPT.next';p.write_text(json.dumps(v,indent=2)+'\n');p.chmod(0o600);p.replace(N/'RECEIPT.private.json')
+def progress(phase, **details):
+ print(json.dumps(dict(phase=phase,**details)),flush=True)
+
+def main():
+ guard();N.mkdir(mode=0o700);records=[];bindings={}
+ for name in ['state_5.sqlite','goals_1.sqlite','memories_1.sqlite','queue_1.sqlite','thread_history_1.sqlite','logs_2.sqlite']:
+  src=ROOT/name;out=N/name;before={str(p):sig(p) for p in [src,Path(str(src)+'-wal')]}
+  with sqlite3.connect(src.as_uri()+'?mode=ro',uri=True)as a,sqlite3.connect(out)as b:
+   last=[-1]
+   def copied(status,remaining,total):
+    if total-remaining>last[0]:
+     last[0]=total-remaining;progress('native-SQL-copy',database=name,completed_pages=last[0],total_pages=total)
+   a.backup(b,pages=4096,progress=copied);assert b.execute('PRAGMA integrity_check').fetchall()==[('ok',)]
+  assert before=={p:sig(Path(p))for p in before},'native writer changed during capture'
+  bindings.update(before);out.chmod(0o600);records.append(dict(source=str(src),local=str(out),sqlite_integrity='ok'))
+  print(json.dumps({'captured':name,'bytes':out.stat().st_size}),flush=True)
+ selected=sessions()
+ for i,src in enumerate(selected):
+  before=sig(src);out=N/(str(i)+'-'+src.name);shutil.copyfile(src,out);out.chmod(0o600);assert sig(src)==before;bindings[str(src)]=before;records.append(dict(source=str(src),local=str(out)))
+ manifest=Path('/mnt/vk-storage/vk-staging-catchup-20261028/cutover-v5-20261029/MANIFEST.private.json');assert sha(manifest)=='703488c3caa16d48336049e9be23e60967cccb95c4a48b10466b896200d0c961'
+ cfg=json.loads(manifest.read_text());plan=json.loads(Path(cfg['plan']['path']).read_text());sys.path.insert(0,plan['source_folder']);from vk_nightly_desktop_objects import DesktopObjects
+ control=copy.deepcopy(plan['workers']['files']['desktop']);control.pop('whole_cycle_deadline_UTC',None)
+ result=dict(complete=False,files=records,source_signatures=bindings,session_selection_since=SINCE,selected_sessions=[str(p)for p in selected],B_root=control['B_root']);save(result)
+ with DesktopObjects(control,guard=guard)as remote:
+  for row in records:
+   p=Path(row['local']);h=hashlib.sha256();segments=[]
+   class Sink:
+    def write(self,raw):h.update(raw);return len(raw)
+   with p.open('rb')as f:
+    while block:=f.read(control['maximum_object_bytes']):segments.append(remote.client.ensure(block,readback_sink=Sink()))
+   expected=sha(p);assert h.hexdigest()==expected
+   descriptor=dict(format='vk-new-build-native-recovery-v1',source=row['source'],bytes=p.stat().st_size,sha256=expected,segments=segments)
+   row.update(sha256=expected,bytes=p.stat().st_size,descriptor=remote.client.ensure((json.dumps(descriptor,sort_keys=True)+'\n').encode()),independent_native_readback_verified=True);save(result)
+   progress('native-Desktop-B-readback',file=p.name,verified_bytes=row['bytes'])
+ result.update(complete=True,UTC=time.strftime('%Y-%m-%dT%H:%M:%SZ',time.gmtime()));save(result)
+if __name__=='__main__':main()

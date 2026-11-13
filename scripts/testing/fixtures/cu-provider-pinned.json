@@ -1,0 +1,999 @@
+{
+  "provenance": {
+    "producerCommit": "1bb81ecc336973a1acc4cd47a9c92cfbdb3ecdab",
+    "producerPath": "src/provider-telemetry.js",
+    "synthetic": true
+  },
+  "nowMs": 1792598400000,
+  "available": {
+    "schemaVersion": "cu.provider-telemetry.v1",
+    "generatedAt": "2026-10-21T16:00:00.000Z",
+    "normalizationVersion": 1,
+    "advisoryOnly": true,
+    "products": [
+      {
+        "product": "codex",
+        "provider": "openai",
+        "observations": 0,
+        "tokens": {
+          "input": {
+            "knownSubtotal": 0,
+            "exact": null
+          },
+          "uncachedInput": {
+            "knownSubtotal": 0,
+            "exact": null
+          },
+          "cacheRead": {
+            "knownSubtotal": 0,
+            "exact": null
+          },
+          "cacheWrite": {
+            "knownSubtotal": 0,
+            "exact": null
+          },
+          "output": {
+            "knownSubtotal": 0,
+            "exact": null
+          },
+          "reasoning": {
+            "knownSubtotal": 0,
+            "exact": null
+          }
+        },
+        "missing": {
+          "input": 0,
+          "uncachedInput": 0,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "output": 0,
+          "reasoning": 0
+        },
+        "totalTokens": null,
+        "billedUsd": null,
+        "estimatedApiUsd": null,
+        "cacheReadRatio": null,
+        "status": "unknown"
+      },
+      {
+        "product": "chatgpt",
+        "provider": "openai",
+        "observations": 0,
+        "tokens": {
+          "input": {
+            "knownSubtotal": 0,
+            "exact": null
+          },
+          "uncachedInput": {
+            "knownSubtotal": 0,
+            "exact": null
+          },
+          "cacheRead": {
+            "knownSubtotal": 0,
+            "exact": null
+          },
+          "cacheWrite": {
+            "knownSubtotal": 0,
+            "exact": null
+          },
+          "output": {
+            "knownSubtotal": 0,
+            "exact": null
+          },
+          "reasoning": {
+            "knownSubtotal": 0,
+            "exact": null
+          }
+        },
+        "missing": {
+          "input": 0,
+          "uncachedInput": 0,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "output": 0,
+          "reasoning": 0
+        },
+        "totalTokens": null,
+        "billedUsd": null,
+        "estimatedApiUsd": null,
+        "cacheReadRatio": null,
+        "status": "unknown"
+      },
+      {
+        "product": "claude-code",
+        "provider": "anthropic",
+        "observations": 0,
+        "tokens": {
+          "input": {
+            "knownSubtotal": 0,
+            "exact": null
+          },
+          "uncachedInput": {
+            "knownSubtotal": 0,
+            "exact": null
+          },
+          "cacheRead": {
+            "knownSubtotal": 0,
+            "exact": null
+          },
+          "cacheWrite": {
+            "knownSubtotal": 0,
+            "exact": null
+          },
+          "output": {
+            "knownSubtotal": 0,
+            "exact": null
+          },
+          "reasoning": {
+            "knownSubtotal": 0,
+            "exact": null
+          }
+        },
+        "missing": {
+          "input": 0,
+          "uncachedInput": 0,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "output": 0,
+          "reasoning": 0
+        },
+        "totalTokens": null,
+        "billedUsd": null,
+        "estimatedApiUsd": null,
+        "cacheReadRatio": null,
+        "status": "observed"
+      },
+      {
+        "product": "antigravity",
+        "provider": "google",
+        "observations": 0,
+        "tokens": {
+          "input": {
+            "knownSubtotal": 0,
+            "exact": null
+          },
+          "uncachedInput": {
+            "knownSubtotal": 0,
+            "exact": null
+          },
+          "cacheRead": {
+            "knownSubtotal": 0,
+            "exact": null
+          },
+          "cacheWrite": {
+            "knownSubtotal": 0,
+            "exact": null
+          },
+          "output": {
+            "knownSubtotal": 0,
+            "exact": null
+          },
+          "reasoning": {
+            "knownSubtotal": 0,
+            "exact": null
+          }
+        },
+        "missing": {
+          "input": 0,
+          "uncachedInput": 0,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "output": 0,
+          "reasoning": 0
+        },
+        "totalTokens": null,
+        "billedUsd": null,
+        "estimatedApiUsd": null,
+        "cacheReadRatio": null,
+        "status": "unknown"
+      },
+      {
+        "product": "droid",
+        "provider": "factory",
+        "observations": 0,
+        "tokens": {
+          "input": {
+            "knownSubtotal": 0,
+            "exact": null
+          },
+          "uncachedInput": {
+            "knownSubtotal": 0,
+            "exact": null
+          },
+          "cacheRead": {
+            "knownSubtotal": 0,
+            "exact": null
+          },
+          "cacheWrite": {
+            "knownSubtotal": 0,
+            "exact": null
+          },
+          "output": {
+            "knownSubtotal": 0,
+            "exact": null
+          },
+          "reasoning": {
+            "knownSubtotal": 0,
+            "exact": null
+          }
+        },
+        "missing": {
+          "input": 0,
+          "uncachedInput": 0,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "output": 0,
+          "reasoning": 0
+        },
+        "totalTokens": null,
+        "billedUsd": null,
+        "estimatedApiUsd": null,
+        "cacheReadRatio": null,
+        "status": "unknown"
+      }
+    ],
+    "pools": [
+      {
+        "poolId": "pool-2b82eacd7753838cbf892316",
+        "provider": "anthropic",
+        "billingSource": "subscription",
+        "windows": [
+          {
+            "windowMinutes": 420,
+            "usedPercent": 25,
+            "resetsAt": "2026-10-21T16:05:00.000Z",
+            "semantics": "anchored",
+            "signal": "available",
+            "model": null,
+            "observedAt": "2026-10-21T15:59:59.000Z",
+            "fresh": true,
+            "evidence": "observed",
+            "status": "observed"
+          }
+        ]
+      }
+    ],
+    "coverage": [],
+    "availability": [],
+    "quality": {
+      "invalid": 0,
+      "duplicates": 0,
+      "aggregateSnapshotsExcluded": 0,
+      "conflictingIdentities": 0,
+      "replayExclusions": 0,
+      "unboundObservations": 0
+    },
+    "totals": {
+      "observations": 0,
+      "tokens": {
+        "input": {
+          "knownSubtotal": 0,
+          "exact": null
+        },
+        "uncachedInput": {
+          "knownSubtotal": 0,
+          "exact": null
+        },
+        "cacheRead": {
+          "knownSubtotal": 0,
+          "exact": null
+        },
+        "cacheWrite": {
+          "knownSubtotal": 0,
+          "exact": null
+        },
+        "output": {
+          "knownSubtotal": 0,
+          "exact": null
+        },
+        "reasoning": {
+          "knownSubtotal": 0,
+          "exact": null
+        }
+      },
+      "missing": {
+        "input": 0,
+        "uncachedInput": 0,
+        "cacheRead": 0,
+        "cacheWrite": 0,
+        "output": 0,
+        "reasoning": 0
+      },
+      "totalTokens": null,
+      "billedUsd": null,
+      "estimatedApiUsd": null,
+      "cacheReadRatio": null
+    },
+    "days": [],
+    "weeks": [],
+    "models": [],
+    "machines": [],
+    "attribution": [],
+    "sessions": [],
+    "benchmark": [],
+    "events": [
+      {
+        "schemaVersion": "cu.provider-telemetry.v1",
+        "normalizationVersion": 1,
+        "kind": "quota",
+        "provider": "anthropic",
+        "product": "claude-code",
+        "scanWindow": null,
+        "eventId": "fixture-quota",
+        "identity": "6d6984270afd9fe033ea03f26e3732e2fadd001c1f66a9e0f2d299119b9719bb",
+        "poolId": "pool-2b82eacd7753838cbf892316",
+        "billingSource": "subscription",
+        "requestId": null,
+        "nativeMessageUuid": null,
+        "parentMessageUuid": null,
+        "nativeVersion": null,
+        "parserVersion": null,
+        "bindingStatus": null,
+        "sourceDigest": null,
+        "model": null,
+        "resolvedModel": null,
+        "routingPolicy": "unknown",
+        "attribution": {
+          "vibeSessionId": null,
+          "machine": null,
+          "projectId": null,
+          "issueId": null,
+          "workspaceId": null,
+          "sessionId": null,
+          "executionId": null,
+          "taskId": null,
+          "turnId": null,
+          "parentSessionId": null,
+          "subagentId": null
+        },
+        "observedAt": "2026-10-21T15:59:59.000Z",
+        "sourceKind": "cli-export",
+        "sourceVersion": "fixture-native-v1",
+        "evidence": "observed",
+        "evidenceRef": "fixture-receipt",
+        "tokens": {
+          "input": null,
+          "uncachedInput": null,
+          "cacheRead": null,
+          "cacheWrite": null,
+          "output": null,
+          "reasoning": null
+        },
+        "totalTokens": null,
+        "billedCredits": null,
+        "billedUsd": null,
+        "billedEvidence": "unknown",
+        "billingReference": null,
+        "estimatedApiUsd": null,
+        "priceVersion": null,
+        "costScope": "unknown",
+        "reportedTaskQuota": null,
+        "weeklySubscriptionUsd": null,
+        "durationMs": null,
+        "activeMs": null,
+        "retries": null,
+        "corrections": null,
+        "interventions": null,
+        "turns": null,
+        "outcome": "unknown",
+        "tests": "unknown",
+        "taskClass": null,
+        "comparisonKey": null,
+        "revision": null,
+        "exclusion": null,
+        "stopReason": null,
+        "availability": null,
+        "quota": {
+          "windowMinutes": 420,
+          "usedPercent": 25,
+          "resetsAt": "2026-10-21T16:05:00.000Z",
+          "semantics": "anchored",
+          "signal": "available",
+          "model": null
+        }
+      }
+    ],
+    "gaps": [
+      "Bounded configured sources only; missing providers and token components remain unknown.",
+      "ChatGPT app/Work requires an explicit legitimate export; Codex does not represent all ChatGPT usage.",
+      "No launch authority or network/provider queries. Subscription sample efficiency requires explicit estimated weekly cost input."
+    ]
+  },
+  "unknown": {
+    "schemaVersion": "cu.provider-telemetry.v1",
+    "generatedAt": "2026-10-21T16:00:00.000Z",
+    "normalizationVersion": 1,
+    "advisoryOnly": true,
+    "products": [
+      {
+        "product": "codex",
+        "provider": "openai",
+        "observations": 0,
+        "tokens": {
+          "input": {
+            "knownSubtotal": 0,
+            "exact": null
+          },
+          "uncachedInput": {
+            "knownSubtotal": 0,
+            "exact": null
+          },
+          "cacheRead": {
+            "knownSubtotal": 0,
+            "exact": null
+          },
+          "cacheWrite": {
+            "knownSubtotal": 0,
+            "exact": null
+          },
+          "output": {
+            "knownSubtotal": 0,
+            "exact": null
+          },
+          "reasoning": {
+            "knownSubtotal": 0,
+            "exact": null
+          }
+        },
+        "missing": {
+          "input": 0,
+          "uncachedInput": 0,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "output": 0,
+          "reasoning": 0
+        },
+        "totalTokens": null,
+        "billedUsd": null,
+        "estimatedApiUsd": null,
+        "cacheReadRatio": null,
+        "status": "unknown"
+      },
+      {
+        "product": "chatgpt",
+        "provider": "openai",
+        "observations": 0,
+        "tokens": {
+          "input": {
+            "knownSubtotal": 0,
+            "exact": null
+          },
+          "uncachedInput": {
+            "knownSubtotal": 0,
+            "exact": null
+          },
+          "cacheRead": {
+            "knownSubtotal": 0,
+            "exact": null
+          },
+          "cacheWrite": {
+            "knownSubtotal": 0,
+            "exact": null
+          },
+          "output": {
+            "knownSubtotal": 0,
+            "exact": null
+          },
+          "reasoning": {
+            "knownSubtotal": 0,
+            "exact": null
+          }
+        },
+        "missing": {
+          "input": 0,
+          "uncachedInput": 0,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "output": 0,
+          "reasoning": 0
+        },
+        "totalTokens": null,
+        "billedUsd": null,
+        "estimatedApiUsd": null,
+        "cacheReadRatio": null,
+        "status": "unknown"
+      },
+      {
+        "product": "claude-code",
+        "provider": "anthropic",
+        "observations": 1,
+        "tokens": {
+          "input": {
+            "knownSubtotal": 100,
+            "exact": 100
+          },
+          "uncachedInput": {
+            "knownSubtotal": 80,
+            "exact": 80
+          },
+          "cacheRead": {
+            "knownSubtotal": 20,
+            "exact": 20
+          },
+          "cacheWrite": {
+            "knownSubtotal": 0,
+            "exact": 0
+          },
+          "output": {
+            "knownSubtotal": 10,
+            "exact": 10
+          },
+          "reasoning": {
+            "knownSubtotal": 0,
+            "exact": null
+          }
+        },
+        "missing": {
+          "input": 0,
+          "uncachedInput": 0,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "output": 0,
+          "reasoning": 1
+        },
+        "totalTokens": 110,
+        "billedUsd": null,
+        "estimatedApiUsd": null,
+        "cacheReadRatio": 0.2,
+        "status": "observed"
+      },
+      {
+        "product": "antigravity",
+        "provider": "google",
+        "observations": 0,
+        "tokens": {
+          "input": {
+            "knownSubtotal": 0,
+            "exact": null
+          },
+          "uncachedInput": {
+            "knownSubtotal": 0,
+            "exact": null
+          },
+          "cacheRead": {
+            "knownSubtotal": 0,
+            "exact": null
+          },
+          "cacheWrite": {
+            "knownSubtotal": 0,
+            "exact": null
+          },
+          "output": {
+            "knownSubtotal": 0,
+            "exact": null
+          },
+          "reasoning": {
+            "knownSubtotal": 0,
+            "exact": null
+          }
+        },
+        "missing": {
+          "input": 0,
+          "uncachedInput": 0,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "output": 0,
+          "reasoning": 0
+        },
+        "totalTokens": null,
+        "billedUsd": null,
+        "estimatedApiUsd": null,
+        "cacheReadRatio": null,
+        "status": "unknown"
+      },
+      {
+        "product": "droid",
+        "provider": "factory",
+        "observations": 0,
+        "tokens": {
+          "input": {
+            "knownSubtotal": 0,
+            "exact": null
+          },
+          "uncachedInput": {
+            "knownSubtotal": 0,
+            "exact": null
+          },
+          "cacheRead": {
+            "knownSubtotal": 0,
+            "exact": null
+          },
+          "cacheWrite": {
+            "knownSubtotal": 0,
+            "exact": null
+          },
+          "output": {
+            "knownSubtotal": 0,
+            "exact": null
+          },
+          "reasoning": {
+            "knownSubtotal": 0,
+            "exact": null
+          }
+        },
+        "missing": {
+          "input": 0,
+          "uncachedInput": 0,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "output": 0,
+          "reasoning": 0
+        },
+        "totalTokens": null,
+        "billedUsd": null,
+        "estimatedApiUsd": null,
+        "cacheReadRatio": null,
+        "status": "unknown"
+      }
+    ],
+    "pools": [],
+    "coverage": [],
+    "availability": [],
+    "quality": {
+      "invalid": 0,
+      "duplicates": 0,
+      "aggregateSnapshotsExcluded": 0,
+      "conflictingIdentities": 0,
+      "replayExclusions": 0,
+      "unboundObservations": 1
+    },
+    "totals": {
+      "observations": 1,
+      "tokens": {
+        "input": {
+          "knownSubtotal": 100,
+          "exact": 100
+        },
+        "uncachedInput": {
+          "knownSubtotal": 80,
+          "exact": 80
+        },
+        "cacheRead": {
+          "knownSubtotal": 20,
+          "exact": 20
+        },
+        "cacheWrite": {
+          "knownSubtotal": 0,
+          "exact": 0
+        },
+        "output": {
+          "knownSubtotal": 10,
+          "exact": 10
+        },
+        "reasoning": {
+          "knownSubtotal": 0,
+          "exact": null
+        }
+      },
+      "missing": {
+        "input": 0,
+        "uncachedInput": 0,
+        "cacheRead": 0,
+        "cacheWrite": 0,
+        "output": 0,
+        "reasoning": 1
+      },
+      "totalTokens": 110,
+      "billedUsd": null,
+      "estimatedApiUsd": null,
+      "cacheReadRatio": 0.2
+    },
+    "days": [
+      {
+        "key": "2026-10-21",
+        "observations": 1,
+        "tokens": {
+          "input": {
+            "knownSubtotal": 100,
+            "exact": 100
+          },
+          "uncachedInput": {
+            "knownSubtotal": 80,
+            "exact": 80
+          },
+          "cacheRead": {
+            "knownSubtotal": 20,
+            "exact": 20
+          },
+          "cacheWrite": {
+            "knownSubtotal": 0,
+            "exact": 0
+          },
+          "output": {
+            "knownSubtotal": 10,
+            "exact": 10
+          },
+          "reasoning": {
+            "knownSubtotal": 0,
+            "exact": null
+          }
+        },
+        "missing": {
+          "input": 0,
+          "uncachedInput": 0,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "output": 0,
+          "reasoning": 1
+        },
+        "totalTokens": 110,
+        "billedUsd": null,
+        "estimatedApiUsd": null,
+        "cacheReadRatio": 0.2
+      }
+    ],
+    "weeks": [
+      {
+        "key": "2026-10-19",
+        "observations": 1,
+        "tokens": {
+          "input": {
+            "knownSubtotal": 100,
+            "exact": 100
+          },
+          "uncachedInput": {
+            "knownSubtotal": 80,
+            "exact": 80
+          },
+          "cacheRead": {
+            "knownSubtotal": 20,
+            "exact": 20
+          },
+          "cacheWrite": {
+            "knownSubtotal": 0,
+            "exact": 0
+          },
+          "output": {
+            "knownSubtotal": 10,
+            "exact": 10
+          },
+          "reasoning": {
+            "knownSubtotal": 0,
+            "exact": null
+          }
+        },
+        "missing": {
+          "input": 0,
+          "uncachedInput": 0,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "output": 0,
+          "reasoning": 1
+        },
+        "totalTokens": 110,
+        "billedUsd": null,
+        "estimatedApiUsd": null,
+        "cacheReadRatio": 0.2
+      }
+    ],
+    "models": [
+      {
+        "key": "[\"anthropic\",\"claude-code\",null,null]",
+        "observations": 1,
+        "tokens": {
+          "input": {
+            "knownSubtotal": 100,
+            "exact": 100
+          },
+          "uncachedInput": {
+            "knownSubtotal": 80,
+            "exact": 80
+          },
+          "cacheRead": {
+            "knownSubtotal": 20,
+            "exact": 20
+          },
+          "cacheWrite": {
+            "knownSubtotal": 0,
+            "exact": 0
+          },
+          "output": {
+            "knownSubtotal": 10,
+            "exact": 10
+          },
+          "reasoning": {
+            "knownSubtotal": 0,
+            "exact": null
+          }
+        },
+        "missing": {
+          "input": 0,
+          "uncachedInput": 0,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "output": 0,
+          "reasoning": 1
+        },
+        "totalTokens": 110,
+        "billedUsd": null,
+        "estimatedApiUsd": null,
+        "cacheReadRatio": 0.2
+      }
+    ],
+    "machines": [
+      {
+        "key": "unknown",
+        "observations": 1,
+        "tokens": {
+          "input": {
+            "knownSubtotal": 100,
+            "exact": 100
+          },
+          "uncachedInput": {
+            "knownSubtotal": 80,
+            "exact": 80
+          },
+          "cacheRead": {
+            "knownSubtotal": 20,
+            "exact": 20
+          },
+          "cacheWrite": {
+            "knownSubtotal": 0,
+            "exact": 0
+          },
+          "output": {
+            "knownSubtotal": 10,
+            "exact": 10
+          },
+          "reasoning": {
+            "knownSubtotal": 0,
+            "exact": null
+          }
+        },
+        "missing": {
+          "input": 0,
+          "uncachedInput": 0,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "output": 0,
+          "reasoning": 1
+        },
+        "totalTokens": 110,
+        "billedUsd": null,
+        "estimatedApiUsd": null,
+        "cacheReadRatio": 0.2
+      }
+    ],
+    "attribution": [
+      {
+        "eventId": "fixture-usage",
+        "vibeSessionId": null,
+        "machine": null,
+        "projectId": null,
+        "issueId": null,
+        "workspaceId": null,
+        "sessionId": null,
+        "executionId": null,
+        "taskId": null,
+        "turnId": null,
+        "parentSessionId": null,
+        "subagentId": null
+      }
+    ],
+    "sessions": [
+      {
+        "key": "[\"claude-code\",null,null]",
+        "observations": 1,
+        "tokens": {
+          "input": {
+            "knownSubtotal": 100,
+            "exact": 100
+          },
+          "uncachedInput": {
+            "knownSubtotal": 80,
+            "exact": 80
+          },
+          "cacheRead": {
+            "knownSubtotal": 20,
+            "exact": 20
+          },
+          "cacheWrite": {
+            "knownSubtotal": 0,
+            "exact": 0
+          },
+          "output": {
+            "knownSubtotal": 10,
+            "exact": 10
+          },
+          "reasoning": {
+            "knownSubtotal": 0,
+            "exact": null
+          }
+        },
+        "missing": {
+          "input": 0,
+          "uncachedInput": 0,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "output": 0,
+          "reasoning": 1
+        },
+        "totalTokens": 110,
+        "billedUsd": null,
+        "estimatedApiUsd": null,
+        "cacheReadRatio": 0.2
+      }
+    ],
+    "benchmark": [],
+    "events": [
+      {
+        "schemaVersion": "cu.provider-telemetry.v1",
+        "normalizationVersion": 1,
+        "kind": "usage",
+        "provider": "anthropic",
+        "product": "claude-code",
+        "scanWindow": null,
+        "eventId": "fixture-usage",
+        "identity": "5f1666ecadf945b414a0ca3e5513b12b0ed4b862e80581610da4ad3d3d2b84e2",
+        "poolId": null,
+        "billingSource": "subscription",
+        "requestId": null,
+        "nativeMessageUuid": null,
+        "parentMessageUuid": null,
+        "nativeVersion": null,
+        "parserVersion": null,
+        "bindingStatus": null,
+        "sourceDigest": null,
+        "model": null,
+        "resolvedModel": null,
+        "routingPolicy": "unknown",
+        "attribution": {
+          "vibeSessionId": null,
+          "machine": null,
+          "projectId": null,
+          "issueId": null,
+          "workspaceId": null,
+          "sessionId": null,
+          "executionId": null,
+          "taskId": null,
+          "turnId": null,
+          "parentSessionId": null,
+          "subagentId": null
+        },
+        "observedAt": "2026-10-21T15:59:59.000Z",
+        "sourceKind": "cli-export",
+        "sourceVersion": "fixture-native-v1",
+        "evidence": "observed",
+        "evidenceRef": "fixture-receipt",
+        "tokens": {
+          "input": 100,
+          "uncachedInput": 80,
+          "cacheRead": 20,
+          "cacheWrite": 0,
+          "output": 10,
+          "reasoning": null
+        },
+        "totalTokens": 110,
+        "billedCredits": null,
+        "billedUsd": null,
+        "billedEvidence": "unknown",
+        "billingReference": null,
+        "estimatedApiUsd": null,
+        "priceVersion": null,
+        "costScope": "unknown",
+        "reportedTaskQuota": null,
+        "weeklySubscriptionUsd": null,
+        "durationMs": null,
+        "activeMs": null,
+        "retries": null,
+        "corrections": null,
+        "interventions": null,
+        "turns": null,
+        "outcome": "unknown",
+        "tests": "unknown",
+        "taskClass": null,
+        "comparisonKey": null,
+        "revision": null,
+        "exclusion": null,
+        "stopReason": null,
+        "availability": null,
+        "quota": null
+      }
+    ],
+    "gaps": [
+      "Bounded configured sources only; missing providers and token components remain unknown.",
+      "ChatGPT app/Work requires an explicit legitimate export; Codex does not represent all ChatGPT usage.",
+      "No launch authority or network/provider queries. Subscription sample efficiency requires explicit estimated weekly cost input."
+    ]
+  }
+}

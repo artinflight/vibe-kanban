@@ -1,0 +1,211 @@
+{
+  "scope": "accepted recorded textual owner patches only",
+  "base_commit": "422fe5ba0a406f03dd3a658d25e2f632f66d49ab",
+  "transcript_sha256": "9b052c937413d638623d785dad70dca575d408eb4afbb90b626811d48475fe56",
+  "after": "2026-10-07T22:47:00Z",
+  "before": "2026-10-07T23:16:00Z",
+  "accepted_patch_calls": 14,
+  "patch_result_bindings": [
+    {
+      "line": 37309,
+      "result_line": 37312,
+      "patch_sha256": "91e64a3877407fcc881db3e3896c84f0f8f5c43c11e9832e9ce8b65f38bf98d6",
+      "result_sha256": "3e00e32cdbc40ffc99c5a807baa8de893e1fdf42381d112c3d62ec3c805fe19d",
+      "accepted": true,
+      "failed_verification": false
+    },
+    {
+      "line": 37320,
+      "result_line": 37323,
+      "patch_sha256": "7e03f6d342db60c2dec430f00f54e71ae196732bfbc50534afbe51860a9cdc70",
+      "result_sha256": "55b78bd2656d500dc9b95096b5c3ab9922d645df6a2ebed35fc812f6fe6c6311",
+      "accepted": true,
+      "failed_verification": false
+    },
+    {
+      "line": 37343,
+      "result_line": 37345,
+      "patch_sha256": "452a9562e3bd02d809f48de1282ab77b9925ec315a23026b2fbcdf17e706c3e2",
+      "result_sha256": "a425590020a1399cf7b4cc670b36ac7df1dc3e1ae1ce77904e4984e5e6c82185",
+      "accepted": false,
+      "failed_verification": true
+    },
+    {
+      "line": 37352,
+      "result_line": 37355,
+      "patch_sha256": "e1f49eae1857bc7376e71410db5168fdfce9c7e5e7fbfe07c0464471ce1ffe80",
+      "result_sha256": "0f5fa41aa5556fd009a147b8cc35511a356476673e5018f90af82dd3b95ab20b",
+      "accepted": true,
+      "failed_verification": false
+    },
+    {
+      "line": 37358,
+      "result_line": 37361,
+      "patch_sha256": "5bd86a1ccfbe1c6787c4d178815b6c2fd803fb51414fc30caefacdb67d5ee71c",
+      "result_sha256": "4fb9d1598eb59e546a82c1b9dc7cd242f1d3132ec9539946f042facf95b3fa41",
+      "accepted": true,
+      "failed_verification": false
+    },
+    {
+      "line": 37386,
+      "result_line": 37389,
+      "patch_sha256": "3de3b8513f64c137e9193106d5790cb522e4466183cb25fc4cfe20e813ee5e37",
+      "result_sha256": "b9f0bfc52161fc6e8f3a0e676695f23b00ce41a22680638e22ab1c7df7a109a9",
+      "accepted": true,
+      "failed_verification": false
+    },
+    {
+      "line": 37429,
+      "result_line": 37432,
+      "patch_sha256": "782f524367729bf55cb5b5cc489f2fe8af12fd7f1eca7f07b231b6be29312837",
+      "result_sha256": "a5f496092341fde8a0396233a7cd675d1577a16e1d2ffac3449f2371be52496d",
+      "accepted": true,
+      "failed_verification": false
+    },
+    {
+      "line": 37486,
+      "result_line": 37489,
+      "patch_sha256": "be9b1a8d5c1d32af8e6659cb1a590392459c5898f1d299d78943029a4da84f64",
+      "result_sha256": "9cd720133b4aefc953bfe09bbae419ec45cbdb32563ccbf7df3a5efc0d056b8d",
+      "accepted": true,
+      "failed_verification": false
+    },
+    {
+      "line": 37493,
+      "result_line": 37496,
+      "patch_sha256": "2fa3231ba3c4effe0172b534a6b30746abfd9485042f35a97bb6f6b2c8853491",
+      "result_sha256": "5e2b5ead203ebf0e77519f1bed17a29f98d2b46460d6bd0c346a879906d8a54f",
+      "accepted": true,
+      "failed_verification": false
+    },
+    {
+      "line": 37499,
+      "result_line": 37502,
+      "patch_sha256": "5f616510e1cfb9dfd66bb84b75682d153b179e6e90827939e70d23b348c8179a",
+      "result_sha256": "546114f9e368a3ad7f6d603a14c9ff702eb419feb13b76f76723328e22b6c77c",
+      "accepted": true,
+      "failed_verification": false
+    },
+    {
+      "line": 37510,
+      "result_line": 37513,
+      "patch_sha256": "50f4c660ffea05d84352236ac4fdb7fbe197cbc2aaf45b56706656a0c617c0cf",
+      "result_sha256": "5f0b5158b098513f639b3b1b6df2cf375050df65c3065a4846dd2d629a830d74",
+      "accepted": true,
+      "failed_verification": false
+    },
+    {
+      "line": 37549,
+      "result_line": 37552,
+      "patch_sha256": "0ceee94b29985e3882a0527b8d35eaaafe44e371aece442a0647e17e26509b3b",
+      "result_sha256": "1fd2d0cb3be880d76c4e3dd8cd430afc9122b9c4fa23946a042d38f72514a670",
+      "accepted": true,
+      "failed_verification": false
+    },
+    {
+      "line": 37571,
+      "result_line": 37574,
+      "patch_sha256": "a5ef7ba39a392fd0082da4a790d86c5d0f477a92a62e31f00dcfb12e20757bd8",
+      "result_sha256": "4d55da6b5eed886c225b4b622a9d6d0fda5e65edb5e92caf31a94ed3e99b1ef6",
+      "accepted": true,
+      "failed_verification": false
+    },
+    {
+      "line": 37630,
+      "result_line": 37633,
+      "patch_sha256": "88946814aa0c165f03ba13959225b1be21a5cfdb8b3912e4f2079fb184a5a26f",
+      "result_sha256": "a8f6ca4d6cc3a480c41eae3d81276a56d030210af8ac25cc72d2d4846dc7e675",
+      "accepted": true,
+      "failed_verification": false
+    },
+    {
+      "line": 37658,
+      "result_line": 37661,
+      "patch_sha256": "14526b4f10f662858a08b2d3e8ed71af03bcad472da1bdb0ea9472f713b04aa0",
+      "result_sha256": "d1f430ea2e1dc5e6854e8d8e85d66cf022399a31cce5a21195548fddf592eefc",
+      "accepted": true,
+      "failed_verification": false
+    }
+  ],
+  "rejected_patch_lines": [
+    37343
+  ],
+  "unresolved_calls": [],
+  "parse_failures_preserved": [
+    {
+      "line": 415,
+      "sha256": "17c828479a4803c0126d478ef14638189bc3f4a7f53fe86cf98d80153bd50ffd"
+    }
+  ],
+  "files": [
+    {
+      "path": "scripts/testing/combined_handover_20261007.py",
+      "expected_sha256": "82918434301534ea746f2b6131cdb69e3ddd209f7dedb95c1ea179baeab1fc29",
+      "current_sha256": "82918434301534ea746f2b6131cdb69e3ddd209f7dedb95c1ea179baeab1fc29",
+      "verified": true
+    },
+    {
+      "path": "scripts/testing/combined_release_20261007.py",
+      "expected_sha256": "15e7d70c54e4c5057938553568ef0cd0d66a8295443b43b8d14e7f5882eb80ee",
+      "current_sha256": "15e7d70c54e4c5057938553568ef0cd0d66a8295443b43b8d14e7f5882eb80ee",
+      "verified": true
+    },
+    {
+      "path": "scripts/testing/historical-review-20261007/record.py",
+      "expected_sha256": "e602e158bcad0a178b0477d8ec125685e192dc53d732c1424921b79e272a3be9",
+      "current_sha256": "e602e158bcad0a178b0477d8ec125685e192dc53d732c1424921b79e272a3be9",
+      "verified": true
+    },
+    {
+      "path": "scripts/testing/historical-review-20261007/src/main.rs",
+      "expected_sha256": "7aa49442f0abf521e114df833958cdbaea1ea7be35bb89aa3803137204dac01e",
+      "current_sha256": "7aa49442f0abf521e114df833958cdbaea1ea7be35bb89aa3803137204dac01e",
+      "verified": true
+    },
+    {
+      "path": "scripts/testing/retire_failed_rehearsal_20261007.py",
+      "expected_sha256": "b642f7e7a3707c8d651257727fc8155f97beddaa1ffc87f3edc808ec842ce703",
+      "current_sha256": "b642f7e7a3707c8d651257727fc8155f97beddaa1ffc87f3edc808ec842ce703",
+      "verified": true
+    },
+    {
+      "path": "scripts/testing/staging-first-run-20261006/combined.py",
+      "expected_sha256": "7277d742ae80828de8e059c022bb467280d816ea3fd1ea82e987b2d1db8e3396",
+      "current_sha256": "7277d742ae80828de8e059c022bb467280d816ea3fd1ea82e987b2d1db8e3396",
+      "verified": true
+    },
+    {
+      "path": "scripts/testing/staging-first-run-20261006/delay-provider.py",
+      "expected_sha256": "6da5ff0ad9875edfdf5878a1d614d95923d3817b2106dce8b4565a072459052d",
+      "current_sha256": "6da5ff0ad9875edfdf5878a1d614d95923d3817b2106dce8b4565a072459052d",
+      "verified": true
+    },
+    {
+      "path": "scripts/testing/staging-first-run-20261006/stall-provider.py",
+      "expected_sha256": "680743f8f77e7f1e1c89309e4ad898b9ffcf539237730774eadcdbaaa8d0fb84",
+      "current_sha256": "680743f8f77e7f1e1c89309e4ad898b9ffcf539237730774eadcdbaaa8d0fb84",
+      "verified": true
+    },
+    {
+      "path": "scripts/testing/staging-low-peak-20261007/scratch_retirement.py",
+      "expected_sha256": "ee1f1e4edc57f79640f081f7cd40543c125cb0e1e5fc1cea89c91031e4f51bda",
+      "current_sha256": "ee1f1e4edc57f79640f081f7cd40543c125cb0e1e5fc1cea89c91031e4f51bda",
+      "verified": true
+    },
+    {
+      "path": "scripts/testing/staging-low-peak-20261007/test_scratch_retirement.py",
+      "expected_sha256": "e2b9eef2a65908ccfa3abca8950c52d570e85143f64d8bb22ddd83714f5e88fa",
+      "current_sha256": "e2b9eef2a65908ccfa3abca8950c52d570e85143f64d8bb22ddd83714f5e88fa",
+      "verified": true
+    },
+    {
+      "path": "scripts/testing/verify_connector_repair_20261007.py",
+      "expected_sha256": "305d48aef4c69571620be532d7a3ed92f6325b42792e34b68f97ce202453410d",
+      "current_sha256": "305d48aef4c69571620be532d7a3ed92f6325b42792e34b68f97ce202453410d",
+      "verified": true
+    }
+  ],
+  "recorded_edits_verified": false,
+  "zero_loss_proven": false,
+  "shared_paths_written": false
+}

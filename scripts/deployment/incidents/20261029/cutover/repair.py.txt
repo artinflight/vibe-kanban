@@ -1,0 +1,311 @@
+"""Operator-authorized recovery of the failed October 29 cutover.
+
+Reuses the verified candidate and same latest database. Never restores old data.
+All live mutations are behind explicit worker/recover modes and an owner lease.
+"""
+import ast
+import copy
+import fcntl
+import hashlib
+import json
+import os
+from pathlib import Path
+import re
+import signal
+import sqlite3
+import ssl
+import subprocess
+import sys
+import time
+import urllib.request
+
+sys.dont_write_bytecode = True
+ROOT = Path(__file__).resolve().parent
+OLD = Path('/mnt/vk-storage/vk-staging-catchup-20261028/cutover-v5-20261029')
+SOURCE = ROOT.parent / 'source/scripts/deployment'
+sys.path[:0] = [str(SOURCE), str(OLD / 'host')]
+import host_cutover_controls as base
+import cutover_transaction as transaction
+from vk_restart_cutover_host import build_ops, digest, validate_final_backup, verify_references
+from vk_restart_writer_fence import unit_state, members
+from vk_restart_history_acceptance import bind_database
+from vk_restart_no_progress import supervise
+
+SEQUENCE = 0
+
+
+def save(name, value):
+    p = ROOT / name
+    temp = p.with_name(p.name + '.repair-next')
+    raw = (json.dumps(value, sort_keys=True, indent=2) + '\n').encode()
+    fd = os.open(temp, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
+    with os.fdopen(fd, 'wb') as stream:
+        stream.write(raw); stream.flush(); os.fsync(stream.fileno())
+    temp.replace(p)
+
+
+def progress(phase, **details):
+    global SEQUENCE
+    SEQUENCE += 1
+    save('progress.json', dict(sequence=SEQUENCE, phase=phase, UTC=time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()), **details))
+    print(json.dumps(dict(phase=phase, **details)), flush=True)
+
+
+def setup():
+    assert os.path.ismount('/mnt/vk-storage')
+    manifest = OLD / 'MANIFEST.private.json'
+    assert digest(manifest) == '703488c3caa16d48336049e9be23e60967cccb95c4a48b10466b896200d0c961'
+    cfg = json.loads(manifest.read_text())
+    verify_references(cfg['references'])
+    cfg['runtime_state'] = str(ROOT / 'RUNTIME_STATE.private.json')
+    cfg['evidence_output'] = str(ROOT / 'evidence')
+    cfg['browser_output_candidate'] = str(ROOT / 'BROWSER_CANDIDATE.private.json')
+    cfg['browser_output_fallback'] = str(ROOT / 'BROWSER_FALLBACK.private.json')
+    cfg['recent_histories'] = json.loads((OLD / 'QUIET_RECENT_HISTORY_BINDING.private.json').read_text())['recent_histories']
+    for variant in ('candidate', 'fallback'):
+        assert digest(cfg['pair'][variant]['path']) == cfg['pair'][variant]['sha256']
+    ops = build_ops(cfg, base, transaction)
+    ops.h = base.load(Path(cfg['release_primitives']), 'repair_release_primitives')
+    ops.boundary = base.load(Path(cfg['queue_boundary']), 'repair_queue_boundary')
+    ops.queue_namespace = dict(DB=base.DB, PORT=5621, ROUTE=base.ROUTE, OLD=base.UNIT, h=ops.h, vibe_cgroup_quiet=lambda: members(unit_state(base.UNIT)['ControlGroup']) == {int(unit_state(base.UNIT)['MainPID'])})
+    base.load(Path(cfg['queue_hooks']), 'repair_queue_hooks').install(ops.queue_namespace)
+    saved = json.loads((OLD / 'RUNTIME_STATE.private.json').read_text())
+    ops.owned_stops = saved['owned_stops'][:]
+    ops.owned_start_holds = copy.deepcopy(saved['owned_start_holds'])
+    ops.owned_poller_freeze = saved['owned_poller_freeze']
+    ops.released_response = json.loads((ROOT / 'RELEASED.private.json').read_text())
+    ops.installed_dropin_sha = digest(base.DROPIN)
+    ops.variant = 'fallback'
+    ops.total_end = ops.data_end = None
+    ops.maintenance_started = time.monotonic()
+    ops.output.mkdir(mode=0o700, exist_ok=True)
+    ops.sequence = max([int(p.name[:4]) for p in ops.output.glob('[0-9][0-9][0-9][0-9]-*')] or [0])
+    original_record = ops.record
+    def record(phase, value):
+        original_record(phase, value)
+        progress(phase)
+    ops.record = record
+    nodes = [n for n in ast.parse(base.ORIGINAL.read_text()).body if isinstance(n, ast.FunctionDef) and n.name in ('routed_get', 'live_acceptance')]
+    ops.smoke = dict(json=json, ssl=ssl, CA=base.CA, re=re, time=time, urllib=__import__('urllib'), META=base.META, digest=digest, hashlib=hashlib)
+    exec(compile(ast.Module(body=nodes, type_ignores=[]), str(base.ORIGINAL), 'exec'), ops.smoke)
+    return cfg, ops
+
+
+def quiet(ops):
+    state = unit_state(base.UNIT)
+    assert state['ActiveState'] == 'active' and state['MainPID'] != '0'
+    assert members(state['ControlGroup']) == {int(state['MainPID'])}, 'Unrelated work in backend cgroup'
+    return ops.queue_namespace['queue_boundary_live']()
+
+
+def current_variant(cfg):
+    state = unit_state(base.UNIT)
+    if state['MainPID'] in ('', '0'):
+        return None
+    actual = digest('/proc/' + state['MainPID'] + '/exe')
+    for variant in ('candidate', 'fallback'):
+        if actual == cfg['pair'][variant]['sha256']:
+            return variant
+    raise ValueError('Unknown actual runtime: preserve external owner')
+
+
+def backup(cfg, ops):
+    target = ROOT / 'current-before-switch.sqlite'
+    if target.exists():
+        receipt = json.loads((ROOT / 'CURRENT_BACKUP.private.json').read_text())
+        assert digest(target) == receipt['sha256']
+        return receipt
+    ops.resources()
+    assert os.statvfs(ROOT).f_bavail * os.statvfs(ROOT).f_frsize > base.DB.stat().st_size * 3 + 2 * 1024**3
+    last = [-1]
+    def copied(status, remaining, total):
+        completed = total - remaining
+        if completed > last[0]:
+            last[0] = completed
+            progress('current-SQL-snapshot', completed_pages=completed, total_pages=total)
+    with sqlite3.connect(base.DB.resolve().as_uri() + '?mode=ro', uri=True, timeout=2) as source:
+        with sqlite3.connect(target) as dest:
+            source.backup(dest, pages=4096, progress=copied)
+            assert dest.execute('PRAGMA integrity_check').fetchall() == [('ok',)]
+    os.chmod(target, 0o600)
+    sha = digest(target)
+    plan = json.loads(Path(cfg['plan']['path']).read_text())
+    sys.path.insert(0, plan['source_folder'])
+    from vk_nightly_desktop_objects import DesktopObjects
+    control = copy.deepcopy(plan['workers']['files']['desktop'])
+    control.pop('whole_cycle_deadline_UTC', None)
+    restored = hashlib.sha256()
+    class Sink:
+        def write(self, raw):
+            restored.update(raw)
+            return len(raw)
+    segments = []
+    progress('Desktop-B-snapshot-mirror-start')
+    with DesktopObjects(control, guard=ops.resources) as remote:
+        with target.open('rb') as source:
+            while block := source.read(control['maximum_object_bytes']):
+                segments.append(remote.client.ensure(block, readback_sink=Sink()))
+                progress('Desktop-B-snapshot-readback', verified_bytes=sum(s['bytes'] for s in segments))
+        assert restored.hexdigest() == sha
+        descriptor = dict(format='vk-incident-SQL-point-v1', database=str(base.DB), snapshot_bytes=target.stat().st_size, sha256=sha, segments=segments, SQLite_integrity='ok', independent_native_readback_verified=True)
+        descriptor_segment = remote.client.ensure((json.dumps(descriptor, sort_keys=True) + '\n').encode())
+    receipt = dict(sha256=sha, bytes=target.stat().st_size, local=str(target), desktop_B_root=control['B_root'], descriptor=descriptor_segment, SQLite_integrity='ok', independent_native_readback_verified=True)
+    save('CURRENT_BACKUP.private.json', receipt)
+    save('CURRENT_BACKUP_DESCRIPTOR.private.json', descriptor)
+    progress('current-backup-mirrored-and-verified', bytes=target.stat().st_size)
+    return receipt
+
+
+def accept_direct(cfg, ops, variant, before, semantic):
+    ops.verify_executable(variant)
+    transaction.preserve_settings(before, ops.info(), candidate=variant == 'candidate')
+    ops.verify_semantics(semantic)
+    ops.recovery_acceptance(variant)
+    ops.reader_check()
+    progress(variant + '-direct-history-and-settings-verified')
+
+
+def publish(cfg, ops, variant, before):
+    ops.select_frontend(variant)
+    owned = ops.h.ownership(5621)
+    if not owned['owned']:
+        released = ops.released_response['state']
+        transaction.same_ownership(released, ops.acquire_ownership(released))
+    ops.route_serving()
+    progress(variant + '-public-route-restored')
+    output = Path(cfg['browser_output_' + variant])
+    if output.exists():
+        cfg['browser_output_' + variant] = str(output.with_name(output.stem + '-' + str(time.time_ns()) + output.suffix))
+    ops.https_acceptance(variant, before)
+    progress(variant + '-trusted-HTTPS-and-browser-verified')
+
+
+def worker():
+    cfg, ops = setup()
+    assert current_variant(cfg) == 'fallback'
+    assert unit_state(base.UNIT)['MainPID'] == '708408', 'Reconcile changed runtime before switch'
+    assert json.loads(base.ROUTE.read_text())['mode'] == 'maintenance'
+    assert not ops.h.ownership(5621)['owned']
+    from vk_restart_ingress_hold import verify
+    verify(ops.owned_start_holds)
+    ops.reader_check(); ops.resources()
+    for path, previous in cfg['companion_previous'].items():
+        current = Path(path)
+        assert (digest(current) if current.exists() else None) == previous['sha256'], 'Companion changed'
+        assert digest(cfg['companion_forward'][path]) == cfg['companion_forward_sha256'][path]
+    prior_backup = json.loads((OLD / 'evidence/0519-final-current-backup-accepted.private.json').read_text())['value']
+    validate_final_backup(prior_backup, cfg['plan_canonical_sha256'])
+    assert prior_backup['durable_B_recovery_control']['independent_native_reopen_verified'] is True
+    fd = os.open(cfg['cutover_lease'], os.O_RDONLY | os.O_NOFOLLOW)
+    fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    try:
+        quiet_before = quiet(ops)
+        before = ops.info()
+        semantic = ops.semantic_snapshot()
+        save('BEFORE.private.json', dict(info=before, semantic=semantic, boundary=quiet_before, original_dropin=base.DROPIN.read_text(), original_frontend=str(base.POINTER.resolve())))
+        accept_direct(cfg, ops, 'fallback', before, semantic)
+        save('HISTORY_BINDING.private.json', bind_database(base.DB, [r['execution'] for r in cfg['recent_histories']]))
+        backup(cfg, ops)
+        assert quiet(ops)['fingerprint'] == quiet_before['fingerprint']
+        ops.verify_semantics(semantic)
+        progress('candidate-switch-admitted')
+        save('SWITCH_INTENT.private.json', dict(expected_fallback_PID=708408, candidate_sha256=cfg['pair']['candidate']['sha256'], current_database_reused=True))
+        ops.stop_variant_if_running()
+        ops.install_variant('candidate')
+        ops.start_variant('candidate')
+        ops.wait_health('candidate')
+        progress('candidate-started')
+        accept_direct(cfg, ops, 'candidate', before, semantic)
+        publish(cfg, ops, 'candidate', before)
+        # From here the accepted serving runtime must survive bookkeeping errors.
+        save('ACCEPTED.private.json', dict(variant='candidate', PID=unit_state(base.UNIT)['MainPID'], sha256=cfg['pair']['candidate']['sha256'], source_commit=cfg['pair']['candidate']['source_commit'], original18_history_verified=True, recent3_history_verified=True, settings_and_semantics_preserved=True, UTC=time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())))
+        ops.resume_owned_consumers(True)
+        save('RESULT.private.json', dict(status='new-version-serving', candidate_sha256=cfg['pair']['candidate']['sha256'], PID=unit_state(base.UNIT)['MainPID'], current_data_reused=True, older_database_restored=False, consumers_resumed=True, UTC=time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())))
+        progress('new-version-verified-consumers-resumed')
+    finally:
+        os.close(fd)
+
+
+def recover():
+    if (ROOT / 'RESULT.private.json').exists():
+        return
+    cfg, ops = setup()
+    variant = current_variant(cfg)
+    if (ROOT / 'RECOVERED.private.json').exists():
+        assert variant == 'fallback' and json.loads(base.ROUTE.read_text())['mode'] == 'blue'
+        assert not any(Path(row['path']).exists() for row in ops.owned_start_holds)
+        return
+    if ((ROOT / 'ACCEPTED.private.json').exists() or (variant == 'candidate' and (ROOT / 'BROWSER_CANDIDATE.private.json').exists() and json.loads((ROOT / 'BROWSER_CANDIDATE.private.json').read_text()).get('passed') is True)):
+        assert variant == 'candidate'
+        assert json.loads(base.ROUTE.read_text())['mode'] == 'blue'
+        # A passed browser receipt follows exact direct/history/TLS acceptance.
+        # Preserve new public work rather than rolling back for later bookkeeping.
+        ops.semantic_snapshot()
+        ops.recovery_acceptance('candidate')
+        ops.verify_public_review()
+        # Resume exact owned holds after success even if bookkeeping failed.
+        ops.resume_owned_consumers(True)
+        save('RESULT.private.json', dict(status='new-version-serving', recovered_cleanup=True, PID=unit_state(base.UNIT)['MainPID']))
+        return
+    if not (ROOT / 'BEFORE.private.json').exists():
+        raise ValueError('No admitted recovery baseline; preserve current runtime')
+    fd = os.open(cfg['cutover_lease'], os.O_RDONLY | os.O_NOFOLLOW)
+    fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    try:
+        before = json.loads((ROOT / 'BEFORE.private.json').read_text())
+        ops.semantic_before = before['semantic']
+        review = base.load(Path(cfg['review_projection']), 'repair_saved_review_projection')
+        snapshot = ROOT / 'current-before-switch.sqlite'
+        # The fresh verified SQL point carries the exact pre-switch review state.
+        # No history, flag or identity is reconstructed from guesses.
+        baseline = review.capture(snapshot if snapshot.exists() else base.DB, 'Authorized incident recovery baseline')
+        ops.review_before = hashlib.sha256(json.dumps(baseline['tables'], sort_keys=True).encode()).hexdigest()
+        if variant is not None:
+            quiet(ops)
+        else:
+            ops.boundary.require_dispatch_quiet(ops.boundary.inventory(base.DB))
+        if variant != 'fallback':
+            ops.route_maintenance()
+            if variant is not None:
+                owned = ops.h.ownership(5621)
+                if owned['owned']:
+                    ops.released_response = ops.h.ownership(5621, 'release', owned['state'])
+                    save('RELEASED.private.json', ops.released_response)
+                ops.stop_variant_if_running()
+            ops.install_variant('fallback')
+            ops.start_variant('fallback'); ops.wait_health('fallback')
+        accept_direct(cfg, ops, 'fallback', before['info'], before['semantic'])
+        publish(cfg, ops, 'fallback', before['info'])
+        ops.resume_owned_consumers(False)
+        save('RECOVERED.private.json', dict(status='verified-fallback-serving', PID=unit_state(base.UNIT)['MainPID'], older_database_restored=False, UTC=time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())))
+        progress('verified-fallback-restored-after-failure')
+    finally:
+        os.close(fd)
+
+
+def main():
+    mode = sys.argv[1]
+    if mode == 'worker':
+        try:
+            worker()
+        except BaseException as error:
+            save('FAILURE.private.json', dict(type=type(error).__name__, reason=str(error)))
+            raise
+    elif mode == 'recover':
+        recover()
+    elif mode == 'supervise':
+        try:
+            supervise([sys.executable, '-B', str(Path(__file__).resolve()), 'worker'], ROOT / 'progress.json', idle_seconds=600)
+        except BaseException as error:
+            save('SUPERVISOR_FAILURE.private.json', dict(type=type(error).__name__, reason=str(error)))
+            subprocess.run([sys.executable, '-B', str(Path(__file__).resolve()), 'recover'], check=True, timeout=300)
+            raise
+    elif mode == 'check':
+        cfg, ops = setup(); quiet(ops); ops.reader_check(); ops.resources()
+        ops.recovery_acceptance('fallback')
+        print('Pre-switch checks passed; no service changes', flush=True)
+    else:
+        raise ValueError('Explicit check/worker/supervise/recover mode required')
+
+if __name__ == '__main__':
+    main()

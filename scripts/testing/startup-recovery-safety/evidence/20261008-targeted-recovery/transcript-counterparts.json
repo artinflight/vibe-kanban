@@ -1,0 +1,92 @@
+{
+  "authenticated_copies": [
+    {
+      "source_archive": "full",
+      "source_archive_sha256": "9beef7c6ca1e533b9861f186d6654e5db0c4d7e13482bdddc70f0673b9b32e4d",
+      "transcript_sha256": "3f3b656a9d55e40623d7b567fff2ab96392aa5a6e36b72669bd4482c3c629af9",
+      "bytes": 131280867,
+      "malformed_line": 415,
+      "malformed_line_sha256": "17c828479a4803c0126d478ef14638189bc3f4a7f53fe86cf98d80153bd50ffd"
+    },
+    {
+      "source_archive": "delta",
+      "source_archive_sha256": "4b2a3881da51148f0c66f773ac292476fab9b3a973f734f09af17e37680f0c53",
+      "transcript_sha256": "f41ce4ef1fe30fbdc93ec958679986238443816cff67a6ae58e6d3cc0e1fc911",
+      "bytes": 131582832,
+      "malformed_line": 415,
+      "malformed_line_sha256": "17c828479a4803c0126d478ef14638189bc3f4a7f53fe86cf98d80153bd50ffd"
+    },
+    {
+      "source_archive": "private-remote-checkpoint-scan.json",
+      "source_archive_sha256": "c79a6c5ca5aa0e8d2a25ed0c25bd41e5c22160bd1f3cb2aceeb32c18ae0abb87",
+      "transcript_sha256": "7edec0e1c84eeee15ef58a61654d226398164fc56a212cc32a0342eba7a06161",
+      "bytes": 71214077,
+      "malformed_line": 415,
+      "malformed_line_sha256": "17c828479a4803c0126d478ef14638189bc3f4a7f53fe86cf98d80153bd50ffd",
+      "parse_errors": [
+        415
+      ]
+    },
+    {
+      "source_archive": "private-remote-delta-scan.json",
+      "source_archive_sha256": "ac03033be84d54a8a0278660429dbb70742c7565b12879fe85832be4b51d997c",
+      "transcript_sha256": "f214efbf00ae74a4422c4b5bcf6e6aa13cdfa7ba8c8a6e49e58664250450de21",
+      "bytes": 92561077,
+      "malformed_line": 415,
+      "malformed_line_sha256": "17c828479a4803c0126d478ef14638189bc3f4a7f53fe86cf98d80153bd50ffd",
+      "parse_errors": [
+        415
+      ]
+    },
+    {
+      "source_archive": "private-remote-threads-scan.json",
+      "source_archive_sha256": "0c5e35c968d8d77c9db93e30017b4d9f8bc392409bf3d8fd1bd93e5893ce3fef",
+      "transcript_sha256": "b28ca4a948ac6e3778ce6708efd5d4d38137ae1c4bcb3ade9496bd17c8743b41",
+      "bytes": 11364207,
+      "malformed_line": 415,
+      "malformed_line_sha256": "17c828479a4803c0126d478ef14638189bc3f4a7f53fe86cf98d80153bd50ffd",
+      "parse_errors": [
+        415
+      ]
+    },
+    {
+      "source_archive": "private-remote-threads-scan.json",
+      "source_archive_sha256": "0c5e35c968d8d77c9db93e30017b4d9f8bc392409bf3d8fd1bd93e5893ce3fef",
+      "transcript_sha256": "3cdc43cb179ad0e03b0e2ccf0a6574d2edcae3eb1c907c1a761fb4284fb7f283",
+      "bytes": 10719616,
+      "malformed_line": 415,
+      "malformed_line_sha256": "17c828479a4803c0126d478ef14638189bc3f4a7f53fe86cf98d80153bd50ffd",
+      "parse_errors": [
+        415
+      ]
+    },
+    {
+      "source_archive": "private-remote-threads-scan.json",
+      "source_archive_sha256": "0c5e35c968d8d77c9db93e30017b4d9f8bc392409bf3d8fd1bd93e5893ce3fef",
+      "transcript_sha256": "5065ef1923be8a86a5911cd2bc4b68c35441ea6988f42c95f63bb8e7ea36ca09",
+      "bytes": 10048160,
+      "malformed_line": 415,
+      "malformed_line_sha256": "17c828479a4803c0126d478ef14638189bc3f4a7f53fe86cf98d80153bd50ffd",
+      "parse_errors": [
+        415
+      ]
+    },
+    {
+      "source_archive": "private-remote-threads-scan.json",
+      "source_archive_sha256": "0c5e35c968d8d77c9db93e30017b4d9f8bc392409bf3d8fd1bd93e5893ce3fef",
+      "transcript_sha256": "241c169340da787c166ff87be370883ac6e7bb48fc3d99e62bfd582100a76712",
+      "bytes": 1800115,
+      "malformed_line": 415,
+      "malformed_line_sha256": "17c828479a4803c0126d478ef14638189bc3f4a7f53fe86cf98d80153bd50ffd",
+      "parse_errors": [
+        415
+      ]
+    }
+  ],
+  "intact_counterpart_found": false,
+  "visible_prefix_event_type": "event_msg/token_count",
+  "visible_prefix_timestamp": "2026-08-26T14:51:15.055Z",
+  "missing_suffix": "unknown",
+  "checker_overall_pass": false,
+  "existing_normalized_stream_observation": "Two parse errors; no exact timestamp counterpart. Not independently authenticated against an original archive."
+}

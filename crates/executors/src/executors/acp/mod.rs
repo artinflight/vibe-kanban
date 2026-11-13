@@ -2,6 +2,7 @@ pub mod client;
 pub mod harness;
 pub mod normalize_logs;
 pub mod session;
+mod supervised;
 
 use std::{fmt::Display, str::FromStr};
 

@@ -9,6 +9,7 @@ import { useActions } from '@/shared/hooks/useActions';
 import { usePageTitle } from '@/shared/hooks/usePageTitle';
 import { KanbanContainer } from '@/features/kanban/ui/KanbanContainer';
 import { useIsMobile } from '@/shared/hooks/useIsMobile';
+import { ProjectCollaborationLayout } from './ProjectCollaborationLayout';
 import { ProjectRightSidebarContainer } from './ProjectRightSidebarContainer';
 import { LoginRequiredPrompt } from '@/shared/dialogs/shared/LoginRequiredPrompt';
 import {
@@ -21,6 +22,7 @@ import { useOrganizationStore } from '@/shared/stores/useOrganizationStore';
 import { useAuth } from '@/shared/hooks/auth/useAuth';
 import { useAppNavigation } from '@/shared/hooks/useAppNavigation';
 import { useCurrentKanbanRouteState } from '@/shared/hooks/useCurrentKanbanRouteState';
+import { useExpectedIssueOpen } from '@/shared/hooks/useExpectedIssueOpen';
 import {
   buildKanbanIssueComposerKey,
   closeKanbanIssueComposer,
@@ -106,10 +108,20 @@ function ProjectKanbanBoard() {
   );
 }
 
-export function ProjectKanbanLayout({ projectName }: { projectName: string }) {
-  const { issueId, isPanelOpen } = useCurrentKanbanRouteState();
+function ProjectKanbanContent({ projectName }: { projectName: string }) {
+  const { issueId, isPanelOpen, hostId, projectId } =
+    useCurrentKanbanRouteState();
   const isMobile = useIsMobile();
-  const { getIssue } = useProjectContext();
+  const { getIssue, issuesById } = useProjectContext();
+  const hasIssue = useMemo(
+    () => (id: string) => issuesById.has(id),
+    [issuesById]
+  );
+  const { expectedIssueId, markExpectedIssue } = useExpectedIssueOpen(
+    `${hostId ?? 'local'}:${projectId}`,
+    issueId,
+    hasIssue
+  );
   const issue = issueId ? getIssue(issueId) : undefined;
   usePageTitle(issue?.title, projectName);
   const [kanbanLeftPanelSize, setKanbanLeftPanelSize] = usePaneSize(
@@ -117,7 +129,7 @@ export function ProjectKanbanLayout({ projectName }: { projectName: string }) {
     75
   );
 
-  const isRightPanelOpen = isPanelOpen;
+  const isRightPanelOpen = isPanelOpen || expectedIssueId !== null;
 
   if (isMobile) {
     return (
@@ -132,7 +144,10 @@ export function ProjectKanbanLayout({ projectName }: { projectName: string }) {
         </div>
         {isRightPanelOpen && (
           <div className="relative h-full overflow-hidden bg-secondary">
-            <ProjectRightSidebarContainer />
+            <ProjectRightSidebarContainer
+              expectedIssueId={expectedIssueId}
+              onExpectIssueOpen={markExpectedIssue}
+            />
           </div>
         )}
       </div>
@@ -182,10 +197,30 @@ export function ProjectKanbanLayout({ projectName }: { projectName: string }) {
           maxSize="800px"
           className="min-w-0 h-full overflow-hidden bg-secondary"
         >
-          <ProjectRightSidebarContainer />
+          <ProjectRightSidebarContainer
+            expectedIssueId={expectedIssueId}
+            onExpectIssueOpen={markExpectedIssue}
+          />
         </Panel>
       )}
     </Group>
+  );
+}
+
+export function ProjectKanbanLayout({ projectName }: { projectName: string }) {
+  const { projectId, hostId, workspaceId, issueId } =
+    useCurrentKanbanRouteState();
+  const board = <ProjectKanbanContent projectName={projectName} />;
+  if (hostId || !projectId) return board;
+  return (
+    <ProjectCollaborationLayout
+      projectId={projectId}
+      projectName={projectName}
+      workspaceId={workspaceId}
+      issueId={issueId}
+    >
+      {board}
+    </ProjectCollaborationLayout>
   );
 }
 

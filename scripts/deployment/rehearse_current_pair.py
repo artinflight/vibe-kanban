@@ -1,0 +1,136 @@
+"""Fresh-current-data fallback/return proof, isolated from host managers/network.
+Only detached SSD files are writable by the tested applications. No live switch.
+"""
+import hashlib,importlib.util,json,os,shutil,sqlite3,subprocess,sys,time
+from pathlib import Path
+if len(sys.argv)!=2: raise SystemExit('usage: rehearse_current_pair.py FRESH_RELEASE_DIR')
+RELEASE=Path(sys.argv[1]).resolve(strict=True)
+binding=json.loads((RELEASE/'BINDING.private.json').read_text())
+D=RELEASE/'roundtrip'
+D.mkdir(mode=0o700,exist_ok=True)
+B=Path(binding['cutback_bundle']); W=D/'fixture'
+assert hashlib.sha256((B/'MANIFEST.private.json').read_bytes()).hexdigest()==binding['cutback_bundle_manifest_sha256']
+sys.path.insert(0,str(B/'controls'))
+from vk_restart_history_acceptance import bind_database
+
+def load(name,path):
+ s=importlib.util.spec_from_file_location(name,path); m=importlib.util.module_from_spec(s);s.loader.exec_module(m);return m
+A=load('auditor',B/'rehearsal/latest_data_audit.py')
+H=load('sandbox',B/'rehearsal/server_sandbox.py')
+G=load('guard',B/'guards/verify-enrolled-99.py')
+def sha(p):
+ with Path(p).open('rb') as f:return hashlib.file_digest(f,'sha256').hexdigest()
+def save(name,v):
+ p=D/name;p.write_text(json.dumps(v,indent=2)+'\n');p.chmod(0o600)
+def audit(path):
+ with sqlite3.connect(path.as_uri()+'?mode=ro',uri=True) as db:
+  db.execute('BEGIN')
+  assert db.execute('PRAGMA integrity_check').fetchall()==[('ok',)]
+  rows=db.execute('select version,hex(checksum),success from _sqlx_migrations order by version').fetchall()
+  G.verify_rows(rows,G.read_catalog());assert len(rows)==99
+  tables=[r[0] for r in db.execute("select name from sqlite_master where type='table' and name not like 'sqlite_%' order by name")]
+  return dict(dataset=db.execute('select dataset_id from vk_runtime_identity where singleton=1').fetchone()[0],migrations=rows,tables={n:A.table_digest(db,n)for n in tables})
+def current_pid():
+ return subprocess.check_output(['systemctl','--user','show','vibe-kanban-native-review-20261015.service','-p','MainPID','--value'],text=True).strip()
+
+def main():
+ assert os.path.ismount('/mnt/vk-storage')
+ m=json.loads((B/'MANIFEST.private.json').read_text())
+ for n,r in m['files'].items():assert sha(B/n)==r['sha256'],n
+ binding=json.loads((D.parent/'BINDING.private.json').read_text());oldpid=current_pid();assert sha('/proc/'+oldpid+'/exe')==binding['fallback']['sha256']
+ W.mkdir(mode=0o700)
+ for n in ('assets','home','workspaces','external','tmp','capacity'):(W/n).mkdir()
+ (W/'home/.codex').mkdir()
+ (W/'workspaces/untracked.txt').write_text('newer uncommitted work must survive')
+ (W/'external/sentinel').write_text('external worktree registration must survive')
+ logical=Path(m['database']); source=logical.resolve(strict=True)
+ snapshot=D/'fresh-current.sqlite';working=W/'assets/db.v2.sqlite'
+ with sqlite3.connect(source.as_uri()+'?mode=ro',uri=True,timeout=2)as src,sqlite3.connect(snapshot)as dst:
+  src.backup(dst,pages=4096,sleep=.02)
+ snapshot.chmod(0o600);shutil.copy2(snapshot,working)
+ with sqlite3.connect(working)as db:
+  db.execute('CREATE TABLE _vk_cutback_probe(phase TEXT PRIMARY KEY, value TEXT NOT NULL)')
+  db.execute('INSERT INTO _vk_cutback_probe VALUES (?,?)',('after-upgrade','preserve later writes'))
+ baseline=audit(working);save('BEFORE.private.json',baseline)
+ assert baseline['dataset']==binding['dataset_id']
+ recent=json.loads((B/'reference/recent-history.private.json').read_text())['recent_histories']
+ save('RECENT_BOUND.private.json',bind_database(snapshot,[r['execution']for r in recent]+[r['execution']for r in binding['additional_histories']]))
+ config=json.loads((B/'rehearsal/private-config.json').read_text());config['workspace_dir']='/run/fixture/workspaces'
+ (W/'assets/config.json').write_text(json.dumps(config))
+ result=dict(production_PID_before=oldpid,snapshot_sha256=sha(snapshot),snapshot_bytes=snapshot.stat().st_size,snapshot_UTC=time.strftime('%Y-%m-%dT%H:%M:%SZ',time.gmtime()),production_changed=False,phases=[])
+ save('RESULT.private.json',result)
+ for label,variant in [('new_before','candidate'),('cutback','fallback'),('new_return','candidate')]:
+  binary=Path(binding[variant]['path']);frontend=Path(binding['frontend_forward' if variant=='candidate' else 'frontend_cutback'])
+  assert sha(binary)==binding[variant]['sha256']
+  masked=['/usr/bin/bwrap','--unshare-all','--new-session','--die-with-parent','--ro-bind','/','/','--tmpfs','/home','--tmpfs','/mnt','--tmpfs','/run','--tmpfs','/tmp','--proc','/proc','--dev','/dev']
+  inspect=masked+['--ro-bind',str(binary),'/run/test-server','--clearenv','--setenv','HOME','/run/fixture/home','--setenv','PATH','/usr/bin:/bin','/run/test-server','--build-info']
+  info=json.loads(subprocess.check_output(inspect,text=True,timeout=15));save(label+'-BUILD.json',info)
+  for k in ['automaticWorkspaceDeletion','automaticAttachmentMigration','automaticAttachmentCleanup']:assert info[k] is False
+  assert info['runtimeIdentityVersion']==1
+  assets=os.path.normpath(info['assetDirectory']);assert any(assets.startswith(p)for p in ['/home/','/mnt/','/run/fixture/'])
+  (W/'identity').write_text(H.pin(assets+'/db.v2.sqlite','/run/fixture/workspaces',working,W/'workspaces',baseline['dataset']))
+  runner=H.RUNNER.replace("('assets','workspaces','external','home')","('workspaces','external')").replace('time.monotonic()+15','time.monotonic()+60')
+  marker='        # All untracked/shared-shaped sentinels must survive normal startup too.'
+  extra='''        def read(path):
+            try:
+                with urllib.request.urlopen('http://127.0.0.1:39001/api/'+path,timeout=10)as r:return json.load(r)
+            except urllib.error.HTTPError as e:
+                print('API conflict diagnostic', e.code, e.read().decode(),flush=True);raise
+        import sys
+        sys.path.insert(0,'/run/controls')
+        from vk_restart_history_acceptance import verify_history
+        targets=json.loads(pathlib.Path('/run/protected.json').read_text())['targets']
+        for row in targets:
+            st=read('execution-processes/'+row['execution']+'/native-recovery-status')['data']
+            assert st['protocol']==1 and st['server_pid']==child.pid and not st['writer_active']
+            history=read('execution-processes/'+row['execution']+'/log-history')['data']
+            replies=[r['entry']['content']['content']for r in history['entries'] if r['entry']['content']['entry_type']['type']=='assistant_message']
+            assert len(replies)==1 and hashlib.sha256(replies[0].encode()).hexdigest()==row['expected_recovered_reply_sha256']
+        recent=json.loads(pathlib.Path('/run/recent.json').read_text())
+        for row in recent:verify_history(read,row)
+        static=subprocess.Popen(['/usr/bin/python3','-B','-m','http.server','4313','--bind','127.0.0.1','--directory','/run/frontend'],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+        try:
+            until=time.monotonic()+10
+            while True:
+                try:
+                    with urllib.request.urlopen('http://127.0.0.1:4313/',timeout=1)as r: page=r.read()
+                    break
+                except OSError:
+                    assert time.monotonic()<until
+                    time.sleep(.05)
+            assert hashlib.sha256(page).hexdigest()==PAGE_SHA
+            import re
+            assets=re.findall(r'(?:src|href)="(/assets/[^\"]+)"',page.decode())
+            assert assets
+            for asset in assets:
+                with urllib.request.urlopen('http://127.0.0.1:4313'+asset,timeout=3)as r: payload=r.read()
+                assert hashlib.sha256(payload).hexdigest()==hashlib.sha256(pathlib.Path('/run/frontend'+asset).read_bytes()).hexdigest()
+        finally:
+            static.terminate();static.wait(timeout=5)
+        print(json.dumps(dict(protected_histories=len(targets),recent_histories=len(recent),frontend_entry_assets=len(assets))))
+'''
+  assert marker in runner
+  runner='PAGE_SHA='+repr(sha(frontend/'index.html'))+'\n'+runner.replace(marker,extra+marker)
+  cmd=masked+['--bind',str(W),'/run/fixture','--ro-bind',str(binary),'/run/test-server','--bind',str(W/'assets'),assets,'--ro-bind',str(logical.parent/'sessions'),assets+'/sessions','--ro-bind','/home/mcp/.local/share/vibe-kanban-green-codex-home/sessions','/run/fixture/home/.codex/sessions','--ro-bind',str(frontend),'/run/frontend','--ro-bind',str(B/'controls'),'/run/controls','--ro-bind',str(B/'reference/protected-history.private.json'),'/run/protected.json','--ro-bind',str(D/'RECENT_BOUND.private.json'),'/run/recent.json','--clearenv']
+  env=dict(HOME='/run/fixture/home',PATH='/usr/bin:/bin',TMPDIR='/run/fixture/tmp',SQLITE_TMPDIR='/run/fixture/tmp',BACKEND_PORT='39001',PREVIEW_PROXY_PORT='39002',RUST_LOG='error',VK_DISABLE_PR_MONITOR='1',VK_CAPACITY_START_PAUSED='1',VK_CAPACITY_STATE_DIR='/run/fixture/capacity',VK_RUNTIME_IDENTITY_FILE='/run/fixture/identity')
+  for k,v in env.items():cmd+=['--setenv',k,v]
+  cmd+=['--chdir','/run/fixture','/usr/bin/python3','-B','-c',runner,'[]','serve','']
+  with (D/(label+'.log')).open('x')as log:
+   run=subprocess.run(cmd,stdout=log,stderr=subprocess.STDOUT,timeout=150)
+  assert run.returncode==0,label+' failed; inspect private log'
+  after=audit(working);save(label+'-AFTER.private.json',after)
+  changed=[n for n,v in baseline['tables'].items() if after['tables'].get(n)!=v]
+  assert baseline==after, 'Detached startup changed rows: '+str(changed)
+  result['phases'].append(dict(variant=variant,native_started=True,all_tables_preserved=len(after['tables']),protected_histories=18,recent_histories=len(json.loads((D/'RECENT_BOUND.private.json').read_text())),frontend_assets_verified=True,detached_later_write_preserved=True))
+  save('RESULT.private.json',result)
+  if label=='new_before':
+   with sqlite3.connect(working)as db:db.execute('INSERT INTO _vk_cutback_probe VALUES (?,?)',('new-write','preserve new-version writes on cutback'))
+   baseline=audit(working)
+  if variant=='fallback':
+   with sqlite3.connect(working)as db:db.execute('INSERT INTO _vk_cutback_probe VALUES (?,?)',('after-cutback','preserve writes when returning forward'))
+   baseline=audit(working)
+ assert current_pid()==oldpid and sha('/proc/'+oldpid+'/exe')==binding['fallback']['sha256']
+ assert sha(snapshot)==result['snapshot_sha256']
+ result.update(passed=True,production_PID_after=current_pid(),terminal_UTC=time.strftime('%Y-%m-%dT%H:%M:%SZ',time.gmtime()),same_current_database_roundtrip=True)
+ save('RESULT.private.json',result);print(json.dumps(result),flush=True)
+if __name__=='__main__':main()

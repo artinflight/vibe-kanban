@@ -1,0 +1,3 @@
+{"method":"thread/goal/cleared","params":{"threadId":"fixture-thread"},"emittedAtMs":1791376170609}
+{"method":"item/started","params":{"item":{"type":"sleep","id":"fixture-call","durationMs":20000},"threadId":"fixture-thread","turnId":"fixture-turn","startedAtMs":1791379319710},"emittedAtMs":1791379319710}
+{"method":"item/completed","params":{"item":{"type":"sleep","id":"fixture-call","durationMs":20000},"threadId":"fixture-thread","turnId":"fixture-turn","completedAtMs":1791379339710},"emittedAtMs":1791379339715}

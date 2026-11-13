@@ -1,0 +1,582 @@
+"""Isolated sidechat contracts. No credentials, network transport or agent actions.
+
+Auth is supplied by a trusted adapter, never by tool arguments. The demo adapter
+uses fixed fixture identities on loopback; it is NOT production authentication.
+"""
+from contextlib import contextmanager
+from dataclasses import dataclass
+import datetime as dt
+import hashlib
+import json
+import os
+from pathlib import Path
+import sqlite3
+import time
+import uuid
+
+EVENT = "vk.sidechat.owner_message.created"
+
+
+@dataclass(frozen=True)
+class Principal:
+    owner: str
+    role: str  # owner, dot or publisher, supplied by trusted host
+
+
+class Rejected(ValueError):
+    pass
+
+
+def canonical(value):
+    return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+
+
+class Store:
+    def __init__(self, path, clock=time.time):
+        self.clock = clock
+        db_path = Path(path)
+        if db_path.is_symlink():
+            raise Rejected("Private database cannot be a symlink")
+        try:
+            fd = os.open(db_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+            os.close(fd)
+        except FileExistsError:
+            if db_path.stat().st_mode & 0o077:
+                raise Rejected("Private database must be owner-readable only")
+        self.db = sqlite3.connect(path, timeout=10, isolation_level=None)
+        self.db.row_factory = sqlite3.Row
+        self.db.executescript("""
+        PRAGMA foreign_keys=ON;
+        PRAGMA journal_mode=WAL;
+        CREATE TABLE IF NOT EXISTS scopes(
+          owner TEXT, project TEXT, issue TEXT, workspace TEXT,
+          PRIMARY KEY(owner,workspace));
+        CREATE TABLE IF NOT EXISTS project_grants(
+          owner TEXT NOT NULL, project TEXT NOT NULL,
+          PRIMARY KEY(owner,project));
+        CREATE TABLE IF NOT EXISTS owner_project_policies(
+          owner TEXT PRIMARY KEY, enabled INTEGER NOT NULL);
+        CREATE TABLE IF NOT EXISTS all_project_sessions(
+          owner TEXT NOT NULL, session TEXT NOT NULL,
+          PRIMARY KEY(owner,session));
+        CREATE TABLE IF NOT EXISTS threads(
+          id TEXT PRIMARY KEY, owner TEXT NOT NULL, project TEXT NOT NULL,
+          issue TEXT NOT NULL, created REAL NOT NULL,
+          UNIQUE(owner,project,issue));
+        CREATE TABLE IF NOT EXISTS messages(
+          id TEXT PRIMARY KEY, thread TEXT NOT NULL REFERENCES threads(id),
+          seq INTEGER NOT NULL, role TEXT NOT NULL, body TEXT NOT NULL,
+          workspace TEXT NOT NULL, request TEXT NOT NULL, reply_to TEXT,
+          hash TEXT NOT NULL, created REAL NOT NULL,
+          UNIQUE(thread,seq), UNIQUE(thread,role,request), UNIQUE(reply_to));
+        CREATE TABLE IF NOT EXISTS owner_reply_targets(
+          message TEXT PRIMARY KEY REFERENCES messages(id),
+          target TEXT NOT NULL REFERENCES messages(id));
+        CREATE TABLE IF NOT EXISTS dot_reply_state(
+          message TEXT PRIMARY KEY REFERENCES messages(id),
+          seen INTEGER NOT NULL DEFAULT 0,
+          attention_kind TEXT CHECK(attention_kind IN ('question','action')),
+          initial_attention_kind TEXT CHECK(initial_attention_kind IN ('question','action')),
+          resolved INTEGER NOT NULL DEFAULT 0,
+          updated REAL NOT NULL);
+        CREATE TABLE IF NOT EXISTS dispatch_notes(
+          owner TEXT NOT NULL,execution TEXT NOT NULL,workspace TEXT NOT NULL,
+          session TEXT NOT NULL,kind TEXT NOT NULL,thread TEXT NOT NULL,message TEXT NOT NULL,
+          PRIMARY KEY(owner,execution),UNIQUE(message));
+        CREATE TABLE IF NOT EXISTS bindings(
+          thread TEXT PRIMARY KEY REFERENCES threads(id),
+          subscription TEXT NOT NULL, active INTEGER NOT NULL, expires REAL NOT NULL);
+        CREATE TABLE IF NOT EXISTS outbox(
+          event TEXT PRIMARY KEY, message TEXT UNIQUE NOT NULL REFERENCES messages(id),
+          thread TEXT NOT NULL REFERENCES threads(id), payload TEXT NOT NULL,
+          state TEXT NOT NULL DEFAULT 'pending', attempts INTEGER NOT NULL DEFAULT 0,
+          next_try REAL NOT NULL DEFAULT 0, lease_until REAL NOT NULL DEFAULT 0,
+          subscription TEXT, http_status INTEGER, updated REAL NOT NULL);
+        """)
+
+        # Durable owner override: automatic visibility reads must not undo it.
+        with self.transaction():
+            if "manual_unread" not in {r[1] for r in self.db.execute("PRAGMA table_info(dot_reply_state)")}:
+                self.db.execute("ALTER TABLE dot_reply_state ADD COLUMN manual_unread INTEGER NOT NULL DEFAULT 0")
+
+        # Legacy Dot replies become unread once. Reopening never resets state.
+        self.db.execute("INSERT OR IGNORE INTO dot_reply_state(message,updated) SELECT id,created FROM messages WHERE role='dot'")
+
+        # Only prototype schema evolution; existing fixtures retain all messages.
+        if "expires" not in {r[1] for r in self.db.execute("PRAGMA table_info(bindings)")} :
+            self.db.execute("ALTER TABLE bindings ADD COLUMN expires REAL NOT NULL DEFAULT 0")
+
+    @classmethod
+    def reader(cls, path):
+        """Open existing private state without creating, migrating or acknowledging it."""
+        path = Path(path)
+        if path.is_symlink() or path.stat().st_mode & 0o077:
+            raise Rejected("Private database must be owner-readable only")
+        store = cls.__new__(cls)
+        store.clock = time.time
+        store.db = sqlite3.connect(path.resolve().as_uri() + "?mode=ro", uri=True, timeout=2)
+        store.db.row_factory = sqlite3.Row
+        store.db.execute("PRAGMA query_only=ON")
+        return store
+
+    def workspace_context(self, principal, workspace):
+        """Existing authorized history only; pending is deliberately not a directory."""
+        self._principal(principal, ("dot",))
+        row = self.db.execute("""SELECT t.id,t.project,t.issue FROM scopes s
+            JOIN threads t ON t.owner=s.owner AND t.project=s.project AND t.issue=s.issue
+            WHERE s.owner=? AND s.workspace=?""", (principal.owner, workspace)).fetchone()
+        if not row:
+            return {"status": "not_found", "workspace_id": workspace}
+        return {"status": "available", "workspace_id": workspace,
+                "thread_id": row["id"], "project_id": row["project"], "issue_id": row["issue"],
+                "next": "Read read_sidechat_thread(thread=thread_id), then check the exact owner delivery. "
+                        "Pending lists unanswered messages only. No monitoring is scheduled by reading."}
+
+    def _reply_origin(self, thread, message, workspace):
+        """Bounded ancestry; continuations must retain the original owner event."""
+        upper = None
+        for _ in range(100):
+            row = self.db.execute("SELECT * FROM messages WHERE thread=? AND id=?",
+                                  (thread, message)).fetchone()
+            if not row or row["workspace"] != workspace or (upper is not None and row["seq"] >= upper):
+                raise Rejected("Reply ancestry does not match this thread/workspace")
+            if row["role"] == "owner":
+                event = self.db.execute("SELECT event FROM outbox WHERE message=? AND thread=?",
+                                        (row["id"], thread)).fetchone()
+                if not event:
+                    raise Rejected("Owner event unavailable")
+                return row, event["event"]
+            if row["role"] != "dot" or not row["reply_to"]:
+                break
+            message, upper = row["reply_to"], row["seq"]
+        raise Rejected("Reply ancestry unavailable or exceeds safe bound")
+
+    def _reply_context(self, thread, origin, event, through):
+        tip, count = origin, 0
+        for _ in range(99):
+            child = self.db.execute("SELECT * FROM messages WHERE thread=? AND reply_to=? AND seq<=?",
+                                    (thread, tip["id"], through)).fetchone()
+            if not child:
+                return {"owner_message_id": origin["id"], "event_id": event,
+                        "workspace": origin["workspace"], "reply_to": tip["id"],
+                        "reply_count": count,
+                        "reply_request": str(uuid.uuid5(uuid.NAMESPACE_URL, "vibe-sidechat-next:" + thread + ":" + tip["id"])),
+                        "latest_reply": {k: tip[k] for k in ("id", "seq", "hash")} if count else None,
+                        "instructions": "For an explicitly requested later update, target this chain tip with the original event. "
+                                        "Read history first. Reuse reply_request and identical content after an uncertain write. "
+                                        "A stale tip rejects competing updates; this context does not schedule monitoring."}
+            if child["role"] != "dot" or child["workspace"] != origin["workspace"] or child["seq"] <= tip["seq"]:
+                raise Rejected("Invalid continuation")
+            tip, count = child, count + 1
+        raise Rejected("Continuation exceeds safe bound")
+
+    @contextmanager
+    def transaction(self):
+        self.db.execute("BEGIN IMMEDIATE")
+        try:
+            yield
+            self.db.execute("COMMIT")
+        except BaseException:
+            self.db.execute("ROLLBACK")
+            raise
+
+    def close(self):
+        self.db.close()
+
+    def _principal(self, principal, roles):
+        if not isinstance(principal.owner, str) or not principal.owner or principal.role not in roles:
+            raise Rejected("Unauthorized role")
+
+    def _thread(self, principal, thread):
+        self._principal(principal, ("owner", "dot", "publisher"))
+        row = self.db.execute("SELECT * FROM threads WHERE id=? AND owner=? AND EXISTS (SELECT 1 FROM scopes s WHERE s.owner=threads.owner AND s.project=threads.project AND s.issue=threads.issue)",
+                              (thread, principal.owner)).fetchone()
+        if not row:
+            raise Rejected("Thread unavailable")
+        return row
+
+    def register_scope(self, owner, project, issue, workspace):
+        """Trusted provisioning only. Never exposed as a tool or HTTP endpoint."""
+        if not all(isinstance(v, str) and 0 < len(v) <= 200 for v in (owner, project, issue, workspace)):
+            raise Rejected("Invalid scope")
+        with self.transaction():
+            old = self.db.execute("SELECT * FROM scopes WHERE owner=? AND workspace=?",
+                                  (owner, workspace)).fetchone()
+            if old and (old["project"], old["issue"]) != (project, issue):
+                raise Rejected("Relinking requires explicit migration; history is retained")
+            self.db.execute("INSERT OR IGNORE INTO scopes VALUES (?,?,?,?)",
+                            (owner, project, issue, workspace))
+
+    def resolve(self, principal, project, issue, workspace):
+        self._principal(principal, ("owner",))
+        with self.transaction():
+            scope = self.db.execute("SELECT 1 FROM scopes WHERE owner=? AND project=? AND issue=? AND workspace=?",
+                                    (principal.owner, project, issue, workspace)).fetchone()
+            if not scope:
+                raise Rejected("Workspace is not authorized for this issue")
+            self.db.execute("INSERT OR IGNORE INTO threads VALUES (?,?,?,?,?)",
+                            (str(uuid.uuid4()), principal.owner, project, issue, self.clock()))
+            return dict(self.db.execute("SELECT * FROM threads WHERE owner=? AND project=? AND issue=?",
+                                        (principal.owner, project, issue)).fetchone())
+
+    def _workspace(self, principal, row, workspace):
+        if not self.db.execute("SELECT 1 FROM scopes WHERE owner=? AND project=? AND issue=? AND workspace=?",
+                               (principal.owner, row["project"], row["issue"], workspace)).fetchone():
+            raise Rejected("Workspace is not authorized for this thread")
+
+    def _owner_reply_target(self, principal, thread, workspace, target):
+        if target is None:
+            return None
+        if principal.role != 'owner' or not isinstance(target, str) or not target or len(target) > 200:
+            raise Rejected('Invalid owner reply target')
+        # Conversation is shared across issue workspaces; dispatch notes are not.
+        row = self.db.execute("""SELECT m.id FROM messages m LEFT JOIN dispatch_notes d
+          ON d.message=m.id AND d.thread=m.thread AND d.owner=? AND d.workspace=m.workspace
+          WHERE m.id=? AND m.thread=? AND (d.message IS NULL OR d.workspace=?)""",
+          (principal.owner, target, thread, workspace)).fetchone()
+        if not row:
+            raise Rejected('Reply target is unavailable in this conversation')
+        return row['id']
+
+    def _owner_reply_reference(self, thread, message, display_workspace=None):
+        # The live connector also has read-only readers of pre-upgrade snapshots.
+        if not self.db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='owner_reply_targets'").fetchone():
+            return None
+        row = self.db.execute("""SELECT t.id,t.seq,t.role,t.body,t.created,d.workspace AS dispatch_workspace
+          FROM owner_reply_targets r JOIN messages t ON t.id=r.target JOIN messages m ON m.id=r.message
+          LEFT JOIN dispatch_notes d ON d.message=t.id AND d.thread=t.thread AND d.workspace=t.workspace
+            AND d.owner=(SELECT owner FROM threads WHERE id=t.thread)
+          WHERE r.message=? AND m.thread=? AND t.thread=m.thread""", (message, thread)).fetchone()
+        if not row:
+            return None
+        unavailable = display_workspace is not None and row['dispatch_workspace'] is not None and row['dispatch_workspace'] != display_workspace
+        return {'id':row['id'], 'seq':row['seq'], 'role':row['role'], 'created':row['created'],
+                'excerpt':'' if unavailable else row['body'][:1000], 'truncated':len(row['body']) > 1000,
+                'unavailable':unavailable}
+
+    def append(self, principal, thread, workspace, request, body, reply_to=None, event_id=None, attention=None, in_reply_to=None):
+        self._principal(principal, ("owner", "dot"))
+        if not isinstance(body, str) or not body.strip() or len(body.encode()) > 60000:
+            raise Rejected("Message must contain 1..60000 UTF-8 bytes")
+        try:
+            uuid.UUID(request)
+        except (ValueError, TypeError, AttributeError):
+            raise Rejected("Request must be a UUID")
+        if attention not in (None,'question','action') or (principal.role!='dot' and attention is not None):
+            raise Rejected('Only Dot replies can flag a question or action')
+        with self.transaction():
+            scope = self._thread(principal, thread)
+            self._workspace(principal, scope, workspace)
+            if principal.role == "owner" and (reply_to is not None or event_id is not None):
+                raise Rejected("Owner messages cannot impersonate replies")
+            if principal.role == "dot":
+                target, original_event = self._reply_origin(thread, reply_to, workspace)
+                if original_event != event_id:
+                    raise Rejected("Reply must match the exact owner message/event/workspace")
+            target_id = self._owner_reply_target(principal, thread, workspace, in_reply_to)
+            digest = hashlib.sha256(body.encode()).hexdigest()
+            old = self.db.execute("SELECT * FROM messages WHERE thread=? AND role=? AND request=?",
+                                  (thread, principal.role, request)).fetchone()
+            if old:
+                old_target = self.db.execute('SELECT target FROM owner_reply_targets WHERE message=?', (old['id'],)).fetchone()
+                if (old["hash"], old["workspace"], old["reply_to"], old_target['target'] if old_target else None) != (digest, workspace, reply_to, target_id):
+                    raise Rejected("Idempotency key conflict")
+                # Idempotency compares the original annotation, not subsequently
+                # resolved state. A retry cannot reopen an action or mark it unread.
+                initial=self.db.execute('SELECT initial_attention_kind FROM dot_reply_state WHERE message=?',(old['id'],)).fetchone()
+                if principal.role=='dot' and (not initial or initial[0]!=attention):
+                    raise Rejected('Idempotency key conflict')
+                return dict(old)
+            if reply_to and self.db.execute("SELECT 1 FROM messages WHERE reply_to=?", (reply_to,)).fetchone():
+                raise Rejected("Reply target already has a successor; read history before another update")
+            seq = self.db.execute("SELECT COALESCE(MAX(seq),0)+1 FROM messages WHERE thread=?", (thread,)).fetchone()[0]
+            mid, now = str(uuid.uuid4()), self.clock()
+            self.db.execute("INSERT INTO messages VALUES (?,?,?,?,?,?,?,?,?,?)",
+                            (mid, thread, seq, principal.role, body, workspace, request, reply_to, digest, now))
+            if target_id is not None:
+                self.db.execute('INSERT INTO owner_reply_targets VALUES (?,?)', (mid, target_id))
+            if principal.role=='dot':
+                self.db.execute('INSERT INTO dot_reply_state(message,attention_kind,initial_attention_kind,updated) VALUES (?,?,?,?)',(mid,attention,attention,now))
+            if principal.role == "owner":
+                eid = "sidechat_" + mid
+                payload = {"eventId": eid, "name": EVENT, "timestamp": dt.datetime.fromtimestamp(now, dt.timezone.utc).isoformat(),
+                           "data": {"thread_id": thread, "project_id": scope["project"],
+                                    "issue_id": scope["issue"], "workspace_id": workspace,
+                                    "message_id": mid, "sequence": seq,
+                                    "author_type": "authenticated_owner",
+                                    "intent": "sidechat_reply_requested",
+                                    "reply_scope": "same_thread_only",
+                                    "message_sha256": digest}, "cursor": None}
+                if target_id is not None:
+                    payload['data']['in_reply_to'] = target_id
+                self.db.execute("INSERT INTO outbox(event,message,thread,payload,updated) VALUES (?,?,?,?,?)",
+                                (eid, mid, thread, canonical(payload), now))
+            return dict(self.db.execute("SELECT * FROM messages WHERE id=?", (mid,)).fetchone())
+
+    def read(self, principal, thread, after=0, limit=50, through=None, display_workspace=None):
+        self._principal(principal, ("owner", "dot"))
+        scope = self._thread(principal, thread)
+        if type(after) is not int or after < 0 or type(limit) is not int or not 1 <= limit <= 100:
+            raise Rejected("Invalid pagination")
+        high = self.db.execute("SELECT COALESCE(MAX(seq),0) FROM messages WHERE thread=?", (thread,)).fetchone()[0]
+        if through is None:
+            through = high
+        if type(through) is not int or through < after or through > high:
+            raise Rejected("Invalid snapshot")
+        if display_workspace is not None:
+            self._workspace(principal, scope, display_workspace)
+        rows = [dict(r) for r in self.db.execute("""SELECT m.*,d.workspace AS dispatch_workspace,d.execution AS dispatch_execution
+            FROM messages m LEFT JOIN dispatch_notes d
+              ON d.message=m.id AND d.thread=m.thread AND d.owner=? AND d.workspace=m.workspace
+            WHERE m.thread=? AND m.seq>? AND m.seq<=?
+              AND (? IS NULL OR d.message IS NULL OR d.workspace=?)
+            ORDER BY m.seq LIMIT ?""",
+            (principal.owner, thread, after, through, display_workspace, display_workspace, limit+1))]
+        more = len(rows) > limit
+        rows = rows[:limit]
+        for message in rows:
+            if message['role'] == 'owner':
+                reference = self._owner_reply_reference(thread, message['id'], display_workspace)
+                if reference:
+                    message['in_reply_to'] = reference['id']
+                    message['reply_reference'] = reference
+            dispatch_workspace=message.pop('dispatch_workspace')
+            dispatch_execution=message.pop('dispatch_execution')
+            if dispatch_workspace:
+                message['dispatch_note']={'workspace_id':dispatch_workspace,'execution_id':dispatch_execution}
+                from dispatch_attribution import presentation
+                message['dispatch_note'].update(presentation(self, principal, message))
+            if message['role']=='dot':
+                state=self.db.execute('SELECT seen,manual_unread,attention_kind,resolved FROM dot_reply_state WHERE message=?',(message['id'],)).fetchone()
+                message['seen']=bool(state and state['seen'])
+                message['manual_unread']=bool(state and state['manual_unread'])
+                message['attention']={'kind':state['attention_kind'],'resolved':bool(state['resolved'])} if state and state['attention_kind'] else None
+            if message["role"] == "owner":
+                origin, event = self._reply_origin(thread, message["id"], message["workspace"])
+                message["reply_context"] = self._reply_context(thread, origin, event, through)
+                message["owner_intent"] = {
+                    "intent": "sidechat_reply_requested",
+                    "reply_scope": "same_thread_only",
+                    "thread_id": thread, "message_id": message["id"],
+                    "message_sha256": message["hash"],
+                    "coding_agent_action_authorized": False,
+                    "platform_review_bypass": False,
+                }
+        return {"thread": dict(dict(scope), scope_kind="project" if scope["issue"] == "project:" + scope["project"] else "issue"), "messages": rows, "through": through,
+                "next_after": rows[-1]["seq"] if more else None, "complete": not more}
+
+    def notifications(self, principal, projects):
+        """Owner-only metadata. A GET never acknowledges reading or resolves work."""
+        self._principal(principal,('owner',))
+        allowed=set(projects)
+        rows=self.db.execute("""SELECT t.project,t.issue,
+          SUM(CASE WHEN s.seen=0 THEN 1 ELSE 0 END) AS unread_count,
+          SUM(CASE WHEN s.attention_kind IS NOT NULL AND s.resolved=0 THEN 1 ELSE 0 END) AS needs_attention_count,
+          SUM(CASE WHEN bound.workspace IS NULL AND s.seen=0 THEN 1 ELSE 0 END) AS shared_unread_count,
+          SUM(CASE WHEN bound.workspace IS NULL AND s.attention_kind IS NOT NULL AND s.resolved=0 THEN 1 ELSE 0 END) AS shared_needs_attention_count
+          FROM threads t JOIN messages m ON m.thread=t.id AND m.role='dot'
+          JOIN dot_reply_state s ON s.message=m.id LEFT JOIN scopes bound
+            ON bound.owner=t.owner AND bound.project=t.project AND bound.issue=t.issue AND bound.workspace=m.workspace
+          WHERE t.owner=? GROUP BY t.project,t.issue""",(principal.owner,)).fetchall()
+        # Shared history does not imply shared notification scope. Stored message
+        # destinations must match an existing trusted scope; never infer a target
+        # from dispatch provenance, siblings, text or a legacy unknown workspace.
+        workspace_rows=self.db.execute("""SELECT t.project,t.issue,m.workspace,
+          SUM(CASE WHEN s.seen=0 THEN 1 ELSE 0 END) AS unread_count,
+          SUM(CASE WHEN s.attention_kind IS NOT NULL AND s.resolved=0 THEN 1 ELSE 0 END) AS needs_attention_count
+          FROM threads t JOIN messages m ON m.thread=t.id AND m.role='dot'
+          JOIN dot_reply_state s ON s.message=m.id JOIN scopes bound
+            ON bound.owner=t.owner AND bound.project=t.project AND bound.issue=t.issue AND bound.workspace=m.workspace
+          WHERE t.owner=? AND t.issue!=('project:'||t.project)
+          GROUP BY t.project,t.issue,m.workspace""",(principal.owner,)).fetchall()
+        return {'issues':[{'project_id':r['project'],'issue_id':r['issue'],
+          'unread_count':r['unread_count'],'needs_attention_count':r['needs_attention_count'],
+          'shared_unread_count':r['shared_unread_count'],'shared_needs_attention_count':r['shared_needs_attention_count']}
+          for r in rows if r['project'] in allowed and not r['issue'].startswith('project:') and (r['unread_count'] or r['needs_attention_count'])],
+          'workspaces':[{'project_id':r['project'],'issue_id':r['issue'],'workspace_id':r['workspace'],
+          'unread_count':r['unread_count'],'needs_attention_count':r['needs_attention_count']}
+          for r in workspace_rows if r['project'] in allowed and (r['unread_count'] or r['needs_attention_count'])],
+          'projects':[{'project_id':r['project'],'unread_count':r['unread_count'],'needs_attention_count':r['needs_attention_count']}
+          for r in rows if r['project'] in allowed and r['issue']=='project:'+r['project'] and (r['unread_count'] or r['needs_attention_count'])]}
+
+    def _reply_for_workspace(self, principal, thread, workspace, message):
+        # Genuine conversation remains issue-shared; verified dispatch notes do not.
+        return self.db.execute("""SELECT m.workspace,s.attention_kind,s.resolved
+          FROM messages m JOIN dot_reply_state s ON s.message=m.id LEFT JOIN dispatch_notes d
+            ON d.message=m.id AND d.thread=m.thread AND d.owner=? AND d.workspace=m.workspace
+          WHERE m.id=? AND m.thread=? AND m.role='dot' AND (d.message IS NULL OR d.workspace=?)""",
+          (principal.owner,message,thread,workspace)).fetchone()
+
+    def seen_replies(self, principal, thread, workspace, messages):
+        self._principal(principal,('owner',))
+        if not isinstance(messages,list) or not 1<=len(messages)<=100 or any(not isinstance(m,str) for m in messages) or len(set(messages))!=len(messages):
+            raise Rejected('Bounded distinct visible reply IDs required')
+        with self.transaction():
+            scope=self._thread(principal,thread);self._workspace(principal,scope,workspace)
+            for message in messages:
+                if not self._reply_for_workspace(principal,thread,workspace,message):
+                    raise Rejected('Visible reply unavailable')
+            acknowledged=[]
+            for message in messages:
+                self.db.execute('UPDATE dot_reply_state SET seen=1,updated=? WHERE message=? AND seen=0 AND manual_unread=0',(self.clock(),message))
+                if self.db.execute('SELECT seen FROM dot_reply_state WHERE message=?',(message,)).fetchone()[0]:
+                    acknowledged.append(message)
+        return {'seen':acknowledged}
+
+    def set_reply_read_state(self, principal, thread, workspace, message, action):
+        self._principal(principal,('owner',))
+        if not isinstance(message,str) or action not in ('read','unread'):
+            raise Rejected('Explicit read or unread action required')
+        with self.transaction():
+            scope=self._thread(principal,thread);self._workspace(principal,scope,workspace)
+            if not self._reply_for_workspace(principal,thread,workspace,message):
+                raise Rejected('Dot reply unavailable in this scope')
+            unread=action=='unread'
+            self.db.execute('UPDATE dot_reply_state SET seen=?,manual_unread=?,updated=? WHERE message=?',(int(not unread),int(unread),self.clock(),message))
+        return {'message':message,'seen':not unread,'manual_unread':unread}
+
+
+    def set_sidechat_attention(self, principal, thread, workspace, message, action):
+        self._principal(principal,('owner','dot'))
+        if action not in ('question','action','resolve','reopen'):
+            raise Rejected('Explicit attention action required')
+        with self.transaction():
+            scope=self._thread(principal,thread);self._workspace(principal,scope,workspace)
+            row=self._reply_for_workspace(principal,thread,workspace,message)
+            if not row or (principal.role=='dot' and row['workspace']!=workspace):
+                raise Rejected('Dot reply unavailable in this scope')
+            if action in ('resolve','reopen') and not row['attention_kind']:
+                raise Rejected('Reply has no question or action to resolve')
+            kind=action if action in ('question','action') else row['attention_kind']
+            resolved=action=='resolve'
+            self.db.execute('UPDATE dot_reply_state SET attention_kind=?,resolved=?,updated=? WHERE message=?',(kind,int(resolved),self.clock(),message))
+        return {'message':message,'attention':{'kind':kind,'resolved':resolved}}
+
+    def pending(self, principal, after=0, limit=20, through=None):
+        """Read-only recovery when the platform wake omits its event context.
+
+        Snapshot cursors never acknowledge, claim, resend or manufacture an event.
+        Only registered exact owner/workspace scopes and unanswered messages appear.
+        """
+        self._principal(principal, ("dot",))
+        if type(after) is not int or after < 0 or type(limit) is not int or not 1 <= limit <= 100:
+            raise Rejected("Invalid pagination")
+        high = self.db.execute("SELECT COALESCE(MAX(m.rowid),0) FROM messages m JOIN threads t ON t.id=m.thread WHERE t.owner=?", (principal.owner,)).fetchone()[0]
+        if through is None:
+            through = high
+        if type(through) is not int or not after <= through <= high:
+            raise Rejected("Invalid snapshot")
+        rows = self.db.execute("""
+          SELECT m.rowid AS position,m.id,m.thread,m.workspace,m.seq,m.hash,
+                 t.project,t.issue,o.event,o.payload
+          FROM messages m JOIN threads t ON t.id=m.thread JOIN outbox o ON o.message=m.id
+          WHERE t.owner=? AND m.role='owner' AND m.rowid>? AND m.rowid<=?
+          AND NOT EXISTS(SELECT 1 FROM messages r WHERE r.reply_to=m.id)
+          AND EXISTS(SELECT 1 FROM scopes s WHERE s.owner=t.owner AND s.project=t.project
+                     AND s.issue=t.issue AND s.workspace=m.workspace)
+          ORDER BY m.rowid LIMIT ?
+          """, (principal.owner,after,through,limit+1)).fetchall()
+        more = len(rows)>limit
+        rows = rows[:limit]
+        items = []
+        for row in rows:
+            event = json.loads(row["payload"])
+            expected = {"thread_id":row["thread"],"project_id":row["project"],
+                        "issue_id":row["issue"],"workspace_id":row["workspace"],
+                        "message_id":row["id"],"sequence":row["seq"],
+                        "message_sha256":row["hash"],"author_type":"authenticated_owner",
+                        "intent":"sidechat_reply_requested","reply_scope":"same_thread_only"}
+            reference = self._owner_reply_reference(row['thread'], row['id'])
+            if reference:
+                expected['in_reply_to'] = reference['id']
+            if event.get("eventId")!=row["event"] or event.get("name")!=EVENT or event.get("data")!=expected:
+                raise Rejected("Stored event context is inconsistent; do not guess a reply target")
+            items.append({"event":event,
+                          "reply_request":str(uuid.uuid5(uuid.NAMESPACE_URL,"vibe-sidechat:"+row["event"])),
+                          "delivery":self.receipt(principal,row["thread"],row["id"])})
+        return {"items":items,"through":through,
+                "next_after":rows[-1]["position"] if more else None,
+                "complete":not more}
+
+    def bind(self, principal, thread, subscription, ttl=3600):
+        """Trusted events/subscribe adapter AFTER callback verification only."""
+        self._principal(principal, ("owner",))
+        if not isinstance(subscription, str) or not 1 <= len(subscription) <= 200 or type(ttl) is not int or not 60 <= ttl <= 86400:
+            raise Rejected("Invalid verified subscription")
+        with self.transaction():
+            self._thread(principal, thread)
+            old = self.db.execute("SELECT * FROM bindings WHERE thread=?", (thread,)).fetchone()
+            if old and old["subscription"] != subscription:
+                raise Rejected("Explicit destination migration required")
+            self.db.execute("INSERT INTO bindings VALUES (?,?,1,?) ON CONFLICT(thread) DO UPDATE SET active=1,expires=excluded.expires",
+                            (thread, subscription, self.clock() + ttl))
+
+    def unbind(self, principal, thread):
+        self._principal(principal, ("owner",))
+        with self.transaction():
+            self._thread(principal, thread)
+            self.db.execute("UPDATE bindings SET active=0 WHERE thread=?", (thread,))
+
+    def claim(self, principal):
+        self._principal(principal, ("publisher",))
+        with self.transaction():
+            row = self.db.execute("""
+              SELECT o.*,b.subscription AS destination FROM outbox o
+              JOIN threads t ON t.id=o.thread JOIN bindings b ON b.thread=o.thread
+              JOIN messages m ON m.id=o.message
+              JOIN scopes s ON s.owner=t.owner AND s.project=t.project AND s.issue=t.issue AND s.workspace=m.workspace
+              WHERE t.owner=? AND b.active=1 AND b.expires>? AND o.state IN ('pending','inflight')
+              AND o.next_try<=? AND o.lease_until<=? ORDER BY o.rowid LIMIT 1
+              """, (principal.owner, self.clock(), self.clock(), self.clock())).fetchone()
+            if not row:
+                return None
+            attempt = row["attempts"] + 1
+            self.db.execute("UPDATE outbox SET state='inflight',attempts=?,lease_until=?,subscription=?,updated=? WHERE event=?",
+                            (attempt, self.clock() + 30, row["destination"], self.clock(), row["event"]))
+            return {"event": json.loads(row["payload"]), "subscription": row["destination"], "attempt": attempt}
+
+    def acknowledge(self, principal, event, attempt, status):
+        self._principal(principal, ("publisher",))
+        if type(status) is not int or not 0 <= status <= 599:
+            raise Rejected("Invalid HTTP status")
+        with self.transaction():
+            row = self.db.execute("SELECT o.* FROM outbox o JOIN threads t ON t.id=o.thread WHERE o.event=? AND t.owner=?",
+                                  (event, principal.owner)).fetchone()
+            if not row or row["state"] != "inflight" or row["attempts"] != attempt:
+                raise Rejected("Stale delivery attempt")
+            transient = status == 0 or status in (408, 425, 429) or 500 <= status <= 599
+            state = "webhook_accepted" if 200 <= status < 300 else (
+                "pending" if transient and attempt < 8 else "failed")
+            self.db.execute("UPDATE outbox SET state=?,http_status=?,next_try=?,lease_until=0,updated=? WHERE event=?",
+                            (state, status, self.clock() + min(3600, 2 ** attempt), self.clock(), event))
+            if status == 410:
+                self.db.execute("UPDATE bindings SET active=0 WHERE thread=?", (row["thread"],))
+
+    def receipt(self, principal, thread, message):
+        self._principal(principal, ("owner", "dot"))
+        self._thread(principal, thread)
+        row = self.db.execute("SELECT event,state,attempts,http_status,updated FROM outbox WHERE thread=? AND message=?",
+                              (thread, message)).fetchone()
+        if not row:
+            raise Rejected("Receipt unavailable")
+        reply = self.db.execute("SELECT id,seq,hash FROM messages WHERE reply_to=? AND thread=?", (message, thread)).fetchone()
+        origin, event = self._reply_origin(thread, message,
+            self.db.execute("SELECT workspace FROM messages WHERE id=? AND thread=?", (message, thread)).fetchone()[0])
+        high = self.db.execute("SELECT MAX(seq) FROM messages WHERE thread=?", (thread,)).fetchone()[0]
+        return {**dict(row), "reply_persisted": reply is not None,
+                "reply": dict(reply) if reply else None, "seen": None,
+                "continuation": self._reply_context(thread, origin, event, high)}
+
+    def tool(self, principal, name, args):
+        """Minimal allowlisted adapter contract: no owner/role argument accepted."""
+        allowed = {
+            "list_pending_sidechat_messages": ({"after", "limit", "through"}, self.pending),
+            "read_sidechat_thread": ({"thread", "after", "limit", "through"}, self.read),
+            "append_dot_reply": ({"thread", "workspace", "request", "body", "reply_to", "event_id", "attention"}, self.append),
+            "set_sidechat_attention": ({"thread","workspace","message","action"}, self.set_sidechat_attention),
+            "get_sidechat_delivery": ({"thread", "message"}, self.receipt),
+        }
+        self._principal(principal, ("dot",))
+        if name not in allowed or not isinstance(args, dict) or set(args) - allowed[name][0]:
+            raise Rejected("Unknown tool or argument")
+        return allowed[name][1](principal, **args)

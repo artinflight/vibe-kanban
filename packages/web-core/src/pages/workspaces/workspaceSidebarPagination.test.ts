@@ -11,6 +11,8 @@ const actionable = [
   { id: 'approval', hasPendingApproval: true },
   { id: 'subagent', activeSubagentCount: 1 },
   { id: 'unresolved', unresolvedSubagentCount: 1 },
+  { id: 'dot-unread', dotUnreadCount: 1 },
+  { id: 'dot-attention', dotNeedsAttentionCount: 1 },
 ];
 
 test('accordion retains actionable work beyond the idle history page', () => {
@@ -29,5 +31,5 @@ test('flat layout retains ordinary pagination and search returns all matches', (
 
 test('loading more preserves sort order and does not duplicate priority entries', () => {
   const rows = [...idle, ...actionable, { id: 'older-idle' }];
-  assert.deepEqual(paginateWorkspaceSidebar(rows, 56, false, true), rows);
+  assert.deepEqual(paginateWorkspaceSidebar(rows, 58, false, true), rows);
 });

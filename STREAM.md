@@ -12,6 +12,11 @@ transcripts, credentials, extra model calls, polling service, DB migration or ne
 permission layer. Existing jobs, queues, settings, capacity and ownership gates
 remain intact.
 
+Address PR #297 review findings: fix backend fixture compilation and exempt
+only confirmed-empty scopes from unversioned coverage; retain unknown for real
+unversioned or unavailable instructions. Preserve the documented v1 shape for
+the independently owned CU PR #56 consumer.
+
 Prepare one focused PR into staging. Do not merge, deploy, restart, or launch
 separate before/after agent tests. Activation and CU::Audit contract are in
 [VK_RUN_PROVENANCE.md](VK_RUN_PROVENANCE.md). Ordinary implementation usage is

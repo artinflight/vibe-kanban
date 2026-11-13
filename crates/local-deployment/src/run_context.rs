@@ -109,9 +109,6 @@ fn snapshot(workspace: &Path, roots: &[PathBuf]) -> Inventory {
         let version = config["instruction_version"]
             .as_str()
             .filter(|v| !v.is_empty() && v.len() <= 128);
-        if version.is_none() {
-            gaps.insert(format!("{label}:unversioned"));
-        }
         // Adopt MM's `current` set. Additional conditional routes are explicit,
         // never a recursive scan of source, history, prompts or native homes.
         for key in ["current", "run_context_files"] {
@@ -166,12 +163,19 @@ fn snapshot(workspace: &Path, roots: &[PathBuf]) -> Inventory {
             hashes.insert(name.clone(), digest);
             states.insert(name, state);
         }
+        // Container roots and intermediate cwd folders are often only parents
+        // of an instruction scope. Exempt only confirmed absence, never null
+        // hashes from unavailable files, malformed config or exhausted reads.
+        let empty_scope = states.values().all(|state| *state == "missing");
+        if version.is_none() && !empty_scope {
+            gaps.insert(format!("{label}:unversioned"));
+        }
         // BTreeMap gives MM's sorted, compact JSON fingerprint encoding.
         let fingerprint = hash(&serde_json::to_vec(&hashes).expect("serializable hashes"));
         sources.insert(
             label.to_owned(),
             json!({
-                "instructionVersion": version.unwrap_or("unversioned"),
+                "instructionVersion": if empty_scope { None } else { Some(version.unwrap_or("unversioned")) },
                 "instructionSetSha256": fingerprint,
                 "fileSha256": hashes,
                 "fileState": states,
@@ -720,6 +724,176 @@ mod tests {
             hash(b"scoped")
         );
         assert!(path.starts_with(root.path()));
+    }
+
+    fn versioned_repository(workspace: &Path) -> PathBuf {
+        let repository = workspace.join("repo");
+        fs::create_dir(&repository).unwrap();
+        let source = fixture();
+        for name in CORE.iter().copied().chain(["handoff.config.json"]) {
+            fs::copy(source.path().join(name), repository.join(name)).unwrap();
+        }
+        repository
+    }
+
+    #[test]
+    fn empty_workspace_and_cwd_parents_do_not_poison_versioned_start_or_resume() {
+        for resumed in [false, true] {
+            let workspace = tempfile::tempdir().unwrap();
+            let repository = versioned_repository(workspace.path());
+            let cwd = repository.join("src/component");
+            fs::create_dir_all(&cwd).unwrap();
+            let context = RunContext::start(
+                workspace.path().into(),
+                vec![repository],
+                cwd,
+                Uuid::new_v4(),
+                Uuid::new_v4(),
+                Uuid::new_v4(),
+                resumed,
+            )
+            .unwrap();
+            let path = context.state.lock().unwrap().destination.clone();
+            context.finish();
+            let result = record(&path);
+            assert_eq!(result["classification"], "observed-stable");
+            assert_eq!(result["unknownReasons"], json!([]));
+            assert_eq!(result["start"]["repo"]["instructionVersion"], "test-v1");
+            for scope in [".", "repo/src", "repo/src/component"] {
+                assert!(result["start"][scope]["instructionVersion"].is_null());
+                assert!(
+                    result["start"][scope]["fileState"]
+                        .as_object()
+                        .unwrap()
+                        .values()
+                        .all(|v| v == "missing")
+                );
+            }
+            assert_eq!(
+                result["phase"],
+                if resumed {
+                    "normal-resume"
+                } else {
+                    "normal-start"
+                }
+            );
+            if resumed {
+                assert_eq!(result["conversationContext"], "inherited-unknown");
+            }
+        }
+    }
+
+    #[test]
+    fn real_unversioned_parent_instructions_keep_a_versioned_run_unknown() {
+        for name in ["AGENTS.md", "docs/CONTEXT_MANAGEMENT.md"] {
+            let workspace = tempfile::tempdir().unwrap();
+            let repository = versioned_repository(workspace.path());
+            let instruction = workspace.path().join(name);
+            fs::create_dir_all(instruction.parent().unwrap()).unwrap();
+            fs::write(instruction, "unversioned parent instructions").unwrap();
+            let context = RunContext::start(
+                workspace.path().into(),
+                vec![repository.clone()],
+                repository,
+                Uuid::new_v4(),
+                Uuid::new_v4(),
+                Uuid::new_v4(),
+                false,
+            )
+            .unwrap();
+            let path = context.state.lock().unwrap().destination.clone();
+            context.finish();
+            let result = record(&path);
+            assert_eq!(result["classification"], "unknown");
+            assert_eq!(result["start"]["."]["instructionVersion"], "unversioned");
+            assert!(
+                result["unknownReasons"]
+                    .as_array()
+                    .unwrap()
+                    .contains(&json!(".:unversioned"))
+            );
+            assert_eq!(result["start"]["repo"]["instructionVersion"], "test-v1");
+        }
+    }
+
+    #[test]
+    fn missing_version_with_real_instructions_is_not_an_empty_scope() {
+        let root = fixture();
+        fs::remove_file(root.path().join("handoff.config.json")).unwrap();
+        let context = start(root.path(), false);
+        let path = context.state.lock().unwrap().destination.clone();
+        context.finish();
+        let result = record(&path);
+        assert_eq!(result["classification"], "unknown");
+        assert_eq!(result["start"]["."]["instructionVersion"], "unversioned");
+        assert!(
+            result["unknownReasons"]
+                .as_array()
+                .unwrap()
+                .contains(&json!(".:unversioned"))
+        );
+    }
+
+    #[test]
+    fn unavailable_parent_instruction_is_not_confirmed_empty() {
+        let workspace = tempfile::tempdir().unwrap();
+        let repository = versioned_repository(workspace.path());
+        let file = File::create(workspace.path().join("AGENTS.md")).unwrap();
+        file.set_len(MAX_BYTES + 1).unwrap();
+        let observed = snapshot(
+            workspace.path(),
+            &[workspace.path().to_path_buf(), repository],
+        );
+        assert_eq!(
+            observed.sources["."]["fileState"]["AGENTS.md"],
+            "unavailable"
+        );
+        assert!(
+            observed.sources["."]["fileSha256"]
+                .as_object()
+                .unwrap()
+                .values()
+                .all(Value::is_null)
+        );
+        assert_eq!(observed.sources["."]["instructionVersion"], "unversioned");
+        assert!(observed.gaps.contains(".:unreadable-file"));
+        assert!(observed.gaps.contains(".:unversioned"));
+    }
+
+    #[test]
+    fn initially_empty_parent_stays_tracked_when_instructions_appear() {
+        let workspace = tempfile::tempdir().unwrap();
+        let repository = versioned_repository(workspace.path());
+        let mut context = RunContext::start(
+            workspace.path().into(),
+            vec![repository.clone()],
+            repository,
+            Uuid::new_v4(),
+            Uuid::new_v4(),
+            Uuid::new_v4(),
+            false,
+        )
+        .unwrap();
+        let path = context.state.lock().unwrap().destination.clone();
+        assert!(record(&path)["start"]["."]["instructionVersion"].is_null());
+        // Boundary hashing must still cover a parent exempted at the start,
+        // independently of native notification delivery.
+        context.watcher.take();
+        fs::write(
+            workspace.path().join("AGENTS.md"),
+            "new parent instructions",
+        )
+        .unwrap();
+        context.finish();
+        let result = record(&path);
+        assert_eq!(result["classification"], "mixed");
+        assert_eq!(result["end"]["."]["instructionVersion"], "unversioned");
+        assert!(
+            result["unknownReasons"]
+                .as_array()
+                .unwrap()
+                .contains(&json!(".:unversioned"))
+        );
     }
 
     #[test]

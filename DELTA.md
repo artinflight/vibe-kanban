@@ -2577,3 +2577,17 @@ promotion is separate. Local Rust baseline remains blocked by offline serde.
   integration stays with normal PR CI. See VK_RUN_PROVENANCE.md for exact limits,
   CU ordinary implementation usage evidence and future activation procedure.
 - No merge, deploy, asset swap, restart or running-job/permission changes.
+
+## 2026-11-13 — PR #297 review corrections
+
+- Fix the omitted fourth exit-monitor argument in the GitHub-sync test fixture,
+  the E0061 source in backend-test/backend-clippy on the previous PR head.
+- Only scopes with every selected file confirmed missing get a null version and
+  no unversioned reason. Preserve their maps/watches; real unversioned,
+  unavailable, malformed and gap cases remain unknown. No new scope fields.
+- Eighteen actual-module tests and focused warnings-denied Clippy pass, including
+  five new classification/change regressions. Full backend compilation is a
+  separate normal PR CI gate; local baseline dependency limits are documented.
+- Document exact v1 semantics for the separate CU PR #56 consumer, including
+  start/end union visibility without assigning later labels to earlier usage.
+  No CU edits, model experiments, merge, deployment or restart.

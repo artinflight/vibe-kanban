@@ -74,8 +74,25 @@ a repository can adopt the following metadata through its usual review process:
 
 Bump the label for adopted standing instruction/routing changes; normal state or
 handoff updates still change the hashes without requiring a label bump. Absent
-or invalid labels are `unversioned`, with an explicit unknown reason. No labels
-are guessed from branch names, commits, today's files or old executions.
+or invalid labels on a scope containing selected instruction files/metadata are
+`unversioned`, with an explicit unknown reason. No labels are guessed from branch
+names, commits, today's files or old executions.
+
+A scope is **confirmed empty** only when every selected path, including
+`handoff.config.json`, has `fileState: "missing"`. Such scopes remain in `start`
+and `end`, with their normal file-state/hash maps and fingerprint, but have
+`instructionVersion: null` and contribute no `unversioned` reason. This prevents
+an empty workspace container or intermediate cwd folder from making a versioned
+repository's otherwise stable file observation unknown. No new scope fields are
+added to the v1 record shape.
+
+Null file hashes alone do not establish emptiness: `unavailable` files, malformed
+config, limits and watcher gaps retain unknown coverage. A present selected
+instruction file without a valid label remains `unversioned`; it does not inherit
+a version from a neighbouring repository or ancestor. Empty scopes stay watched,
+so instructions appearing later still mark the execution mixed and receive their
+own terminal observation. A run containing only empty scopes has no adopted
+instruction version and cannot form a versioned usage cohort.
 
 Reads are bounded to 1 MiB per file, 64 files per scope, 32 scopes and an 8 MiB
 snapshot budget (the last bounded read can exceed that budget by up to 1 MiB).
@@ -101,7 +118,7 @@ MM's unextended top-level layout. Important fields are:
 | `conversationContext` | Resumptions are `inherited-unknown`. Even a new execution does not prove a fresh instruction context. |
 | `observedAt`, `updatedAt`, `endedAt` | UTC observation boundaries, not token-allocation boundaries. |
 | `start`, `end` | Maps from relative source scope to an observation. `end` is absent until the monitor closes or the guard is dropped. |
-| `instructionVersion` | Per-scope adopted label or `unversioned`. |
+| `instructionVersion` | Per-scope adopted label, `unversioned` for a nonempty/unavailable scope lacking a valid label, or JSON null only when all selected files are confirmed missing. |
 | `fileSha256`, `fileState` | Per-scope exact hashes and present/missing/unavailable distinctions. |
 | `instructionSetSha256` | SHA-256 of sorted compact JSON `fileSha256`. Config inclusion/file selection can make it differ from MM's seven-file fingerprint. |
 | `lifecycle` | `starting` until closure, then `ended` or `interrupted`. It is not evidence that a provider accepted a request or that a task succeeded. |
@@ -132,8 +149,12 @@ records are unknown coverage, never a retroactive stable version.
 
 CU::Audit should join by the exact execution ID and cross-check workspace/session
 identity against CU's attribution. Keep the original record with the usage
-export and retain its coverage/freshness and missing-component metadata. CU does
-not automatically ingest this format. Session/workspace fallbacks spanning
+export and retain its coverage/freshness and missing-component metadata. Consumers
+should preserve the union of `start` and `end` scope keys; a scope or version
+appearing only at the end must never be assigned to earlier usage. Ignore
+confirmed-empty scopes for version-label coverage, but never suppress other
+unknown reasons or treat unmatched usage as known. CU does not automatically
+ingest this format. Session/workspace fallbacks spanning
 versions remain mixed/unknown; never split their token totals at timestamps or
 sum overlapping execution/session/workspace totals. Cached input is already a
 subset of input, and reasoning output is a subset of output.
@@ -168,7 +189,7 @@ about already observed runs. No cleanup or permission change is necessary.
 
 ## Validation and normal-work evidence
 
-The actual Rust module's 13 tests pass in a small isolated harness on mounted
+The actual Rust module's 18 tests pass in a small isolated harness on mounted
 SSD, including native notification delivery while a context remains open,
 change/revert handling, end-hash fallback, version/route changes, exact IDs,
 resumption, nested/multiple scopes, interruption, missing/unreadable files,
@@ -185,6 +206,16 @@ offline Cargo tests cannot resolve the host's missing `serde` registry entry.
 The full backend integration/Clippy/schema baseline remains for normal PR CI;
 no large local workspace dependency restore was attempted. No model/provider
 acceptance or local-instance activation is claimed.
+
+The 2026-11-13 review correction also fixes the GitHub-sync fixture's missing
+fourth `spawn_exit_monitor` argument (`None` for no context), which caused E0061
+in the [previous backend CI](https://github.com/artinflight/vibe-kanban/actions/runs/43321606696).
+Five additional regressions cover empty container/intermediate scopes for starts
+and resumes, genuinely unversioned parent instructions, missing labels,
+unavailable parent files with null hashes, and instructions appearing in an
+initially empty parent. The same 18-test actual-module harness and focused
+warnings-denied Clippy pass. Full backend test compilation remains a separate
+normal PR CI check, rather than being inferred from the isolated harness.
 
 An existing CU read during this ordinary implementation execution succeeded at
 2026-11-12T22:30:11Z, with observation coverage through 22:27:17Z (fresh at query).

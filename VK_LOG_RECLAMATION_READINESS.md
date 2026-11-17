@@ -1,3 +1,11 @@
+# Final production plan — 17 November 2026
+
+Read [VK_LOG_PRODUCTION_GO_NO_GO.md](VK_LOG_PRODUCTION_GO_NO_GO.md) for fresh
+read-only capacity/queue/backup/UI checks, remaining go gates, downtime uncertainty
+and exact launch/recovery sequence. Current decision: NO-GO for launch; no
+maintenance or conversion started. Earlier verified move/history receipts below
+remain valid and preserved; sample capacity is not peak-demand admission.
+
 # OP::Disk Space — resume after the completed first batch (17 November 2026)
 
 The first batch installed four VKLOGCAS1 manifests and preserves exact raw bytes

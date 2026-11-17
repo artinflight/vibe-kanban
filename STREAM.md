@@ -1,9 +1,28 @@
-# Production deduplication — bounded offload completed, 17 November 2026
+# Production deduplication — final go/no-go prepared, 17 November 2026
 
-Latest user approved ONLY two exact inactive .rlib moves, copy/inactivity/hash
-verification, SSD-original removal and a fresh history test. That work is COMPLETE.
-DO NOT start production conversion. No new maintenance, build, agent, goal,
-SQL backup, WakeWatch change or producer pipeline was started.
+Latest instruction is PLAN ONLY: recheck capacity/work/backup/UI access and
+prepare final go/no-go, downtime uncertainty, exact launch/recovery. Completed in
+VK_LOG_PRODUCTION_GO_NO_GO.md; NO-GO until peak allocation/B demand, broader UI
+acceptance, lost-capacity-reply recovery and fresh immutable arming/boundary gates
+pass. No maintenance, pause,
+conversion, capture, build, agent, goal or producer was started.
+
+Fresh private evidence: P/final-go-no-go-20261117. Aware owners/public route and
+five watcher configurations/normal ticks exact; only this root turn active;
+zero durable/1,338 volatile queues;32 uncertainties preserved. SSD3,497,500,672B
+(276,275,200B above3GiB), RAM8,194,068,480B/fullPSI0.00. B healthy85,496,852,480B;
+no B owner pause/explicit hold and local writer/controller locks unheld. Offline exact host freeze method reproduces TypeError on lost release reply
+followed by valid owned=false/state=null status; receipt stays unset. Correct and
+regression-test NEW host source before arming; no live release/helper change.
+Actual remaining physical writes and peak512MiB staging are NOT bounded by these samples.
+Fresh3,433candidates/90,992,755,255logicalB;306 envelopes before actual benefit
+filter;82tiny/8pending/1invalid/4CAS/14active-session exclusions preserved.
+Public real history rendered in4desktop/mobile-viewport cases with0pageerrors/
+0operator writes; full rendered review/settings/queue acceptance still unproved.
+History334.782s is called twice under held admission; total downtime unbounded
+by available measurements. Package-v5 unarmed/no ATTEMPT; never replay a088.
+
+The earlier exact two-file offload and full history check are COMPLETE.
 
 Both approved files are now on the existing healthy Desktop B volume, with full
 independent size/SHA256 reopens and Linux restore metadata. Build locks, process
@@ -33,7 +52,8 @@ requests/resource waits earn no progress credit. Memory/PSI limits unchanged.
 Earlier300s diagnostic failure remains historical. Public TLS/index/assets pass;
 aware main4766246c/protected40a91f69 serving owners remain active/thawed/unchanged.
 Accepted18 old archives still require restore-before-view; not all18 local/live.
-Rendered desktop/mobile/settings/queue UI acceptance is separate future work.
+Fresh desktop/mobile viewport history now passes; broader rendered review/
+settings/queue acceptance and post-conversion repetition remain.
 
 Production log status remains FOUR installeda088 lossless manifests. Their exact
 originals/sidecars, complete decoded hashes and independent original normal-B

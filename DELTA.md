@@ -2845,3 +2845,38 @@ supersedes capacity/full-history gaps; package-v5 remains UNARMED/no ATTEMPT.
 No model/route/permission/WakeWatch/service/SQL-backup/pipeline change. Full future
 conversion/B object closure/rendered UI acceptance remain outside this instruction.
 Required format/ops/diff checks; current follow-up changes operational docs only.
+
+
+## 2026-11-17 — final production go/no-go plan, no maintenance
+
+Read-only fresh actual aware owners/frontend/public TLS, five exact WakeWatch
+configs/normal ticks and zero unsettled deliveries. Only own planning execution
+active;0durable/all1,338volatile queues empty,32uncertain inputs unchanged.
+SSD3,497,500,672B/RAM8,194,068,480B/PSI0.00; B healthy85,496,852,480B with
+actual B-excluded MM scope/no pause and local writer/controller locks unheld.
+Fresh metadata3,433candidates/90,992,755,255B/306envelopes; explicit82tiny/
+8pending/1invalid/4CAS/14active-session preservation. Real public history UI
+passed4desktop/mobile-viewport cases/160entries/0pageerrors/0operator writes.
+Settings/review/queue rendered acceptance remains unproved; navigation probe
+did not establish settings dialog. No captures/producer/agent/build/live change.
+
+VK_LOG_PRODUCTION_GO_NO_GO.md records NO-GO pending peak SSD allocation, actual
+remaining B demand, broader UI and fresh arming/boundary. Logical90.99GB vs85.50GB
+free proves neither fit nor failure because retained chunks may reuse. Twice-
+called334.782s history and76.019s UI do not bound full306envelope downtime.
+Exact future launch ABI/source pins/unused attempt, normalB/currentSQL/realFD
+sequence, current-batch-only aware recovery and exact WakeWatch restoration
+retained. Package-v5 remains unarmed/noATTEMPT; no consumed attempt replay.
+First827,506,688B log recovery and303,202,304B build offload not recredited.
+Private FINAL_GO_NO_GO and planning receipts preserve evidence. Required
+format/ops/diff checks; operational documentation changes only.
+
+Final source review added a concrete launch blocker: exact pinned host
+Boundary.freeze_boundary offline lost-release-reply fixture raises TypeError
+on valid owned=false/state=null status; its release receipt remains unset.
+CAPACITY_RELEASE_EDGE records exact sourceSHA and status/release/status calls;
+no live RPC/service action. Final plan now requires NEW corrected/tested host
+source with locked durable-intent/persisted-v2 reconciliation and authentic
+capacity recovery before ingress release. Launch sequence ordering clarified:
+owned maintenance/ingress quiet -> actual SQL B checkpoint -> capacity release/
+freeze/realFD. Deployed source and all existing epochs remain unchanged.

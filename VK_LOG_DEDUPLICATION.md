@@ -192,10 +192,17 @@ Do not publish transcript objects, restored logs or private history bindings.
 
 ## Current production continuation — 17 November 2026
 
-Use the fresh Vibe and Nightly owner handoffs and a new operation UUID, never the
-consumed Nov4 attempt. Current92.63GB allocated payload and prior separate31.57GB
-Nov14 retirement supersede the old full-inventory baseline; prior cleanup cannot
-be counted again. Actual dedup recovery remains zero until physical publication.
+The final plan-only review and exact safe launch/recovery procedure are in
+[VK_LOG_PRODUCTION_GO_NO_GO.md](VK_LOG_PRODUCTION_GO_NO_GO.md). Current decision
+is NO-GO until peak allocation/remaining B demand, broader UI and fresh arming/
+boundary gates pass. No maintenance or conversion was started for that review.
+
+Use the fresh Vibe and Nightly owner handoffs and an unconsumed operation UUID,
+never a consumed attempt. Fresh metadata measures 91,655,319,552 allocated bytes
+including shared objects. Prior separate 31,572,000,768-byte Nov14 retirement
+cannot be counted again. The completed four-log batch recovered 827,506,688
+allocated bytes net including all canary object/directory costs. Further recovery
+remains unverified; preserve and exclude that batch from every continuation.
 
 During authorized downtime pause WakeWatch dispatch through the shared installed
 Store.dispatch boundary after reconciliation, preserving monitoring and every
@@ -231,8 +238,10 @@ The real retained predeployment wire baseline reports0.159.2,8turns and
 10,746,496 response bytes. Capture fragments must be joined through their actual
 newline boundary before parsing the JSON response; inspecting only the first
 101 capture records misses the multi-megabyte initial response. Retain byte/hash/
-turn-count metadata without publishing conversation bodies. The next actual
-production version/response and serving hash establish the deployed comparison;
-an isolated0.166 fixture is not deployed0.166 evidence. The successor build
-passed8 actual executor tests, but production growth acceptance remains pending.
+turn-count metadata without publishing conversation bodies. The retained actual
+postdeployment native 0.159.2 response was zero historical turns / 5,126 bytes,
+versus eight / 10,746,496 bytes before deployment (99.9523% fewer initial bytes).
+This is initial-response evidence, not total future-growth measurement. An
+isolated0.166 fixture is not deployed0.166 evidence. The successor build passed8
+actual executor tests.
 No automatic converter timer is enabled.

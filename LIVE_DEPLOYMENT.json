@@ -515,7 +515,28 @@
     "latest_preparation_unarmed": true,
     "old_attempt_consumed": true,
     "normal_B_all_object_closure_still_required": true,
-    "rendered_UI_acceptance_still_required": true
+    "rendered_UI_acceptance_still_required": true,
+    "current_full_history_verification": {
+      "verified_at_utc": "2026-11-17T21:59:32.378694+00:00",
+      "receipt": "/mnt/vk-storage/vk-log-dedup-20261103-0815/production-20261117/approved-two-build-archives-9816ae8beb404092852093ed2e1c90a0/history-recheck-a094f38beaa14d07a23586a08394ce45/RESULT.private.json",
+      "passed": true,
+      "completed_responses": 22,
+      "sparse_pages": 7,
+      "sparse_entries": 49,
+      "seconds": 334.7824210599065,
+      "all18_archived_views_local_claimed": false,
+      "prepared_operation_still_unarmed": true
+    },
+    "approved_build_archive_offload": {
+      "only_files": 2,
+      "copied_logical_bytes": 303194186,
+      "released_allocated_bytes": 303202304,
+      "SSD_available_postcheck_bytes": 3492601856,
+      "SSD_floor_bytes": 3221225472,
+      "SSD_floor_passed": true,
+      "receipt": "/mnt/vk-storage/vk-log-dedup-20261103-0815/production-20261117/approved-two-build-archives-9816ae8beb404092852093ed2e1c90a0/POSTCHECK.private.json",
+      "not_conversation_dedup_recovery": true
+    }
   },
   "previous_frontend_deployed_at_utc": "2026-11-03T10:55:35.807043+00:00",
   "frontend_publication_timestamp_status": "Later existing owner release preserved; its publication timestamp was not requalified by this task."

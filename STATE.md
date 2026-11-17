@@ -21,6 +21,14 @@ zero historical turns/5,126 response bytes versus8turns/10,746,496 bytes before
 deployment. The isolated0.166 fixture is qualification evidence, not deployed
 runtime evidence. No extra provider request was made for measurement.
 
+The operator-approved follow-up moved ONLY two inactive build archives to
+independently verified Desktop B copies, preserving restore metadata and removing
+only their unchanged SSD originals.303,202,304 allocatedB released; SSD postcheck
+3,492,601,856B exceeds3GiBfloor. The full current history recheck passes22responses,
+including exact7page/49entry reconstruction, plus public TLS/assets. Its334.782s
+run used existing600s completed-data supervision; older failure receipts remain.
+No production conversion was armed or started. See STREAM/HANDOFF for receipts.
+
 Full production deduplication remains unfinished. Today's exact history mismatch
 was workspace-path rendering context, independently reproduced on raw and archive
 inputs. The prepared continuation adopts compatible readers without reactivation,

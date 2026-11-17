@@ -8,6 +8,42 @@ All original normal-B epochs and actual installed journal/custody checkpoints
 remain. The separate Nov14 retirement is not recredited. Current authoritative
 runtime provenance and prohibited historical fallbacks are in LIVE_DEPLOYMENT.json.
 
+## Approved two-file offload and full history recheck — 17 November, 21:59 UTC
+
+The operator approved exactly these inactive build outputs, with immutable sizes
+and SHA256 values. Both were checked unchanged and not in use under the existing
+build locks, process FD/mapping checks and exclusive kernel file leases:
+
+- `libcodex_app_server_protocol-773a4156fc22d395.rlib`:98,946,694B,
+  SHA256c9d301adf098255b6d0f78ba4e326df5fe7ec0ade94f34a3b343ebc25623c9a1.
+- `libserver-b2b796e103571a21.rlib`:204,247,492B,
+  SHA2562432381f573df9187042573ba9a19305647c07251ff5466721ccfed437d3fd46.
+
+Copies are on the verified existing Desktop B volume beneath
+`B:/vk-backups/vk-log-dedup-build-offload-20261117/`. Independent complete-file
+reopens match both approved sizes/hashes before either SSD original was removed.
+Linux restore metadata and a location note retain exact destinations. No other
+SSD path was removed. Original allocated blocks released:303,202,304B; immediate
+observed available-space increase303,190,016B (metadata/global drift separate).
+Final postcheck3,492,601,856B free,271,376,384B above the unchanged3GiBfloor.
+These are BUILD-ARCHIVE blocks, not additional conversation-dedup savings.
+
+The full unchanged qualified history check PASSED in334.782s:22completed HTTP
+responses, all main/protected canaries, T18 reply/multiplicity checks and exact
+7page/49entry sparse pagination. Accepted18 old archives remain restore-before-view.
+Public TLS/index/assets and same aware serving identities pass. The diagnostic
+uses the existing600s completed-data no-progress watchdog, with unchanged memory/
+PSI floors and no total elapsed cutoff. No new production conversion was started.
+Earlier300s diagnostic and copy failures remain preserved with their reconciliation.
+The first receiver was stopped only after exact owned script/birth/command proof;
+Desktop's Python3.10-compatible copy reused the already verified first archive.
+
+Private POSTCHECK and POST_OFFLOAD_READINESS receipts in the existing case are
+current readiness evidence. New production still requires fresh owner/queue/pause/
+SQL/B/fd custody, all remaining positive-benefit batches, complete object closure
+and ordinary rendered UI/full-service/WakeWatch acceptance. Package-v5 remains
+UNARMED with no ATTEMPT. Do not start conversion under this bounded instruction.
+
 ## Correct history qualification and recovery
 
 The failed exact-page check compared different workspace-path rendering contexts.
@@ -66,8 +102,8 @@ permission to mutate data or to omit complete final backup closure.
    observations if changed. Seal NEW inputs; never edit a consumed attempt.
 5. Require actual unchanged admission:4GiBmemory floor,full PSI<=.10,3GiBSSD,
    exact mounted storage and authentic producer/capacity/permission gates. Latest
-   verified SSD sample3,215,835,136B is5,390,336B BELOW its3,221,225,472B floor.
-   Resolve capacity within separately verified authorized cleanup scope; do not
+   historical below-floor sample is superseded by the approved two-file move:
+   postcheck3,492,601,856B exceeds3,221,225,472B. Recheck at the future boundary; do not
    delete originals/recovery records or lower the floor. A resource wait earns
    no progress credit; retain600s verified-data/300s separate recovery supervision.
 6. Through the existing sole Nightly producer, take/independently restore fresh
@@ -116,7 +152,9 @@ runtime remains0.159.2: initial response0turns/5,126B versus8turns/10,746,496B
 before deployment (99.9523% fewer bytes). No extra inference request was made;
 this measures initial repeated-history growth, not total future disk usage.
 
-Remaining: admitted fresh production boundary/SQL/B custody and pause, actual
+Current full history is now verified by the newer approved-offload recheck above;
+repeat required volatile acceptance at the actual future production boundary.
+Remaining: fresh production boundary/SQL/B custody and pause, actual
 no-restart adoption under that fence, all positive-benefit remaining batches,
 complete postconversion all-object backup closure, measured new-run allocated and
 filesystem recovery, and ordinary rendered desktop/mobile/full-service/WakeWatch

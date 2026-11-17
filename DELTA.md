@@ -2819,3 +2819,29 @@ THIS actual production native0.159.2 resume measured0historical turns/5,126B ver
 provider requests. Isolated0.166 fixture is not a deployed-runtime claim. Updated
 LIVE_DEPLOYMENT/STATE to verified aware identities and prohibited old fallbacks;
 prior manifests/state and every recovery epoch retained. PR291 remains draft.
+
+2026-11-17 21:59UTC — Completed the bounded explicitly approved two-build-archive
+move; NO production conversion. Exact98,946,694B/c9d301ad... and204,247,492B/
+2432381f... .rlibs were unchanged and inactive under build locks, FD/maps checks
+and exclusive kernel leases. Both Desktop B copies independently reopened to full
+hash/length before ONLY those two SSD originals were unlinked; source FDs closed.
+303,202,304 original allocatedB released; immediate measured free-space increase
+303,190,016B. Postcheck SSD3,492,601,856B,271,376,384B above unchanged3GiBfloor.
+Restore metadata retained on B/local with adjacent MOVED-TO-DESKTOP location note.
+All histories, backups, old epochs, pending inputs/settings and failures preserved.
+
+Initial owned .NET receiver stalled; exact script SHA/birth/command proof identified
+and stopped ONLY that receiver. Native copy reached full first file but Python3.10
+lacked file_digest; independent exclusive reopen verified it, then it was reused
+with streaming-hash compatible receiver for second file. No blind recopy/replay.
+Both failed attempt receipts and complete successful continuation remain private.
+
+Full unchanged history acceptance PASSED22responses,14main/protected canary/T18
+checks and exact7page/49entry sparse pagination in334.782s. Existing600s completed-
+data watchdog retains unchanged resource floors; requests/waits earn no progress
+credit. Earlier300s total diagnostic failure remains historical. Public TLS/assets
+and original aware serving identities unchanged. Fresh POST_OFFLOAD_READINESS
+supersedes capacity/full-history gaps; package-v5 remains UNARMED/no ATTEMPT.
+No model/route/permission/WakeWatch/service/SQL-backup/pipeline change. Full future
+conversion/B object closure/rendered UI acceptance remain outside this instruction.
+Required format/ops/diff checks; current follow-up changes operational docs only.

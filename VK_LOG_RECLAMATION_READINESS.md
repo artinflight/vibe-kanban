@@ -1,3 +1,51 @@
+# Current production continuation — 17 November 2026
+
+The old Nov4 native ATTEMPT is consumed/inactive; its busy producer lease stopped
+it before any production boundary. Fresh owner handoffs are ready. Root owns the
+new full-scope operation, not another four-log-only attempt. Current status is in
+STREAM.md/HANDOFF.md and the private production-20261117 case. Actual production
+reclamation remains zero until a verified manifest publication/accounting receipt.
+
+Before downtime retain the global WakeWatch dispatch pause and verify there are
+no unsettled automatic deliveries or queued work. Keep monitors/reconciliation,
+notifications, timer/configurations and incident ledgers active. The owned pause
+receipt records exact original dispatcher bytes and five source configurations;
+restore those bytes/settings and verify all five ordinary ticks after Vibe resumes.
+
+Fresh Vibe qualification covers current99-migration data/latest frontend and the
+accepted Nov14 restore-before-old-view contract. Fresh Nightly proof restored68
+retained versions/3,073,516,522B; batch-source-v3 provides all-batch same-context
+original/SQL/control recovery. Current native0.166.0 needs the root successor
+main build with its exact-version guard; the older main artifact's0.159-only
+allowlist does not establish ongoing-growth prevention on this runtime.
+
+Use a new UUID and immutable source/configuration pins. After naturally quiet
+queues and actual final current-main SQLite API/B restore, acquire the real
+capacity lease and physically freeze exact writers. Deploy compatible main and
+protected readers with persistent aware boot paths. Verify the first four normal
+histories, then retain aware readers across every positive-benefit closed batch.
+A later batch failure cannot choose an old archive-unaware reader while earlier
+manifests remain. Keep immutable per-batch custody/controls before resealing.
+
+Each batch requires actual normal B full EOF/hash/Linux metadata/separate-inode
+original recovery, production Rust full EOF, preserved sidecars, actual journal
+and normally restored B controls. Full postconversion closure covers ALL local
+session .log-objects, including unreferenced objects, manifests/sidecars and
+original directory/link metadata. Bounded lossless physical carriers must pass
+independent extraction and actual normal B full-carrier restore with equal full
+hashes and complete union indexing; include compatible software and recovery
+procedures. No extra whole-current Nightly schedule gate or semantic omission.
+
+Resume Vibe through the owned acceptance path, verify public TLS/assets and
+ordinary desktop/mobile history/settings/review/queue behavior, close B/RAM, prove
+original descriptors released, and restore/verify WakeWatch. Report actual unique
+allocated payload delta separately from filesystem free-space drift and the
+separate31,572,000,768B Nov14 retirement. Do not count that prior cleanup again.
+Verify actual deployed narrow-resume capture/growth after the existing root
+continuation; isolated metadata-only native proof alone is insufficient.
+
+---
+
 # Conversation-log reclamation readiness
 
 ## Full scope and estimate reconciliation — 2026-11-04

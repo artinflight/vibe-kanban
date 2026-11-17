@@ -185,3 +185,45 @@ PID 645213 and original invocation identity.
 Private evidence, exact paths, plans, source-version/hash checks, packed/restored
 comparisons and validation logs: `/mnt/vk-storage/vk-log-dedup-20261103-0815/`.
 Do not publish transcript objects, restored logs or private history bindings.
+
+
+## Current production continuation — 17 November 2026
+
+Use the fresh Vibe and Nightly owner handoffs and a new operation UUID, never the
+consumed Nov4 attempt. Current92.63GB allocated payload and prior separate31.57GB
+Nov14 retirement supersede the old full-inventory baseline; prior cleanup cannot
+be counted again. Actual dedup recovery remains zero until physical publication.
+
+During authorized downtime pause WakeWatch dispatch through the shared installed
+Store.dispatch boundary after reconciliation, preserving monitoring and every
+saved setting. Check unsettled deliveries and native durable/volatile queues;
+preserve uncertain incoming prompts. Restore the exact prior dispatcher bytes,
+remove only the owned hold, verify all five normal monitor ticks and transport
+readiness, and report both pause and restoration. No synthetic paid wake is needed.
+
+After a first batch's actual main/protected history acceptance, retain compatible
+readers across every subsequent batch. A later failure restores only its current
+batch; never boot an archive-unaware reader over earlier manifests. Keep immutable
+per-batch custody/config epochs before resealing shared controller filenames.
+
+The complete backup closure includes ALL affected session-local .log-objects,
+including unreferenced files, plus manifests, sidecars, original directory/link
+metadata and final software/control epochs. Bounded physical carriers may preserve
+these bytes through the SAME Nightly owner-controls transport: independently
+extract/hash/metadata-check each carrier and independently normally restore its
+entire B bytes/hash/metadata. Bind both proofs by the exact full carrier SHA256 and
+retain a complete union index and explicit restore procedure. No semantic turn
+omission or prefix-only graph may substitute. Compatible binaries may be split
+into exact contiguous parts with full-artifact hash/metadata reconstruction.
+
+Own newly created SSD staging object replicas may retire only after the actual
+production manifest/primary objects, independent B originals, immutable journal
+and normal B control checkpoint pass; use a frozen exact inode/hash allowlist and
+kernel consumer exclusion. Keep all primary objects, originals' backup epochs,
+old preparation epochs and rollback recipes. Rehydrate exact staging replicas
+from verified primary CAS before a separately admitted future raw rollback.
+
+Exact0.166.0 native resume support was isolated and qualified without inference.
+The deployed Vibe serving hash, actual saved initial resume response and observed
+growth still require production acceptance; an isolated native fixture is not a
+deployed growth claim. No automatic converter timer is enabled.

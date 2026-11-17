@@ -1,70 +1,42 @@
-# Production operation armed — 2026-11-04 20:16 UTC
+# Production reclamation refresh — 2026-11-17
 
-Zero production log bytes reclaimed so far. The finite native operation is now
-actually running as `vk-log-dedup-production-04f1fa5a-20261104.service` (invocation77b2f7261cbc48948dbfddd7fc79b325). It waits for active turns to finish
-naturally; observed5active/0queued/23uncertain preserved. No reader or route has
-changed during the wait. Existing owner handover is shared revision46; no further
-owner approval/turn is awaited. Root must finish its turn so the real fence can run.
+User explicitly authorizes the coordinated maintenance window and complete
+production lossless reclamation. Production logs remain unchanged at this
+checkpoint. The old Nov4 operation is INACTIVE and consumed: it failed before
+host changes on a genuine Nightly producer lease. Never replay that attempt.
 
-Private `native-operation-v1/LAUNCH_RECEIPT.v3.private.json` in the case below pins
-INPUTS.v3 SHA1754458ae1e148eb44f3afd0975716460f934c3f5229ae2b39e4d7a5c78a7700
-and run-v2 sourceece551fdc0ec706e38a1ff44ab68a52d6f8c4963739d0655316b5b6845ca6177.
-Fifteen native-operation tests pass; source/class preflight reached and correctly
-refused the actual active-work boundary. SQL aliases resolve to the enrolled
-canonical inode. No sequence-only or absolute operation/recovery kill timer remains;
-actual provider/STOP/lease/resource guards are retained. Native job is bounded to
-2GiBhigh/3GiBmax/swap0/CPU100%. Originals/sidecars and software already passed real
-normal-B independent restore. Actual current-main SQL and dynamic controls are
-captured/restored using that SAME qualified real context at the quiet boundary.
+Current metadata inventory: 3,454 raw logs /92,399,645,893 logical bytes,
+92,632,117,248 allocated log/object payload bytes. Of these,3,302 closed/inactive
+logs hold88,350,341,373 logical bytes; reselect naturally completed sessions at
+actual custody. Disk separately retired32,579 paths /31,572,000,768 allocated bytes
+on Nov14 after B archive verification and accepted restore-before-old-view.
+That exact missing set is explained; do not recapture or credit it again.
 
-Full inventory114.3GB:84.6GB closed/26.2GB legacy plus3.6GB thenactive/pending.
-Original conditional closed-log recovery model is71–75GB, not verified savings.
-Hundreds-of-GB recovery is not supported by the examined original reports.
-The first4 canary logs have827,506,688B NET potential including preparation cost;
-this is not actual recovered space. The controller verifies live histories, public
-route/assets, read-only desktop/mobile browser and known-reader descriptor release,
-then requests one continuation in this existing root session without replacing
-pending work or changing saved model/route. Full66-batch reclamation and future
-log-growth prevention remain unfinished after this canary; continue them on receipt.
-Public source5c29278fd has71focused tests and both hosted workflows passing.
-Preserve original epochs and do not launch a competing operation or blind retry.
+WakeWatch automatic agent dispatch is TEMPORARILY PAUSED across its five existing
+sources. All monitors/timer/configurations/incident ledgers remain active and
+unchanged. No unsettled delivery or native queued follow-up was found. Ordinary
+monitor ticks advanced without new dispatch. Root owns exact preimage restoration
+and post-restoration ordinary-timer verification before reporting completion.
 
-# Production conversation-log reclamation — 2026-11-04
+Vibe owner has qualified current99-migration data, later writes, fallback,
+protected replay and latest frontend. Nightly independently restored68 retained
+versions /3,073,516,522 bytes, qualified batch-source-v3, and closed all contexts.
+Neither owner requires a new approval/turn. Current native Codex is0.166.0;
+actual isolated no-inference metadata resumes returned2 turns/54,084 bytes full
+versus0 turns/2,127 bytes narrow, repeatedly. Public exact-version guard and
+multi-batch aware-reader failure recovery are committedd007c88d2. Actual new
+main build/test is running under the shared build lease and resource limits.
+Protected reader40a91f69 remains qualified; live original readers are untouched.
 
-Branch `vk/0815-vk-deduplicate-c`, rebased on fork/staging `ee2efee4d`. User requests
-completion through production lossless conversion, independently verified recovery,
-actual space reclamation and ongoing-growth prevention. Source integration alone
-is insufficient. Draft [PR291](https://github.com/artinflight/vibe-kanban/pull/291)
-targets staging. Preserve latest live frontend, private retained-history inputs,
-protected replay behavior, current database writes, native homes and queued work.
+Private execution: `/mnt/vk-storage/vk-log-dedup-20261103-0815/production-20261117`.
+One new finite controller must perform first4 live acceptance THEN every
+positive-benefit current closed batch, independent B originals/SQL/controls,
+complete object-store closure including unreferenced objects, all production
+Rust EOF checks, actual allocation accounting, Vibe resume/public desktop/mobile
+acceptance and WakeWatch restoration. No full production operation is armed yet.
+No actual dedup recovery or deployed growth reduction is claimed by preparation.
 
-Current checkpoint15:11UTC: **zero production conversions/recovered log bytes**.
-Both executables are built and independently byte-hash verified; eight exact
-protected replay tests pass. Existing Vibe owner is preparing current-data rehearsal.
-Nightly remains sole backup producer; it is reconciling retained versions and
-qualifying normal restore. Its accepted archive dependency contract remains valid.
-Actual selected B body/metadata recall and real owned custody are still required.
 
-`VK_LOG_RECLAMATION_READINESS.md` is the OP::Disk Space procedure;
-`VK_LOG_DEDUPLICATION.md` records format and original six-log evidence. Immutable
-private execution state is under `/mnt/vk-storage/vk-log-dedup-20261103-0815/`.
-The finite selection contains3,221 closed/inactive logs /84,557,012,508 logical
-bytes in66 bounded preparations. Selection establishes neither custody nor saving.
-Legacy, active, pending, damaged and nonbeneficial tiny logs stay preserved pending
-explicit applicable review; no semantic turn omission or object garbage collection.
-
-Four unchanged canary originals allocate1,053,085,696B; their selected packed graph
-allocates222,183,424B including sidecars. The792.4MiB margin excludes directory/store
-changes and is not actual recovery. Original six-file potential812.1MiB is separate.
-Another33-file/2,020,462,248-byte archive is sealed and reconstructed with unchanged
-originals. Resource guards stopped prior attempts; later Rust verification was
-refused before startup on renewed shared pressure. No guard was lowered.
-
-Sourcee70732c92 passed hosted Test and Historical recovery.53 focused Python and
-eight retained WriterFence tests pass. Formatting/ops and current source hashes
-are recorded in durable receipts. Existing owners retain build/deployment and
-backup admission. Actual WriterFence requires legitimately quiet dispatch and
-physically frozen compatible readers; preserve active jobs and uncertain inputs.
-No new producer, timer, automatic conversion or background retry is enabled.
+Branch `vk/0815-vk-deduplicate-c`; draft [PR291](https://github.com/artinflight/vibe-kanban/pull/291) targets staging. Procedure: `VK_LOG_RECLAMATION_READINESS.md` and `VK_LOG_DEDUPLICATION.md`. Historical checkpoints remain in Git and immutable private case receipts.
 
 Historical scope: [STREAM_HISTORY_20261017.md](STREAM_HISTORY_20261017.md).

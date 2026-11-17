@@ -2701,3 +2701,16 @@ at actual memory/PSI admission, preserving all sources; no retry threshold relax
   both readers, current frontend and online review snapshot. Final quiet review,
   operation journal, real host boundary, deployment and conversion remain pending;
   zero log space recovery is claimed by this source change.
+
+
+## 2026-11-17 — current owner handoffs and full-scope safe continuation
+
+- Reconciled consumed Nov4 lease failure, current92.63GB allocated payload and
+  separately verified Nov14 31.57GB retirement; no unexplained missing sources.
+- Paused all five WakeWatch dispatch paths while preserving ordinary monitoring,
+  ledgers/configuration and uncertain prompts; restoration is root-owned.
+- Both existing owners completed fresh qualification. Nightly68versions/3.073GB
+  actual fullEOF/metadata/separate-inode restore; Vibe current99data/latest assets.
+- Added exact0.166.0 guard based on actual no-inference narrow-resume proof and
+  guarded subsequent batches retaining aware readers;74 focused Python checks.
+- Main release build/tests running; no new production activation/conversion yet.

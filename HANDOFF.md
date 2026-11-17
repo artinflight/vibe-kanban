@@ -1,46 +1,48 @@
-# Production operation armed — 2026-11-04 20:16 UTC
+# Production reclamation pickup — 2026-11-17
 
-Zero production log bytes reclaimed so far. The finite native operation is now
-actually running as `vk-log-dedup-production-04f1fa5a-20261104.service` (invocation77b2f7261cbc48948dbfddd7fc79b325). It waits for active turns to finish
-naturally; observed5active/0queued/23uncertain preserved. No reader or route has
-changed during the wait. Existing owner handover is shared revision46; no further
-owner approval/turn is awaited. Root must finish its turn so the real fence can run.
+Read STREAM.md for current measurements and owner receipts. Zero production
+VKLOGCAS1 manifests are installed at this checkpoint; do not report preparation
+as actual recovered space. Current full payload allocation is92,632,117,248B.
 
-Private `native-operation-v1/LAUNCH_RECEIPT.v3.private.json` in the case below pins
-INPUTS.v3 SHA1754458ae1e148eb44f3afd0975716460f934c3f5229ae2b39e4d7a5c78a7700
-and run-v2 sourceece551fdc0ec706e38a1ff44ab68a52d6f8c4963739d0655316b5b6845ca6177.
-Fifteen native-operation tests pass; source/class preflight reached and correctly
-refused the actual active-work boundary. SQL aliases resolve to the enrolled
-canonical inode. No sequence-only or absolute operation/recovery kill timer remains;
-actual provider/STOP/lease/resource guards are retained. Native job is bounded to
-2GiBhigh/3GiBmax/swap0/CPU100%. Originals/sidecars and software already passed real
-normal-B independent restore. Actual current-main SQL and dynamic controls are
-captured/restored using that SAME qualified real context at the quiet boundary.
+Private root case `/mnt/vk-storage/vk-log-dedup-20261103-0815/production-20261117`:
+- `native-166-build` is the actual guarded main build/test. Current original main
+  PID645213 and original/protected/proxy owners remain unchanged. Deployment must
+  use its successful source-pinned artifact, never the older0.159-only guard.
+- `prepare_release.private.py` produces fresh compatible main/spec/adapter/host
+  inputs after actual build success. Existing qualified protected40a stays.
+- `controller.private.py` is the new finite full-scope operation; not armed yet.
+  Must complete first4 live acceptance then ALL positive-benefit current closed
+  batches, independent B restore/SQL/controls, complete session object closure,
+  Rust EOF, allocation accounting, Vibe public/UI recovery, WakeWatch restoration.
+- `batch_support.private.py`, `closure_support.private.py` and controller helper
+  tests pass. Own new staging replicas can retire only after publication+B proofs;
+  primary CAS, all old epochs, sidecars and original backup bytes remain intact.
+- `wakewatch-pause` contains the exact source preimage/receipt/owned hold and
+  `restore.private.py`. All five monitors continue naturally, zero new dispatch.
+  MUST restore previous bytes/configs and verify five ordinary ticks/readiness.
 
-Full inventory114.3GB:84.6GB closed/26.2GB legacy plus3.6GB thenactive/pending.
-Original conditional closed-log recovery model is71–75GB, not verified savings.
-Hundreds-of-GB recovery is not supported by the examined original reports.
-The first4 canary logs have827,506,688B NET potential including preparation cost;
-this is not actual recovered space. The controller verifies live histories, public
-route/assets, read-only desktop/mobile browser and known-reader descriptor release,
-then requests one continuation in this existing root session without replacing
-pending work or changing saved model/route. Full66-batch reclamation and future
-log-growth prevention remain unfinished after this canary; continue them on receipt.
-Public source5c29278fd has71focused tests and both hosted workflows passing.
-Preserve original epochs and do not launch a competing operation or blind retry.
+Current owner handoffs: Vibe
+`/mnt/vk-storage/vk-log-reader-release-20261104/refresh-20261117-v1/HANDOFF_MANIFEST.private.json`;
+Nightly `../nightly-coordination-20261117/ROOT_HANDOFF.private.json` under the dedup
+case. Both existing owner turns are complete; no further approval/turn is awaited.
+Nightly remains sole producer/schedule owner; batch-source-v3 and BASE_PROVIDER_CATALOG
+are required. Hold actual normal B/reader class and real WriterFence, serially
+switch B scopes without nesting producer leases, retain immutable custody epochs.
 
-Private case: `/mnt/vk-storage/vk-log-dedup-20261103-0815`.
-Read `PRODUCTION_EXECUTION_20261104.private.json`, actual native operation receipts
-and `VK_LOG_RECLAMATION_READINESS.md`. Reader owner case is
-`/mnt/vk-storage/vk-log-reader-release-20261104`; use sealed host-boundary-v2 and
-ADAPTER_MANIFEST-v3. Nightly SAME-context SQL SDK is owner-context-source-v2 in
-commissioning-20261103/dedup-release-software-20261104. Actual originals and
-software normal-B acceptance receipts are already in the dedup case; preserve them.
-The actual next30 metadata request and finite factory remain available; do not
-repeat original captures, whole-calendar commissioning or add another agent.
+The Nov4 native ATTEMPT was consumed and failed before any host boundary. Never
+replay it. The exact32,579 missing paths were separately archived/retired Nov14
+(31,572,000,768 allocatedB); accepted restore-before-old-view remains explicit.
+Do not recapture/credit them or restore them merely to certify current readers.
 
-Branch `vk/0815-vk-deduplicate-c`; draft PR291 targets staging. Earlier checkpoints
-remain in Git history and private receipts. No PR merge or full-objective completion
-is claimed by arming the first canary operation.
+While any manifest remains, use compatible readers. A failed later batch rolls
+back only itself or retains fully verified mixed raw/archive serving state; never
+fallback to old software or overwrite the current main database. Preserve latest
+frontend, current99-migration data/review writes, pending/uncertain prompts and all
+selected model/route/settings. Actual deployed resume/growth still needs proof.
+
+Public commitd007c88d2 contains exact0.166 guard and guarded subsequent batches.
+PR291 remains draft into staging; no merge. Run full formatting and ops pickup
+checks after updating this note. Historical checkpoints remain in Git/private
+receipts; the apparent old Nov4 armed state is no longer current.
 
 Historical scope: [HANDOFF_HISTORY_20261017.md](HANDOFF_HISTORY_20261017.md).

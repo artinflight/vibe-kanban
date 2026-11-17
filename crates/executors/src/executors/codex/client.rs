@@ -126,10 +126,15 @@ enum ResumeWireRequest<'a, T> {
 fn narrow_resume_supported(runtime: Option<&str>) -> bool {
     // Native userAgent uses the initialize caller's clientInfo.name. Vibe
     // initializes as vibe-codex-executor; both names identify the qualified
-    // 0.159.2 runtime. Keep every other version on the original wire path.
+    // 0.159.2 and 0.166.0 runtimes. Keep every other version on the original wire path.
     matches!(
         runtime.and_then(|s| s.split_ascii_whitespace().next()),
-        Some("codex_cli_rs/0.159.2" | "vibe-codex-executor/0.159.2")
+        Some(
+            "codex_cli_rs/0.159.2"
+                | "vibe-codex-executor/0.159.2"
+                | "codex_cli_rs/0.166.0"
+                | "vibe-codex-executor/0.166.0"
+        )
     )
 }
 
@@ -3071,6 +3076,8 @@ for line in sys.stdin:
         for runtime in [
             "codex_cli_rs/0.159.2 (synthetic)",
             "vibe-codex-executor/0.159.2 (Ubuntu 24.4.0; x86_64) dumb (vibe-codex-executor; 0.1.42)",
+            "codex_cli_rs/0.166.0 (synthetic)",
+            "vibe-codex-executor/0.166.0 (Ubuntu 24.4.0; x86_64) dumb (vibe-codex-executor; 0.1.42)",
         ] {
             let mut narrow = serde_json::to_value(
                 resume_wire_request(&request, "thread/resume", Some(runtime)).unwrap(),
@@ -3094,6 +3101,8 @@ for line in sys.stdin:
             Some("vibe-codex-executor/0.116.0"),
             Some("vibe-codex-executor/0.159.20"),
             Some("vibe-codex-executor/0.162.1"),
+            Some("codex_cli_rs/0.166.00"),
+            Some("vibe-codex-executor/0.166.0-extra"),
             Some("unknown-client/0.159.2"),
             Some("vibe-codex-executor/0.159.2-extra"),
         ] {
@@ -3125,6 +3134,14 @@ for line in sys.stdin:
     async fn actual_client_narrows_live_vibe_identity_resumes() {
         assert_client_narrows_resumes(
             "vibe-codex-executor/0.159.2 (Ubuntu 24.4.0; x86_64) dumb (vibe-codex-executor; 0.1.42)",
+        )
+        .await;
+    }
+
+    #[tokio::test]
+    async fn actual_client_narrows_current_vibe_0166_resumes() {
+        assert_client_narrows_resumes(
+            "vibe-codex-executor/0.166.0 (Ubuntu 24.4.0; x86_64) dumb (vibe-codex-executor; 0.1.42)",
         )
         .await;
     }

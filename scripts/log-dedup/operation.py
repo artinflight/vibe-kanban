@@ -99,3 +99,34 @@ def convert_held(*, assembly, manifest, operation, plan, archive, journal,
             inputs['path'], inputs['sha256'], operation, fence, plan)
         record('old_readers_recovered_frozen', recovered)
         raise
+
+
+def convert_next_held(*, assembly, config, plan, archive, journal, fence,
+                      recovery, record, minimum_reserve_bytes=0):
+    """Convert another exact batch while retaining the compatible readers.
+
+    The caller supplies freshly sealed plan-specific custody and retains the
+    same real host fence and normal backup context. Earlier batches can already
+    contain manifests: failure restores only this batch, never archive-unaware
+    software. Host validation and safe service recovery remain the owner's job.
+    """
+    import sys
+    if type(minimum_reserve_bytes) is not int or minimum_reserve_bytes < 0:
+        raise ValueError('Explicit nonnegative rollback reserve required')
+    adapter, _ = assembly
+    with adapter.admit_held(config, plan, fence, recovery) as custody:
+        if custody['writer_fence'] is not fence or custody['recovery'] is not recovery:
+            raise ValueError('The SAME actual fence and B context must remain held')
+        batch = sys.modules['reclaim'].Batch(
+            plan, archive, journal, fence, recovery, custody['reader_guard'],
+            reserve_bytes=max(custody['reserve_bytes'], minimum_reserve_bytes))
+        try:
+            result = batch.run(after_replace=lambda path: record(
+                'manifest_readback_complete', {'path': path}))
+        except BaseException:
+            if batch.state is not None:
+                restored = batch.run(rollback=True)
+                record('current_batch_raw_recovery_complete', restored)
+            raise
+    record('additional_frozen_batch_complete', result)
+    return result

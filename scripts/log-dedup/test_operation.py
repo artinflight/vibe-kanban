@@ -119,6 +119,53 @@ class OperationTests(unittest.TestCase):
         self.assertIs(seen[-1][1], proof)
         self.fixture.assert_original()
 
+    def additional(self, plan, journal):
+        return operation.convert_next_held(
+            assembly=(self.adapter, self.actions), config={}, plan=plan,
+            archive=self.fixture.archive, journal=journal,
+            fence=self.fixture.fence, recovery=self.fixture.store,
+            record=self.record)
+
+    def split_plans(self):
+        return [dict(self.fixture.plan, files=[entry])
+                for entry in self.fixture.plan['files']]
+
+    def test_additional_batches_keep_same_fence_and_do_not_reactivate(self):
+        with self.fixture.fence.held():
+            for index, plan in enumerate(self.split_plans()):
+                result = self.additional(plan, self.fixture.base / ('batch-' + str(index)))
+                self.assertEqual(result['outcome'], 'installed')
+            self.fixture.fence.check()
+        self.assertNotIn('activate', self.events)
+        self.assertFalse(self.recovery_called)
+        for relative in self.fixture.paths:
+            self.assertTrue((self.fixture.source / relative).read_bytes().startswith(logs.MAGIC))
+
+    def test_additional_failure_restores_only_current_batch_and_keeps_aware_readers(self):
+        first, second = self.split_plans()
+        with self.fixture.fence.held():
+            self.additional(first, self.fixture.base / 'first-batch')
+            self.failure = 'manifest_readback_complete'
+            with self.assertRaisesRegex(RuntimeError, 'injected'):
+                self.additional(second, self.fixture.base / 'second-batch')
+            self.fixture.fence.check()
+        first_path = self.fixture.source / first['files'][0]['path']
+        second_path = self.fixture.source / second['files'][0]['path']
+        self.assertEqual(logs.reconstruct(first_path)['sha256'], first['files'][0]['sha256'])
+        self.assertEqual(logs.sha(second_path.read_bytes()), second['files'][0]['sha256'])
+        self.assertFalse(self.recovery_called)
+        self.assertIn('current_batch_raw_recovery_complete', self.events)
+
+    def test_additional_lost_reader_custody_never_selects_unaware_fallback(self):
+        first, second = self.split_plans()
+        with self.fixture.fence.held():
+            self.additional(first, self.fixture.base / 'first-batch')
+            self.fixture.reader_ready = False
+            with self.assertRaises(ValueError):
+                self.additional(second, self.fixture.base / 'second-batch')
+        self.assertFalse(self.recovery_called)
+        self.assertTrue((self.fixture.source / first['files'][0]['path']).read_bytes().startswith(logs.MAGIC))
+
     def test_sealed_loader_rejects_changed_source_before_execution(self):
         source = self.fixture.base / 'sealed.py'
         source.write_text('raise AssertionError("must not execute")\n')

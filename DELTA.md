@@ -2714,3 +2714,11 @@ at actual memory/PSI admission, preserving all sources; no retry threshold relax
 - Added exact0.166.0 guard based on actual no-inference narrow-resume proof and
   guarded subsequent batches retaining aware readers;74 focused Python checks.
 - Main release build/tests running; no new production activation/conversion yet.
+
+- Single full-scope native chain actually armed as
+  vk-log-dedup-full-20261117-3197505a.service /PID1545066 /
+  invocationedad5c8ca48a4dfc88c8c5c652c84095. Source/class preflight passed;
+  8actual executor tests pass, server build still running. It waits for real
+  build qualification and natural root completion, then performs all batches,
+  closure/recovery/accounting and exact WakeWatch restoration; one existing-root
+  continuation preserves saved settings/pending work. No activation claimed yet.

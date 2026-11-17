@@ -10,7 +10,12 @@ Private root case `/mnt/vk-storage/vk-log-dedup-20261103-0815/production-2026111
   use its successful source-pinned artifact, never the older0.159-only guard.
 - `prepare_release.private.py` produces fresh compatible main/spec/adapter/host
   inputs after actual build success. Existing qualified protected40a stays.
-- `controller.private.py` is the new finite full-scope operation; not armed yet.
+- `controller.private.py` is the new finite full-scope operation; ARMED through the single
+  native chain `vk-log-dedup-full-20261117-3197505a.service` (PID1545066,
+  invedad5c8ca48a4dfc88c8c5c652c84095). Read LAUNCH_RECEIPT/CONTRACT and its
+  actual launch folder; after build success, SEALED_OPERATION points to the new
+  actual full-scope operation. It waits for actual build and natural root completion.
+  Never relaunch consumed inputs; original failed attempt remains preserved.
   Must complete first4 live acceptance then ALL positive-benefit current closed
   batches, independent B restore/SQL/controls, complete session object closure,
   Rust EOF, allocation accounting, Vibe public/UI recovery, WakeWatch restoration.
@@ -40,6 +45,7 @@ fallback to old software or overwrite the current main database. Preserve latest
 frontend, current99-migration data/review writes, pending/uncertain prompts and all
 selected model/route/settings. Actual deployed resume/growth still needs proof.
 
+Actual8executor tests +74Python regressions +13private helper tests pass.
 Public commitd007c88d2 contains exact0.166 guard and guarded subsequent batches.
 PR291 remains draft into staging; no merge. Run full formatting and ops pickup
 checks after updating this note. Historical checkpoints remain in Git/private

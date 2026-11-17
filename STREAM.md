@@ -24,8 +24,8 @@ versions /3,073,516,522 bytes, qualified batch-source-v3, and closed all context
 Neither owner requires a new approval/turn. Current native Codex is0.166.0;
 actual isolated no-inference metadata resumes returned2 turns/54,084 bytes full
 versus0 turns/2,127 bytes narrow, repeatedly. Public exact-version guard and
-multi-batch aware-reader failure recovery are committedd007c88d2. Actual new
-main build/test is running under the shared build lease and resource limits.
+multi-batch aware-reader failure recovery are committedd007c88d2. All8actual executor tests pass. Actual new
+main server build is running under the shared build lease and resource limits.
 Protected reader40a91f69 remains qualified; live original readers are untouched.
 
 Private execution: `/mnt/vk-storage/vk-log-dedup-20261103-0815/production-20261117`.
@@ -33,7 +33,16 @@ One new finite controller must perform first4 live acceptance THEN every
 positive-benefit current closed batch, independent B originals/SQL/controls,
 complete object-store closure including unreferenced objects, all production
 Rust EOF checks, actual allocation accounting, Vibe resume/public desktop/mobile
-acceptance and WakeWatch restoration. No full production operation is armed yet.
+acceptance and WakeWatch restoration. The full production chain is ARMED as
+`vk-log-dedup-full-20261117-3197505a.service`, actual PID1545066,
+invocationedad5c8ca48a4dfc88c8c5c652c84095. It waits for the actual guarded
+server build to pass, then naturally quiet dispatch. It executes fresh sealed
+preparation/preflight and the entire controller; no human dependency handoff.
+InputsSHA d398fda7dc6b3ca7cf5fbf17517dfd52be6533f08da9d8c6ab9e6f8b2a1762ec;
+controllerSHA25a1af04ef277c79c2cc3a1f993200d546e01dff947e77f0f2f06cdef930fc3d.
+See production-20261117/LAUNCH_RECEIPT.private.json and actual launch/operation
+receipts. Its single continuation targets existing root sessiona4011fb5 after
+execution471be918 completes naturally, with exactly the saved executor config.
 No actual dedup recovery or deployed growth reduction is claimed by preparation.
 
 

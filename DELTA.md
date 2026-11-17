@@ -2722,3 +2722,18 @@ at actual memory/PSI admission, preserving all sources; no retry threshold relax
   build qualification and natural root completion, then performs all batches,
   closure/recovery/accounting and exact WakeWatch restoration; one existing-root
   continuation preserves saved settings/pending work. No activation claimed yet.
+
+
+2026-11-17: Actual native build4766246c and8 executor tests passed. The first
+production launcher failed read-only preflight because the plan was group-writable;
+no production conversion happened, original service stayed intact, and WakeWatch
+was restored exactly with5 ordinary ticks. A fresh finite operation reuses the
+retained immutable byte-identical PLAN without weakening guards. Exact fresh
+source/class/callback/artifact preflight and4 controller regressions pass; the
+corrected native unit d6ed2cee is running and waits for this root to finish.
+Fresh global WakeWatch dispatch pause retains all monitoring/configs,5 ordinary
+ticks and unchanged attempts, zero queued/unsettled deliveries;32 uncertain
+inputs are preserved. Full B/closure/all-batch/recovery objective is unchanged.
+Measured actual predeployment fragmented wire baseline:0.159.2,8turns/10,746,496B;
+isolated0.166 proof is not deployed evidence. Current SEALED_OPERATION and
+STREAM/HANDOFF identify exact operation/receipts. No reclaimed-space claim yet.

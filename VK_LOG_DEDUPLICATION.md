@@ -224,6 +224,12 @@ old preparation epochs and rollback recipes. Rehydrate exact staging replicas
 from verified primary CAS before a separately admitted future raw rollback.
 
 Exact0.166.0 native resume support was isolated and qualified without inference.
-The deployed Vibe serving hash, actual saved initial resume response and observed
-growth still require production acceptance; an isolated native fixture is not a
-deployed growth claim. No automatic converter timer is enabled.
+The real retained predeployment wire baseline reports0.159.2,8turns and
+10,746,496 response bytes. Capture fragments must be joined through their actual
+newline boundary before parsing the JSON response; inspecting only the first
+101 capture records misses the multi-megabyte initial response. Retain byte/hash/
+turn-count metadata without publishing conversation bodies. The next actual
+production version/response and serving hash establish the deployed comparison;
+an isolated0.166 fixture is not deployed0.166 evidence. The successor build
+passed8 actual executor tests, but production growth acceptance remains pending.
+No automatic converter timer is enabled.

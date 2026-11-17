@@ -5,6 +5,10 @@ it before any production boundary. Fresh owner handoffs are ready. Root owns the
 new full-scope operation, not another four-log-only attempt. Current status is in
 STREAM.md/HANDOFF.md and the private production-20261117 case. Actual production
 reclamation remains zero until a verified manifest publication/accounting receipt.
+The first Nov17 launcher failed read-only immutable-plan preflight and restored
+WakeWatch exactly. A corrected fresh native operation is running, waiting for
+the root to finish naturally; use the current SEALED_OPERATION pointer, never
+replay either the Nov4 or first Nov17 consumed launcher.
 
 Before downtime retain the global WakeWatch dispatch pause and verify there are
 no unsettled automatic deliveries or queued work. Keep monitors/reconciliation,
@@ -15,9 +19,11 @@ restore those bytes/settings and verify all five ordinary ticks after Vibe resum
 Fresh Vibe qualification covers current99-migration data/latest frontend and the
 accepted Nov14 restore-before-old-view contract. Fresh Nightly proof restored68
 retained versions/3,073,516,522B; batch-source-v3 provides all-batch same-context
-original/SQL/control recovery. Current native0.166.0 needs the root successor
-main build with its exact-version guard; the older main artifact's0.159-only
-allowlist does not establish ongoing-growth prevention on this runtime.
+original/SQL/control recovery. The successor main build passed, including8actual
+executor tests; its exact guard qualifies0.159.2 and0.166.0. Complete real
+predeployment wire captures report0.159.2: the latest initial resume repeated
+8turns/10,746,496 bytes. The separately tested0.166 fixture is not deployed
+runtime evidence. Measure the resumed production version/response after activation.
 
 Use a new UUID and immutable source/configuration pins. After naturally quiet
 queues and actual final current-main SQLite API/B restore, acquire the real

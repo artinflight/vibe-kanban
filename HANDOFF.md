@@ -1,54 +1,68 @@
 # Production reclamation pickup — 2026-11-17
 
-Read STREAM.md for current measurements and owner receipts. Zero production
-VKLOGCAS1 manifests are installed at this checkpoint; do not report preparation
-as actual recovered space. Current full payload allocation is92,632,117,248B.
+Read STREAM.md. No production conversion/recovery has happened while this root
+turn is active. Do not report preparation as reclaimed space. The native build
+PASSED; the original first Nov17 launcher failed read-only preflight because its
+plan was group-writable. Original readers were unchanged and WakeWatch restored
+exactly with all5 ordinary ticks. Never replay that consumed launcher.
 
-Private root case `/mnt/vk-storage/vk-log-dedup-20261103-0815/production-20261117`:
-- `native-166-build` is the actual guarded main build/test. Current original main
-  PID645213 and original/protected/proxy owners remain unchanged. Deployment must
-  use its successful source-pinned artifact, never the older0.159-only guard.
-- `prepare_release.private.py` produces fresh compatible main/spec/adapter/host
-  inputs after actual build success. Existing qualified protected40a stays.
-- `controller.private.py` is the new finite full-scope operation; ARMED through the single
-  native chain `vk-log-dedup-full-20261117-3197505a.service` (PID1545066,
-  invedad5c8ca48a4dfc88c8c5c652c84095). Read LAUNCH_RECEIPT/CONTRACT and its
-  actual launch folder; after build success, SEALED_OPERATION points to the new
-  actual full-scope operation. It waits for actual build and natural root completion.
-  Never relaunch consumed inputs; original failed attempt remains preserved.
-  Must complete first4 live acceptance then ALL positive-benefit current closed
-  batches, independent B restore/SQL/controls, complete session object closure,
-  Rust EOF, allocation accounting, Vibe public/UI recovery, WakeWatch restoration.
-- `batch_support.private.py`, `closure_support.private.py` and controller helper
-  tests pass. Own new staging replicas can retire only after publication+B proofs;
-  primary CAS, all old epochs, sidecars and original backup bytes remain intact.
-- `wakewatch-pause` contains the exact source preimage/receipt/owned hold and
-  `restore.private.py`. All five monitors continue naturally, zero new dispatch.
-  MUST restore previous bytes/configs and verify five ordinary ticks/readiness.
+The corrected finite native operation IS RUNNING:
+`vk-log-dedup-full-20261117-d6ed2cee.service`, invocation
+`f90df6f2c300401490821d9706654fd4`, initial PID1845038. It waits for current root
+9f358e27 to finish naturally. Private root case:
+`/mnt/vk-storage/vk-log-dedup-20261103-0815/production-20261117` (`P`).
+`SEALED_OPERATION.private.json` / `CURRENT_OPERATION.private.json` point to
+operationd6ed2cee's exact `INPUTS.v2.private.json` (SHAad0e7771...),
+`controller-v2.private.py` (SHAbd02e8f8...), and operation receipts. The prior
+sealed epoch is preserved under its original operation folder. No new goal,
+agent, pipeline, build, owner approval or repeated request is needed.
 
-Current owner handoffs: Vibe
-`/mnt/vk-storage/vk-log-reader-release-20261104/refresh-20261117-v1/HANDOFF_MANIFEST.private.json`;
-Nightly `../nightly-coordination-20261117/ROOT_HANDOFF.private.json` under the dedup
-case. Both existing owner turns are complete; no further approval/turn is awaited.
-Nightly remains sole producer/schedule owner; batch-source-v3 and BASE_PROVIDER_CATALOG
-are required. Hold actual normal B/reader class and real WriterFence, serially
-switch B scopes without nesting producer leases, retain immutable custody epochs.
+The correction reuses the old immutable byte-identical PLAN, preserving the
+writable original and the exact pin guard. Main artifact4766246c and protected
+40a91f69 are ready. Actual complete module/class/callback/artifact preflight and
+4 controller regressions pass; independent existing data-progress supervision
+has600s idle/300s recovery, no total cutoff. Read actual RESULT/FAILURE/RECOVERY_FAILURE
+and full reclamation, physical release, SQL, software/frontend/all-object B closure,
+public/browser and WakeWatch restoration receipts before claiming any success.
 
-The Nov4 native ATTEMPT was consumed and failed before any host boundary. Never
-replay it. The exact32,579 missing paths were separately archived/retired Nov14
-(31,572,000,768 allocatedB); accepted restore-before-old-view remains explicit.
-Do not recapture/credit them or restore them merely to certify current readers.
+FRESH WakeWatch pause belongs to the operation-local `wakewatch-pause` directory.
+All5 ordinary monitor ticks advanced with unchanged configs/attempt counts,
+no unsettled deliveries, resource-guard timer active. Monitoring/notifications/
+reconciliation remain active. Supervisor restores exact source/configs only after
+ordinary service recovery, verifies all5 ordinary ticks plus status/check, then
+submits at most ONE existing-root continuation with exactly the saved configuration.
+All32 pending uncertain inputs remain preserved; current durable queue is empty.
 
-While any manifest remains, use compatible readers. A failed later batch rolls
-back only itself or retains fully verified mixed raw/archive serving state; never
-fallback to old software or overwrite the current main database. Preserve latest
-frontend, current99-migration data/review writes, pending/uncertain prompts and all
-selected model/route/settings. Actual deployed resume/growth still needs proof.
+The full native job MUST complete first4 acceptance THEN ALL positive-benefit
+current closed batches, independent normal B original/sidecar/current-main SQL/
+software/current frontend/complete object-store closure (unreferenced included),
+Python+production Rust EOF, actual allocation and original FD release, and resumed
+ordinary desktop/mobile/history/review/settings/queue/public service. Newly created
+staging replicas retire only after publication+B proofs; preserve primary CAS,
+old epochs, originals/sidecars and every backup. Never boot archive-unaware code
+while ANY manifest remains. Never restore an old DB over later writes.
 
-Actual8executor tests +74Python regressions +13private helper tests pass.
-Public commitd007c88d2 contains exact0.166 guard and guarded subsequent batches.
-PR291 remains draft into staging; no merge. Run full formatting and ops pickup
-checks after updating this note. Historical checkpoints remain in Git/private
-receipts; the apparent old Nov4 armed state is no longer current.
+Vibe handoff: `/mnt/vk-storage/vk-log-reader-release-20261104/refresh-20261117-v1/HANDOFF_MANIFEST.private.json`.
+Nightly handoff: dedup case `nightly-coordination-20261117/ROOT_HANDOFF.private.json`.
+Both owner turns finished. Nightly batch-source-v3/BASE_PROVIDER_CATALOG and exact
+old Reader class are required. Serial context switching only, genuine fence,
+immutable per-batch custody epochs, no second producer. Shared question revision54
+has the corrected job and complete owner contracts.
+
+Measure actual resumed production wire capture/version with
+`P/measure_resume.private.py`; retained closest baseline is
+`P/MEASURED_PREDEPLOYMENT_CURRENT_RESUME.private.json`:8turns/10,746,496B,
+reported0.159.2. Prior baseline7turns/7,729,679B. The actual isolated0.166 fixture
+is qualified but is NOT proof of deployed0.166. Do not issue extra inference for QA.
+
+The exact32,579 missing raw paths are explained by Disk's separate completed
+Nov14 retirement (31,572,000,768 allocatedB); do not recapture or credit it again.
+Accepted18 older private views remain restore-before-view, not locally available.
+
+Public source d007c88d2 contains exact-version resume guard and subsequent batches;
+8 actual Rust tests/build,74 Python tests,13 helper tests passed. PR291 draft into
+staging. Preserve latest frontend/current99-migration DB, selected model/route/
+permission, all pending prompts and backup epochs. Keep notes truthful after each
+actual result; zero current recovery is still the prelaunch checkpoint.
 
 Historical scope: [HANDOFF_HISTORY_20261017.md](HANDOFF_HISTORY_20261017.md).

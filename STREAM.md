@@ -1,112 +1,51 @@
-# Production deduplication — final go/no-go prepared, 17 November 2026
+# Finish backward deduplication — active takeover, 17 November 2026
 
-Latest instruction: hand off WHAT/WHY/context/success criteria, with independent
-agent judgment. VK_LOG_AGENT_HANDOFF.md and compact HANDOFF.md follow that model.
-No new agent/live action or fresh activity/capacity scan in this docs turn.
-Prior go/no-go receipts and implementation remain evidence, not a mandated route.
-Known lost-capacity-reply failure is documented with an offline reproduction;
-no correction is claimed. Remaining recovery, backup compatibility, ordinary UI,
-actual allocation and future-growth outcomes define the mission. The incoming
-agent determines the approach within genuine preservation/ownership requirements.
+The current user goal authorizes pursuing the complete reclamation outcome. The
+older documentation-only restriction below describes the previous turn, not this
+assignment. Production remains unchanged: four archives, 827,506,688 B historical
+net log recovery. The full goal remains active and unfinished.
 
-Previous plan-only observations (historical, not refreshed for handoff): P/final-go-no-go-20261117. Aware owners/public route and
-five watcher configurations/normal ticks exact; only this root turn active;
-zero durable/1,338 volatile queues;32 uncertainties preserved. SSD3,497,500,672B
-(276,275,200B above3GiB), RAM8,194,068,480B/fullPSI0.00. B healthy85,496,852,480B;
-no B owner pause/explicit hold and local writer/controller locks unheld. Offline exact host freeze method reproduces TypeError on lost release reply
-followed by valid owned=false/state=null status; receipt stays unset. Correct and
-regression-test NEW host source before arming; no live release/helper change.
-Actual remaining physical writes and peak512MiB staging are NOT bounded by these samples.
-Fresh3,433candidates/90,992,755,255logicalB;306 envelopes before actual benefit
-filter;82tiny/8pending/1invalid/4CAS/14active-session exclusions preserved.
-Public real history rendered in4desktop/mobile-viewport cases with0pageerrors/
-0operator writes; full rendered review/settings/queue acceptance still unproved.
-History334.782s is called twice under held admission; total downtime unbounded
-by available measurements. Package-v5 unarmed/no ATTEMPT; never replay a088.
+Implemented public capacity_release.py and an inert source-pinned host preparer.
+Release intent is durably recorded before RPC. A lost response is reconciled
+against authenticated owned=false/state=null status, the original physical lock,
+and the complete unchanged persisted v2 state. Journal recovery reconciles before
+its no-release branch; foreign ownership, changed history and competing/replaced
+locks retain maintenance. No RPC retry or state rewrite is introduced. New host
+source 7cfbf0497f70c22f7d735ed64e2d832e3b7ca1f33b3673ae7f508bd19a168393;
+helper 909155182af4db735ad5f18c9d0f10f368817effe10a3e657c7a56e892c113ca.
+Old packages and consumed operations remain untouched; integration into a fresh
+full operation is still required.
 
-The earlier exact two-file offload and full history check are COMPLETE.
+Validation: 111 focused tests passed, including 11 new release tests and three
+actual patched-host freeze/recovery tests with fixture RPCs and real kernel locks.
+Format passed using repository-pinned Prettier 3.6.1 from an SSD-only npm cache;
+the first ordinary format attempt lacked its executable and is retained. Ops and
+diff checks passed. No full Cargo/frontend check/lint or PR update is claimed.
 
-Both approved files are now on the existing healthy Desktop B volume, with full
-independent size/SHA256 reopens and Linux restore metadata. Build locks, process
-FD/maps checks and exclusive kernel file leases protected unchanged originals;
-ONLY those two SSD paths were removed after both copies were verified.303,194,186
-logicalB copied;303,202,304 original allocatedB released. Immediate available-space
-increase303,190,016B, separate from metadata/global drift. Final SSD postcheck
-3,492,601,856B exceeds unchanged3GiBfloor by271,376,384B. This is BUILD-ARCHIVE
-recovery, not additional conversation-dedup recovery. Exact locations/hashes and
-restore procedure are in VK_LOG_RECLAMATION_READINESS.md and the adjacent
-cargo-target/acceptance/deps/VK_LOG_DEDUP_TWO_BUILD_ARCHIVES.MOVED-TO-DESKTOP.txt.
+Fresh read-only observations verify aware readers/public assets, unchanged
+WakeWatch dispatcher/five configurations, five normal ticks, one active execution
+and zero durable queued messages. Current actual native 0.159.2 startup returns
+zero historical turns/1,826 response bytes without another provider call. This
+confirms prevention of initial replay, not a whole-workload growth forecast.
 
-Private case (`P`):
-`/mnt/vk-storage/vk-log-dedup-20261103-0815/production-20261117`.
-Move case (`M`): `P/approved-two-build-archives-9816ae8beb404092852093ed2e1c90a0`.
-M/POSTCHECK.private.json and P/resume-after-first-20261117/POST_OFFLOAD_READINESS.private.json
-bind actual success. M/RESULT records final reconciled outcome; earlier FAILURE
-and continuation-v3 receipts remain. Initial owned receiver stalled; ONLY its
-exact script/birth/command-proven process was stopped. Native Python3.10 hash
-compatibility was corrected, reusing the independently verified first copy.
-No blind replay, duplicate first copy or loss of old recovery evidence.
+Private evidence under P/completion-20261117-capacity-host and
+P/completion-20261117-demand, where P is the production-20261117 directory below.
+New inventory selects 3,366 non-tiny closed logs. Nightly's existing normal native
+context queried 6,732 log/sidecar names: 5,676 retained map entries found; context
+closed, no payload capture. Entries are not yet full hash-match/restore acceptance.
+Read-only exact compression/hash sizing is running as measure-v3.private.py,
+exec session 70465, PID2294952. It reuses stable completed plans from two terminal
+attempts that stopped on transient full PSI >.10. The new finite data job waits
+up to600s for unchanged resource floors, never counts waits as completed data, and
+retains each completed plan/size receipt. Poll the SAME live handle/process before
+any continuation. At documentation time1,560plans/4,761,656,829rawB were complete.
+No conversion, maintenance, watcher pause or payload backup has started.
 
-The full unchanged qualified history recheck PASSED in334.782s:22HTTP responses,
-all4main/4protected canaries,6T18 reply/multiplicity checks and exact7page/49entry
-sparse pagination. Existing600s completed-data no-progress watchdog retained;
-requests/resource waits earn no progress credit. Memory/PSI limits unchanged.
-Earlier300s diagnostic failure remains historical. Public TLS/index/assets pass;
-aware main4766246c/protected40a91f69 serving owners remain active/thawed/unchanged.
-Accepted18 old archives still require restore-before-view; not all18 local/live.
-Fresh desktop/mobile viewport history now passes; broader rendered review/
-settings/queue acceptance and post-conversion repetition remain.
+Next: finish sizing and exact backup demand; choose feasible first/next batches
+including raw rollback and two archive copies above the3GiBfloor; integrate the
+new helper, qualify complete rendered UI, then perform the genuinely fenced
+remaining conversion and normal-B closure. Preserve every existing epoch and input.
 
-Production log status remains FOUR installeda088 lossless manifests. Their exact
-originals/sidecars, complete decoded hashes and independent original normal-B
-proof passed; net827,506,688 allocatedB including ALL canary objects/object-dir
-cost.174 known reader/proxy FDs retained no original inode. Whole-host FD/global
-filesystem delta was not claimed. Separate Nov14 recovery31,572,000,768B is not
-recredited. All histories, backups/old epochs, pending inputs and settings remain.
-
-Today's history mismatch was isolated workspace-path rendering: exact raw/CAS/
-live context parity qualified one main-page expectation change. Protected and
-all noncanary contracts stay unchanged; no path/message normalization. Return
-scope fixed. Public resume.py validates source-root-bound installed journal,
-manifest inode/hash/metadata/decoded originals, sidecars and retained B proof;
-rejects unknown CAS/replay selection. Fresh adoption requires genuine owner/fd/B/
-cgroup/namespace checks and permanent aware boot controls, without restarting.
-Failure restores ONLY current batch and keeps aware readers. Independent recovery
-never reruns the same failed strict history check or boots unaware code over CAS.
-Production EOF proofs bind unchanged physical versions; seals join B controls.
-
-FINAL prepared package remains
-`P/resume-after-first-20261117/package-v5/PREPARED.private.json`.
-NEXT_INPUTS SHA53de9edf727c8544cb4a6e18c3fd7f214ab3059b04a6ce9891459335289f363f.
-State prepared_unarmed_partial_resume, no ATTEMPT, automatic continuation off.
-Old CURRENT/SEALED_OPERATION point to consumeda088: NEVER replay them or old
-pause-installing/raw-first preparers. Earlier prepared epochs remain inert.
-
-Future production still needs fresh natural quiet/current owner/queue/uncertain
-input checks; NEW exact WakeWatch dispatch pause/preimage/five-ledger reconciliation;
-current-main SQL B/fresh actual capacity and physical WriterFence; SAME selected
-normal-B context; no-restart adoption; ALL positive-benefit batches; complete ALL
-local objects/unreferenced objects/manifests/sidecars/directory/link B closure;
-actual new-run allocation/FD release; ordinary public desktop/mobile/history/
-review/settings/queue recovery; exact WakeWatch restoration and five normal ticks.
-Recheck volatile4GiBmemory/.10PSI/3GiBSSD admission; never weaken floors or remove
-recovery records. Those actions are outside this bounded user instruction.
-
-Last metadata selection:3,433closed candidates/90,992,755,255logicalB,82tiny
-preserved;14active-session/8pending/1invalid/4archived excluded in latest snapshot. Reobserve under
-actual custody after natural completion; candidate bytes are not recovery proof.
-Vibe/Nightly contracts accepted; sole Nightly producer/schedule ownership retained.
-First8original/sidecar versions/1,053,055,572B and SQL/software/frontend/custody
-control epochs preserved; final all-store closure unfinished. No new owner turn
-or whole-backup commissioning gate. WakeWatch originalaf4ead9a/five configurations
-was restored with five ordinary ticks before this follow-up; unchanged this turn.
-
-Actual native0.159.2 initial resume0turns/5,126B versus8turns/10,746,496B before
-activation:99.9523% fewer initial-response bytes, no extra inference request.
-Isolated0.166 fixture is NOT deployed runtime evidence.97focused/8sealed-package
-source tests and prior8Rust executor tests/native build remain unchanged; this
-follow-up changes operational docs only. Required format/ops/diff checks apply.
-Draft [PR291](https://github.com/artinflight/vibe-kanban/pull/291) targets staging.
-OP::Disk Space: VK_LOG_DEDUPLICATION.md / VK_LOG_RECLAMATION_READINESS.md.
+Prior planning/handoff: [preserved November17 stream](deployment-history/20261117-before-completion-takeover/STREAM.md).
 
 Historical scope: [STREAM history](STREAM_HISTORY_20261017.md).

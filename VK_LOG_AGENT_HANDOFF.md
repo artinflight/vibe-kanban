@@ -1,5 +1,15 @@
 # Conversation-log reclamation: context for the receiving agent
 
+## Takeover update — 17 November, late UTC
+
+The receiving agent is now pursuing the full goal. The documented lost-reply bug
+is fixed and regression-tested in a separate inert host candidate; 111 focused
+tests including three exact patched-host method tests pass. Old v5 still points
+to the original helper and must not be armed unchanged. STREAM/HANDOFF identify
+the new source pins, active read-only sizing job and completed normal-B metadata
+lookup. No new production conversion or backup payload capture is claimed. The
+prior evidence and scope below remain preserved context.
+
 ## Objective and why it matters
 
 Finish production conversation-log deduplication and reclaim the recoverable

@@ -1,5 +1,12 @@
 # Current production — 17 November 2026
 
+Takeover continuation (17 November, late UTC): production still has only the four
+previously converted logs. The lost-capacity-reply defect is fixed in a NEW inert
+host helper, with 111 focused tests including three exact retained-host method
+tests. It is not deployed or armed. Fresh serving/public/five-watcher checks pass.
+Read-only remaining-log sizing and exact backup-demand preparation are underway;
+see STREAM/HANDOFF for the live job and receipts. No new reclamation is claimed.
+
 The compatible log readers are deployed. Main executable SHA256 is
 `4766246c477fd8d73367969bee9b705586c5b580ddf786515409d977b48ce104`;
 protected reader is `40a91f69f31c1b9751f8f5a699fc8dfaa6f20138ba1b0ab528788aecb7ddd000`.

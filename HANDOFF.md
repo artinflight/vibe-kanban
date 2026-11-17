@@ -1,37 +1,46 @@
-# New-agent handoff — 17 November 2026
+# Active completion handoff — 17 November 2026, late UTC
 
-Latest user instruction: transfer the problem, context and success criteria;
-let the receiving agent determine the solution. Documentation only this turn.
-No new agent, maintenance, conversion, build or backup job was started.
+Full objective: finish lossless backward production deduplication, measured net
+recovery, normal-B recoverability, ordinary UI/service/WakeWatch restoration and
+deployed future-growth evidence. Read VK_LOG_AGENT_HANDOFF.md for the full scope;
+its old plan-only authorization describes the previous turn. The goal is active.
 
-Read [VK_LOG_AGENT_HANDOFF.md](VK_LOG_AGENT_HANDOFF.md). It describes:
+Production remains on the aware readers with ONLY the four earlier archives.
+This turn fixed the documented capacity-release lost-response bug in public
+scripts/log-dedup/capacity_release.py plus prepare_capacity_host.py. New inert
+private host/helper under P/completion-20261117-capacity-host; PREPARED pins them.
+Still integrate capacity_release_source into NEW host config and host_source into
+NEW operation inputs, including source/recovery closures. Do not edit/replay v5
+or any consumed package. The new helper also reconciles saved intent during
+recover_boundary before the old no-release branch.
 
-- Objective: finish lossless production log reclamation and future-growth control;
-  measured recovery, readable histories, recoverable backups and ordinary service.
-- Verified work: compatible readers deployed; four archives recovered827,506,688B
-  net; separate approved build offload recovered303,202,304allocatedB. Do not
-  recredit either or earlier Nov14 retirement.
-- Unfinished results and limitations: full remaining recovery/backup closure,
-  rendered review/settings/queue acceptance and overall growth/timing evidence.
-- Known defect: lost capacity-release reply causes the prepared host helper to
-  index null status.state and leave its release receipt unset. Exact offline
-  reproduction and evidence are retained; no fix is claimed.
-- Actual requirements: preserve histories/references/backup epochs/current writes/
-  pending inputs/selected settings, lossless recovery, compatible readers,
-  other owners, and monitoring plus exact WakeWatch restoration after a pause.
-- Evidence map: exact private receipts, accepted Vibe/Nightly handoffs, prepared
-  artifacts and test coverage limits. Live snapshots are historical, not admission.
-
-The prepared route and older go/no-go plan are context, not a required solution.
-The next agent may choose a better approach. Its authority comes from its actual
-assignment; this documentation transfer does not itself launch production work.
+111 focused tests pass (11 release tests +3 actual patched-host integration tests
+included), format passes using pinned Prettier3.6.1, ops/diff pass. tests.log and
+format-with-pinned-prettier.log retained. No broad build or PR update this turn.
+Fresh LIVE_STATE confirms reader/public/five normal watcher ticks; actual current
+native0.159.2 initial resume is0turns/1,826B, no provider request added.
 
 P=/mnt/vk-storage/vk-log-dedup-20261103-0815/production-20261117.
-Latest decision evidence: final-go-no-go-20261117/FINAL_GO_NO_GO.v2.private.json.
-Known-defect reproduction: same folder CAPACITY_RELEASE_EDGE_REPRO.private.py
-(offline fixtures only; success means bug reproduced, not bug fixed).
-Package-v5 remains unarmed; no ATTEMPT when reread. Consumed attempts, existing
-histories/backups/recovery records and selected settings remain preserved.
+D=P/completion-20261117-demand. B metadata lookup COMPLETE:6,732requested names,
+5,676found entries through existing leased Nightly native context; no payload
+capture. BACKUP-MAP-*.private.json carries decoded map rows. Match exact current
+hash/size against PLAN-*.private.json; lookup presence is not restore proof.
 
-PR291 is draft into staging. Commit/push is not deployment.
+LIVE read-only sizing job: exec session70465, PID2294952, exact script
+D/measure-v3.private.py. Poll this same handle and inspect actual process before
+any retry. START-v3 records identity. Older measure/measure-v2 are terminal with
+retained FAILURE receipts (transient full PSI .18/.19). V3 waits at unchanged
+resource floors for at most600s, persists per-file plans/sizes, and reuses stable
+completed plans; it is not a maintenance/controller/goal loop. At last observation
+1,560 of3,366non-tiny logs /4,761,656,829rawB measured. No live log writes.
+RESULT.private.json means complete sizing only. Preserve partials if it stops.
+
+Next actionable gaps: complete exact B demand and SSD peak/rollback bounds;
+qualify rendered review/settings/queue checks; integrate the fixed helper and
+size-admitted batch order into a fresh sealed operation; then execute all remaining
+beneficial batches, complete normal-B all-store closure and actual allocation/FD
+release, recover ordinary public UI and exact watcher state. Resource floors stay
+4GiBRAM/.10fullPSI/3GiBSSD. Original backups, all objects, inputs and selected
+settings remain protected. No new recovery is claimed yet.
+
 Historical scope: [HANDOFF history](HANDOFF_HISTORY_20261017.md).

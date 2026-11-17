@@ -2899,3 +2899,20 @@ No new agent, maintenance, conversion, build, capture, dispatch/settings change 
 live inventory in this docs turn. Histories/backups/recovery records/pending inputs
 preserved; earlier capacity/queue observations explicitly historical. Required
 format/ops/diff checks and intended handoff publication apply.
+
+
+## 2026-11-17 — Active reclamation takeover: capacity recovery fixed
+
+- Added durable release-intent reconciliation under the genuine kernel lock,
+  preserving epoch/revision/goals/issued history and refusing unknown ownership.
+  New inert host source fixes both freeze and journal-recovery paths; old packages
+  remain immutable and unarmed. Production has not been changed by this fix.
+- 111 focused tests passed, including 11 release and3 exact-host integration
+  cases; format passed with pinned Prettier3.6.1 on SSD, ops and diff passed.
+- Fresh reader/public/watcher checks pass. Current actual native0.159.2 resume:
+  zero historical turns/1,826responseB, no extra provider request.
+- Existing leased normal-B metadata lookup completed6,732names/5,676entries.
+  Read-only compression/hash sizing runs under unchanged resource safeguards;
+  partial plans and two transient-PSI refusal receipts are preserved. Full
+  reclamation/backup closure/service acceptance remain unfinished; no new physical
+  recovery is credited. Exact current process and next actions are in HANDOFF.

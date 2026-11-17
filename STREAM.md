@@ -17,37 +17,45 @@ Original service was verified and WakeWatch restored exactly, including all five
 ordinary ticks. Reusing the existing byte-identical sealed PLAN fixes that
 specific failure without changing the original plan or weakening the guard.
 
-The corrected d6ed2cee operation completed normal B software/current-frontend/
-root-control closure, then failed BEFORE maintenance during independent RAM
-original verification on the unchanged memory/pressure admission guard. Zero
-conversion/reclamation; original service and exact WakeWatch restoration with
-5ordinary ticks/status/check passed. Its consumed attempt and B epochs remain.
+The d6ed2cee attempt stopped before maintenance on resource admission. The
+9f616dc0 attempt completed online B original/software/frontend/control proof and
+actual quiet current-main SQL API backup/independent B restore (187,142,144B),
+then failed during reader activation's separate resource guard before ANY log
+conversion. Original software/public route/current DB were recovered in325.89s;
+all32 uncertain inputs and zero queued work retained. Exact WakeWatch restoration,
+5ordinary ticks/status/check passed. Both attempts and every B epoch are preserved.
 
-Successor9f616dc0 is RUNNING as
-`vk-log-dedup-full-20261117-9f616dc0.service`, invocation
-`5c81a2dbee98494096d826f1cb468ba4`, initial PID2045487. It prepares actual
-original/software/frontend B proof ONLINE, then waits for this root's natural
-completion before the maintenance boundary. Resource refusal safely parks with
-the SAME guards/floors and no progress credit; unrelated refusals still fail. Private case:
+The correction now covers ALL local resource gates: source-pinned owner activation
+and custody adapter safely park at unchanged4GiB/.10 admission floors, with no
+admitted work or progress credit. Activation revalidates real fence, B context,
+route, ingress and DB identity on each wait; mount/foreign-custody failure still
+refuses.7 focused guard tests pass, including changed ingress/route and whole-source
+archive rollback refusal. No native build or binary change is needed.
+
+Fresh operationa0885d2b is RUNNING as
+`vk-log-dedup-full-20261117-a0885d2b.service`, initial PID2377580, invocation
+`2dfb725676e247faa16abf38bfcb2bb4`. Private case:
 `/mnt/vk-storage/vk-log-dedup-20261103-0815/production-20261117` (`P`).
-`P/SEALED_OPERATION.private.json` and `P/CURRENT_OPERATION.private.json` identify
-operation9f616dc0 and its exact folder/inputs/source. Inputs SHA256
-`e7692265765811e93de733bd9e040b1cfd622481932e7dfc76aefd20de45b20a`;
-controller-v3 SHA256
-`bd66c24904af1712d21117cb05e6341c22b6e5753f9811cdbe5064a374fcaba6`.
-Actual source/class/callback/artifact preflight and7 controller/admission tests pass.
-Existing verified-data progress supervisor:600s idle,300s separate recovery,
-no total elapsed cutoff. The actual operation receipts, not preparation, govern
-all claims. One exact existing-root continuation is sealed with unchanged settings.
+`P/SEALED_OPERATION.private.json` / `CURRENT_OPERATION.private.json` identify
+operationa0885d2b, exact folder and inputs SHA256
+`adc18e6e8e78b779685a080848155ebd4cc54393431321403ef20602d10fd0e6`.
+Root controller-v3 remainsbd66c249. New `release-resource-wait-v5/PREPARED.private.json`
+binds safe-wait owner/source/adapter hashes and fresh recovered service identities.
+Actual module/class/callback/owner preflight passes. Online preparation runs while
+Vibe remains usable, then waits for rootb0b7665b natural completion. Existing
+600s verified-data no-progress/300s recovery supervision remains; no total cutoff.
+Same actual B/RAM custody, all-batch conversion/recovery and single exact-root
+continuation remain. Preparation/SQL proof is NOT space reclamation.
 
-ONLINE PREPARATION PASSED at16:48:52UTC. Actual SAME normal B context
-restored8 original/sidecar versions /1,053,055,572B with full EOF/hash,
-Linux metadata and separate inodes. Both reader binaries and1,309 current frontend
-files have normal B closure;110 exact root controls are closed. The operation's
-`ONLINE_PREPARATION_VERIFIED.private.json` and `FIRST_ORIGINAL_B_PROOF.private.json`
-are authoritative. Real B/RAM context is retained. Current wait is ONLY natural
-root completion, then actual quiet SQL capture/reader deployment/all batches.
-Zero production manifests/reclaimed bytes at this root checkpoint.
+CURRENT a0885d2b ONLINE PREPARATION PASSED at17:19:45UTC:8original/sidecar
+versions /1,053,055,572B independently normal B restored to full EOF/hash/Linux
+metadata/separate inodes; software/frontend and current operation controls closed.
+Actual B/RAM context remains held. No pressure refusal is recorded in this new
+preparation. It waits only for rootb0b7665b natural completion before fresh quiet
+SQL checkpoint, corrected activation, ALL positive-benefit batches, complete
+object closure and actual service/WakeWatch recovery. Zero reclamation so far.
+A sanitized owner status was shared; detailed receipts remain private after
+external-disclosure approval review refused them. No owner action is required.
 
 A FRESH global automatic WakeWatch dispatch pause is installed for this operation.
 All five ordinary monitors/timer/configs/incident ledgers remain active and
@@ -69,13 +77,12 @@ restoration. Preserve nonbeneficial/active/pending/invalid sources with disposit
 
 Vibe current99-migration/later-write/fallback/frontend handoff and Nightly's68
 independently restored versions /3,073,516,522B are complete. Both owners are done;
-no further approval/turn is awaited. Existing shared coordination
-records the corrected operation (revision55). Nightly remains sole producer/schedule owner.
+no further approval/turn is awaited. Existing shared coordination records the current exact operation. Nightly remains sole producer/schedule owner.
 
 Actual retained predeployment resumes were measured from complete fragmented
 wire captures:7turns/7,729,679B, then THIS root8turns/10,746,496B. Both report
-native0.159.2. The continued d9 root also still reports0.159.2,
-9turns/11,155,606 response bytes; no deployment or growth reduction yet. The isolated actual0.166 fixture passed2turns/54,084B full versus
+native0.159.2. The continued d9 root reported0.159.2,9turns/11,155,606B; current b0 root
+also reports0.159.2,10turns/11,391,874B. No deployed growth reduction yet. The isolated actual0.166 fixture passed2turns/54,084B full versus
 0turns/2,127B narrow, but that is NOT deployed0.166 evidence. Measure the next
 actual production capture/version with `P/measure_resume.private.py`; compare
 `P/MEASURED_PREDEPLOYMENT_CURRENT_RESUME.private.json`. No extra provider turn.

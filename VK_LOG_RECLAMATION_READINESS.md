@@ -12,6 +12,14 @@ Its successor prepares B originals/controls online, safely waits for the SAME
 resource floors without progress credit, then waits for natural root quiet; use the current SEALED_OPERATION pointer, never
 replay either the Nov4 or first Nov17 consumed launcher.
 
+The subsequent actual handover also exposed a separate activation resource gate.
+It recovered original service/current DB/route and WakeWatch before converting
+any logs. The source-pinned successor now safely waits at BOTH activation and
+custody guards with unchanged4GiB/.10 floors, per-wait actual custody rechecks and
+no progress credit; foreign/missing ownership still refuses. Retain the existing
+600s data-progress/300s separate recovery guard. Never replay failed attempts or
+mistake previously accepted backup readiness for completed conversion.
+
 Before downtime retain the global WakeWatch dispatch pause and verify there are
 no unsettled automatic deliveries or queued work. Keep monitors/reconciliation,
 notifications, timer/configurations and incident ledgers active. The owned pause

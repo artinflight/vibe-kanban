@@ -2758,3 +2758,24 @@ current frontend members and110 root controls have normal B closure. No pressure
 refusal occurred in this attempt. Actual B/RAM context remains held; the same
 controller waits only for natural root completion before maintenance and full
 production conversion/recovery. Zero reclamation at this checkpoint.
+
+
+2026-11-17:9f616dc0 completed quiet current SQL API/independent B restore
+187,142,144B, then activation separately refused resource admission before any
+log conversion. Exact original-software/current-DB/route recovery325.89s and
+WakeWatch restoration/5ticks/status/check passed;32 uncertainties/zero queue
+preserved. Fresh source-pinned activation and adapter now safely wait at SAME
+4GiB/.10 floors with no work/progress credit, actual per-wait custody rechecks
+and unchanged600s/300s supervision.7 focused guard/rollback tests pass. New
+a0885d2b operation/current recovered identities are pinned and actual preflight
+passes; its online B preparation is running. Current real continuation remains
+0.159.2,10turns/11,391,874B; no deployed growth or space-reclamation claim.
+
+
+2026-11-17 17:19:45UTC:a0885d2b ONLINE_PREPARATION_VERIFIED passed actual
+normal B8versions/1,053,055,572B with full EOF/hash/Linuxmetadata/separate-inode
+proof. Software/frontend/updated guarded-source controls closed; live context
+held, waiting only natural root completion before all-scope maintenance. All5
+ordinary monitor ticks/unchanged attempt counts/no unsettled wakes verified.
+Detailed external handoff rejected by automatic review; sanitized owner decision
+posted successfully, full receipts private. No production reclamation yet.

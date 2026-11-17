@@ -1,67 +1,62 @@
-# Production reclamation pickup — 2026-11-17
+# Prepared partial continuation — 17 November 2026
 
-Read STREAM.md. Zero production manifests/reclaimed bytes so far. Preserve all
-originals/backup epochs, pending inputs and selected model/route/permission.
+Read STATE/STREAM and the OP::Disk Space procedure. Latest user requests preparation,
+not launch. Foura088 manifests are INSTALLED; do not rerun the old operation or
+raw-first converter. Net first-batch blocks recovered827,506,688B, including all
+objects/object-directory cost; no known reader/proxy original FD remains.
 
-The consumed9f616dc0 attempt verified normal B originals/software/frontend and
-quiet current-main SQL API/B recovery (187,142,144B), then failed activation's
-separate resource gate BEFORE conversion. Original software/current DB/public
-route recovered in325.89s;32 uncertain inputs/zero queue preserved. WakeWatch
-exact restoration/5ordinary ticks/status/check passed. Never replay it.
+Vibe is recovered on aware4766246c/40a91f69 readers with current99SQL/latest
+frontend. Public TLS/assets and all five serving/ingress owners verified. Previous
+WakeWatch dispatcher/five configurations restored EXACTLY; five ordinary monitors
+advanced, timer active. No live setting/prompt/queue was changed this turn.
 
-Current single native operation IS RUNNING:
-`vk-log-dedup-full-20261117-a0885d2b.service`, initial PID2377580, invocation
-`2dfb725676e247faa16abf38bfcb2bb4`. Private case (`P`):
-`/mnt/vk-storage/vk-log-dedup-20261103-0815/production-20261117`.
-`SEALED_OPERATION.private.json` / `CURRENT_OPERATION.private.json` identify
-operationa0885d2b, exact INPUTS SHAadc18e6e8..., controller-v3bd66c249 and
-`release-resource-wait-v5/PREPARED.private.json` owner/source/current-owner pins.
-Binaries4766246c/40a91f69 are reused; no build/new agent/goal/producer pipeline.
+Private `P=/mnt/vk-storage/vk-log-dedup-20261103-0815/production-20261117`.
+Current production evidence is operation-a088... first-journal, original normal-B
+proof and FIRST_DYNAMIC_B, plus isolated-canary-diagnostic-20261117/recover-only-v3
+release receipts and operation-local WakeWatch restoration/normal ticks.
+FINAL NEW package: `P/resume-after-first-20261117/package-v5/PREPARED.private.json`.
+NEXT_INPUTS SHA53de9edf727c8544cb4a6e18c3fd7f214ab3059b04a6ce9891459335289f363f.
+UNARMED; no ATTEMPT, no automatic wake. Existing CURRENT_OPERATION points to the
+consumed old run, not this package. Earlier package versions are preserved/inert.
 
-CURRENT ONLINE PREPARATION PASSED17:19:45UTC:8original/sidecar versions /
-1,053,055,572B normal B independently verified full EOF/hash/Linuxmetadata/
-separate inodes; software/frontend/current controls closed. Actual B/RAM context
-is retained. It waits ONLY for rootb0b7665b natural completion before maintenance.
-Read its ONLINE_PREPARATION_VERIFIED and FIRST_ORIGINAL_B_PROOF receipts.
+History failure was isolated workspace-path context, not changed archive bytes.
+Exact raw/CAS/live parity qualifies one main-page expectation change; protected
+and all noncanary requirements unchanged. No normalization. Return scope fixed.
+Final checker safely waits at the same memory/PSI guard and rejects mount/owner
+changes. FINAL_HISTORY_RECHECK_FAILURE records the additional diagnostic300s
+timeout after request14, NOT fresh full-history acceptance. Earlier complete
+same-owner history proofs remain preserved; fresh full production acceptance is
+still required. No production total cutoff was added.
 
-ALL local activation/custody resource gates now safely wait at SAME4GiB/.10
-limits, performing no admitted work and receiving no progress credit. Activation
-rechecks actual fence/B/route/ingress/DB each wait; foreign ownership/mount loss
-refuses.7guard tests and actual class/callback/owner preflight pass. Existing600s
-data-progress/300s recovery remain, no total cutoff. Original137d6cd7/b50beb13
-readers currently serve raw logs with fresh recovered PIDs, healthy/unfrozen.
+Public resume.py verifies committed journal/inodes/hashes/decoded bytes/sidecars/
+retained B proof; rejects unknown CAS; excludes first batch. Genuine fresh-fence
+adoption preserves live aware readers and persistent boot paths. New worker uses
+ONLY convert_next_held. Failure rolls back only current batch. Recovery NEVER
+reruns failed strict history check or selects unaware fallback. Independently
+validate current decoded EOF and unchanged version-bound committed proofs,
+identities/settings/review/queues, then use normal authenticated host release.
+Proof seals are included in normal B batch controls; data/custody changes refuse.
 
-FRESH global WakeWatch pause is operation-local.5ordinary monitor ticks advanced
-with unchanged configs/attempts, zero unsettled delivery, resource-guard timer
-active. Monitoring/reconciliation/notifications remain active. Supervisor restores
-exact source/configs after ordinary service recovery, verifies5ordinary ticks and
-status/check, then allows ONE exact existing-root continuation with saved config.
+Before production: fresh natural quiet/owner/queue checks and exact WakeWatch pause,
+new immutable arming inputs/preimage/restore refs, then fresh SQL B/real WriterFence
+and SAME selected normal-B custody. Current SSD sample is5,390,336B below the
+unchanged3GiBfloor; memory/PSI admitted at last sample. No cleanup scope or reduced
+floor is implied. Preserve every existing recovery epoch. Then all positive-benefit
+batches, complete all-object closure and ordinary rendered desktop/mobile/history/
+review/settings/queue/service/WakeWatch acceptance remain. No owner approval or
+new pipeline is awaited. Nightly sole producer/schedule owner; contracts unchanged.
 
-Full scope: first4 acceptance THEN ALL positive-benefit closed batches; actual
-normal B originals/sidecars/current-main SQL/software/current frontend/ALL local
-objects (unreferenced included)/manifests/directory/link closure; Python+production
-Rust EOF; actual unique allocation and FD release; ordinary public desktop/mobile/
-history/review/settings/queue recovery; exact WakeWatch restoration. Read actual
-RESULT/FAILURE/RECOVERY_FAILURE, VERIFIED_RECLAMATION, PHYSICAL_RELEASE, closure/
-SQL/software/frontend and browser/restoration receipts before claiming success.
-Retire only new staging replicas after publication+B proof; never boot unaware
-readers over ANY manifest or restore old DB over later writes.
+Read-only inventory:3,433remaining closed candidates/90,992,755,255logicalB;
+82tiny preserved;12active-session/8pending/1invalid/4archived excluded. Reobserve
+under fresh custody rather than freeze today's eligible set blindly.
+Actual deployed native0.159.2 now0turns/5,126B versus8turns/10,746,496B baseline;
+99.9523% initial-response reduction. Isolated0.166 fixture is NOT actual runtime.
+No extra provider turn. Separate Nov14 recovery31,572,000,768B not recredited.
 
-Vibe handoff: `/mnt/vk-storage/vk-log-reader-release-20261104/refresh-20261117-v1/HANDOFF_MANIFEST.private.json`.
-Nightly: dedup case `nightly-coordination-20261117/ROOT_HANDOFF.private.json`.
-Both owners are finished; no owner approval/turn is needed. Use exact batch-source-v3,
-BASE_PROVIDER_CATALOG/old Reader class, genuine fence, serial B contexts and
-immutable batch custody. Sanitized owner status shared; automatic review refused
-detailed external disclosure, so full new receipts stay private.
+97focused tests and8final-package tests pass; actual unchanged native build/8Rust
+tests previously passed. Full workspace/current rendered UI not certified. PR291
+remains draft into staging. See private CURRENT_STATE, FIRST_BATCH_ALLOCATION,
+COMPLETED_BATCH_VERIFIED, REMAINING, MEASURED_POSTDEPLOYMENT_CURRENT_RESUME and
+final history result/failure; originals and all old operation receipts preserved.
 
-Measure real resumed capture/version with `P/measure_resume.private.py`. Baseline
-MEASURED_PREDEPLOYMENT_CURRENT_RESUME:0.159.2,8turns/10,746,496B; current b0
-still0.159.2,10turns/11,391,874B. Native correction remains unactivated. Isolated
-0.166 qualification is NOT deployed evidence; no extra inference for QA.
-
-Disk separately retired32,579 paths/31,572,000,768 allocatedB on Nov14; do not
-recapture/credit it again. Accepted18 old views require B restore-before-view.
-Publicd007c88d2/native build+8Rust tests,74Python/13helper tests pass; PR291 draft
-into staging. Historical checkpoints remain in Git/private case receipts.
-
-Historical scope: [HANDOFF_HISTORY_20261017.md](HANDOFF_HISTORY_20261017.md).
+Historical scope: [HANDOFF history](HANDOFF_HISTORY_20261017.md).

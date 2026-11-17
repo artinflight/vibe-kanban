@@ -1,16 +1,19 @@
 # OP::Disk Space — lossless conversation log deduplication
 
-Status: implemented and locally tested; production installation and reclamation
-are not performed. The follow-up [reclamation readiness report](VK_LOG_RECLAMATION_READINESS.md)
-adds the guarded conversion/rollback command, backup graph and growth audit,
-including owner-discovered protected-reader and current-B blockers. Do not confuse a packed copy with recovered free space.
+Status (17 November 2026): compatible readers and native-resume prevention are
+DEPLOYED; the first four lossless manifests are installed. Net first-batch
+recovery is827,506,688 allocated bytes including object-directory cost. Full
+reclamation remains unfinished. [Current continuation procedure](VK_LOG_RECLAMATION_READINESS.md)
+excludes that completed batch and preserves all old recovery epochs. The next
+production operation is prepared and unarmed; never replay the old consumed run.
 
 ## Cause, scope and preservation
 
 The [disk investigation and prevention fix](VK_DUPLICATE_HISTORY_FIX.md) identify
 replayed native `thread/resume` history as the main measured growth mechanism.
 The exact-qualified `vibe-codex-executor/0.159.2` narrow-resume correction is
-already present in this branch. Deploy it with this change. It prevents historical
+deployed in the qualified composite main build. Its exact allowlist also covers
+qualified0.166.0, but the ACTUAL continued runtime remains0.159.2. It prevents historical
 turns being returned on qualified resumes, retaining new output and native model
 context. Other identities/versions still use their existing protocol; requalify
 new native versions rather than widening that guard without tests.

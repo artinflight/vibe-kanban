@@ -1,26 +1,22 @@
 {
   "schema": 2,
-  "generated_at_utc": "2026-11-03T10:58:25.374567+00:00",
+  "generated_at_utc": "2026-11-17T20:19:55.268824+00:00",
   "canonical_repo": "/home/mcp/_vibe_kanban_repo",
   "canonical_repo_dirty": true,
   "canonical_branch": "vk/land-live-fixes-20260422",
   "canonical_head": "06a65a3ce4b522a54cb7a3ae13a6ce200826b282",
-  "source_commit": "9a4179e8bdf38e93d1a81faca6c665cadd6fddc7",
-  "deployed_at_utc": "2026-10-30T03:18:14Z",
+  "source_commit": "087319cc49055ad44474dea33be729720dec9518",
+  "deployed_at_utc": "2026-11-17T17:30:30.907570+00:00",
   "version_label": "0.1.42",
   "live_service": "vibe-kanban-native-review-20261015.service",
-  "live_binary": "/mnt/vk-storage/vk-deployment-reconcile-20261030/activation-build-1/candidate-server",
-  "live_binary_sha256": "137d6cd7b6475f47f9b92455a879b5fd23d3b3a5374743c77d0c694f3f1257d2",
+  "live_binary": "/mnt/vk-storage/vk-log-dedup-20261103-0815/production-20261117/native-166-build/reader-server",
+  "live_binary_sha256": "4766246c477fd8d73367969bee9b705586c5b580ddf786515409d977b48ce104",
   "last_observed_process": {
-    "MainPID": "645213",
-    "MemoryHigh": "infinity",
-    "MemoryMax": "infinity",
-    "MemorySwapMax": "infinity",
-    "TasksMax": "38282",
+    "MainPID": "2573710",
     "ActiveState": "active",
-    "SubState": "running",
-    "InvocationID": "440a8acde3f4428abc3a27a8f601808d",
-    "executable_sha256": "137d6cd7b6475f47f9b92455a879b5fd23d3b3a5374743c77d0c694f3f1257d2"
+    "FreezerState": "running",
+    "InvocationID": "74e3735e38574268a329ee5a31280227",
+    "executable_sha256": "4766246c477fd8d73367969bee9b705586c5b580ddf786515409d977b48ce104"
   },
   "live_state_dir": "/home/mcp/.local/share/vibe-kanban-green-xdg/vibe-kanban",
   "live_database": "/home/mcp/.local/share/vibe-kanban-green-xdg/vibe-kanban/db.v2.sqlite",
@@ -32,17 +28,17 @@
   "history_proxy_port": 5640,
   "gateway_port": 4720,
   "public_frontend_pointer": "/home/mcp/.local/share/vibe-kanban/frontend-dist/current",
-  "public_frontend_release": "/mnt/vk-storage/vk-invisible-workspaces-20261103-75db/paired/candidate",
+  "public_frontend_release": "/mnt/vk-storage/vk-read-later-sync-20261105/no-restart-release/paired/candidate",
   "public_assets": [
-    "/assets/index-BDlsFLgm.css",
-    "/assets/index-CM79W1F0.js"
+    "/assets/index-CH6XvTRC.js",
+    "/assets/index-DeUaYq-8.css"
   ],
-  "frontend_routing_note": "Visibility fix live: default All workspace assignments and mobile task statuses, visible saved-search chip, explicit Mine hidden-count recovery. Carries forward the November 3 scrolling correction and existing unread protections. Reload existing tabs/devices. Backend/API/DB/services unchanged.",
+  "frontend_routing_note": "Existing later owner-published frontend preserved during log-reader activation and recovery; fresh public TLS/index/entry assets match. Prior frontend publication records below are historical.",
   "selected_runtime_environment": {
     "HOST": "127.0.0.1",
     "PORT": "5621",
     "BACKEND_PORT": "5621",
-    "VK_FRONTEND_DIST_DIR": "/mnt/vk-storage/vk-deployment-reconcile-20261030/activation-release-1/paired-frontend/candidate",
+    "VK_FRONTEND_DIST_DIR": "/home/mcp/.local/share/vibe-kanban/frontend-dist/current",
     "CODEX_HOME": "/home/mcp/.local/share/vibe-kanban-green-codex-home",
     "XDG_DATA_HOME": "/home/mcp/.local/share/vibe-kanban-green-xdg",
     "DISABLE_WORKTREE_CLEANUP": "1",
@@ -66,9 +62,10 @@
     "source_commit": "ddaaf64a5870124842c385e490a0b40e1174db86",
     "frontend": "/mnt/vk-storage/vk-deployment-reconcile-20261030/activation-release-1/paired-frontend/fallback",
     "release_package": "/mnt/vk-storage/vk-deployment-reconcile-20261030/activation-release-2",
-    "policy": "Drain current work and recheck compatibility; use paired executable/frontend against the latest data. Never overwrite new writes with an old snapshot.",
+    "policy": "Historical artifact only. NEVER boot archive-unaware software while any VKLOGCAS1 remains. Recover forward with qualified aware readers, or independently restore EVERY manifest to exact raw under real custody first. Preserve current SQL and every backup epoch.",
     "roundtrip": "Fresh current-data candidate/fallback/candidate preserved 60 tables including later-write probe, 99 migrations, 18 protected and four recent histories.",
-    "antigravity_execution": "Disabled by fallback; existing Antigravity records remain recognizable; recheck after future writes/schema changes."
+    "antigravity_execution": "Disabled by fallback; existing Antigravity records remain recognizable; recheck after future writes/schema changes.",
+    "usable_with_current_archived_logs": false
   },
   "antigravity": {
     "activation_verified": true,
@@ -123,10 +120,10 @@
       "provenance_note": "Use the PR merge event for rebased staging IDs. Original deployed source and release hashes remain immutable; merging Git does not redeploy."
     }
   },
-  "evidence_root": "/mnt/vk-storage/vk-deployment-reconcile-20261030/activation-release-2",
-  "current_investigation_root": "/mnt/vk-storage/vk-deployment-reconcile-20261030",
+  "evidence_root": "/mnt/vk-storage/vk-log-dedup-20261103-0815/production-20261117/resume-after-first-20261117",
+  "current_investigation_root": "/mnt/vk-storage/vk-log-dedup-20261103-0815/production-20261117",
   "desktop_backup_root": "desktop:B:/vk-backups/vk-nightly-efficiency-20261026/objects-v1",
-  "previous_record": "deployment-history/20261030-before-reconciliation/LIVE_DEPLOYMENT.json",
+  "previous_record": "deployment-history/20261117-before-log-reader-continuation/LIVE_DEPLOYMENT.json",
   "unresolved": [
     "Main promotion is separate; final integration status and documentation-successor checks are recorded on PR #284.",
     "Private retained-history bindings and retained host/Nightly controls remain required and deliberately absent from public Git.",
@@ -140,18 +137,15 @@
     "binary_sha256": "95312f4f3be43cdc109159acc680dc6be73daed0f162e3a220eb5ac6a936cddc",
     "bundle": "/mnt/vk-storage/vk-cutback-ready-20261029/bundle",
     "frontend": "/mnt/vk-storage/vk-t63-notification-scope-release-20261019/frontend-release",
-    "policy": "Switch the paired executable/frontend against latest data; never restore an old database over new writes.",
-    "roundtrip": "59 application tables, migrations and a later-write sentinel retained in isolated new-to-fallback-to-new rehearsal"
+    "policy": "Historical artifact only. NEVER boot archive-unaware software while any VKLOGCAS1 remains. Recover forward with qualified aware readers, or independently restore EVERY manifest to exact raw under real custody first. Preserve current SQL and every backup epoch.",
+    "roundtrip": "59 application tables, migrations and a later-write sentinel retained in isolated new-to-fallback-to-new rehearsal",
+    "usable_with_current_archived_logs": false
   },
   "previous_live_release_evidence": "/mnt/vk-storage/vk-new-build-repair-20261029",
   "frontend_build": {
-    "feature_source_commit": "66bbe11786983886851d9473ec662ec7bca6571d",
-    "preserved_live_source": "/mnt/vk-storage/vk-scrolling-projects-20261103-9cb7-correction/source",
-    "feature_manifest": "/mnt/vk-storage/vk-invisible-workspaces-20261103-75db/frontend-artifact.json",
-    "composition_manifest": "/mnt/vk-storage/vk-invisible-workspaces-20261103-75db/frontend-composition.json",
-    "unchanged_input_count": 1313,
-    "build_log": "/mnt/vk-storage/vk-invisible-workspaces-20261103-75db/frontend-build-final.log",
-    "paired_asset_count": 978
+    "qualification_manifest": "/mnt/vk-storage/vk-log-reader-release-20261104/refresh-20261117-v1/FRONTEND_CURRENT.private.json",
+    "verified_manifest_files": 1309,
+    "rebuilt_by_log_deduplication": false
   },
   "recovery": {
     "total_50_minute_cutoff": false,
@@ -163,15 +157,12 @@
     "private_optional_tests_skipped": 22
   },
   "last_readonly_verification": {
-    "status": "passed",
-    "UTC": "2026-11-02T18:28:43.114247+00:00",
-    "receipt": "/mnt/vk-storage/vk-disappearing-unread-20261102-3ad7/fix-release-4/activation.json",
-    "database_and_backend_identity_preserved": true,
-    "public_browser": "/mnt/vk-storage/vk-disappearing-unread-20261102-3ad7/integration/browser-settled-live/results.json",
-    "running_turn_browser": "/mnt/vk-storage/vk-disappearing-unread-20261102-3ad7/integration/browser-pending-live/results.json",
-    "validation_scope": "public TLS/assets/health, five services, backend hash, DB identity/99 migrations; four served layout cases plus API-verified running-turn guard; all writes intercepted"
+    "status": "passed_for_stated_scope",
+    "UTC": "2026-11-17T20:19:55.268824+00:00",
+    "receipt": "/mnt/vk-storage/vk-log-dedup-20261103-0815/production-20261117/resume-after-first-20261117/CURRENT_STATE.private.json",
+    "validation_scope": "Actual aware main/protected hashes and stable owners; all five serving/ingress units active/thawed; public TLS/index/entry assets; authoritative database inode and99 migrations; exact WakeWatch source/five configurations and five ordinary post-restoration ticks. Full current history rerun and rendered desktop/mobile are separate receipts/gates."
   },
-  "frontend_deployed_at_utc": "2026-11-03T10:55:35.807043+00:00",
+  "frontend_deployed_at_utc": null,
   "previous_frontend_build": {
     "source_commit": "800011bd573e2869d6ea4c0e5bfba4d9046d9cbe",
     "feature_commit": "800011bd573e2869d6ea4c0e5bfba4d9046d9cbe",
@@ -447,5 +438,85 @@
     "integration_authority": "PR #292 final checks and merge event; original deployed source remains immutable",
     "full_hosted_baseline": "https://github.com/artinflight/vibe-kanban/actions/runs/41740959926",
     "recovery_contracts": "https://github.com/artinflight/vibe-kanban/actions/runs/41741243530"
-  }
+  },
+  "previous_backend_deployment": {
+    "source_commit": "9a4179e8bdf38e93d1a81faca6c665cadd6fddc7",
+    "deployed_at_utc": "2026-10-30T03:18:14Z",
+    "live_binary": "/mnt/vk-storage/vk-deployment-reconcile-20261030/activation-build-1/candidate-server",
+    "live_binary_sha256": "137d6cd7b6475f47f9b92455a879b5fd23d3b3a5374743c77d0c694f3f1257d2",
+    "last_observed_process": {
+      "MainPID": "645213",
+      "MemoryHigh": "infinity",
+      "MemoryMax": "infinity",
+      "MemorySwapMax": "infinity",
+      "TasksMax": "38282",
+      "ActiveState": "active",
+      "SubState": "running",
+      "InvocationID": "440a8acde3f4428abc3a27a8f601808d",
+      "executable_sha256": "137d6cd7b6475f47f9b92455a879b5fd23d3b3a5374743c77d0c694f3f1257d2"
+    }
+  },
+  "source_composite": {
+    "source_commit": "d007c88d2620fbed2c0a890b5b285ada96f32d9d",
+    "source_base": "087319cc49055ad44474dea33be729720dec9518",
+    "overlay_sha256": "e76116a00410b029cb67b2e8ae8c6cbe379d011473f326d96b1e946e22638aea",
+    "artifact_sha256": "4766246c477fd8d73367969bee9b705586c5b580ddf786515409d977b48ce104",
+    "bytes": 110180848,
+    "phases": [
+      {
+        "name": "native-resume-tests",
+        "status": "passed",
+        "started_at": 1794927789.2761636,
+        "exit_code": 0,
+        "seconds": 1773.0160658359528
+      },
+      {
+        "name": "build",
+        "status": "passed",
+        "started_at": 1794929562.2927363,
+        "exit_code": 0,
+        "seconds": 2180.7256877422333
+      }
+    ]
+  },
+  "deployed_at_utc_note": "Actual completed aware-reader activation receipt; public release and first-batch history acceptance failed later and required the separately recorded recovery.",
+  "previous_frontend_build_before_log_readers": {
+    "feature_source_commit": "66bbe11786983886851d9473ec662ec7bca6571d",
+    "preserved_live_source": "/mnt/vk-storage/vk-scrolling-projects-20261103-9cb7-correction/source",
+    "feature_manifest": "/mnt/vk-storage/vk-invisible-workspaces-20261103-75db/frontend-artifact.json",
+    "composition_manifest": "/mnt/vk-storage/vk-invisible-workspaces-20261103-75db/frontend-composition.json",
+    "unchanged_input_count": 1313,
+    "build_log": "/mnt/vk-storage/vk-invisible-workspaces-20261103-75db/frontend-build-final.log",
+    "paired_asset_count": 978
+  },
+  "protected_history_reader": {
+    "binary_sha256": "40a91f69f31c1b9751f8f5a699fc8dfaa6f20138ba1b0ab528788aecb7ddd000",
+    "last_observed": {
+      "main_pid": 2573723,
+      "server_pid": 2573735,
+      "invocation": "9c0b08030aa445318309e41dff070786"
+    },
+    "archive_aware": true
+  },
+  "log_deduplication": {
+    "status": "first_batch_installed_full_scope_unfinished",
+    "installed_files": 4,
+    "net_allocated_recovery_including_objects_and_object_directory_bytes": 827506688,
+    "first_batch_is_not_total_reclamation": true,
+    "native_runtime": "vibe-codex-executor/0.159.2",
+    "measured_initial_resume": {
+      "before_turns": 8,
+      "before_response_bytes": 10746496,
+      "after_turns": 0,
+      "after_response_bytes": 5126
+    },
+    "isolated_0166_fixture_is_not_deployed_runtime": true,
+    "procedure": "VK_LOG_RECLAMATION_READINESS.md",
+    "latest_preparation_unarmed": true,
+    "old_attempt_consumed": true,
+    "normal_B_all_object_closure_still_required": true,
+    "rendered_UI_acceptance_still_required": true
+  },
+  "previous_frontend_deployed_at_utc": "2026-11-03T10:55:35.807043+00:00",
+  "frontend_publication_timestamp_status": "Later existing owner release preserved; its publication timestamp was not requalified by this task."
 }

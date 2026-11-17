@@ -2779,3 +2779,43 @@ held, waiting only natural root completion before all-scope maintenance. All5
 ordinary monitor ticks/unchanged attempt counts/no unsettled wakes verified.
 Detailed external handoff rejected by automatic review; sanitized owner decision
 posted successfully, full receipts private. No production reclamation yet.
+
+2026-11-17 — Prepared partial continuation after the actually installeda088 first
+batch; no new maintenance/build/agent/goal/B pipeline launched. Four manifests,
+sidecars, complete decoded originals and retained independent normal-B proof
+reverified. First-batch net827,506,688 allocatedB includes ALL canary objects and
+object-directory blocks;174 known reader/proxy FDs contain no original inode.
+Current aware main4766246c/protected40a91f69, latest frontend/current99SQL, public
+TLS/assets and five serving/ingress units verified. Exact WakeWatch source/five
+configurations restored; five ordinary monitors advanced, timer remains active.
+
+Added source-root-bound completed-journal verification/exclusion, no-restart real
+fence/B/reader adoption, exact context-qualified raw/CAS/live history expectation
+checks, independent compatible recovery and stable-version production EOF seals.
+Recovery does not rerun the same failed strict history checker or decode the
+whole growing union repeatedly; corruption/custody loss retains maintenance.
+Existing/future object/sidecar/all-store normal-B closure contract remains intact.
+
+Final unarmed package-v5 PREPARED/NEXT_INPUTS in production-20261117/resume-after-
+first-20261117 pins the finite no-replay controller and sources; no ATTEMPT exists
+and automatic continuation is disabled. Source fixtures and exact-package tests
+prove next-batch-only conversion/current-batch rollback/old-journal preservation.
+97focused tests and8sealed-package tests pass; required full format, ops/diff
+checks pass. Extra full live-history diagnostic reached request14 (all8canary and
+at least5T18 comparisons completed) then hit its300s diagnostic limit; it is NOT
+fresh full-history acceptance. Earlier complete same-owner context/history proof
+is preserved. Production600s no-progress/300s recovery remains unchanged.
+
+Current candidates3,433/90,992,755,255logicalB include82tiny preserved;12active-
+session/8pending/1invalid/4archived excluded. Latest recorded SSD sample is about
+6MB below unchanged3GiBfloor; no arbitrary cleanup or weakened admission. Fresh
+pause/queue/owner checks, currentSQL/B/realfence, all positive-benefit conversions,
+complete object closure, actual new-run recovery and ordinary rendered desktop/
+mobile/full-service/WakeWatch acceptance remain production work. Shared owner
+decision updated with sanitized status; sole Nightly ownership/contracts unchanged.
+
+THIS actual production native0.159.2 resume measured0historical turns/5,126B versus
+8turns/10,746,496B baseline,99.9523% initial-response reduction with zero new
+provider requests. Isolated0.166 fixture is not a deployed-runtime claim. Updated
+LIVE_DEPLOYMENT/STATE to verified aware identities and prohibited old fallbacks;
+prior manifests/state and every recovery epoch retained. PR291 remains draft.

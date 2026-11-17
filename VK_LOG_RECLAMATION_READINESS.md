@@ -1,64 +1,127 @@
-# Current production continuation — 17 November 2026
+# OP::Disk Space — resume after the completed first batch (17 November 2026)
 
-The old Nov4 native ATTEMPT is consumed/inactive; its busy producer lease stopped
-it before any production boundary. Fresh owner handoffs are ready. Root owns the
-new full-scope operation, not another four-log-only attempt. Current status is in
-STREAM.md/HANDOFF.md and the private production-20261117 case. Actual production
-reclamation remains zero until a verified manifest publication/accounting receipt.
-The first Nov17 launcher failed read-only immutable-plan preflight and restored
-WakeWatch exactly. The next attempt completed software/frontend B closure, then refused unchanged
-memory/pressure admission before maintenance and restored ordinary service/wakes.
-Its successor prepares B originals/controls online, safely waits for the SAME
-resource floors without progress credit, then waits for natural root quiet; use the current SEALED_OPERATION pointer, never
-replay either the Nov4 or first Nov17 consumed launcher.
+The first batch installed four VKLOGCAS1 manifests and preserves exact raw bytes
+and sidecars. Net recovery after ALL canary objects/object-directory blocks is
+827,506,688 bytes. It is not the full objective or a claim of attributed global
+filesystem delta. Known main/protected/proxy consumers retain zero original FDs.
+All original normal-B epochs and actual installed journal/custody checkpoints
+remain. The separate Nov14 retirement is not recredited. Current authoritative
+runtime provenance and prohibited historical fallbacks are in LIVE_DEPLOYMENT.json.
 
-The subsequent actual handover also exposed a separate activation resource gate.
-It recovered original service/current DB/route and WakeWatch before converting
-any logs. The source-pinned successor now safely waits at BOTH activation and
-custody guards with unchanged4GiB/.10 floors, per-wait actual custody rechecks and
-no progress credit; foreign/missing ownership still refuses. Retain the existing
-600s data-progress/300s separate recovery guard. Never replay failed attempts or
-mistake previously accepted backup readiness for completed conversion.
+## Correct history qualification and recovery
 
-Before downtime retain the global WakeWatch dispatch pause and verify there are
-no unsettled automatic deliveries or queued work. Keep monitors/reconciliation,
-notifications, timer/configurations and incident ledgers active. The owned pause
-receipt records exact original dispatcher bytes and five source configurations;
-restore those bytes/settings and verify all five ordinary ticks after Vibe resumes.
+The failed exact-page check compared different workspace-path rendering contexts.
+An isolated RAW fixture and CAS fixture render the SAME page when given the same
+synthetic path context; that page also matches production. All four main canaries
+and role-specific protected expectations were independently checked. Only one
+main-page expectation changes; protected/private/T18/pagination/archive contracts
+stay unchanged. Do not strip paths, normalize messages, change reply multiplicity,
+or accept a digest merely because the live server currently returns it.
+`resume.qualify_history_inputs` enforces those complete evidence dependencies.
+The separate archive-reference return-scope defect is corrected as well.
 
-Fresh Vibe qualification covers current99-migration data/latest frontend and the
-accepted Nov14 restore-before-old-view contract. Fresh Nightly proof restored68
-retained versions/3,073,516,522B; batch-source-v3 provides all-batch same-context
-original/SQL/control recovery. The successor main build passed, including8actual
-executor tests; its exact guard qualifies0.159.2 and0.166.0. Complete real
-predeployment wire captures report0.159.2: the latest initial resume repeated
-8turns/10,746,496 bytes. The separately tested0.166 fixture is not deployed
-runtime evidence. Measure the resumed production version/response after activation.
+Safe recovery must not repeat the same failed strict history checker. Record the
+original failure, then independently establish compatible serving identity,
+lossless current-batch bytes/sidecars and unchanged full-reader proofs for earlier
+committed batches, current review/settings/queues and actual host/capacity custody.
+Use the existing authenticated release/ingress/route interface; preserve all
+failures and mark full reclamation acceptance unfinished. A health check alone
+cannot release maintenance. Changed/missing bytes or custody MUST retain it.
+`resume.recover_compatible` implements this split. No old archive-unaware reader
+is a fallback while ANY manifest remains anywhere in the source tree.
 
-Use a new UUID and immutable source/configuration pins. After naturally quiet
-queues and actual final current-main SQLite API/B restore, acquire the real
-capacity lease and physically freeze exact writers. Deploy compatible main and
-protected readers with persistent aware boot paths. Verify the first four normal
-histories, then retain aware readers across every positive-benefit closed batch.
-A later batch failure cannot choose an old archive-unaware reader while earlier
-manifests remain. Keep immutable per-batch custody/controls before resealing.
+Bind each production-library full EOF/hash/length proof to physical member
+versions before/after reading, under the real fence. Persist these seals with
+normal-B batch journal/control checkpoints. Recovery may revalidate unchanged
+versions without decoding the whole growing union again; the unsealed/current
+batch still needs complete decoded proof. Object/manifest/sidecar inode, size,
+mtime or ctime changes invalidate the seal. This is recovery evidence, not
+permission to mutate data or to omit complete final backup closure.
 
-Each batch requires actual normal B full EOF/hash/Linux metadata/separate-inode
-original recovery, production Rust full EOF, preserved sidecars, actual journal
-and normally restored B controls. Full postconversion closure covers ALL local
-session .log-objects, including unreferenced objects, manifests/sidecars and
-original directory/link metadata. Bounded lossless physical carriers must pass
-independent extraction and actual normal B full-carrier restore with equal full
-hashes and complete union indexing; include compatible software and recovery
-procedures. No extra whole-current Nightly schedule gate or semantic omission.
+## Continuation procedure
 
-Resume Vibe through the owned acceptance path, verify public TLS/assets and
-ordinary desktop/mobile history/settings/review/queue behavior, close B/RAM, prove
-original descriptors released, and restore/verify WakeWatch. Report actual unique
-allocated payload delta separately from filesystem free-space drift and the
-separate31,572,000,768B Nov14 retirement. Do not count that prior cleanup again.
-Verify actual deployed narrow-resume capture/growth after the existing root
-continuation; isolated metadata-only native proof alone is insufficient.
+1. Pin the consumed operation's original plan, COMPLETE installed journal,
+   independent normal-B original/sidecar proof, installed custody/control backup,
+   successful aware-service recovery and exact WakeWatch restoration receipts.
+   `resume.completed_batch` checks exact installed identity/hash/metadata, full
+   decoded originals and exact sidecars. An incomplete journal or externally
+   replaced file requires reconciliation, not exclusion by filename alone.
+2. Reobserve current metadata and terminal/capture status. `resume.remaining`
+   requires the observed CAS set to equal the verified completed union, explicitly
+   removes it from eligibility and refuses any unexpected archive. Current sample:
+   3,433remaining closed candidates/90,992,755,255logical bytes,82tiny preserved;
+   12active-session/8pending/1invalid/4archived files excluded. Recheck after natural
+   completion, then under actual custody; do not convert active or pending logs.
+3. The NEW private package is
+   `production-20261117/resume-after-first-20261117/package-v5/PREPARED.private.json`
+   beneath the existing dedup case. It is UNARMED, with fresh UUID and source pins;
+   no ATTEMPT or automatic agent wake exists. CURRENT_OPERATION/SEALED_OPERATION
+   at the old case root describe the consumed run. Do not invoke them or the old
+   pause-installing preparer. Preserve every previous package and operation epoch.
+4. Before arming, reconcile current active/queued work and all uncertain inputs;
+   retain the selected model/route/permission. Create a NEW owned global automatic
+   WakeWatch dispatch pause, reconcile all five ledgers/queued deliveries, retain
+   exact preimage/configuration/restoration pins, and keep monitoring/notifications
+   and normal timer/reconciliation active. Refresh volatile owner/config/frontend
+   observations if changed. Seal NEW inputs; never edit a consumed attempt.
+5. Require actual unchanged admission:4GiBmemory floor,full PSI<=.10,3GiBSSD,
+   exact mounted storage and authentic producer/capacity/permission gates. Latest
+   verified SSD sample3,215,835,136B is5,390,336B BELOW its3,221,225,472B floor.
+   Resolve capacity within separately verified authorized cleanup scope; do not
+   delete originals/recovery records or lower the floor. A resource wait earns
+   no progress credit; retain600s verified-data/300s separate recovery supervision.
+6. Through the existing sole Nightly producer, take/independently restore fresh
+   current-main SQL via SQLite backup API and current source/software/frontend
+   controls. Acquire a NEW genuine WriterFence and retain SAME actual selected B
+   context. Adopt the already compatible frozen readers: do not restart them,
+   replace bindings or reinstall the first four manifests. Exact artifact hashes,
+   cgroups/namespaces and permanent aware boot controls are checked again.
+7. Use ONLY `convert_next_held` on newly selected positive-benefit batches. Before
+   publication independently normal-B restore every original/sidecar to full EOF,
+   hash, Linux metadata and a separate inode; verify actual production Rust EOF.
+   Keep each plan/journal/custody/proof seal in immutable normal-B controls. Failure
+   restores only the CURRENT batch and keeps previously installed aware history.
+   Preserve tiny/nonbeneficial/excluded data with exact dispositions.
+8. Complete normal-B closure for ALL session-local stores, including unreferenced
+   objects, all manifests/sidecars and directory/link metadata. Root inclusion is
+   not accepted-body proof. Existing lossless bounded carriers require full normal
+   B restore plus independent local extraction/hash/complete member union. Preserve
+   original and software/frontend/SQL backup epochs. Never semantically omit turns
+   or add a second backup pipeline/whole-calendar commissioning prerequisite.
+9. Compare new-run unique allocated payload against its own fresh baseline;
+   explicitly exclude previously reclaimed first-batch blocks. Separately verify
+   object-directory cost, original FD release and actual filesystem capacity.
+   Resume ordinary public desktop/mobile/history/review/settings/queue service,
+   then restore the exact owned WakeWatch preimage/configurations and verify all
+   five normal monitor ticks/readiness. Never claim rendered UI from HTTP alone.
+
+## Verified readiness and remaining production work
+
+97focused tests pass, including23new continuation/adoption/recovery tests.
+Eight tests load the final sealed package and exercise its recovery callback on
+real converted fixtures, corruption refusal, genuine class identity, no raw-first
+converter, no automatic wake, and unchanged guard waits. The four installed
+production manifests/sidecars and retained original B proof passed current
+read-only verification. Fresh extra history qualification initially refused
+pressure safely; the corrected-source recheck reached request14 and then hit its300s diagnostic limit;
+its TimeoutExpired receipt is NOT a full fresh-history pass. Earlier same-owner
+complete history/context proofs remain; actual fresh full acceptance is still a
+production gate. This diagnostic limit does not add a production total cutoff.
+No new maintenance, B capture/lease, conversion, build or agent was started.
+
+Ordinary Vibe/TLS/assets, current main/protected hashes and all five serving/ingress
+units are verified. Exact WakeWatch original source/five saved configurations and
+five ordinary post-restoration ticks are verified. The actual deployed native
+runtime remains0.159.2: initial response0turns/5,126B versus8turns/10,746,496B
+before deployment (99.9523% fewer bytes). No extra inference request was made;
+this measures initial repeated-history growth, not total future disk usage.
+
+Remaining: admitted fresh production boundary/SQL/B custody and pause, actual
+no-restart adoption under that fence, all positive-benefit remaining batches,
+complete postconversion all-object backup closure, measured new-run allocated and
+filesystem recovery, and ordinary rendered desktop/mobile/full-service/WakeWatch
+acceptance. The next run is prepared, not executed or certified complete. Existing
+Vibe/Nightly contracts are accepted; no new owner permission is awaited.
 
 ---
 

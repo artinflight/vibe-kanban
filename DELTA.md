@@ -2880,3 +2880,22 @@ source with locked durable-intent/persisted-v2 reconciliation and authentic
 capacity recovery before ingress release. Launch sequence ordering clarified:
 owned maintenance/ingress quiet -> actual SQL B checkpoint -> capacity release/
 freeze/realFD. Deployed source and all existing epochs remain unchanged.
+
+
+## 2026-11-17 — outcome-focused new-agent handoff
+
+User requested sufficient documentation for transfer, then explicitly asked for
+objective/context/success criteria rather than a prescribed solution. Added
+VK_LOG_AGENT_HANDOFF.md with verified progress, actual unresolved outcomes, known
+recovery defect, evidence/source/test coverage map and genuine preservation/owner
+requirements. Prepared implementation and previous go/no-go are context; approach
+selection belongs to the receiving agent. HANDOFF/STATE/STREAM point to it.
+
+Saved and ran CAPACITY_RELEASE_EDGE_REPRO.private.py beside retained finding.
+Exact pinned method AST plus fixtures reproduces TypeError/unset release receipt
+with zero live operations. Reproduction success does not certify a fix. Referenced
+core evidence exists; package-v5 input hash unchanged/unarmed/no ATTEMPT when read.
+No new agent, maintenance, conversion, build, capture, dispatch/settings change or
+live inventory in this docs turn. Histories/backups/recovery records/pending inputs
+preserved; earlier capacity/queue observations explicitly historical. Required
+format/ops/diff checks and intended handoff publication apply.

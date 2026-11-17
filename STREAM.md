@@ -1,13 +1,15 @@
 # Production deduplication — final go/no-go prepared, 17 November 2026
 
-Latest instruction is PLAN ONLY: recheck capacity/work/backup/UI access and
-prepare final go/no-go, downtime uncertainty, exact launch/recovery. Completed in
-VK_LOG_PRODUCTION_GO_NO_GO.md; NO-GO until peak allocation/B demand, broader UI
-acceptance, lost-capacity-reply recovery and fresh immutable arming/boundary gates
-pass. No maintenance, pause,
-conversion, capture, build, agent, goal or producer was started.
+Latest instruction: hand off WHAT/WHY/context/success criteria, with independent
+agent judgment. VK_LOG_AGENT_HANDOFF.md and compact HANDOFF.md follow that model.
+No new agent/live action or fresh activity/capacity scan in this docs turn.
+Prior go/no-go receipts and implementation remain evidence, not a mandated route.
+Known lost-capacity-reply failure is documented with an offline reproduction;
+no correction is claimed. Remaining recovery, backup compatibility, ordinary UI,
+actual allocation and future-growth outcomes define the mission. The incoming
+agent determines the approach within genuine preservation/ownership requirements.
 
-Fresh private evidence: P/final-go-no-go-20261117. Aware owners/public route and
+Previous plan-only observations (historical, not refreshed for handoff): P/final-go-no-go-20261117. Aware owners/public route and
 five watcher configurations/normal ticks exact; only this root turn active;
 zero durable/1,338 volatile queues;32 uncertainties preserved. SSD3,497,500,672B
 (276,275,200B above3GiB), RAM8,194,068,480B/fullPSI0.00. B healthy85,496,852,480B;
@@ -91,7 +93,7 @@ Recheck volatile4GiBmemory/.10PSI/3GiBSSD admission; never weaken floors or remo
 recovery records. Those actions are outside this bounded user instruction.
 
 Last metadata selection:3,433closed candidates/90,992,755,255logicalB,82tiny
-preserved;12active-session/8pending/1invalid/4archived excluded. Reobserve under
+preserved;14active-session/8pending/1invalid/4archived excluded in latest snapshot. Reobserve under
 actual custody after natural completion; candidate bytes are not recovery proof.
 Vibe/Nightly contracts accepted; sole Nightly producer/schedule ownership retained.
 First8original/sidecar versions/1,053,055,572B and SQL/software/frontend/custody

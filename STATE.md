@@ -29,7 +29,14 @@ including exact7page/49entry reconstruction, plus public TLS/assets. Its334.782s
 run used existing600s completed-data supervision; older failure receipts remain.
 No production conversion was armed or started. See STREAM/HANDOFF for receipts.
 
-Full production deduplication remains unfinished. Today's exact history mismatch
+Full production deduplication remains unfinished. The transfer-ready
+[agent handoff](VK_LOG_AGENT_HANDOFF.md) describes the objective, verified progress, known recovery defect, source/test
+map, evidence and success criteria; it leaves the approach to the receiving agent. This documentation
+transfer does not authorize maintenance or launch another agent. The preceding
+[go/no-go plan](VK_LOG_PRODUCTION_GO_NO_GO.md) records the prepared design
+assessment; its proposed procedure is not a mandate for a new approach. Historical capacity/queue samples must be refreshed before admission.
+
+Today's continuation state: the exact history mismatch
 was workspace-path rendering context, independently reproduced on raw and archive
 inputs. The prepared continuation adopts compatible readers without reactivation,
 excludes the completed batch and separates strict history acceptance from lossless

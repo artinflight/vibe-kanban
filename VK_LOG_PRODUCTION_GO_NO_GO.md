@@ -1,6 +1,11 @@
 # Production log deduplication: final go/no-go plan
 
 17 November 2026. **NO-GO for launch; planning and read-only checks completed.**
+
+This document assesses the particular prepared pipeline. For transfer to another
+agent, [VK_LOG_AGENT_HANDOFF.md](VK_LOG_AGENT_HANDOFF.md) defines the mission, facts
+and success criteria. The proposed route below is context, not a required method;
+the receiving agent may determine a better approach.
 The current instruction authorizes preparation only. No maintenance, dispatch
 pause, conversion, source deletion, SQL backup, new producer, build or agent was
 started. Histories, original backup epochs, completed batches and pending inputs

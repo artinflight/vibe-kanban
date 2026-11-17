@@ -6,24 +6,37 @@ PASSED; the original first Nov17 launcher failed read-only preflight because its
 plan was group-writable. Original readers were unchanged and WakeWatch restored
 exactly with all5 ordinary ticks. Never replay that consumed launcher.
 
-The corrected finite native operation IS RUNNING:
-`vk-log-dedup-full-20261117-d6ed2cee.service`, invocation
-`f90df6f2c300401490821d9706654fd4`, initial PID1845038. It waits for current root
-9f358e27 to finish naturally. Private root case:
+The d6ed2cee operation failed BEFORE maintenance on unchanged memory/pressure
+admission during independent RAM original verification. Software/current frontend/
+root controls normal B closures completed and are retained. No conversion or
+recovery; original serving and exact WakeWatch restoration/5ticks/status/check pass.
+Never replay it. The fresh successor IS RUNNING:
+`vk-log-dedup-full-20261117-9f616dc0.service`, invocation
+`5c81a2dbee98494096d826f1cb468ba4`, initial PID2045487. Private root case:
 `/mnt/vk-storage/vk-log-dedup-20261103-0815/production-20261117` (`P`).
 `SEALED_OPERATION.private.json` / `CURRENT_OPERATION.private.json` point to
-operationd6ed2cee's exact `INPUTS.v2.private.json` (SHAad0e7771...),
-`controller-v2.private.py` (SHAbd02e8f8...), and operation receipts. The prior
-sealed epoch is preserved under its original operation folder. No new goal,
-agent, pipeline, build, owner approval or repeated request is needed.
+operation9f616dc0, `INPUTS.private.json` (SHAe7692265...),
+`controller-v3.private.py` (SHAbd66c249...), and its exact operation receipts.
+Actual normal B preparation now runs ONLINE. It waits for rootd9c0b868 natural
+completion ONLY after `ONLINE_PREPARATION_VERIFIED.private.json` exists with
+independent original proof. Refused memory/pressure admission parks without any
+source work or progress credit; same exact floors/guards retained, foreign errors
+still fail. Existing600s no-progress/300s recovery is unchanged.7controller/
+admission tests and full actual source/class/callback/artifact preflight pass.
+No new goal/agent/build/producer pipeline or owner approval is needed.
 
-The correction reuses the old immutable byte-identical PLAN, preserving the
-writable original and the exact pin guard. Main artifact4766246c and protected
-40a91f69 are ready. Actual complete module/class/callback/artifact preflight and
-4 controller regressions pass; independent existing data-progress supervision
-has600s idle/300s recovery, no total cutoff. Read actual RESULT/FAILURE/RECOVERY_FAILURE
+Read actual RESULT/FAILURE/RECOVERY_FAILURE
 and full reclamation, physical release, SQL, software/frontend/all-object B closure,
 public/browser and WakeWatch restoration receipts before claiming any success.
+
+ONLINE PREPARATION PASSED at16:48:52UTC. Actual SAME normal B context
+restored8 original/sidecar versions /1,053,055,572B with full EOF/hash,
+Linux metadata and separate inodes. Both reader binaries and1,309 current frontend
+files have normal B closure;110 exact root controls are closed. The operation's
+`ONLINE_PREPARATION_VERIFIED.private.json` and `FIRST_ORIGINAL_B_PROOF.private.json`
+are authoritative. Real B/RAM context is retained. Current wait is ONLY natural
+root completion, then actual quiet SQL capture/reader deployment/all batches.
+Zero production manifests/reclaimed bytes at this root checkpoint.
 
 FRESH WakeWatch pause belongs to the operation-local `wakewatch-pause` directory.
 All5 ordinary monitor ticks advanced with unchanged configs/attempt counts,
@@ -46,13 +59,14 @@ Vibe handoff: `/mnt/vk-storage/vk-log-reader-release-20261104/refresh-20261117-v
 Nightly handoff: dedup case `nightly-coordination-20261117/ROOT_HANDOFF.private.json`.
 Both owner turns finished. Nightly batch-source-v3/BASE_PROVIDER_CATALOG and exact
 old Reader class are required. Serial context switching only, genuine fence,
-immutable per-batch custody epochs, no second producer. Shared question revision54
+immutable per-batch custody epochs, no second producer. Shared question revision55
 has the corrected job and complete owner contracts.
 
 Measure actual resumed production wire capture/version with
 `P/measure_resume.private.py`; retained closest baseline is
 `P/MEASURED_PREDEPLOYMENT_CURRENT_RESUME.private.json`:8turns/10,746,496B,
-reported0.159.2. Prior baseline7turns/7,729,679B. The actual isolated0.166 fixture
+reported0.159.2. Prior baseline7turns/7,729,679B. Continued d9 root still0.159.2,
+9turns/11,155,606B; native correction remains unactivated. The actual isolated0.166 fixture
 is qualified but is NOT proof of deployed0.166. Do not issue extra inference for QA.
 
 The exact32,579 missing raw paths are explained by Disk's separate completed

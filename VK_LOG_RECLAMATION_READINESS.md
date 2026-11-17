@@ -6,8 +6,10 @@ new full-scope operation, not another four-log-only attempt. Current status is i
 STREAM.md/HANDOFF.md and the private production-20261117 case. Actual production
 reclamation remains zero until a verified manifest publication/accounting receipt.
 The first Nov17 launcher failed read-only immutable-plan preflight and restored
-WakeWatch exactly. A corrected fresh native operation is running, waiting for
-the root to finish naturally; use the current SEALED_OPERATION pointer, never
+WakeWatch exactly. The next attempt completed software/frontend B closure, then refused unchanged
+memory/pressure admission before maintenance and restored ordinary service/wakes.
+Its successor prepares B originals/controls online, safely waits for the SAME
+resource floors without progress credit, then waits for natural root quiet; use the current SEALED_OPERATION pointer, never
 replay either the Nov4 or first Nov17 consumed launcher.
 
 Before downtime retain the global WakeWatch dispatch pause and verify there are

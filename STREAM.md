@@ -17,20 +17,37 @@ Original service was verified and WakeWatch restored exactly, including all five
 ordinary ticks. Reusing the existing byte-identical sealed PLAN fixes that
 specific failure without changing the original plan or weakening the guard.
 
-The corrected finite operation is RUNNING as
-`vk-log-dedup-full-20261117-d6ed2cee.service`, invocation
-`f90df6f2c300401490821d9706654fd4`, initial PID1845038. It waits for this root's
-natural completion before acquiring the actual maintenance boundary. Private case:
+The corrected d6ed2cee operation completed normal B software/current-frontend/
+root-control closure, then failed BEFORE maintenance during independent RAM
+original verification on the unchanged memory/pressure admission guard. Zero
+conversion/reclamation; original service and exact WakeWatch restoration with
+5ordinary ticks/status/check passed. Its consumed attempt and B epochs remain.
+
+Successor9f616dc0 is RUNNING as
+`vk-log-dedup-full-20261117-9f616dc0.service`, invocation
+`5c81a2dbee98494096d826f1cb468ba4`, initial PID2045487. It prepares actual
+original/software/frontend B proof ONLINE, then waits for this root's natural
+completion before the maintenance boundary. Resource refusal safely parks with
+the SAME guards/floors and no progress credit; unrelated refusals still fail. Private case:
 `/mnt/vk-storage/vk-log-dedup-20261103-0815/production-20261117` (`P`).
 `P/SEALED_OPERATION.private.json` and `P/CURRENT_OPERATION.private.json` identify
-operationd6ed2cee and its exact folder/inputs/source. Inputs SHA256
-`ad0e7771e52d232a5c2c9328e652ce52f49ac5d86f1e48fd7ae11440c6d07e5a`;
-controller-v2 SHA256
-`bd02e8f888da39ba6e8b4f35ead79839b56838c59b5962a22549ec15dac6af1d`.
-Actual source/class/callback/artifact preflight and4 controller regressions pass.
+operation9f616dc0 and its exact folder/inputs/source. Inputs SHA256
+`e7692265765811e93de733bd9e040b1cfd622481932e7dfc76aefd20de45b20a`;
+controller-v3 SHA256
+`bd66c24904af1712d21117cb05e6341c22b6e5753f9811cdbe5064a374fcaba6`.
+Actual source/class/callback/artifact preflight and7 controller/admission tests pass.
 Existing verified-data progress supervisor:600s idle,300s separate recovery,
 no total elapsed cutoff. The actual operation receipts, not preparation, govern
 all claims. One exact existing-root continuation is sealed with unchanged settings.
+
+ONLINE PREPARATION PASSED at16:48:52UTC. Actual SAME normal B context
+restored8 original/sidecar versions /1,053,055,572B with full EOF/hash,
+Linux metadata and separate inodes. Both reader binaries and1,309 current frontend
+files have normal B closure;110 exact root controls are closed. The operation's
+`ONLINE_PREPARATION_VERIFIED.private.json` and `FIRST_ORIGINAL_B_PROOF.private.json`
+are authoritative. Real B/RAM context is retained. Current wait is ONLY natural
+root completion, then actual quiet SQL capture/reader deployment/all batches.
+Zero production manifests/reclaimed bytes at this root checkpoint.
 
 A FRESH global automatic WakeWatch dispatch pause is installed for this operation.
 All five ordinary monitors/timer/configs/incident ledgers remain active and
@@ -52,12 +69,13 @@ restoration. Preserve nonbeneficial/active/pending/invalid sources with disposit
 
 Vibe current99-migration/later-write/fallback/frontend handoff and Nightly's68
 independently restored versions /3,073,516,522B are complete. Both owners are done;
-no further approval/turn is awaited. Existing shared coordination revision54
-records the corrected operation. Nightly remains sole producer/schedule owner.
+no further approval/turn is awaited. Existing shared coordination
+records the corrected operation (revision55). Nightly remains sole producer/schedule owner.
 
 Actual retained predeployment resumes were measured from complete fragmented
 wire captures:7turns/7,729,679B, then THIS root8turns/10,746,496B. Both report
-native0.159.2. The isolated actual0.166 fixture passed2turns/54,084B full versus
+native0.159.2. The continued d9 root also still reports0.159.2,
+9turns/11,155,606 response bytes; no deployment or growth reduction yet. The isolated actual0.166 fixture passed2turns/54,084B full versus
 0turns/2,127B narrow, but that is NOT deployed0.166 evidence. Measure the next
 actual production capture/version with `P/measure_resume.private.py`; compare
 `P/MEASURED_PREDEPLOYMENT_CURRENT_RESUME.private.json`. No extra provider turn.

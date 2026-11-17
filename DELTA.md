@@ -2737,3 +2737,24 @@ inputs are preserved. Full B/closure/all-batch/recovery objective is unchanged.
 Measured actual predeployment fragmented wire baseline:0.159.2,8turns/10,746,496B;
 isolated0.166 proof is not deployed evidence. Current SEALED_OPERATION and
 STREAM/HANDOFF identify exact operation/receipts. No reclaimed-space claim yet.
+
+
+2026-11-17: d6ed2cee completed normal B software/frontend/root-control closure,
+then refused existing resource admission before maintenance during independent
+RAM-original verification. Zero manifests/reclaimed bytes; Vibe unchanged, exact
+WakeWatch restoration/5 ordinary ticks/status/check passed. Fresh9f616dc0 runs
+actual B preparation ONLINE before waiting for root quiet. Same admission floors
+and600s data-progress watchdog/300s recovery retained; safe waits receive no
+progress credit, unrelated refusals fail.7 controller/admission tests pass and
+actual B preparation is advancing. Current continued capture still0.159.2,
+9turns/11,155,606B initial response. Exact new operation and receipts are in
+STREAM/HANDOFF/shared revision55; all earlier epochs and32 uncertainties preserved.
+
+
+2026-11-17 16:48:52UTC:9f616dc0 ONLINE_PREPARATION_VERIFIED passed. Actual
+same-context normal B restore8versions/1,053,055,572B independently passed full
+EOF/hash/Linux metadata/separate inode checks. Both compatible binaries, all1,309
+current frontend members and110 root controls have normal B closure. No pressure
+refusal occurred in this attempt. Actual B/RAM context remains held; the same
+controller waits only for natural root completion before maintenance and full
+production conversion/recovery. Zero reclamation at this checkpoint.

@@ -6,6 +6,9 @@ Codex picker, uses GPT-6.2 Sol for new default-variant configurations, preserves
 custom variants and explicit selections, and keeps all streamed GPT models at
 5.6 or newer.
 
+[PR #298](https://github.com/artinflight/vibe-kanban/pull/298) targets `staging`.
+The implementation commit is `fb8e03406`.
+
 The fallback exposes low, medium, high, xhigh, and max, matching the current
 Vibe Codex executor contract. Discovered extra tiers are retained. CLI-only
 `ultra` is not added because this backend would ignore it, and Fast/Ultrafast
@@ -30,10 +33,11 @@ chunk-size/Sentry warnings.
 
 `cargo test --workspace` was attempted with the required shared non-incremental
 target and stopped at the host's missing `glib-2.0.pc`; no Rust file changed.
-The clean preview runs locally on `127.0.0.1:5511`. Its advertised tailnet route
-timed out, public Funnel publication was denied because authenticated backend
-exposure lacked destination-specific approval, and shared-browser controls were
-unavailable, so browser-visible operator QA is not claimed.
+The clean preview passed locally on `127.0.0.1:5511` and was stopped after the
+review. Its advertised tailnet route timed out, public Funnel publication was
+denied because authenticated backend exposure lacked destination-specific
+approval, and shared-browser controls were unavailable, so browser-visible
+operator QA is not claimed.
 
 # VK::Run Provenance — review corrections, 2026-11-13
 

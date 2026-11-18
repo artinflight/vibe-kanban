@@ -1,3 +1,26 @@
+# GPT-6.2 frontend model update — 2026-11-18
+
+The frontend-only candidate adds GPT-6.2 Sol and GPT-6.2 Astra to the Codex
+picker, makes GPT-6.2 Sol the default for the default Codex variant, and retains
+explicit custom-variant and current-form selections. Both models expose every
+reasoning tier currently accepted by Vibe's Codex executor: low, medium, high,
+xhigh, and max. Extra options supplied by future backend discovery are preserved.
+
+The frontend already retains streamed GPT models at version 5.6 or newer, but it
+cannot independently discover models: `/api/agents/discovered-options/ws` is
+backend-owned and the current Codex catalog is static. Automatically adding new
+models requires backend discovery from installed Codex metadata. Keeping the
+latest Sol as the actual new-session default additionally requires that discovery
+result to reach executor-default resolution; this branch uses the latest known
+compatible Sol, `gpt-6.2-sol`.
+
+Codex CLI metadata advertises `ultra`, but the current Vibe Codex executor accepts
+reasoning only through `max`; an `ultra` frontend selection would be silently
+ignored. It is therefore not invented by this frontend-only candidate, while a
+future backend-advertised option will remain visible. Fast/Ultrafast service
+speed is also absent from the frontend selector contract. No backend source,
+profile, runtime, database, or service is changed.
+
 # Active-goal delegation source correction — 2026-11-04
 
 The focused branch corrects a goal/delegation instruction and capability mismatch;

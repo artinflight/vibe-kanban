@@ -1,3 +1,40 @@
+# GPT-6.2 frontend model update — 2026-11-18
+
+Branch `vk/273f-vk-update-codex-frontend-only` is a clean frontend-only candidate
+based on `fork/staging` `dbcbfbe4e`. It adds GPT-6.2 Sol and GPT-6.2 Astra to the
+Codex picker, uses GPT-6.2 Sol for new default-variant configurations, preserves
+custom variants and explicit selections, and keeps all streamed GPT models at
+5.6 or newer.
+
+The fallback exposes low, medium, high, xhigh, and max, matching the current
+Vibe Codex executor contract. Discovered extra tiers are retained. CLI-only
+`ultra` is not added because this backend would ignore it, and Fast/Ultrafast
+service-speed selection has no frontend contract. Supporting either requires a
+separate backend/contract change.
+
+The browser cannot discover future models itself. It consumes
+`/api/agents/discovered-options/ws`, whose Codex source is currently static.
+Separate backend work should publish installed Codex model metadata and make the
+latest compatible Sol available to executor-default resolution.
+
+No runtime, profile, database, backend, deployment, or service was changed by
+this source candidate.
+
+Validation passed with exact `fork/staging` lockfile dependencies: repository
+formatting, three focused Node/tsx regressions, local/remote/web-core/UI
+TypeScript checks, local/UI lint, unused-i18n check, ops governance, production
+frontend build, diff whitespace, compiled-bundle marker checks, and local preview
+HTTP/API proxy checks against the active backend on `127.0.0.1:5621`. The build
+produced `index-C2pzTuWF.js` and `index-BDlsFLgm.css` with the expected existing
+chunk-size/Sentry warnings.
+
+`cargo test --workspace` was attempted with the required shared non-incremental
+target and stopped at the host's missing `glib-2.0.pc`; no Rust file changed.
+The clean preview runs locally on `127.0.0.1:5511`. Its advertised tailnet route
+timed out, public Funnel publication was denied because authenticated backend
+exposure lacked destination-specific approval, and shared-browser controls were
+unavailable, so browser-visible operator QA is not claimed.
+
 # VK::Run Provenance — review corrections, 2026-11-13
 
 Source-only change on `vk/a507-vk-run-provenanc`, current fork/staging base

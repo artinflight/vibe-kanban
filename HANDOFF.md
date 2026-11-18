@@ -1,3 +1,50 @@
+# GPT-6.2 frontend model update — 2026-11-18
+
+Branch `vk/273f-vk-update-codex-frontend-only` is a frontend-only release branch
+based on `fork/staging` `dbcbfbe4e`. It adds GPT-6.2 Sol and GPT-6.2 Astra to the
+Codex picker, uses GPT-6.2 Sol for new default-variant configurations, preserves
+custom variants and explicit selections, and keeps all streamed GPT models at
+5.6 or newer.
+
+[PR #298](https://github.com/artinflight/vibe-kanban/pull/298) targets `staging`.
+The implementation commit is `fb8e03406`.
+
+The release is live at `https://vibe.local` on Vibe 0.1.42. Public browser QA
+verified both new models, Low/Medium/High/Extra High/Max, selection of Sol, no
+pre-5.6 entry, and no page errors while blocking all writes. The active pointer is
+`/mnt/vk-storage/vk-gpt62-models-20261118/release/paired/candidate`; its paired
+fallback is retained. The frontend switch did not restart the backend or any of
+the five services and did not change the database identity or migrations. Full
+receipts are in [VK_GPT62_FRONTEND_DEPLOYMENT.md](VK_GPT62_FRONTEND_DEPLOYMENT.md).
+
+The fallback exposes low, medium, high, xhigh, and max, matching the current
+Vibe Codex executor contract. Discovered extra tiers are retained. CLI-only
+`ultra` is not added because this backend would ignore it, and Fast/Ultrafast
+service-speed selection has no frontend contract. Supporting either requires a
+separate backend/contract change.
+
+The browser cannot discover future models itself. It consumes
+`/api/agents/discovered-options/ws`, whose Codex source is currently static.
+Separate backend work should publish installed Codex model metadata and make the
+latest compatible Sol available to executor-default resolution.
+
+No runtime profile, database, backend binary, or service was changed. Only the
+frontend asset pointer was atomically switched with the operator's authorization.
+
+Validation passed with exact `fork/staging` lockfile dependencies: repository
+formatting, three focused Node/tsx regressions, local/remote/web-core/UI
+TypeScript checks, local/UI lint, unused-i18n check, ops governance, production
+frontend build, diff whitespace, compiled-bundle marker checks, and local preview
+HTTP/API proxy checks against the active backend on `127.0.0.1:5621`. The build
+produced `index-C2pzTuWF.js` and `index-BDlsFLgm.css` with the expected existing
+chunk-size/Sentry warnings.
+
+`cargo test --workspace` was attempted with the required shared non-incremental
+target and stopped at the host's missing `glib-2.0.pc`; no Rust file changed.
+The clean candidate preview passed locally and was stopped. The final public
+browser run against `https://vibe.local` passed after publication; all browser
+mutations were intercepted and blocked.
+
 # VK::Run Provenance — review corrections, 2026-11-13
 
 Source-only change on `vk/a507-vk-run-provenanc`, current fork/staging base

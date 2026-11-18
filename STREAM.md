@@ -1,27 +1,23 @@
-# VK::Run Provenance
+# GPT-6.2 frontend model update
 
-Branch `vk/a507-vk-run-provenanc`, based on freshly fetched `fork/staging`
-`bc3b89dee`. Add automatic, local file-context observations to normal coding-agent
-start/resume/review spawn and exit paths, independent of AutoSwitch. Start from
-Media Management's merged context-management record format at `4b2783612ad1a80ce1394d4f168cf0c36fd6cba2`.
+Branch `vk/273f-vk-update-codex-frontend-only`, based on current `fork/staging`
+`dbcbfbe4e`, adds GPT-6.2 Sol and GPT-6.2 Astra to the frontend Codex picker and
+makes Sol the default for the default Codex variant.
 
-Records bind actual workspace/session/execution IDs to version labels and bounded
-hashes, detect file changes with native events and end snapshots, and keep mixed,
-unknown, inherited context and model-read uncertainty explicit. No prompts,
-transcripts, credentials, extra model calls, polling service, DB migration or new
-permission layer. Existing jobs, queues, settings, capacity and ownership gates
-remain intact.
+Scope is limited to frontend model normalization, default resolution, focused
+validation, frontend-only publication, and continuity documentation. The release
+was published through an atomic asset-pointer switch on 2026-11-18; no backend
+catalog or reasoning enum was edited, no live profile/data was mutated, and no
+service was restarted. Preserve custom variants, explicit selections, and all
+streamed GPT models at version 5.6 or newer.
 
-Address PR #297 review findings: fix backend fixture compilation and exempt
-only confirmed-empty scopes from unversioned coverage; retain unknown for real
-unversioned or unavailable instructions. Preserve the documented v1 shape for
-the independently owned CU PR #56 consumer.
+PR #298 remains the staging integration record. The public release evidence and
+paired fallback are recorded in `VK_GPT62_FRONTEND_DEPLOYMENT.md` and
+`LIVE_DEPLOYMENT.json`.
 
-Prepare one focused PR into staging. Do not merge, deploy, restart, or launch
-separate before/after agent tests. Activation and CU::Audit contract are in
-[VK_RUN_PROVENANCE.md](VK_RUN_PROVENANCE.md). Ordinary implementation usage is
-observational evidence only; automatic production coverage awaits authorised
-backend activation and future normal work.
+Automatic future-model discovery remains a backend follow-up because the browser
+only consumes the backend discovery WebSocket. Latest-Sol defaulting can become
+automatic once that dynamic catalog is available to executor-default resolution.
 
 Prior stream history: [STREAM history](STREAM_HISTORY_20261017.md) and
 [previous record](deployment-history/20261030-before-reconciliation/STREAM.md).

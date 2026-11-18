@@ -2591,3 +2591,18 @@ promotion is separate. Local Rust baseline remains blocked by offline serde.
 - Document exact v1 semantics for the separate CU PR #56 consumer, including
   start/end union visibility without assigning later labels to earlier usage.
   No CU edits, model experiments, merge, deployment or restart.
+
+## 2026-11-18 — GPT-6.2 frontend model release
+
+- Add GPT-6.2 Sol and GPT-6.2 Astra to the frontend selector, use Sol for new
+  default-variant configurations, show every executor-supported tier from Low
+  through Max, and filter only versions before 5.6.
+- Publish the preservation-gated production build with an atomic frontend pointer
+  switch. Public browser QA passed with both models and all tiers visible, Sol
+  selectable, no pre-5.6 entry and all writes blocked.
+- Preserve all five service identities, backend binary SHA, database inode and 99
+  migrations. No backend restart or database/profile mutation. Retain the paired
+  fallback, 1,346 assets and independently restored/Desktop-B-verified software
+  recovery archive under `/mnt/vk-storage/vk-gpt62-models-20261118/release`.
+- Automatic model discovery and automatic latest-Sol selection remain a separate
+  backend/contract follow-up; the browser cannot discover Codex models itself.

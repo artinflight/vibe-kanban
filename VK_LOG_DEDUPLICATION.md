@@ -245,3 +245,73 @@ This is initial-response evidence, not total future-growth measurement. An
 isolated0.166 fixture is not deployed0.166 evidence. The successor build passed8
 actual executor tests.
 No automatic converter timer is enabled.
+
+
+## Completion takeover qualification — 18 November 2026
+
+The new inert completion-package-v9 integrates the corrected capacity-release
+and journal-recovery helper, adaptive batch admission, complete physical accounting
+and actual public history/settings/review/empty-queue acceptance. The original
+package-v5 and every consumed attempt remain unchanged. This is prepared code;
+no additional production conversion or reclamation is claimed yet.
+
+Admission recalculates actual SSD availability before each batch. It includes
+worst-case gzip expansion, object/directory blocks, copied sidecars, both staging
+and publication copies, and raw rollback, retaining the unchanged3GiB reserve
+and16MiB control allowance. Sources are ordered by size so smaller beneficial
+conversions can release room for the larger ones. It never silently skips a
+large source that fails capacity admission. Existing real writer/B/reader gates
+remain mandatory. Physical accounting counts unique allocated inodes, directory
+blocks, links without following them, and all named new preparation/staging roots;
+logical compression estimates are not recovery credit.
+
+All126 focused tests pass, including actual patched-host lost-reply recovery,
+admission changes and physical accounting. Eight additional exact-package tests
+pass, including real converted fixtures and corruption refusal. Four public
+browser cases(two workspaces at1440/393px) render history, settings and the review
+dialog and confirm actual empty queues; no page errors or operator writes were
+sent. This is desktop/mobile viewport coverage, not physical-phone testing.
+
+Fresh actual native0.159.2 startup again returned zero historical turns and1,826
+response bytes, compared with the retained predeployment8turns/10,746,496bytes.
+No extra provider/native request was generated for measurement. An ordinary
+1,622.893second observation measured1,961,984 additional allocated log/object
+bytes(1,955,286 logical bytes), with no new/missing log files, no archive
+conversions and no executions created in that interval. The same active task
+continued. This is one live workload observation, not a matched pre/post workload
+experiment, daily forecast or claim that new output stops growing. The deployed
+fix prevents initial historical replay for its qualified native identities; new
+execution output still needs capacity monitoring and eventual retention policy.
+
+Private growth evidence: completion-20261117-demand/GROWTH_MEASURED_v2.private.json
+and its before/after inventories. V2 corrects only the workload-count query to
+SQLite julianday timestamps; the original count-query failure is retained.
+CURRENT_ACTIVE_RESUME.private.json retains only wire counts/hashes and identity.
+Existing restore instructions above still apply: preserve complete session stores,
+all objects including unreferenced ones, sidecars, SQL, exact compatible binaries,
+frontend and normal-B recovery controls. Never start an unaware reader while any
+manifest remains; restore exact original bytes under genuine custody first.
+
+
+The inherited closure iterator omitted raw logs and other adjacent regular files
+inside affected process directories. archive_closure.py now includes every regular
+body recursively, records directory/link and hardlink metadata without following
+links, and preserves unreferenced objects. Large bodies use bounded ordered
+fragments. Independent extraction hashes their concatenation against the original
+whole-file SHA256 across carriers; missing, reordered, duplicated, changed or
+incomplete fragments refuse acceptance. Restore fragments into one separate inode,
+verify complete length/hash, then apply metadata before publication. Five new
+behavior tests cover full namespace inclusion, cross-carrier large bodies,
+corruption/gap refusal and changed source versions. The v7 private restore recipe
+and index record this protocol. No production closure acceptance is claimed yet.
+
+
+The final unarmed candidate also caps actual original/control input bytes before
+normal B writes. Uncertain control captures retain their charge; existing bodies
+consume no new original-capture allowance. It rechecks remaining raw candidates
+after successful passes until shared objects produce no further eligible benefit.
+All3,366stable measured logs total91.105GB. Exact normal-B metadata matching leaves
+9.118GB of missing bodies; this is not full restore acceptance. The conservatively
+bounded sequence and fresh owner/B/SSD evidence are recorded in STREAM/HANDOFF.
+Production interruption is awaiting the explicit window decision; the three
+production outcome requirements remain open.

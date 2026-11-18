@@ -2916,3 +2916,18 @@ format/ops/diff checks and intended handoff publication apply.
   partial plans and two transient-PSI refusal receipts are preserved. Full
   reclamation/backup closure/service acceptance remain unfinished; no new physical
   recovery is credited. Exact current process and next actions are in HANDOFF.
+
+
+## 2026-11-18 — backward deduplication completion qualification
+
+Completed stable sizing of3,366logs/91.105GB and exact normal-B metadata matching
+of6,732versions (9.118GBmissing upper bound). Fixed inherited closure omissions
+with complete raw/adjacent/nested/unreferenced coverage and bounded whole-file
+fragment verification. Added adaptive SSD admission, full allocated accounting,
+finite B input budgets and final benefit rechecks. New unarmed v9 package passes
+126focused and8exact-package tests. Four actual public desktop/mobile viewport
+cases pass history/settings/review/empty queues without writes. Fresh owner and
+capacity evidence supports bounded continuation; ordinary measured deployed
+native0.159.2 growth is documented with explicit limits. No new maintenance,
+conversion, payload backup or reclamation occurred. Awaiting explicit production
+window approval required by the existing restart protocol; full goal remains open.

@@ -1,3 +1,24 @@
+# Active completion qualification — 18 November 2026
+
+The full user goal supersedes the previous plan-only assignment below. New inert
+`production-20261117/completion-package-v9` is the current candidate; all older
+packages/attempts remain preserved. It integrates tested lost-capacity-reply
+recovery, fresh owner checks, adaptive worst-case SSD batch admission, complete
+allocated-block accounting and qualified four-case public history/settings/review/
+empty-queue rendering.126focused and8exact-package tests pass. No conversion or
+maintenance has started. Exact full-population demand and normal-B matching are
+being completed before arming; final custody/SQL/backup checks remain required.
+
+The read-only sizing and backup lookup jobs are complete:3,366logs/91.105GBraw,
+6,732original/sidecar versions,9.118GBmissing body upper bound. Fresh00:31UTC B
+capacity71.156GB exceeds the61.373GB conservative planned bound. The318batch SSD
+simulation retains the3GiBfloor. Actual conversion, full original/closure restores
+and final ordinary-service/WakeWatch acceptance remain required. The explicit
+production-window decision is pending; current inputs are UNARMED. See STREAM,
+HANDOFF and [measured growth/restore guidance](VK_LOG_DEDUPLICATION.md).
+
+## Historical planning and completed first-batch evidence
+
 # Final production plan — 17 November 2026
 
 Read [VK_LOG_PRODUCTION_GO_NO_GO.md](VK_LOG_PRODUCTION_GO_NO_GO.md) for fresh

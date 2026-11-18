@@ -1,26 +1,27 @@
 {
   "schema": 2,
-  "generated_at_utc": "2026-11-03T10:58:25.374567+00:00",
+  "generated_at_utc": "2026-11-18T22:26:03.820758+00:00",
   "canonical_repo": "/home/mcp/_vibe_kanban_repo",
   "canonical_repo_dirty": true,
   "canonical_branch": "vk/land-live-fixes-20260422",
   "canonical_head": "06a65a3ce4b522a54cb7a3ae13a6ce200826b282",
-  "source_commit": "9a4179e8bdf38e93d1a81faca6c665cadd6fddc7",
-  "deployed_at_utc": "2026-10-30T03:18:14Z",
+  "backend_source_commit": null,
+  "backend_source_provenance": "The current backend executable was observed and preserved during this frontend-only release; its source commit was not re-attributed.",
+  "backend_deployed_at_utc": null,
   "version_label": "0.1.42",
   "live_service": "vibe-kanban-native-review-20261015.service",
-  "live_binary": "/mnt/vk-storage/vk-deployment-reconcile-20261030/activation-build-1/candidate-server",
-  "live_binary_sha256": "137d6cd7b6475f47f9b92455a879b5fd23d3b3a5374743c77d0c694f3f1257d2",
+  "live_binary": "/mnt/vk-storage/vk-log-dedup-20261103-0815/production-20261117/native-166-build/reader-server",
+  "live_binary_sha256": "4766246c477fd8d73367969bee9b705586c5b580ddf786515409d977b48ce104",
   "last_observed_process": {
-    "MainPID": "645213",
+    "MainPID": "2573710",
     "MemoryHigh": "infinity",
     "MemoryMax": "infinity",
     "MemorySwapMax": "infinity",
     "TasksMax": "38282",
     "ActiveState": "active",
     "SubState": "running",
-    "InvocationID": "440a8acde3f4428abc3a27a8f601808d",
-    "executable_sha256": "137d6cd7b6475f47f9b92455a879b5fd23d3b3a5374743c77d0c694f3f1257d2"
+    "InvocationID": "74e3735e38574268a329ee5a31280227",
+    "executable_sha256": "4766246c477fd8d73367969bee9b705586c5b580ddf786515409d977b48ce104"
   },
   "live_state_dir": "/home/mcp/.local/share/vibe-kanban-green-xdg/vibe-kanban",
   "live_database": "/home/mcp/.local/share/vibe-kanban-green-xdg/vibe-kanban/db.v2.sqlite",
@@ -32,17 +33,17 @@
   "history_proxy_port": 5640,
   "gateway_port": 4720,
   "public_frontend_pointer": "/home/mcp/.local/share/vibe-kanban/frontend-dist/current",
-  "public_frontend_release": "/mnt/vk-storage/vk-invisible-workspaces-20261103-75db/paired/candidate",
+  "public_frontend_release": "/mnt/vk-storage/vk-gpt62-models-20261118/release/paired/candidate",
   "public_assets": [
-    "/assets/index-BDlsFLgm.css",
-    "/assets/index-CM79W1F0.js"
+    "/assets/index-DeUaYq-8.css",
+    "/assets/index-DxHYbG0e.js"
   ],
-  "frontend_routing_note": "Visibility fix live: default All workspace assignments and mobile task statuses, visible saved-search chip, explicit Mine hidden-count recovery. Carries forward the November 3 scrolling correction and existing unread protections. Reload existing tabs/devices. Backend/API/DB/services unchanged.",
+  "frontend_routing_note": "GPT-6.2 Sol and GPT-6.2 Astra live with Low through Max; GPT-6.2 Sol is the new default for the default Codex variant and pre-5.6 models are filtered. The preservation-gated source carries forward all other live frontend behavior. Reload existing tabs. Backend/API/DB/services unchanged.",
   "selected_runtime_environment": {
     "HOST": "127.0.0.1",
     "PORT": "5621",
     "BACKEND_PORT": "5621",
-    "VK_FRONTEND_DIST_DIR": "/mnt/vk-storage/vk-deployment-reconcile-20261030/activation-release-1/paired-frontend/candidate",
+    "VK_FRONTEND_DIST_DIR": "/home/mcp/.local/share/vibe-kanban/frontend-dist/current",
     "CODEX_HOME": "/home/mcp/.local/share/vibe-kanban-green-codex-home",
     "XDG_DATA_HOME": "/home/mcp/.local/share/vibe-kanban-green-xdg",
     "DISABLE_WORKTREE_CLEANUP": "1",
@@ -123,8 +124,8 @@
       "provenance_note": "Use the PR merge event for rebased staging IDs. Original deployed source and release hashes remain immutable; merging Git does not redeploy."
     }
   },
-  "evidence_root": "/mnt/vk-storage/vk-deployment-reconcile-20261030/activation-release-2",
-  "current_investigation_root": "/mnt/vk-storage/vk-deployment-reconcile-20261030",
+  "evidence_root": "/mnt/vk-storage/vk-gpt62-models-20261118/release",
+  "current_investigation_root": "/mnt/vk-storage/vk-gpt62-models-20261118",
   "desktop_backup_root": "desktop:B:/vk-backups/vk-nightly-efficiency-20261026/objects-v1",
   "previous_record": "deployment-history/20261030-before-reconciliation/LIVE_DEPLOYMENT.json",
   "unresolved": [
@@ -145,13 +146,18 @@
   },
   "previous_live_release_evidence": "/mnt/vk-storage/vk-new-build-repair-20261029",
   "frontend_build": {
-    "feature_source_commit": "66bbe11786983886851d9473ec662ec7bca6571d",
-    "preserved_live_source": "/mnt/vk-storage/vk-scrolling-projects-20261103-9cb7-correction/source",
-    "feature_manifest": "/mnt/vk-storage/vk-invisible-workspaces-20261103-75db/frontend-artifact.json",
-    "composition_manifest": "/mnt/vk-storage/vk-invisible-workspaces-20261103-75db/frontend-composition.json",
-    "unchanged_input_count": 1313,
-    "build_log": "/mnt/vk-storage/vk-invisible-workspaces-20261103-75db/frontend-build-final.log",
-    "paired_asset_count": 978
+    "feature_source_commit": "fb8e03406d25d50ee4926f98182741314819c134",
+    "prepared_branch_head": "212d963f5a934fee34f22d48163049031bdddbd4",
+    "preserved_live_source": "/mnt/vk-storage/vk-running-read-later-0f9d-20261118/release/source",
+    "feature_manifest": "/mnt/vk-storage/vk-gpt62-models-20261118/release/frontend-artifact.json",
+    "composition_manifest": "/mnt/vk-storage/vk-gpt62-models-20261118/release/source-composition.json",
+    "compared_input_count": 1327,
+    "reviewed_changed_paths": [
+      "packages/web-core/src/shared/hooks/useExecutorConfig.ts",
+      "packages/web-core/src/shared/lib/codexModelSelector.ts"
+    ],
+    "artifact_file_count": 417,
+    "paired_asset_count": 1346
   },
   "recovery": {
     "total_50_minute_cutoff": false,
@@ -164,14 +170,13 @@
   },
   "last_readonly_verification": {
     "status": "passed",
-    "UTC": "2026-11-02T18:28:43.114247+00:00",
-    "receipt": "/mnt/vk-storage/vk-disappearing-unread-20261102-3ad7/fix-release-4/activation.json",
+    "UTC": "2026-11-18T22:26:03.820758+00:00",
+    "receipt": "/mnt/vk-storage/vk-gpt62-models-20261118/release/activation.json",
     "database_and_backend_identity_preserved": true,
-    "public_browser": "/mnt/vk-storage/vk-disappearing-unread-20261102-3ad7/integration/browser-settled-live/results.json",
-    "running_turn_browser": "/mnt/vk-storage/vk-disappearing-unread-20261102-3ad7/integration/browser-pending-live/results.json",
-    "validation_scope": "public TLS/assets/health, five services, backend hash, DB identity/99 migrations; four served layout cases plus API-verified running-turn guard; all writes intercepted"
+    "public_browser": "/mnt/vk-storage/vk-gpt62-models-20261118/release/public-model-browser.json",
+    "validation_scope": "public TLS/assets/health/info, five service identities, backend hash, DB identity/99 migrations; GPT-6.2 Sol/Astra and Low through Max visible, Sol selectable, no pre-5.6 entry, all writes intercepted"
   },
-  "frontend_deployed_at_utc": "2026-11-03T10:55:35.807043+00:00",
+  "frontend_deployed_at_utc": "2026-11-18T22:26:03.820758+00:00",
   "previous_frontend_build": {
     "source_commit": "800011bd573e2869d6ea4c0e5bfba4d9046d9cbe",
     "feature_commit": "800011bd573e2869d6ea4c0e5bfba4d9046d9cbe",
@@ -184,19 +189,23 @@
     "hosted_ci": false
   },
   "frontend_only_deployment": {
-    "published_at_utc": "2026-11-03T10:55:35.807043+00:00",
-    "publication_receipt": "/mnt/vk-storage/vk-invisible-workspaces-20261103-75db/frontend-publication.json",
-    "candidate": "/mnt/vk-storage/vk-invisible-workspaces-20261103-75db/paired/candidate",
-    "fallback": "/mnt/vk-storage/vk-invisible-workspaces-20261103-75db/paired/fallback",
-    "pointer_switch_seconds": 0.005150215933099389,
-    "served_browser_cases": 17,
-    "served_browser_receipt": "/mnt/vk-storage/vk-invisible-workspaces-20261103-75db/browser-served-inclusive/results.json",
+    "published_at_utc": "2026-11-18T22:26:03.820758+00:00",
+    "publication_receipt": "/mnt/vk-storage/vk-gpt62-models-20261118/release/activation.json",
+    "candidate": "/mnt/vk-storage/vk-gpt62-models-20261118/release/paired/candidate",
+    "fallback": "/mnt/vk-storage/vk-gpt62-models-20261118/release/paired/fallback",
+    "pointer_switch_seconds": 0.01635185768827796,
+    "served_browser_cases": 1,
+    "served_browser_receipt": "/mnt/vk-storage/vk-gpt62-models-20261118/release/public-model-browser.json",
     "Desktop_B_recovery_verified": true,
     "backend_restarted": false,
     "database_mutations": false,
     "seen_unread_requests_sent": 0,
     "native_route_safeguards_deployed": false,
-    "native_route_qualification_gap": "Cached Rust proc-macro dependency E0463; Rust tests not executed"
+    "source_preservation_passed": true,
+    "recovery_archive_sha256": "ff21d977334d96a34353998173a4d681c8912384449092525d4f3e86cb953d5b",
+    "recovery_archive_bytes": 121726055,
+    "recovery_files_verified": 4164,
+    "qualification_gap": "cargo test --workspace stopped at missing glib-2.0.pc; no Rust file changed"
   },
   "previous_frontend_only_deployment": {
     "source_commit": "b990b5939642b1ac7e744a9290840a731fa3f550",

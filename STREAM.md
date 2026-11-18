@@ -5,10 +5,15 @@ Branch `vk/273f-vk-update-codex-frontend-only`, based on current `fork/staging`
 makes Sol the default for the default Codex variant.
 
 Scope is limited to frontend model normalization, default resolution, focused
-validation, and continuity documentation. Do not edit the backend catalog or
-reasoning enum, mutate live profiles/data, restart a service, or deploy from this
-feature-preparation branch. Preserve custom variants, explicit selections, and
-all streamed GPT models at version 5.6 or newer.
+validation, frontend-only publication, and continuity documentation. The release
+was published through an atomic asset-pointer switch on 2026-11-18; no backend
+catalog or reasoning enum was edited, no live profile/data was mutated, and no
+service was restarted. Preserve custom variants, explicit selections, and all
+streamed GPT models at version 5.6 or newer.
+
+PR #298 remains the staging integration record. The public release evidence and
+paired fallback are recorded in `VK_GPT62_FRONTEND_DEPLOYMENT.md` and
+`LIVE_DEPLOYMENT.json`.
 
 Automatic future-model discovery remains a backend follow-up because the browser
 only consumes the backend discovery WebSocket. Latest-Sol defaulting can become

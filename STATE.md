@@ -1,10 +1,21 @@
-# GPT-6.2 frontend model update — 2026-11-18
+# GPT-6.2 frontend model update — live 2026-11-18
 
-The frontend-only candidate adds GPT-6.2 Sol and GPT-6.2 Astra to the Codex
-picker, makes GPT-6.2 Sol the default for the default Codex variant, and retains
-explicit custom-variant and current-form selections. Both models expose every
-reasoning tier currently accepted by Vibe's Codex executor: low, medium, high,
-xhigh, and max. Extra options supplied by future backend discovery are preserved.
+The frontend-only release is live at `https://vibe.local`. It adds GPT-6.2 Sol
+and GPT-6.2 Astra to the Codex picker, makes GPT-6.2 Sol the default for the
+default Codex variant, and retains explicit custom-variant and current-form
+selections. Both models expose every reasoning tier currently accepted by Vibe's
+Codex executor: low, medium, high, xhigh, and max. Extra options supplied by
+future backend discovery are preserved.
+
+The public browser verified both GPT-6.2 models, all five tiers, selection of Sol,
+no pre-5.6 entry, and no page errors with every mutation blocked. The atomic
+frontend pointer switch took 0.0164 seconds. All five service identities, backend
+SHA256 `4766246c477fd8d73367969bee9b705586c5b580ddf786515409d977b48ce104`,
+database inode and 99 migrations remained unchanged. Vibe remains version 0.1.42.
+The paired fallback, 1,346 retained assets, fully restored 121,726,055-byte
+software recovery archive, and independent Desktop B readback are retained under
+`/mnt/vk-storage/vk-gpt62-models-20261118/release`. See
+[VK_GPT62_FRONTEND_DEPLOYMENT.md](VK_GPT62_FRONTEND_DEPLOYMENT.md).
 
 The frontend already retains streamed GPT models at version 5.6 or newer, but it
 cannot independently discover models: `/api/agents/discovered-options/ws` is
@@ -16,7 +27,7 @@ compatible Sol, `gpt-6.2-sol`.
 
 Codex CLI metadata advertises `ultra`, but the current Vibe Codex executor accepts
 reasoning only through `max`; an `ultra` frontend selection would be silently
-ignored. It is therefore not invented by this frontend-only candidate, while a
+ignored. It is therefore not invented by this frontend-only release, while a
 future backend-advertised option will remain visible. Fast/Ultrafast service
 speed is also absent from the frontend selector contract. No backend source,
 profile, runtime, database, or service is changed.

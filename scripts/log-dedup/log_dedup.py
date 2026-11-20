@@ -152,13 +152,20 @@ def scan(root, relatives):
         objects = stores.setdefault(str(path.parent), {})
         manifest, st = manifest_for(path, objects)
         companions = sidecars(path)
-        files.append({'path': relative, 'identity': version(st),
-                      'sha256': manifest['sha256'], 'raw_bytes': st.st_size,
-                      'allocated_bytes': st.st_blocks * 512,
-                      'manifest_bytes': len(encode(manifest)),
-                      'sidecars': [{'extension': ext, 'sha256': sha(data),
-                                    'identity': identity}
-                                   for ext, data, identity in companions]})
+        files.append(file_record(relative, manifest, st, companions))
+    return measured_plan(root, files, stores)
+
+
+def file_record(relative, manifest, st, companions):
+    return {'path': relative, 'identity': version(st),
+            'sha256': manifest['sha256'], 'raw_bytes': st.st_size,
+            'allocated_bytes': st.st_blocks * 512,
+            'manifest_bytes': len(encode(manifest)),
+            'sidecars': [{'extension': ext, 'sha256': sha(data), 'identity': identity}
+                         for ext, data, identity in companions]}
+
+
+def measured_plan(root, files, stores):
     raw = sum(f['raw_bytes'] for f in files)
     unique = sum(v[0] for store in stores.values() for v in store.values())
     compressed = sum(v[1] for store in stores.values() for v in store.values())
@@ -243,11 +250,10 @@ def create_destination(destination, root):
 
 def pack(plan, destination):
     root = Path(plan['source_root']).resolve()
-    relatives = [entry['path'] for entry in plan['files']]
-    if scan(root, relatives) != plan:
-        raise ArchiveError('Plan stale; no output written')
+    validate_source_versions(root, plan)
     destination = create_destination(destination, root)
     stores = {}
+    files = []
     for entry in plan['files']:
         source = safe_path(root, entry['path'])
         companions = sidecars(source)
@@ -262,20 +268,49 @@ def pack(plan, destination):
         store.mkdir(exist_ok=True, mode=0o700)
         objects = stores.setdefault(str(target.parent), {})
         manifest, before = manifest_for(source, objects, store)
-        if version(before) != entry['identity'] or manifest['sha256'] != entry['sha256']:
+        actual = file_record(entry['path'], manifest, before, companions)
+        if actual != entry:
             raise ArchiveError('Source changed since plan')
+        files.append(actual)
         write_new(target, encode(manifest))
         reconstruct(target)  # Independently reopen every reference before success.
         for ext, data, _ in companions:
             write_new(target.with_suffix('.' + ext), data)
-    # Recheck the complete frozen set after building it, not just per-file.
-    if scan(root, relatives) != plan:
-        raise ArchiveError('Source changed while packing; output is unsealed')
+    # The packing pass computes the exact same full hashes and measurements as
+    # scan. Recompressing all sources before and after it adds no evidence.
+    if measured_plan(root, files, stores) != plan:
+        raise ArchiveError('Packed measurements differ; output is unsealed')
+    # Recheck the entire set, including earlier files and sidecar membership.
+    # ctime detects same-length writes even when mtime is restored. Every packed
+    # body was independently decoded before the seal is published.
+    validate_source_versions(root, plan)
     # Make the complete object graph durable before publishing the seal.
     sync_directories(destination)
     write_new(destination / 'receipt.json', json.dumps(plan, indent=2).encode() + b'\n')
     sync_directories(destination)
-    return {'verified': True, 'files': len(relatives), 'source_changed': False}
+    return {'verified': True, 'files': len(files), 'source_changed': False}
+
+
+def validate_source_versions(root, plan):
+    if (plan.get('version') != 1 or str(root) != plan.get('source_root')
+            or len({entry['path'] for entry in plan['files']}) != len(plan['files'])):
+        raise ArchiveError('Exact canonical unique source plan required')
+    for entry in plan['files']:
+        source = safe_path(root, entry['path'])
+        st = regular(source)
+        if (version(st) != entry['identity'] or st.st_size != entry['raw_bytes']
+                or st.st_blocks * 512 != entry['allocated_bytes']):
+            raise ArchiveError('Source version changed; output is unsealed')
+        companions = sidecars(source)
+        actual = [{'extension': ext, 'sha256': sha(data), 'identity': identity}
+                  for ext, data, identity in companions]
+        if actual != entry['sidecars']:
+            raise ArchiveError('Source sidecars changed; output is unsealed')
+        for ext, data, _ in companions:
+            if ext == 'capture.json':
+                state = json.loads(data)
+                if not isinstance(state, dict) or state.get('capture_state') != 'closed':
+                    raise ArchiveError('Refused pending/incomplete capture')
 
 
 def sync_directories(root):

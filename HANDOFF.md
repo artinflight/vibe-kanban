@@ -1,49 +1,133 @@
-# Completion handoff — 18 November 2026, 00:35 UTC
+# Writer cutover accepted; finite converter STOPPED after natural failure
 
-Full goal remains unfinished. Recovery qualification and deployed-growth guidance
-have durable completion evidence. Production conversion, normal-B full restore
-closure and post-reclamation service/monitoring requirements remain open. Only
-four historical archives exist; no new recovery is claimed.
+Nov20 checkpoint controls are tested (59 tests) but NOT ACTIVE. See
+[control handoff](VK_DEDUP_CHECKPOINT_CONTROLS.md). Resume3 failed naturally at
+11:36UTC on a read-only systemd query. Both backup locks are free; no agent stop
+or forced unlock occurred.118 logs are committed;4 installed tail logs retain
+full recovery proof and need final staging retirement/commitment. Next batch37
+is empty. The attempted paused activation stopped at an inaccessible consumer
+scan before changing conversion data, watcher or services. The failed attempt
+is retained under checkpoint-controls-20261120; never blindly replay it. Automatic
+approval review rejected both proposed scan changes, and neither edit executed.
+External privileged inspection or explicit approval for an alternative is needed
+before activation. Original sources, main/protected identities and settings match.
 
-The explicit production-window question is pending. Current full task supersedes
-old plan-only scope, but VK_BACKEND_RESTART_PROTOCOL.md requires "cut over now"
-before interruption. Prior recall rates imply several hours, no verified total
-upper bound. Current native execution must end naturally before genuine custody;
-do not kill it or introduce a second goal/agent continuation loop. If approved,
-do not ask again. Refresh readiness, then use the prepared one-time arm step and
-finite supervisor; inspect exact receipts after any uncertain result.
+## Dedicated failure wake reconciled —20November2026
 
-Current candidate P/completion-package-v9. Inputs SHA256
-4f0c9db5d6f80b5200dbfc017f466b55cf17a465d4530efdacd0911dc3547757;
-controller5020115c833f6dcca9cf717b7cdfb227b0574ee04c21fd75881f5c1f727d3ce7.
-Operation99ac6cd5d1b84fe893d5a1501d32c35d has NO ATTEMPT and is UNARMED.
-P/arm_completion_v9.private.py is inert without --apply. Applying requires fresh
-<=300s exact readiness and current root execution; it saves exact watcher preimage,
-locks/reconciles all5ledgers, installs only the owned dispatch hold, creates armed
-inputs/SEALED_OPERATION with exact argv, and does not launch. Its failure restores
-an installed hold only after proving ordinary service. Preserve all old packages.
+WakeWatch batch8ae7dc66-43d4-4a4e-b84c-bdaeef8b974f arrived once in the dedicated
+chat (executionc1548168-ce0b-45b3-8699-2a217339f49e). Fresh read-only checks verified
+all38 journals, all122 installed manifests and required sidecars, retained normalB
+proofs,23 prepared source pins, both live reader hashes/mounts/protocol/settings,
+and unchanged converter invocation.118 files remain committed;4 installed files
+in batch0036 await carrier retirement/commitment; batch0037 is empty. The natural
+failure log names `Transport endpoint is not connected` from systemd. Both backup
+lease inodes have no kernel lock at the inspection snapshot.
 
-The v9 worker integrates lost-release recovery, adaptive disk admission, complete
-physical accounting, enforced B input caps, repeated remaining-benefit passes,
-complete raw/adjacent/nested/object closure and bounded whole-file-verified
-fragments.126focused+8exact-package tests pass. Four real public browser cases
-cover history/settings/review-dialog/actual empty queues with zero writes/errors.
-Read VK_LOG_DEDUPLICATION.md for restore rules and measured prevention limits.
+The consumer scan still fails at `/proc/1119/cwd`. No activation, resume, stop,
+unlock, settings change or recovery-data mutation was performed. Existing rejected
+scan alternatives remain rejected. The next step requires privileged inspection
+of consumers of the exact empty batch0037 directory (device2065/inode21119143),
+including same-user PID1119, followed by independent reconciliation of the consumed
+activation; then activation must start paused. Do not run the existing uid-based
+scan as root without preserving its intended mcp-user scope. Any subsequent resume
+must follow the explicit control authorization; this alert grants no auto-resume.
 
-All sizing/lookup jobs finished; do not restart them. D contains3,366stableplans/
-91.105GBraw;6,732original/sidecar versions,9.118GBmissing body upper bound.
-FINAL_READINESS at00:31UTC passes exact5owner/reader/frontend checks, one active
-root,0durablequeued,32uncertainpreserved. B71.156GBfree versus61.373GBplanned
-physical bound. SSD conservative318batchsimulation stays3.296GB above3GiBfloor.
-Source/control caps9,185,003,365/46,453,728,929bytes. These are admission evidence,
-not actual restoration or reclamation. Later fresh identity/resource gates apply.
+Evidence: operation `wakewatch/chat-handoff-20261120/FAILURE_WAKE_8ae7dc66_RECONCILED.private.json`.
+Recorded committed live-log allocation reduction is15,590,174,720B, plus413,466,624B
+for the installed tail. These are not net filesystem savings: final staging,
+growth and old-descriptor accounting remain open. This response reclaimed0B.
+The ordinary watcher still reports failure_recovery_pending with one attempt for
+this wake. The selected finite conversion and final backup/UI/accounting acceptance
+remain unfinished; no full deduplication acceptance is claimed.
 
-P=/mnt/vk-storage/vk-log-dedup-20261103-0815/production-20261117;
-D=P/completion-20261117-demand. FINAL_READINESS, BACKUP_DEMAND_RESULT,
-B_INPUT_BOUND_COMPONENTS_v2, GROWTH_MEASURED_v2 and UI/qualified/RESULT are retained.
-The growthv2 supersedes an incorrect lexical timestamp count only; measurements
-are unchanged. Old sizing failures/interrupts, source versions and backup epochs
-remain. tests-v7.log records126passing tests. Full Cargo/frontend check/lint and
-PR update are not claimed. Never arm v5/v6 or replay consumed a088.
+## Operator restart ownership correction —19November2026
 
-Full historical archive: [HANDOFF history](HANDOFF_HISTORY_20261017.md).
+The operator explicitly reaffirmed: backend restarts belong to the managing agent
+outside Vibe; individual workspace agents must hand off the actual restart. A
+standalone systemd controller is not that agent handoff. The v4 cutover did stop
+and start the main backend, with221s maintenance; its evidence does not establish
+external managing-agent ownership. Describe this plainly as a backend restart.
+No backend restart is needed for checkpoint controls or normal online conversion.
+Any future necessary restart must be prepared here and handed to that manager.
+Future Codex resume replay prevention is active for qualified runtime versions;
+it is not automatic recurring deduplication of every future log. The current
+conversion is a finite backlog job; ongoing scheduling remains unimplemented.
+
+Current operation6d4d022ab2f84d1ea72f39d6a6382d1c:
+/mnt/vk-storage/vk-log-dedup-20261103-0815/production-20261117/efficiency-20261118/online-20261119-v1
+Unit vk-online-dedup-bulk-20261119-v1.service;
+terminal MainPID0 / invocation3b0f92bbd65a47afb1a599b7d3015003; attempt resume3.
+OldPID4119270 is gone; no replacement controller was launched.
+Read exact unit identity, ARMED, PROGRESS, COMMITTED, RESULT/FAILURE and per-batch
+journals before acting. Never duplicate the worker or replay an uncertain batch.
+Earlier attempts and their exact recovery proofs are retained in
+[checkpoint-control history](deployment-history/20261120-checkpoint-controls/HANDOFF_HISTORY.md).
+Qualified legacy inputs remain bulk_resume3.py, worker_v5.py, RESUME3_SEAL,
+resume3-sdk and resume3-nightly. Sources are unchanged and sealed. Never replay
+consumed attempts or infer completion from preparation/graph validation alone.
+
+The finite selection is3,361 additional closed logs /90,874,060,091 source+sidecar
+bytes in395 batches. Input volume is not expected savings. One canary is already
+complete. Closed current workspace logs are included; archived/completed workspace
+cleanup, active/pending/unknown captures and tiny nonbeneficial files are preserved.
+Fresh metadata and real per-execution locks still decide actual admission.
+
+Main writerPID70372 / invocation81dd8bb21f894aa1bd286f8f0029b770,
+SHA01495f7f911a222f022354d406789ffa7f634f6faab81798828413d3582cc0a0.
+Cutover904ccb9583b845d9a6644d02013b8780 succeeded; evidence in sibling
+cutover-20261119-v4. Maintenance221.01seconds. All60SQL tables, selected histories,
+review/settings/queues,35 pending inputs and latest GPT6.2 frontend were preserved.
+Protected server2573735 / unit2573723 and proxy2573727 unchanged. Never rerun it.
+
+Canary converted15,543,547 raw bytes while this agent remained active. Actual B
+original and all675 graph members restored independently; one packed carrier
+replaced15 tiny-file checkpoints. Full Python/Rust EOF and identical ordinary
+history passed;673 staging object replicas retired. Live-log allocated reduction
+including objects/directories10,596,352bytes; task staging is separately accounted.
+The bulk job retires only its exact newly-created duplicate carrier/object copies,
+retaining all primary objects, immutable B epochs, manifests and recovery records.
+
+Desktop1440 and mobile393 viewport history/settings/review/queue flows passed4
+cases with0 operator writes; physical phone testing is not claimed. Current real
+native resume on0.159.2 returned0 historical turns /3,904bytes; old measured
+prevention baseline8turns /10,746,496bytes. This bounds initial replay, not all
+future log growth. No new inference/provider test call was issued.
+
+WakeWatch now targets the separate “WakeWatch — Deduplication” chat in this
+workspace:036f0739-6fcc-4e30-911a-e4c6e7e1f388. The20November operator-requested
+handoff preserved all7 settled deliveries, settings, ledger and timer. See
+wakewatch/chat-handoff-20261120 under the operation root for continuity and audit.
+Future issue/success reports go there; no new execution or restart was needed.
+Live progress, independent of Vibe maintenance:
+https://mcp-server.tail744c4.ts.net/vk-dedup-status
+It shows resolved/selected and converted counts plus actual verified phase/time.
+Native goal remains paused; do not create another goal or continuation loop.
+
+When bulk success wakes: reconcile every exact batch, re-inventory remaining
+eligible beneficial logs, close the complete resulting archive dependency tree
+including pre-existing/unreferenced objects and recovery records on normalB,
+capture/restore currentSQL and retain compatible software/frontend backup links,
+verify ordinary UI/history/review/settings/queues and exact ordinary monitoring,
+measure total net allocated AND filesystem release including new staging and
+any open old descriptors, then finish growth/operating/restore documentation.
+Use FULL_OBJECTIVE_CHECKLIST.private.json. Bulk RESULT deliberately says full
+objective unverified. Per-batch checkpoints alone do not close complete-tree backup.
+Preserve current writes, pending inputs, selected settings, all epochs/other owners.
+
+Qualification:170 Python tests ran,165 passed and5 optional probes skipped.
+The resource guard retains3GiB SSD/4GiB available RAM/.10 full PSI thresholds,
+waits up to the existing600s no-progress bound, rechecks owner/mount identities,
+and records exact metrics without crediting waiting as progress. Packed immutable
+B-derived RAM uses1s remote owner polling and64-member read-only graph checks;
+every byte/EOF/metadata is still verified. Publication guards remain uncached.
+Watcher fixture proves accepted issues are not replayed and a manually reconciled
+attempt can report a new issue. No automatic controller retry was added. Real
+production canary passed. Existing Rust lock/reader qualification remains retained.
+Rust formatting passes; web formatting unavailable because Prettier is missing.
+Bulk source/config/inventory pinned in RESUME1_SEAL; do not edit active inputs.
+worker_v3 pipelines the next request through the same real B context and groups
+RAM replays in unchanged32-member sealed caches under a512MiB total batch bound.
+MemoryHigh1.5GiB/Max2GiB; actual SSD/memory/Desktop admission remains enforced.
+
+History: [before v4](deployment-history/20261119-before-v4-cutover/HANDOFF.md),
+[HANDOFF history](HANDOFF_HISTORY_20261017.md).

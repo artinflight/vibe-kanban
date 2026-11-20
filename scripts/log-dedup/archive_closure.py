@@ -26,7 +26,7 @@ def bundles(rows,maximum=24*B):
   current.append(row);size+=demand
  if current:yield current
 
-def pack_verify(root,rows,folder,guard,*,fragments=None):
+def pack_verify(root,rows,folder,guard,*,fragments=None,record=lambda value:None):
  root=Path(root);folder=Path(folder);carrier=folder/'closure.tar';manifest=folder/'members.json';actual=[]
  with tarfile.open(carrier,'x',format=tarfile.PAX_FORMAT)as tar:
   for index,row in enumerate(rows):
@@ -45,13 +45,14 @@ def pack_verify(root,rows,folder,guard,*,fragments=None):
    if version(p.lstat())!=version(before):raise ValueError('Closure source replaced')
    if row.get('expected_sha256',h.hexdigest())!=h.hexdigest():raise ValueError('Qualified physical source hash changed')
    actual.append(dict(row,sha256=h.hexdigest(),member=str(index)))
+   if (index+1)%64==0 or index+1==len(rows):record(dict(verified_members=index+1,total_members=len(rows)))
  with carrier.open('rb')as f:os.fsync(f.fileno())
  manifest.write_text(json.dumps(dict(format='vk-lossless-closure-carrier-v1',files=actual,carrier_sha256=sha(carrier)),sort_keys=True)+'\n');manifest.chmod(0o600);carrier.chmod(0o600)
  with manifest.open('rb')as f:os.fsync(f.fileno())
  proof=extract_verify(carrier,manifest,folder/'independent',guard,fragments=fragments)
  return dict(carrier=str(carrier),manifest=str(manifest),files=len(actual),physical_bytes=sum(r['bytes']for r in actual),carrier_sha256=sha(carrier),manifest_sha256=sha(manifest),independent_extraction=proof)
 
-def extract_verify(carrier,manifest,destination,guard,*,fragments=None):
+def extract_verify(carrier,manifest,destination,guard,*,fragments=None,record=lambda value:None):
  m=json.loads(Path(manifest).read_bytes());destination=Path(destination);destination.mkdir(mode=0o700)
  if sha(carrier)!=m['carrier_sha256']:raise ValueError('Closure carrier changed')
  verified=[]
@@ -73,6 +74,7 @@ def extract_verify(carrier,manifest,destination,guard,*,fragments=None):
    if size!=row['bytes']or h.hexdigest()!=row['sha256']or sha(p)!=row['sha256']or metadata(p)!=row['metadata']or(s.st_dev,s.st_ino)==tuple(row['identity'][:2]):raise ValueError('Independent closure restore body/metadata/inode differs')
    if fragments is not None:fragments.end(row)
    verified.append(dict(path=row['path'],bytes=size,sha256=row['sha256'],Linux_metadata_verified=True,separate_restored_inode=[s.st_dev,s.st_ino]));p.unlink()
+   if len(verified)%64==0 or len(verified)==len(m['files']):record(dict(verified_members=len(verified),total_members=len(m['files'])))
  destination.rmdir();return dict(passed=True,files=len(verified),physical_bytes=sum(r['bytes']for r in verified),members_sha256=hashlib.sha256(json.dumps(verified,sort_keys=True).encode()).hexdigest())
 
 def closure_layout(root,converted):

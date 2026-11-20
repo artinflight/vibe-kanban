@@ -1,6 +1,7 @@
 import copy
 import importlib.util
 import json
+import os
 from pathlib import Path
 import random
 import subprocess
@@ -157,6 +158,48 @@ class ArchiveTests(unittest.TestCase):
         with patch.object(dedup, 'manifest_for', changed):
             with self.assertRaises(ValueError):
                 dedup.pack(self.plan, self.archive)
+        self.assertFalse((self.archive / 'receipt.json').exists())
+
+    def test_pack_compresses_each_unique_object_once(self):
+        original = dedup.gzip.compress
+        with patch.object(dedup.gzip, 'compress', wraps=original) as compress:
+            self.pack()
+        objects = list(self.archive.rglob('*.gz'))
+        self.assertEqual(compress.call_count, len(objects))
+        self.assertEqual(json.loads((self.archive / 'receipt.json').read_text()), self.plan)
+        self.assertTrue(dedup.verify_or_restore(self.archive)['verified'])
+
+    def test_forged_measurement_never_sealed(self):
+        self.plan['metrics']['compressed_unique_bytes'] += 1
+        with self.assertRaises(ValueError):
+            self.pack()
+        self.assertFalse((self.archive / 'receipt.json').exists())
+
+    def test_same_size_rewrite_with_restored_mtime_never_sealed(self):
+        original = dedup.manifest_for
+        first = self.source / self.paths[0]
+        before = first.stat()
+        def changed(path, objects, output=None):
+            result = original(path, objects, output)
+            if output is not None and str(path) == str(self.source / self.paths[1]):
+                first.write_bytes(b'X' + self.raw[1:])
+                os.utime(first, ns=(before.st_atime_ns, before.st_mtime_ns))
+            return result
+        with patch.object(dedup, 'manifest_for', changed):
+            with self.assertRaises(ValueError):
+                self.pack()
+        self.assertFalse((self.archive / 'receipt.json').exists())
+
+    def test_sidecar_added_after_body_was_packed_never_sealed(self):
+        original = dedup.manifest_for
+        def changed(path, objects, output=None):
+            result = original(path, objects, output)
+            if output is not None and str(path) == str(self.source / self.paths[1]):
+                (self.source / self.paths[0]).with_suffix('.recovered-final.json').write_bytes(b'{}')
+            return result
+        with patch.object(dedup, 'manifest_for', changed):
+            with self.assertRaises(ValueError):
+                self.pack()
         self.assertFalse((self.archive / 'receipt.json').exists())
 
     def test_no_cross_session_object_dependency(self):

@@ -12,6 +12,7 @@ pub mod http_headers;
 pub mod jwt;
 pub mod log_archive;
 pub mod log_msg;
+pub mod log_mutation;
 pub mod msg_store;
 pub mod path;
 pub mod port_file;

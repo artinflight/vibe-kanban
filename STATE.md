@@ -1,63 +1,77 @@
-# Current production — 17 November 2026
+# Dedup resumed under renewed operator instruction — 19 November 2026
 
-Takeover continuation (17 November, late UTC): production still has only the four
-previously converted logs. The lost-capacity-reply defect is fixed in a NEW inert
-host helper, with 111 focused tests including three exact retained-host method
-tests. It is not deployed or armed. Fresh serving/public/five-watcher checks pass.
-Read-only remaining-log sizing and exact backup-demand preparation are underway;
-see STREAM/HANDOFF for the live job and receipts. No new reclamation is claimed.
+The operator explicitly instructed “get this done” after recovery-only work had
+stopped dedup. Preparation and the authorized cutover now continue. The full
+objective is lossless backward conversion, normal Nightly/Desktop-B recovery,
+ordinary-service acceptance, measured space/growth results and operating handoff.
+Deferred workspace/archive cleanup remains excluded. The native goal is paused;
+no duplicate goal or model continuation loop has been started.
 
-The compatible log readers are deployed. Main executable SHA256 is
-`4766246c477fd8d73367969bee9b705586c5b580ddf786515409d977b48ce104`;
-protected reader is `40a91f69f31c1b9751f8f5a699fc8dfaa6f20138ba1b0ab528788aecb7ddd000`.
-The build is base087319cc4 plus the exact d007c88d2 native-resume overlay;
-it is not a plain build of either commit. [LIVE_DEPLOYMENT.json](LIVE_DEPLOYMENT.json)
-records current hashes/provenance and retains historical releases separately.
+Writer cutover completed at17:52UTC and independently reconciled on the success
+wake. Main PID70372 / invocation81dd8bb21f894aa1bd286f8f0029b770 runs the sealed
+protocol1 binary SHA01495f7f…; protected server2573735 and proxy2573727 unchanged.
+All60 SQL tables passed acceptance; current data, settings,35 pending inputs and
+the latest GPT6.2 frontend were preserved. Maintenance221.01seconds; controller
+295.54seconds total, exited0. Exact currentSQL/control recovery independently
+restored from normalB. WakeWatch delivered success batch038e0872… once.
 
-Four original paths now contain verified lossless VKLOGCAS1 manifests. Net
-allocated recovery is827,506,688 bytes including all canary objects and their
-object-directory blocks. This first batch is NOT full reclamation. Preserve every
-old epoch, sidecar, complete object store, pending prompt and selected setting.
-NEVER select any historical archive-unaware fallback over remaining manifests.
-The current99-migration authoritative DB and latest existing frontend are preserved;
-public TLS/assets and all five serving/ingress services were verified after recovery.
-Blue remains retired. No provider settings or concurrency guard was changed.
+Online conversion ran under actual current reader bindings; it is currently
+stopped after the20November11:36UTC natural read-only systemd-query failure.
+Both backup locks are free. Controls are tested but not active: paused activation
+failed before mutation at a privileged consumer inspection. See HANDOFF and
+VK_DEDUP_CHECKPOINT_CONTROLS; all serving/data/settings bindings are unchanged. The
+production canary passed, recovering10,596,352 live-log allocated bytes including
+objects/directories. A finite395-batch script processes3,361 additional selected
+closed logs without pausing Vibe or keeping model turns active. The same progress
+page/WakeWatch hook reports issues and success; final full acceptance remains.
+Cutover itself converted no logs. Four historical conversions remain827,506,688B
+net allocated recovery; current conversion evidence is online-20261119-v1 beside
+the cutover root. Full completion is not yet claimed.
 
-The actual continued native runtime is0.159.2: its initial resume now returns
-zero historical turns/5,126 response bytes versus8turns/10,746,496 bytes before
-deployment. The isolated0.166 fixture is qualification evidence, not deployed
-runtime evidence. No extra provider request was made for measurement.
+The v3 failure was staged control-file mode0664, after freeze but before install.
+Automatic recovery repeated the invalid source check. Separate recovery restored
+the original processes without restarting or restoring SQL. All failure records,
+current data and backup epochs are preserved. Recovery history is archived below.
 
-The operator-approved follow-up moved ONLY two inactive build archives to
-independently verified Desktop B copies, preserving restore metadata and removing
-only their unchanged SSD originals.303,202,304 allocatedB released; SSD postcheck
-3,492,601,856B exceeds3GiBfloor. The full current history recheck passes22responses,
-including exact7page/49entry reconstruction, plus public TLS/assets. Its334.782s
-run used existing600s completed-data supervision; older failure receipts remain.
-No production conversion was armed or started. See STREAM/HANDOFF for receipts.
+Fresh v4 validates the exact installer requirements before maintenance and again
+before freeze. If no candidate started, recovery thaws the exact original owner
+without needing a startup control. Real disposable-systemd tests cover success,
+bad permissions, failure after controls/stop/start and later-write fallback. Exact
+staged controls passed private installation. SQL validation preserves all current
+60 tables, permitting only verified ordinary waiting/blocked Git-sync retries;
+request/ownership/observation changes and six corruption cases were rejected.
 
-Full production deduplication remains unfinished. The transfer-ready
-[agent handoff](VK_LOG_AGENT_HANDOFF.md) describes the objective, verified progress, known recovery defect, source/test
-map, evidence and success criteria; it leaves the approach to the receiving agent. This documentation
-transfer does not authorize maintenance or launch another agent. The preceding
-[go/no-go plan](VK_LOG_PRODUCTION_GO_NO_GO.md) records the prepared design
-assessment; its proposed procedure is not a mandate for a new approach. Historical capacity/queue samples must be refreshed before admission.
+The first bulk attempt stopped at a resource check before any source replacement.
+Exact original inode/hash and no-journal reconciliation passed. The same unit and
+operation resumed at18:46UTC from retained backup checkpoints after tested resource
+backpressure and read-only check efficiency fixes. Thresholds, full restoration,
+writer custody and uncached publication checks remain unchanged. The old failure
+and all backup epochs are retained. Resume1 later stopped on an unreadable Desktop
+STOP control after24 installed logs. Resume2 finalized those and reached54 logs,
+then stopped on an MM state read before the next batch's publication. Resume3 now
+uses a sharing-compatible Windows reader and explicit partial-checkpoint recovery;
+34 Python tests, native Windows fixtures and actual B admission passed. All54
+installs and the next3 untouched originals reconcile. Recorded live-log recovery
+is7,672,238,080B; final staging/filesystem acceptance is open. No Vibe restart,
+permission or STOP change occurred. HANDOFF names exact identities and evidence.
 
-Today's continuation state: the exact history mismatch
-was workspace-path rendering context, independently reproduced on raw and archive
-inputs. The prepared continuation adopts compatible readers without reactivation,
-excludes the completed batch and separates strict history acceptance from lossless
-service recovery. WakeWatch's previous dispatcher and all five configurations
-were restored exactly; ordinary monitoring continues. No new maintenance was
-started for this preparation. See [STREAM](STREAM.md), [HANDOFF](HANDOFF.md) and
-[OP::Disk Space procedure](VK_LOG_RECLAMATION_READINESS.md) for actual readiness,
-resource gates and outstanding full-scope/UI/normal-B closure acceptance.
+The later stall alert was a missing progress phase while verified duplicate staging
+was retiring. No converter interruption occurred. Three bulk batches plus the
+canary completed naturally:7new logs and1,078,501,376B live allocation reduction,
+including objects/directories. Final staging/filesystem accounting is still open.
+Existing monitoring now observes actual verified staging retirement, preserving
+the accepted alert and separate later terminal-failure/success reporting.
 
-[PR291](https://github.com/artinflight/vibe-kanban/pull/291) remains the source
-integration record; commit/push does not deploy the prepared operation. Required
-branch checks and private deployment qualification are distinct. Earlier source,
-frontend/scrolling integration and provider qualification remain in
-[the preserved November3 state](deployment-history/20261117-before-log-reader-continuation/STATE.md).
-Their historical deployment IDs and acceptance budgets are not rewritten.
+The existing resource-guard timer now watches the finite online operation for
+success, failure and stalls,
+using the same ledger and owner-selected executor. Old issue delivery is reconciled
+as completed with one attempt. Other watcher settings remain unchanged. Progress:
+https://mcp-server.tail744c4.ts.net/vk-dedup-status
 
+Writer cutover success is only a dependency. Continue the already-authorized
+online conversion afterward, preserving active/pending logs and other writers.
+Full archive graph restore, rendered desktop/mobile acceptance, current settings,
+queues and measured growth/recovery evidence remain required before completion.
+
+Recovery archive: [before v4](deployment-history/20261119-before-v4-cutover/STATE.md).
 Full historical archive: [STATE history](STATE_HISTORY_20261017.md).

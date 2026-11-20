@@ -51,12 +51,14 @@ def inventory(root, plan):
             'note': 'Export is a dependency contract, not a Desktop B recovery receipt.'}
 
 
-def verify_provider(graph, provider, guard):
+def verify_provider(graph, provider, guard, *, progress=lambda value:None, guard_every=1):
     """Owner adapter reopens each physical member through its normal B reader.
 
     Provider open_member(relative, sha256) must preserve the original namespace;
     successful verification requires actual streamed bytes, never a ready flag.
     """
+    if type(guard_every) is not int or not 1 <= guard_every <= 64:
+        raise logs.ArchiveError('Bounded read-only guard interval required')
     if not provider.location.startswith('desktop:B:/vk-backups/'):
         raise logs.ArchiveError('Canonical B provider required')
     if (graph['version'] != 1 or not graph['logical_originals']
@@ -69,6 +71,7 @@ def verify_provider(graph, provider, guard):
     patterns = {'manifest': base + logs.UUID + r'\.jsonl',
                 'sidecar': base + logs.UUID + r'\.(capture|recovered-final)\.json',
                 'object': base + r'\.log-objects/[0-9a-f]{64}\.gz'}
+    verified_members = 0
     for member in graph['members']:
         path = Path(member['path'])
         if (member['kind'] not in patterns or not re.fullmatch(patterns[member['kind']], member['path'])
@@ -77,7 +80,8 @@ def verify_provider(graph, provider, guard):
             raise logs.ArchiveError('Invalid archive backup member reference')
         if member['kind'] == 'manifest' and member['bytes'] > logs.MAX_MANIFEST + len(logs.MAGIC):
             raise logs.ArchiveError('Manifest backup body exceeds bound')
-        guard()
+        if verified_members % guard_every == 0:
+            guard()
         total = 0
         digest = hashlib.sha256()
         manifest_body = bytearray()
@@ -95,6 +99,10 @@ def verify_provider(graph, provider, guard):
             if not manifest_body.startswith(logs.MAGIC):
                 raise logs.ArchiveError('B member is not an archive manifest')
             manifests[member['path']] = json.loads(manifest_body[len(logs.MAGIC):])
+        verified_members += 1
+        if verified_members % 64 == 0 or verified_members == len(graph['members']):
+            progress(dict(verified_members=verified_members, total_members=len(graph['members'])))
+    guard()  # Fresh ownership proof after the complete read-only stream.
     if set(manifests) != set(graph['logical_originals']):
         raise logs.ArchiveError('B graph omits a selected manifest')
     for relative, manifest in manifests.items():

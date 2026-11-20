@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 """Run one reviewed batch through a source-pinned deployment-owner adapter.
 
-The adapter is trusted executable deployment code, not an admission JSON flag.
-Its admit(config, plan, rollback=...) context must own real ingress/consumer
-custody, yield the retained WriterFence already held, provide independent B
-readback, and recover/retain maintenance on failure before releasing consumers.
+The adapter is trusted deployment code, not an admission JSON flag. Global
+admit retains the WriterFence. Explicit --online calls only admit_online, which
+must retain ClosedLogFence plus original and complete archive-graph B recovery.
 """
 import argparse
 import hashlib
@@ -18,7 +17,7 @@ import log_dedup as logs
 from reclaim import Batch
 
 
-def load_adapter(path, expected):
+def load_adapter(path, expected, *, entrypoint="admit"):
     path = Path(path)
     if not path.is_absolute() or path.resolve(strict=True) != path:
         raise logs.ArchiveError('Literal absolute owner adapter path required')
@@ -34,7 +33,7 @@ def load_adapter(path, expected):
     module = importlib.util.module_from_spec(importlib.util.spec_from_loader('log_dedup_owner_adapter', loader=None))
     module.__file__ = str(path)
     exec(compile(raw, str(path), 'exec'), module.__dict__)
-    if module.PROTOCOL != 1 or not callable(module.admit):
+    if module.PROTOCOL != 1 or not callable(getattr(module, entrypoint, None)):
         raise logs.ArchiveError('Qualified owner adapter protocol required')
     return module
 
@@ -42,8 +41,21 @@ def load_adapter(path, expected):
 def run(args):
     plan = json.loads(args.plan.read_bytes())
     config = json.loads(args.config.read_bytes())
-    adapter = load_adapter(args.adapter, args.adapter_sha256)
-    with adapter.admit(config, plan, rollback=args.rollback) as custody:
+    online = getattr(args, 'online', False)
+    entrypoint = 'admit_online' if online else 'admit'
+    adapter = load_adapter(args.adapter, args.adapter_sha256, entrypoint=entrypoint)
+    with getattr(adapter, entrypoint)(config, plan, rollback=args.rollback) as custody:
+        if online:
+            from scoped_fence import ClosedLogFence
+            if not isinstance(custody['writer_fence'], ClosedLogFence):
+                raise logs.ArchiveError('Online command requires actual scoped custody')
+            import graph
+            if custody.get('archive_recovery') is None:
+                raise logs.ArchiveError('Online conversion requires complete archive recovery on B')
+            # Verify the staged physical manifest/object/sidecar graph before any
+            # publication, including objects shared with earlier conversions.
+            graph.verify_provider(graph.inventory(args.archive, plan),
+                                  custody['archive_recovery'], custody['reader_guard'])
         batch = Batch(plan, args.archive, args.journal, custody['writer_fence'],
                       custody['recovery'], custody['reader_guard'],
                       reserve_bytes=custody['reserve_bytes'])
@@ -56,6 +68,7 @@ def main():
         parser.add_argument('--' + name, required=True, type=Path)
     parser.add_argument('--adapter-sha256', required=True)
     parser.add_argument('--rollback', action='store_true')
+    parser.add_argument('--online', action='store_true', help='Require scoped admission; never call the global pause adapter')
     args = parser.parse_args()
     print(json.dumps(run(args), indent=2))
 

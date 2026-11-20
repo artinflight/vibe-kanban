@@ -28,6 +28,24 @@ pub struct ExecutionLogWriter {
     file: tokio::fs::File,
     initially_empty: bool,
     status_path: PathBuf,
+    // Declared last: the data descriptor is dropped before its mutation lock.
+    mutation: crate::log_mutation::LogMutationGuard,
+}
+
+/// Wait asynchronously for only this execution's mutation lock. No global gate,
+/// blocking worker, queue mutation or cancellation side effect.
+pub async fn acquire_log_mutation(
+    path: &Path,
+) -> std::io::Result<crate::log_mutation::LogMutationGuard> {
+    loop {
+        match crate::log_mutation::LogMutationGuard::try_acquire(path) {
+            Ok(guard) => return Ok(guard),
+            Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {
+                tokio::time::sleep(std::time::Duration::from_millis(25)).await;
+            }
+            Err(error) => return Err(error),
+        }
+    }
 }
 
 impl ExecutionLogWriter {
@@ -35,6 +53,7 @@ impl ExecutionLogWriter {
         if let Some(parent) = path.parent() {
             tokio::fs::create_dir_all(parent).await?;
         }
+        let mutation = acquire_log_mutation(&path).await?;
         if crate::log_archive::is_archive(&path)? {
             return Err(std::io::Error::other(
                 "Cannot append to an archived execution log",
@@ -47,14 +66,15 @@ impl ExecutionLogWriter {
             .await?;
         let initially_empty = file.metadata().await?.len() == 0;
         let status_path = path.with_extension("capture.json");
-        if initially_empty {
-            tokio::fs::write(&status_path, b"{\"capture_state\":\"pending\"}\n").await?;
-        }
+        // Any append invalidates an earlier closure, including an error message
+        // appended to a previously existing log. The lock covers this sidecar.
+        tokio::fs::write(&status_path, b"{\"capture_state\":\"pending\"}\n").await?;
         Ok(Self {
             path,
             file,
             initially_empty,
             status_path,
+            mutation,
         })
     }
 
@@ -67,6 +87,7 @@ impl ExecutionLogWriter {
     }
 
     pub async fn finish_for_review(&mut self) -> std::io::Result<()> {
+        self.mutation.check()?;
         if !self.initially_empty {
             return Err(std::io::Error::other(
                 "Cannot certify an appended pre-existing log",
@@ -78,6 +99,7 @@ impl ExecutionLogWriter {
     }
 
     pub async fn append_jsonl_line(&mut self, jsonl_line: &str) -> std::io::Result<()> {
+        self.mutation.check()?;
         self.file.write_all(jsonl_line.as_bytes()).await
     }
 }
@@ -522,6 +544,80 @@ pub async fn read_execution_log_strict(
 #[cfg(test)]
 mod capture_tests {
     use super::*;
+    #[tokio::test]
+    async fn mutation_wait_is_cancellable_and_other_executions_continue() {
+        let root = std::env::temp_dir().join(format!("vk-lock-writer-{}", Uuid::new_v4()));
+        std::fs::create_dir(&root).unwrap();
+        let path = root.join("a.jsonl");
+        let held = crate::log_mutation::LogMutationGuard::try_acquire(&path).unwrap();
+        assert!(
+            tokio::time::timeout(
+                std::time::Duration::from_millis(60),
+                ExecutionLogWriter::new(path.clone())
+            )
+            .await
+            .is_err()
+        );
+        assert!(!path.exists());
+        let mut other = ExecutionLogWriter::new(root.join("b.jsonl")).await.unwrap();
+        other.append_jsonl_line("new work\n").await.unwrap();
+        other.finish_for_review().await.unwrap();
+        drop(other);
+        drop(held);
+        let writer = ExecutionLogWriter::new(path.clone()).await.unwrap();
+        drop(writer);
+        std::fs::remove_dir_all(root).unwrap();
+    }
+
+    #[tokio::test]
+    async fn waiting_writer_rechecks_archive_and_preserves_closed_sidecar() {
+        let root = std::env::temp_dir().join(format!("vk-lock-archive-{}", Uuid::new_v4()));
+        std::fs::create_dir(&root).unwrap();
+        let path = root.join("a.jsonl");
+        let mut writer = ExecutionLogWriter::new(path.clone()).await.unwrap();
+        writer.append_jsonl_line("history\n").await.unwrap();
+        writer.finish_for_review().await.unwrap();
+        drop(writer);
+        let closed = std::fs::read(path.with_extension("capture.json")).unwrap();
+        let held = crate::log_mutation::LogMutationGuard::try_acquire(&path).unwrap();
+        assert!(
+            tokio::time::timeout(
+                std::time::Duration::from_millis(60),
+                ExecutionLogWriter::new(path.clone())
+            )
+            .await
+            .is_err()
+        );
+        std::fs::write(&path, crate::log_archive::MAGIC).unwrap();
+        drop(held);
+        assert!(ExecutionLogWriter::new(path.clone()).await.is_err());
+        assert_eq!(
+            std::fs::read(path.with_extension("capture.json")).unwrap(),
+            closed
+        );
+        std::fs::remove_dir_all(root).unwrap();
+    }
+
+    #[tokio::test]
+    async fn reopening_an_existing_capture_invalidates_old_closure_before_append() {
+        let root = std::env::temp_dir().join(format!("vk-lock-append-{}", Uuid::new_v4()));
+        std::fs::create_dir(&root).unwrap();
+        let path = root.join("a.jsonl");
+        let mut writer = ExecutionLogWriter::new(path.clone()).await.unwrap();
+        writer.append_jsonl_line("history\n").await.unwrap();
+        writer.finish_for_review().await.unwrap();
+        drop(writer);
+        let mut writer = ExecutionLogWriter::new(path.clone()).await.unwrap();
+        assert!(
+            std::fs::read_to_string(path.with_extension("capture.json"))
+                .unwrap()
+                .contains("pending")
+        );
+        assert!(writer.finish_for_review().await.is_err());
+        drop(writer);
+        std::fs::remove_dir_all(root).unwrap();
+    }
+
     #[tokio::test]
     async fn utf8_final_split_across_every_byte_is_exact() {
         let expected = "assistant final — ✓\n";

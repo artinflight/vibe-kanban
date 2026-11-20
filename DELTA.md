@@ -2931,3 +2931,87 @@ capacity evidence supports bounded continuation; ordinary measured deployed
 native0.159.2 growth is documented with explicit limits. No new maintenance,
 conversion, payload backup or reclamation occurred. Awaiting explicit production
 window approval required by the existing restart protocol; full goal remains open.
+
+2026-11-19: Operator explicitly authorized morning cutover. Fresh current-SQL188,227,584B independent normal-B restore and real private-systemd forward/fallback/failure tests passed. Main-only controller vk-scoped-writer-cutover-20261119-now-v1 is armed, waiting for exact owning execution to finish naturally. Latest GPT6.2 frontend/protected reader/five watcher configs preserved; no log conversion or cleanup. RESULT, not arming, determines live success. Full format attempted: Rust passed, missing Prettier blocked web step; ops/diff checks passed.
+
+2026-11-19 12:10UTC status: morning cutover aborted at10:06UTC after final backup because main cgroup was not quiet. No binary switch/freeze/capacity release occurred. Exact failed helper identity was not recorded. Original main/protected/proxy retained; both ingress services restarted, all holds/maintenance cleared, public TLS/index/assets/API pass. Controller failed exit1; no retry running. Full dedup remains incomplete.
+
+2026-11-19: Prepared fresh authorized v2 cutover after v1 pre-switch helper abort. Added bounded natural helper drain and same-owner freeze-race recovery, real disposable-service tests, tailnet-only exact-file live status and existing-timer WakeWatch issue/success source. Current normal timer accepted source with zero dispatches while owner busy. No production switch or new log recovery claimed before actual RESULT. Full dedup objective remains.
+
+2026-11-19 12:33UTC: v2 recovered before switching: strict capacity guard rejected0664 lock. Verified unchanged live original backend/public route, one actual WakeWatch issue delivery. Repaired only exact privately owned empty lock to0600, retaininginode/kernel owner. v3 moves both capacity file checks to preflight;11 recovery tests pass and source AST comparison retains prior real-systemd switch/fallback qualification. Existing timer hook/ledger is reused with operation-scoped event state; no old event replay or model setting change.
+
+
+## 2026-11-19 14:12:17 UTC — recovery only; dedup stopped
+
+Recovered original frozen production processes and ownership without data restore or candidate activation. Disabled the dedicated dedup wake, preserved 35 unresolved inputs and four completed archive manifests. Current handoff and private receipt are in /mnt/vk-storage/vk-production-recovery-20261119. No source implementation was changed, formatted, committed or pushed.
+
+## 2026-11-19 — renewed dedup instruction / v4 repair
+
+Prepared fresh operation904ccb9583b845d9a6644d02013b8780 under renewed user instruction. Exact staged-file validation moved before maintenance/freeze; pre-candidate recovery restores the original process without restart. Real systemd transition/recovery and staged-control/data-corruption tests passed. Existing WakeWatch ledger/timer reused for success/issues; unrelated settings preserved. Production remains original, full reclamation and recovery closure unfinished. Current pickup in HANDOFF; previous recovery archived before-v4-cutover.
+
+## 2026-11-19 — scoped writer cutover accepted
+
+Operation904ccb9583b845d9a6644d02013b8780 completed. Actual PID70372/hash01495f7f… verified;60tables and selected histories/review/settings/queues preserved. Maintenance221.01s; controller exited0; protected reader/frontend unchanged. WakeWatch success batch038e0872… delivered once. Online conversion now proceeds; no new reclamation credited by cutover.
+
+## 2026-11-19 — production canary and finite online conversion
+
+Real canary converted one15,543,547B closed log; normalB original+675-member graph recovery, Rust/Python EOF and unchanged ordinary history passed. Live allocated reduction10,596,352B includes objects/directories. Packed carrier reduces15 tiny-file checkpoints to1. Four rendered desktop/mobile UI cases passed without writes. Finite online job6d4d022ab2f84d1ea72f39d6a6382d1c is running on3,361 further logs/395batches, with existing WakeWatch/progress. Full archive closure and final accounting/service validation remain.
+
+## 2026-11-19 — first bulk issue reconciled and same operation resumed
+
+Attempt0 stopped at resource admission before publication. Both raw files/sidecars retained exact inode/full hash; no journal. Four normalB graph checkpoints preserved. Tested unchanged-floor resource waiting and bounded read-only remote checks (170tests,165passed,5optional skips). Same finite operation/unit resumed at18:46UTC with pinned RESUME1 sources and attempt-aware existing WakeWatch. No Vibe restart, dispatch replay, rollback or completed/archived cleanup. Full objective remains unfinished.
+
+## 2026-11-19 — retirement progress gap reconciled without restart
+
+Wake3f9635a7… arrived during verified duplicate staging retirement. Same controller continued; third bulk batch completed naturally. Seven newly converted logs have current installed-identity/hash and recovery receipts; live allocation reduction1,078,501,376B before final task accounting. Added tested read-only retirement progress to the existing WakeWatch hook, preserving accepted delivery and later terminal-failure/success reporting. No controller/service restart, conversion replay or deferred cleanup.
+
+
+2026-11-20 — Wake7f4b8876 reconciliation:54 completed log manifests/inodes/sidecars and all per-batch outcomes verified; batch19 originals unchanged/no journal. Native Windows fixture reproduced the legacy sharing-related errno13. Added current shared-delete control reads, retaining immediate real-denial/STOP refusal;34 Python tests and real B guard admission passed. Resume3 reuses the exact two immutable archive checkpoints and appends only missing carriers under the same finite unit, PID4119270/invocation3b0f92bbd65a47afb1a599b7d3015003. No Vibe restart, ACL/STOP/settings/epoch change. Full objective remains unfinished; sealed evidence in online-20261119-v1/RESUME3_* and RESUME2_FAILURE_RECONCILIATION.
+
+## 2026-11-20 — Separate WakeWatch chat
+
+Operator requested dedup alerts outside the main conversation. Created session036f0739-6fcc-4e30-911a-e4c6e7e1f388 in the same workspace with exact saved executor settings. Explicit locked handoff updated only destination bindings and event continuity pointer, retaining all7 independently settled deliveries and immutable history. No synthetic wake, new converter, native goal or restart. Evidence: online-20261119-v1/wakewatch/chat-handoff-20261120. Normal timer acceptance is recorded there separately.
+
+## 2026-11-20 — Checkpoint control preparation
+
+Prepared durable pause/resume/status, a finite controlled driver around the unchanged qualified batch worker, normal-admission legacy handoff and truthful WakeWatch hold reporting. No production stop, signal, lock release, source replacement or activation. See VK_DEDUP_CHECKPOINT_CONTROLS.md and the operation checkpoint-controls-20261120 package. Explicit decision remains for the one-time transition because the preceding instruction was assessment only.
+
+
+## 2026-11-20 — checkpoint controls and failed activation reconciled
+
+Added durable pause/resume/status, verified boundary handoff, guarded admission
+waits and truthful monitor integration.59 focused tests pass. Before activation,
+resume3 failed naturally while prefetching batch37 on a systemd status-query
+transport error.118 files committed plus4 installed tail files reconcile; both
+backup locks are free. One paused activation attempt failed at an inaccessible
+same-user systemd consumer reference before recovery/data/watcher/service changes.
+Automatic approval review rejected two proposed inspection changes; neither edit
+executed. Controls remain inactive and the converter stopped. Exact failure,
+source-pin/serving-identity/lock checks and retained attempt evidence are in
+online-20261119-v1/checkpoint-controls-20261120. No backend restart, job stop,
+forced unlock, conversion replay or frontend publication occurred. Privileged
+inspection or explicit approval for an alternative remains necessary. Nightly
+and deferred cleanup scope are unchanged.
+
+## 2026-11-20 — Dedicated failure wake 8ae7dc66 reconciled
+
+Read-only reconciliation verified all38 journals/122 installed manifests and
+sidecars, retained recovery proofs,23 source pins and unchanged live reader
+hashes/mounts/protocol/settings.118 logs remain committed;4 tail installs await
+carrier retirement/commitment. The converter remains failed/MainPID0 after the
+11:36UTC systemd transport error. Exact wake delivery is one attempt into the
+dedicated chat. Both backup lease inodes were unlocked at inspection.
+
+The existing consumer scan still cannot inspect /proc/1119/cwd. No failed
+activation replay, scan change, controller/service mutation, forced unlock or
+auto-resume occurred. Privileged consumer inspection and reconciled paused
+activation remain required. No bytes reclaimed in this response; final finite
+conversion, archive/currentSQL recovery, UI/monitoring and net accounting remain
+open. Private immutable evidence is in the operation's wakewatch/chat-handoff-20261120
+FAILURE_WAKE_8ae7dc66_RECONCILED.private.json (SHA256
+c3edf1c885eac87442df6a52bfd2870dee9fdff6e3032cbd45f6641053681008).
+
+Validation for this wake: ops:check and git diff --check passed; pnpm run
+format completed both Rust formatters then failed because Prettier is absent.
+The existing HTTPS progress page returned200 and displayed the failure with
+118/3362 counts. No conversion, restore or final UI acceptance was performed.

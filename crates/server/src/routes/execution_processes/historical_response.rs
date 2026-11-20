@@ -470,6 +470,8 @@ fn record_path(capture: &Path) -> PathBuf {
 }
 
 fn save(capture: &Path, record: &RecoveredFinal) -> RecoveryResult<bool> {
+    let _mutation = utils::log_mutation::LogMutationGuard::try_acquire(capture)
+        .map_err(|_| "Capture mutation is busy; recovery record was not changed")?;
     let target = record_path(capture);
     if target.exists() {
         let old = load_record(&target)?;

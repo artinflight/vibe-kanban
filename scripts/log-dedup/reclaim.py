@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 """Crash-recoverable log conversion for the existing deployment controller.
 
-No standalone live-admission flag. The controller supplies its held WriterFence,
-qualified reader/consumer guard and independently readable Desktop B store.
+No standalone live-admission flag. The controller supplies its held WriterFence
+or lock-aware ClosedLogFence, qualified reader/consumer guard and independently
+readable Desktop B store. The scoped route preserves the same journal/recovery
+algorithm; only execution custody and unrelated-running-execution policy differ.
 """
 import base64
 from contextlib import closing, contextmanager
@@ -22,6 +24,7 @@ import log_dedup as logs
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'deployment'))
 from vk_restart_writer_fence import WriterFence
+from scoped_fence import ClosedLogFence
 
 
 def canonical(value):
@@ -147,8 +150,8 @@ def object_bytes(path, chunk):
 
 class Batch:
     def __init__(self, plan, archive, journal, fence, recovery, reader_guard, *, reserve_bytes):
-        if not isinstance(fence, WriterFence):
-            raise logs.ArchiveError('Existing deployment WriterFence required')
+        if not isinstance(fence, (WriterFence, ClosedLogFence)):
+            raise logs.ArchiveError('Existing deployment or scoped execution fence required')
         if not callable(reader_guard) or type(reserve_bytes) is not int or reserve_bytes < 0:
             raise logs.ArchiveError('Qualified reader/consumer guard and explicit reserve required')
         if (not 1 <= len(plan['files']) <= 64
@@ -169,8 +172,14 @@ class Batch:
         self.digest = logs.sha(canonical(plan))
         self.state = None
 
+    def terminal(self, entry):
+        if isinstance(self.fence, ClosedLogFence):
+            self.fence.validate_entry(entry)
+        else:
+            terminal_process(self.fence.binding['database'], entry)
+
     def guard(self):
-        self.fence.check()  # Includes actual held lease, owner, ingress and DB checks.
+        self.fence.check()  # Actual held global or execution-scoped custody.
         if self.fence.binding.get('log_source_root') != str(self.root):
             raise logs.ArchiveError('Writer custody does not bind this exact log root')
         self.reader_guard()  # Trusted controller: exact reader build, consumers, recovery owner.
@@ -364,7 +373,7 @@ class Batch:
             # Keep enough headroom for all originals plus reserve on fallback.
             self.require_capacity(0 if rollback else self.publication_peak())
             for entry in self.plan['files']:
-                terminal_process(self.fence.binding['database'], entry)
+                self.terminal(entry)
                 verify_sidecars(self.root, entry)
                 self.source_kind(entry)
             verify_recovery(self.recovery, self.plan, self.guard)
@@ -375,7 +384,7 @@ class Batch:
             for entry in self.plan['files']:
                 self.guard()
                 self.require_capacity()
-                terminal_process(self.fence.binding['database'], entry)
+                self.terminal(entry)
                 verify_sidecars(self.root, entry)
                 kind = self.source_kind(entry)
                 target = logs.safe_path(self.root, entry['path'])

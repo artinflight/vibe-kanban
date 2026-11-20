@@ -62,6 +62,7 @@ async fn main() -> Result<(), VibeKanbanError> {
                     "version": utils::version::APP_VERSION,
                     "sourceCommit": option_env!("VK_BUILD_SOURCE_COMMIT"),
                     "runtimeIdentityVersion": 1,
+                    "executionLogMutationLockProtocol": utils::log_mutation::PROTOCOL,
                     "assetDirectory": utils::assets::asset_dir_path(),
                     "automaticWorkspaceDeletion": false,
                     "automaticAttachmentMigration": server::startup::AUTOMATIC_ATTACHMENT_MIGRATION,

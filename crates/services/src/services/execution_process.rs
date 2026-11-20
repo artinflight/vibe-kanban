@@ -104,6 +104,14 @@ pub async fn migrate_execution_logs_to_files() -> Result<()> {
                     tokio::fs::create_dir_all(parent).await?;
                 }
 
+                let _mutation = utils::execution_logs::acquire_log_mutation(&path).await?;
+                // A concurrent capture/converter may have published while waiting.
+                if path.exists() {
+                    if let Some(pb) = &pb {
+                        pb.inc(1);
+                    }
+                    return Ok::<(), anyhow::Error>(());
+                }
                 let temp_path = path.with_extension("jsonl.tmp");
                 let mut file = tokio::fs::OpenOptions::new()
                     .create(true)

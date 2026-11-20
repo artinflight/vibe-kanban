@@ -18,7 +18,7 @@ use crate::{
         StandardCodingAgentExecutor, acp::AcpAgentHarness,
     },
     logs::utils::patch,
-    model_selector::{ModelSelectorConfig, PermissionPolicy},
+    model_selector::{ModelInfo, ModelSelectorConfig, PermissionPolicy},
     profile::ExecutorConfig,
 };
 
@@ -28,6 +28,17 @@ use crate::{
 // does not assert account access; every launch must authenticate successfully.
 const ACTIVATION_VERIFIED: bool = true;
 const GATE: &str = "Antigravity ACP execution is disabled pending native acceptance for this build";
+
+pub const DEFAULT_ANTIGRAVITY_MODEL: &str = "gemini-3.8-flash-low";
+
+pub const ANTIGRAVITY_MODELS: &[(&str, &str)] = &[
+    ("gemini-4-argon-medium", "Gemini 4 Argon (Medium)"),
+    ("gemini-4-argon-high", "Gemini 4 Argon (High)"),
+    ("gemini-4-argon-low", "Gemini 4 Argon (Low)"),
+    ("gemini-3.8-flash-high", "Gemini 3.8 Flash (High)"),
+    ("gemini-3.8-flash-medium", "Gemini 3.8 Flash (Medium)"),
+    ("gemini-3.8-flash-low", "Gemini 3.8 Flash (Low)"),
+];
 
 #[derive(Derivative, Default, Clone, Serialize, Deserialize, TS, JsonSchema)]
 #[derivative(Debug, PartialEq)]
@@ -78,8 +89,47 @@ impl Antigravity {
 
     fn selected_model(&self) -> Option<String> {
         self.model
-            .clone()
-            .or_else(|| std::env::var("VK_ANTIGRAVITY_ACP_MODEL").ok())
+            .as_deref()
+            .map(str::trim)
+            .filter(|model| !model.is_empty())
+            .map(ToOwned::to_owned)
+            .or_else(|| {
+                std::env::var("VK_ANTIGRAVITY_ACP_MODEL")
+                    .ok()
+                    .map(|model| model.trim().to_owned())
+                    .filter(|model| !model.is_empty())
+            })
+    }
+
+    fn model_selector_models(&self) -> (Vec<ModelInfo>, Option<String>) {
+        let selected_model = self.selected_model();
+        let mut models: Vec<ModelInfo> = ANTIGRAVITY_MODELS
+            .iter()
+            .map(|(id, name)| ModelInfo {
+                id: (*id).to_string(),
+                name: (*name).to_string(),
+                provider_id: None,
+                reasoning_options: vec![],
+            })
+            .collect();
+        if let Some(selected) = selected_model.as_deref()
+            && !models
+                .iter()
+                .any(|model| model.id.eq_ignore_ascii_case(selected))
+        {
+            models.insert(
+                0,
+                ModelInfo {
+                    id: selected.to_string(),
+                    name: selected.to_string(),
+                    provider_id: None,
+                    reasoning_options: vec![],
+                },
+            );
+        }
+        let default_model =
+            Some(selected_model.unwrap_or_else(|| DEFAULT_ANTIGRAVITY_MODEL.to_string()));
+        (models, default_model)
     }
 
     fn check_activation(&self) -> Result<(), ExecutorError> {
@@ -193,8 +243,11 @@ impl StandardCodingAgentExecutor for Antigravity {
         _workdir: Option<&Path>,
         _repo: Option<&Path>,
     ) -> Result<futures::stream::BoxStream<'static, json_patch::Patch>, ExecutorError> {
+        let (models, default_model) = self.model_selector_models();
         let options = ExecutorDiscoveredOptions {
             model_selector: ModelSelectorConfig {
+                models,
+                default_model,
                 permissions: vec![PermissionPolicy::Supervised],
                 ..Default::default()
             },
@@ -208,7 +261,50 @@ impl StandardCodingAgentExecutor for Antigravity {
 
 #[cfg(test)]
 mod tests {
+    use std::ffi::{OsStr, OsString};
+
+    use futures::StreamExt;
+
     use super::*;
+
+    struct EnvGuard {
+        key: &'static str,
+        previous: Option<OsString>,
+    }
+
+    impl EnvGuard {
+        fn set(key: &'static str, value: Option<&OsStr>) -> Self {
+            let previous = std::env::var_os(key);
+            unsafe {
+                match value {
+                    Some(v) => std::env::set_var(key, v),
+                    None => std::env::remove_var(key),
+                }
+            }
+            Self { key, previous }
+        }
+    }
+
+    impl Drop for EnvGuard {
+        fn drop(&mut self) {
+            unsafe {
+                match &self.previous {
+                    Some(v) => std::env::set_var(self.key, v),
+                    None => std::env::remove_var(self.key),
+                }
+            }
+        }
+    }
+
+    async fn discovered_model_selector(agent: &Antigravity) -> ModelSelectorConfig {
+        let mut stream = agent.discover_options(None, None).await.unwrap();
+        let patch = stream.next().await.expect("discovery patch");
+        let mut doc = serde_json::json!({ "options": null });
+        json_patch::patch(&mut doc, &patch).unwrap();
+        let options: ExecutorDiscoveredOptions =
+            serde_json::from_value(doc["options"].clone()).unwrap();
+        options.model_selector
+    }
     #[tokio::test]
     async fn antigravity_unconfigured_or_without_approval_owner_cannot_launch() {
         let agent = Antigravity::default();
@@ -243,6 +339,80 @@ mod tests {
         assert!(
             agent.check_activation().is_err(),
             "approval owner remains mandatory"
+        );
+    }
+
+    #[tokio::test]
+    async fn antigravity_discover_options_exposes_offered_models_and_preserves_selection() {
+        let _env = EnvGuard::set(
+            "VK_ANTIGRAVITY_ACP_MODEL",
+            Some(OsStr::new("gemini-3.8-flash-low")),
+        );
+
+        let default_agent = Antigravity::default();
+        assert_eq!(
+            default_agent.get_preset_options().model_id.as_deref(),
+            Some("gemini-3.8-flash-low")
+        );
+        let selector = discovered_model_selector(&default_agent).await;
+        assert_eq!(
+            selector.default_model.as_deref(),
+            Some("gemini-3.8-flash-low")
+        );
+        let offered: Vec<(&str, &str)> = selector
+            .models
+            .iter()
+            .map(|m| (m.id.as_str(), m.name.as_str()))
+            .collect();
+        assert_eq!(offered, ANTIGRAVITY_MODELS);
+        assert!(
+            selector
+                .models
+                .iter()
+                .all(|m| m.reasoning_options.is_empty())
+        );
+
+        // Saved profile selection for a provider-offered model is preserved without duplication.
+        let saved_agent = Antigravity {
+            model: Some("gemini-4-argon-high".into()),
+            ..Default::default()
+        };
+        assert_eq!(
+            saved_agent.get_preset_options().model_id.as_deref(),
+            Some("gemini-4-argon-high")
+        );
+        let saved_selector = discovered_model_selector(&saved_agent).await;
+        assert_eq!(
+            saved_selector.default_model.as_deref(),
+            Some("gemini-4-argon-high")
+        );
+        assert_eq!(saved_selector.models.len(), ANTIGRAVITY_MODELS.len());
+
+        // Saved custom model and explicit override remain selectable alongside offered models.
+        let mut custom_agent = Antigravity {
+            model: Some("gemini-custom-preview".into()),
+            ..Default::default()
+        };
+        let custom_selector = discovered_model_selector(&custom_agent).await;
+        assert_eq!(
+            custom_selector.default_model.as_deref(),
+            Some("gemini-custom-preview")
+        );
+        assert_eq!(custom_selector.models[0].id, "gemini-custom-preview");
+        assert_eq!(custom_selector.models.len(), ANTIGRAVITY_MODELS.len() + 1);
+
+        custom_agent.apply_overrides(&ExecutorConfig {
+            executor: BaseCodingAgent::Antigravity,
+            variant: None,
+            model_id: Some("gemini-4-argon-medium".into()),
+            agent_id: None,
+            reasoning_id: None,
+            permission_policy: Some(PermissionPolicy::Supervised),
+            routing: None,
+        });
+        assert_eq!(
+            custom_agent.get_preset_options().model_id.as_deref(),
+            Some("gemini-4-argon-medium")
         );
     }
 }

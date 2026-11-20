@@ -710,7 +710,11 @@ executable?: string | null,
 /**
  * Exact ACP-advertised model ID. No guessed models or fallback substitutions.
  */
-model?: string | null, };
+model?: string | null,
+/**
+ * Auto-approve tool calls via the ACP yolo session mode. Defaults to false (supervised).
+ */
+yolo?: boolean | null, };
 
 export type Amp = { append_prompt: AppendPrompt, dangerously_allow_all?: boolean | null, base_command_override?: string | null, additional_params?: Array<string> | null, env?: { [key in string]?: string } | null, };
 

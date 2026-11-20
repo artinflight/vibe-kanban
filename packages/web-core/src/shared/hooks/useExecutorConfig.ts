@@ -29,13 +29,21 @@ const DEFAULT_CODEX_OVERRIDES: Partial<ExecutorConfig> = {
   reasoning_id: 'high',
 };
 
+const DEFAULT_ANTIGRAVITY_OVERRIDES: Partial<ExecutorConfig> = {
+  permission_policy: 'SUPERVISED',
+};
+
 export function getDefaultExecutorOverride(
   executor: BaseCodingAgent,
   field: (typeof OVERRIDE_FIELDS)[number]
 ): ExecutorConfig[(typeof OVERRIDE_FIELDS)[number]] | undefined {
-  return executor === BaseCodingAgent.CODEX
-    ? DEFAULT_CODEX_OVERRIDES[field]
-    : undefined;
+  if (executor === BaseCodingAgent.CODEX) {
+    return DEFAULT_CODEX_OVERRIDES[field];
+  }
+  if (executor === BaseCodingAgent.ANTIGRAVITY) {
+    return DEFAULT_ANTIGRAVITY_OVERRIDES[field];
+  }
+  return undefined;
 }
 
 /**

@@ -32,6 +32,7 @@ use crate::{
 pub struct AcpAgentHarness {
     session_namespace: String,
     personal_auth: bool,
+    auto_approve: bool,
     model: Option<String>,
     mode: Option<String>,
 }
@@ -50,6 +51,7 @@ impl AcpAgentHarness {
             session_namespace: "gemini_sessions".to_string(),
             model: None,
             personal_auth: false,
+            auto_approve: false,
             mode: None,
         }
     }
@@ -60,6 +62,7 @@ impl AcpAgentHarness {
             session_namespace: namespace.into(),
             model: None,
             personal_auth: false,
+            auto_approve: false,
             mode: None,
         }
     }
@@ -67,6 +70,13 @@ impl AcpAgentHarness {
     /// Explicit selection for the Antigravity personal-account adapter only.
     pub fn with_personal_auth(mut self) -> Self {
         self.personal_auth = true;
+        self
+    }
+
+    /// Explicit automatic-approval mode (`yolo`) for the Antigravity personal-account adapter.
+    /// Defaults to false (`default` supervised mode).
+    pub fn with_auto_approve(mut self, auto_approve: bool) -> Self {
+        self.auto_approve = auto_approve;
         self
     }
 
@@ -80,7 +90,8 @@ impl AcpAgentHarness {
         self
     }
 
-    /// Strict opt-in lifecycle: interactive approvals, native resume, terminal failures.
+    /// Strict opt-in lifecycle: interactive approvals (or explicit personal-auth auto-approval),
+    /// native resume, terminal failures.
     #[allow(clippy::too_many_arguments)]
     pub async fn spawn_supervised_with_command(
         &self,
@@ -91,7 +102,7 @@ impl AcpAgentHarness {
         env: &ExecutionEnv,
         approvals: Option<Arc<dyn ExecutorApprovalService>>,
     ) -> Result<SpawnedChild, ExecutorError> {
-        if self.mode.is_some() {
+        if self.mode.is_some() || (self.auto_approve && !self.personal_auth) {
             return Err(ExecutorError::Io(std::io::Error::other(
                 "Supervised ACP mode overrides are unsupported",
             )));
@@ -100,6 +111,7 @@ impl AcpAgentHarness {
             self.session_namespace.clone(),
             self.model.clone(),
             self.personal_auth,
+            self.auto_approve,
             cwd,
             prompt,
             session,

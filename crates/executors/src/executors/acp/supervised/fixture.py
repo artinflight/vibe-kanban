@@ -5,6 +5,7 @@ import sys
 scenario, trace_path = sys.argv[1:]
 prompt_id = None
 authenticated = False
+selected_mode = None
 
 def send(value):
     print(json.dumps({"jsonrpc": "2.0", **value}), flush=True)
@@ -54,11 +55,14 @@ for line in sys.stdin:
         response = {"sessionId": "synthetic-1"} if method == "session/new" else {}
         if scenario != "no-models":
             response["models"] = {"currentModelId": "fixture-model", "availableModels": [{"modelId": "fixture-model", "name": "Fixture model"}]}
-        if scenario.startswith("personal-") and scenario != "personal-no-modes":
+        if scenario == "personal-no-yolo":
+            response["modes"] = {"currentModeId": "default", "availableModes": [{"id": "default", "name": "Supervised"}]}
+        elif scenario.startswith("personal-") and scenario != "personal-no-modes":
             response["modes"] = {"currentModeId": "yolo", "availableModes": [{"id": "default", "name": "Supervised"}, {"id": "yolo", "name": "Unsafe saved mode"}]}
         result(request, response)
     elif method == "session/set_mode":
-        assert request["params"]["modeId"] == "default"
+        selected_mode = request["params"]["modeId"]
+        assert selected_mode in ("default", "yolo")
         if scenario == "personal-mode-error":
             error(request)
         else:
@@ -75,17 +79,19 @@ for line in sys.stdin:
         if scenario == "prompt-error":
             error(request)
             continue
-        if scenario == "approval":
+        if scenario in ("approval", "personal-approval"):
             send({"id": 900, "method": "session/request_permission", "params": {
                 "sessionId": "synthetic-1", "toolCall": {"toolCallId": "tool-1", "title": "synthetic tool"},
-                "options": [{"optionId": "allow-once", "name": "Allow", "kind": "allow_once"},
+                "options": [{"optionId": "allow-always", "name": "Always", "kind": "allow_always"},
+                            {"optionId": "allow-once", "name": "Allow", "kind": "allow_once"},
                             {"optionId": "reject-once", "name": "Deny", "kind": "reject_once"}]}})
             continue
         send({"method": "session/update", "params": {"sessionId": "synthetic-1", "update": {
             "sessionUpdate": "agent_message_chunk", "content": {"type": "text", "text": "fixture-ok"}}}})
         result(request, {"stopReason": "cancelled" if scenario == "cancelled" else "end_turn"})
     elif request.get("id") == 900:
-        assert request["result"]["outcome"]["optionId"] == "reject-once", request
+        expected_option = "allow-once" if selected_mode == "yolo" else "reject-once"
+        assert request["result"]["outcome"]["optionId"] == expected_option, request
         send({"id": prompt_id, "result": {"stopReason": "end_turn"}})
     elif method == "session/cancel":
         if scenario == "wait":

@@ -31,6 +31,7 @@ import {
   resolveDefaultReasoningId,
 } from '@/shared/lib/modelSelector';
 import { profilesApi } from '@/shared/lib/api';
+import { normalizeAntigravityModelSelector } from '@/shared/lib/antigravityModelSelector';
 import { normalizeCodexModelSelector } from '@/shared/lib/codexModelSelector';
 import { useUserSystem } from '@/shared/hooks/useUserSystem';
 import { getResolvedTheme, useTheme } from '@/shared/hooks/useTheme';
@@ -118,9 +119,14 @@ export function ModelSelectorContainer({
   }, [streamError]);
 
   const baseConfig = streamConfig;
-  const config = normalizeCodexModelSelector(
+  const config = normalizeAntigravityModelSelector(
     agent,
-    appendPresetModel(baseConfig, presetOptions?.model_id)
+    normalizeCodexModelSelector(
+      agent,
+      appendPresetModel(baseConfig, presetOptions?.model_id)
+    ),
+    presetOptions?.model_id,
+    executorConfig?.model_id
   );
 
   const availableProviderIds = useMemo(

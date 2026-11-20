@@ -430,3 +430,200 @@ async fn antigravity_personal_missing_or_rejected_supervision_never_prompts() {
         );
     }
 }
+
+async fn start_personal_with_approval_mode(
+    dir: &Path,
+    scenario: &str,
+    session: Option<&str>,
+    auto_approve: bool,
+) -> Result<SpawnedChild, ExecutorError> {
+    let harness = AcpAgentHarness::with_session_namespace("antigravity-acp")
+        .with_personal_auth()
+        .with_auto_approve(auto_approve);
+    harness
+        .spawn_supervised_with_command(
+            dir,
+            "synthetic prompt".into(),
+            session,
+            command(scenario, &dir.join("trace")),
+            &env(),
+            if auto_approve {
+                None
+            } else {
+                Some(Arc::new(Deny))
+            },
+        )
+        .await
+}
+
+#[tokio::test]
+async fn antigravity_auto_approval_mode_is_explicit_across_new_and_resumed_sessions() {
+    let dir = tempfile::tempdir().unwrap();
+
+    // 1. Start new session in supervised mode: explicitly selects "default" and denies tool call via Deny service.
+    let (ok, logs) = finish_personal(
+        start_personal_with_approval_mode(dir.path(), "personal-approval", None, false)
+            .await
+            .unwrap(),
+    )
+    .await;
+    assert!(ok, "{logs}");
+    let identity = session(&logs);
+    let rows: Vec<serde_json::Value> = std::fs::read_to_string(dir.path().join("trace"))
+        .unwrap()
+        .lines()
+        .map(|l| serde_json::from_str(l).unwrap())
+        .collect();
+    assert_eq!(
+        rows.iter()
+            .find(|r| r["method"] == "session/set_mode")
+            .unwrap()["params"]["modeId"],
+        "default"
+    );
+    assert_eq!(
+        rows.iter().find(|r| r["id"] == 900).unwrap()["result"]["outcome"]["optionId"],
+        "reject-once"
+    );
+
+    // 2. Resume the existing session in automatic-approval mode: explicitly selects "yolo" on session/load
+    // and auto-approves any permission request with allow-once without requiring interactive approvals.
+    std::fs::write(dir.path().join("trace"), "").unwrap();
+    let (ok, logs) = finish_personal(
+        start_personal_with_approval_mode(
+            dir.path(),
+            "personal-approval",
+            Some(identity.as_str()),
+            true,
+        )
+        .await
+        .unwrap(),
+    )
+    .await;
+    assert!(ok, "{logs}");
+    let rows: Vec<serde_json::Value> = std::fs::read_to_string(dir.path().join("trace"))
+        .unwrap()
+        .lines()
+        .map(|l| serde_json::from_str(l).unwrap())
+        .collect();
+    let methods: Vec<_> = rows.iter().filter_map(|r| r["method"].as_str()).collect();
+    assert_eq!(
+        methods,
+        [
+            "initialize",
+            "authenticate",
+            "session/load",
+            "session/set_mode",
+            "session/prompt"
+        ]
+    );
+    assert_eq!(
+        rows.iter()
+            .find(|r| r["method"] == "session/set_mode")
+            .unwrap()["params"]["modeId"],
+        "yolo"
+    );
+    assert_eq!(
+        rows.iter().find(|r| r["id"] == 900).unwrap()["result"]["outcome"]["optionId"],
+        "allow-once"
+    );
+
+    // 3. Resume the same session back in supervised mode: explicitly reasserts "default" on session/load
+    // so the previous "yolo" mode is never silently inherited.
+    std::fs::write(dir.path().join("trace"), "").unwrap();
+    let (ok, logs) = finish_personal(
+        start_personal_with_approval_mode(
+            dir.path(),
+            "personal-approval",
+            Some(identity.as_str()),
+            false,
+        )
+        .await
+        .unwrap(),
+    )
+    .await;
+    assert!(ok, "{logs}");
+    let rows: Vec<serde_json::Value> = std::fs::read_to_string(dir.path().join("trace"))
+        .unwrap()
+        .lines()
+        .map(|l| serde_json::from_str(l).unwrap())
+        .collect();
+    assert_eq!(
+        rows.iter()
+            .find(|r| r["method"] == "session/set_mode")
+            .unwrap()["params"]["modeId"],
+        "default"
+    );
+    assert_eq!(
+        rows.iter().find(|r| r["id"] == 900).unwrap()["result"]["outcome"]["optionId"],
+        "reject-once"
+    );
+
+    // 4. Start a brand-new session directly in automatic-approval mode: explicitly selects "yolo" on session/new.
+    std::fs::write(dir.path().join("trace"), "").unwrap();
+    let (ok, logs) = finish_personal(
+        start_personal_with_approval_mode(dir.path(), "personal-approval", None, true)
+            .await
+            .unwrap(),
+    )
+    .await;
+    assert!(ok, "{logs}");
+    let rows: Vec<serde_json::Value> = std::fs::read_to_string(dir.path().join("trace"))
+        .unwrap()
+        .lines()
+        .map(|l| serde_json::from_str(l).unwrap())
+        .collect();
+    let methods: Vec<_> = rows.iter().filter_map(|r| r["method"].as_str()).collect();
+    assert_eq!(
+        methods,
+        [
+            "initialize",
+            "authenticate",
+            "session/new",
+            "session/set_mode",
+            "session/prompt"
+        ]
+    );
+    assert_eq!(
+        rows.iter()
+            .find(|r| r["method"] == "session/set_mode")
+            .unwrap()["params"]["modeId"],
+        "yolo"
+    );
+}
+
+#[tokio::test]
+async fn antigravity_auto_approval_missing_yolo_mode_or_non_personal_never_prompts() {
+    let dir = tempfile::tempdir().unwrap();
+    let non_personal = AcpAgentHarness::with_session_namespace("antigravity-acp")
+        .with_auto_approve(true)
+        .spawn_supervised_with_command(
+            dir.path(),
+            "synthetic".into(),
+            None,
+            command("ok", &dir.path().join("trace")),
+            &env(),
+            None,
+        )
+        .await
+        .unwrap_err();
+    assert!(
+        non_personal
+            .to_string()
+            .contains("mode overrides are unsupported")
+    );
+    assert!(!dir.path().join("trace").exists());
+
+    let (ok, logs) = finish_personal(
+        start_personal_with_approval_mode(dir.path(), "personal-no-yolo", None, true)
+            .await
+            .unwrap(),
+    )
+    .await;
+    assert!(!ok, "{logs}");
+    assert!(logs.contains("automatic-approval yolo mode was not advertised"));
+    assert!(
+        !std::fs::read_to_string(dir.path().join("trace"))
+            .unwrap()
+            .contains("session/prompt")
+    );
+}

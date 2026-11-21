@@ -1,5 +1,10 @@
 # Writer cutover accepted; finite conversion RUNNING with checkpoint controls
 
+Desktop's live dedup Rainmeter card is installed directly below Archive Queue.
+See [HUD operation and acceptance](VK_DEDUP_RAINMETER.md). It uses the existing
+public status publisher; source freshness, pause/wait/failure and final-checks
+states remain explicit. It introduces no converter or backend restart.
+
 November21 recovery is live: same finite unit, PID1316160,
 invocation3594484094cb4790885a9b4b7570da3f, attempt controlled1.
 See [controls](VK_DEDUP_CHECKPOINT_CONTROLS.md). Package checkpoint-controls-20261121

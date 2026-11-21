@@ -3033,3 +3033,12 @@ failure wording to distinguish completed alert responses from repaired conversio
 Current controller PID1316160/invocation3594484094cb4790885a9b4b7570da3f;
 sealed evidence in online-20261119-v1/checkpoint-controls-20261121. Full objective
 remains unfinished. Deferred cleanup and native-goal pause remain unchanged.
+
+
+## 2026-11-21 — Desktop live dedup HUD
+
+Installed matching420×218 Rainmeter card8px below Archive Queue. Existing status
+publisher supplies sanitized committed counters; no new watcher, model worker or
+converter. Five Python and twelve real-Rainmeter presentation checks pass; live
+consumption advanced126→130 logs. Other HUDs and saved settings are preserved.
+See VK_DEDUP_RAINMETER.md and private installation/acceptance receipts.

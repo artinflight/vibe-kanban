@@ -1,44 +1,30 @@
-# Writer cutover accepted; finite converter STOPPED after natural failure
+# Writer cutover accepted; finite conversion RUNNING with checkpoint controls
 
-Nov20 checkpoint controls are tested (59 tests) but NOT ACTIVE. See
-[control handoff](VK_DEDUP_CHECKPOINT_CONTROLS.md). Resume3 failed naturally at
-11:36UTC on a read-only systemd query. Both backup locks are free; no agent stop
-or forced unlock occurred.118 logs are committed;4 installed tail logs retain
-full recovery proof and need final staging retirement/commitment. Next batch37
-is empty. The attempted paused activation stopped at an inaccessible consumer
-scan before changing conversion data, watcher or services. The failed attempt
-is retained under checkpoint-controls-20261120; never blindly replay it. Automatic
-approval review rejected both proposed scan changes, and neither edit executed.
-External privileged inspection or explicit approval for an alternative is needed
-before activation. Original sources, main/protected identities and settings match.
+November21 recovery is live: same finite unit, PID1316160,
+invocation3594484094cb4790885a9b4b7570da3f, attempt controlled1.
+See [controls](VK_DEDUP_CHECKPOINT_CONTROLS.md). Package checkpoint-controls-20261121
+under the operation root retains preparation, recovery, pause/resume and live
+acceptance receipts.122 files/37 batches are committed; next batch37 packed
+441,903,688 raw bytes. Packing is not conversion acceptance. Normal WakeWatch
+observed pause and resumed progress with the same8 deliveries/8 attempts.
 
-## Dedicated failure wake reconciled —20November2026
+Recovery leaves the old batch0037 directory entirely untouched. The sealed
+HANDOFF.batch_override maps that one batch to new isolated staging under the
+control package. Preserve the mapping in all subsequent recovery/closure work;
+never substitute the empty old path. The existing consumer scan, original worker,
+source custody, backup epochs and all rejected alternatives remain unchanged.
+No backend restart, forced unlock, duplicate job or synthetic wake occurred.
+Status/pause/resume are available through the current package's control client;
+pause takes effect at the next verified batch boundary. Read live identity and
+acknowledgement, never blindly rerun a consumed activation or resume request.
 
-WakeWatch batch8ae7dc66-43d4-4a4e-b84c-bdaeef8b974f arrived once in the dedicated
-chat (executionc1548168-ce0b-45b3-8699-2a217339f49e). Fresh read-only checks verified
-all38 journals, all122 installed manifests and required sidecars, retained normalB
-proofs,23 prepared source pins, both live reader hashes/mounts/protocol/settings,
-and unchanged converter invocation.118 files remain committed;4 installed files
-in batch0036 await carrier retirement/commitment; batch0037 is empty. The natural
-failure log names `Transport endpoint is not connected` from systemd. Both backup
-lease inodes have no kernel lock at the inspection snapshot.
+## Historical failure wake — recovered November21
 
-The consumer scan still fails at `/proc/1119/cwd`. No activation, resume, stop,
-unlock, settings change or recovery-data mutation was performed. Existing rejected
-scan alternatives remain rejected. The next step requires privileged inspection
-of consumers of the exact empty batch0037 directory (device2065/inode21119143),
-including same-user PID1119, followed by independent reconciliation of the consumed
-activation; then activation must start paused. Do not run the existing uid-based
-scan as root without preserving its intended mcp-user scope. Any subsequent resume
-must follow the explicit control authorization; this alert grants no auto-resume.
-
-Evidence: operation `wakewatch/chat-handoff-20261120/FAILURE_WAKE_8ae7dc66_RECONCILED.private.json`.
-Recorded committed live-log allocation reduction is15,590,174,720B, plus413,466,624B
-for the installed tail. These are not net filesystem savings: final staging,
-growth and old-descriptor accounting remain open. This response reclaimed0B.
-The ordinary watcher still reports failure_recovery_pending with one attempt for
-this wake. The selected finite conversion and final backup/UI/accounting acceptance
-remain unfinished; no full deduplication acceptance is claimed.
+Wake8ae7dc66 reached the dedicated chat once at11:54UTC November20; execution
+c1548168 ended blocked at12:02UTC. All122 installed logs and their backups were
+intact. Its record is wakewatch/chat-handoff-20261120/FAILURE_WAKE_8ae7dc66_RECONCILED.private.json.
+The current isolated-staging route supersedes that block without removing the
+consumer scan or reusing the inaccessible directory. All prior evidence remains.
 
 ## Operator restart ownership correction —19November2026
 
@@ -56,8 +42,8 @@ conversion is a finite backlog job; ongoing scheduling remains unimplemented.
 Current operation6d4d022ab2f84d1ea72f39d6a6382d1c:
 /mnt/vk-storage/vk-log-dedup-20261103-0815/production-20261117/efficiency-20261118/online-20261119-v1
 Unit vk-online-dedup-bulk-20261119-v1.service;
-terminal MainPID0 / invocation3b0f92bbd65a47afb1a599b7d3015003; attempt resume3.
-OldPID4119270 is gone; no replacement controller was launched.
+current PID1316160 / invocation3594484094cb4790885a9b4b7570da3f; attempt controlled1.
+OldPID4119270 is gone; its terminal invocation3b0f92bbd65a47afb1a599b7d3015003 is historical.
 Read exact unit identity, ARMED, PROGRESS, COMMITTED, RESULT/FAILURE and per-batch
 journals before acting. Never duplicate the worker or replay an uncertain batch.
 Earlier attempts and their exact recovery proofs are retained in

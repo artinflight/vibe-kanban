@@ -15,11 +15,14 @@ the latest GPT6.2 frontend were preserved. Maintenance221.01seconds; controller
 295.54seconds total, exited0. Exact currentSQL/control recovery independently
 restored from normalB. WakeWatch delivered success batch038e0872… once.
 
-Online conversion ran under actual current reader bindings; it is currently
-stopped after the20November11:36UTC natural read-only systemd-query failure.
-Both backup locks are free. Controls are tested but not active: paused activation
-failed before mutation at a privileged consumer inspection. See HANDOFF and
-VK_DEDUP_CHECKPOINT_CONTROLS; all serving/data/settings bindings are unchanged. The
+Online conversion resumed November21 under checkpoint pause/resume controls.
+The November20 natural query failure and failed activation are reconciled. The
+new route leaves the old staging directory untouched and prepares batch37 in
+fresh isolated staging; original custody/consumer/backup checks remain.122 logs
+are committed and the next441.9MB batch is packed. Ordinary WakeWatch observed
+both paused and resumed states; no Vibe restart occurred. See HANDOFF and
+VK_DEDUP_CHECKPOINT_CONTROLS for exact current identities and recovery mapping.
+The
 production canary passed, recovering10,596,352 live-log allocated bytes including
 objects/directories. A finite395-batch script processes3,361 additional selected
 closed logs without pausing Vibe or keeping model turns active. The same progress

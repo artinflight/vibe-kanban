@@ -30,3 +30,23 @@ def supplement(row,config,service,now):
                 control_request=command['action'])
     # progress_at intentionally remains the last real conversion progress.
     return result
+
+
+
+def retirement_supplement(config,row,previous,now):
+    """Observe normal staging and the one sealed isolated batch, read-only."""
+    import retirement_progress
+    from controlled_conversion import batch_folder
+    result,current=retirement_progress.supplement(config['operation_root'],row,previous,now)
+    controls=config.get('checkpoint_controls')
+    if not controls:return result,current
+    seal=read(Path(controls)/'CONTROLLER_SEAL.private.json',8*1024**2)
+    if seal['operation']!=row['operation'] or seal['attempt']!=row.get('attempt'):return result,current
+    handoff=read(seal['handoff'],8*1024**2);override=handoff.get('batch_override')
+    if not override:return result,current
+    folder=batch_folder(config['operation_root'],override['batch'],override)
+    isolated,observation=retirement_progress.supplement(folder.parent,row,previous,now)
+    if 'retirement_batch' in isolated:
+        if 'retirement_batch' in result:raise ValueError('ambiguous retirement across ordinary and isolated staging')
+        return isolated,observation
+    return result,current

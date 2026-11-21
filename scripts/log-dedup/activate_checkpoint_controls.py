@@ -44,7 +44,7 @@ def activate(preparation_path,authorization_ref):
             'exact mounted operation/control paths required')
     require(authorization_ref and len(authorization_ref)<=2048,'actual operator authorization reference required')
     require(unit(preparation['unit'])==preparation['old_unit'],'legacy unit identity changed; reconcile')
-    terminal=preparation.get('mode')=='reconciled_terminal_prefetch_failure'
+    terminal=preparation.get('mode') in ('reconciled_terminal_prefetch_failure','reconciled_terminal_prefetch_isolated_staging')
     if terminal:
         from boundary_handoff import alive
         require(not alive(preparation['old_process']),'terminal owner is still alive')
@@ -59,7 +59,10 @@ def activate(preparation_path,authorization_ref):
     atomic(controls/'DRAIN_REQUEST.private.json',request)
     try:
         if terminal:
-            from terminal_checkpoint_recovery import reconcile
+            if preparation['mode']=='reconciled_terminal_prefetch_isolated_staging':
+                from isolated_checkpoint_recovery import reconcile
+            else:
+                from terminal_checkpoint_recovery import reconcile
             handoff=reconcile(root,controls,preparation)
         else:
             handoff=drain(root,controls,request)

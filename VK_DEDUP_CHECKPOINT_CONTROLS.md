@@ -1,98 +1,54 @@
-# Dedup checkpoint controls — prepared November 20
+# Dedup checkpoint controls — live November 21
 
-The operator requested better control after the frontend recovery mirror was
-blocked by historical conversion. Pause/resume/status controls are prepared and
-59 tests pass, but **the controls are not active**.
+The finite converter is running again under checkpoint pause/resume controls.
+Operation6d4d022ab2f84d1ea72f39d6a6382d1c uses the same unit
+`vk-online-dedup-bulk-20261119-v1.service`, PID1316160,
+invocation3594484094cb4790885a9b4b7570da3f, attempt controlled1. Recheck these
+identities before acting. Writer cutover remains complete; full deduplication is
+not complete. No Vibe/backend/proxy restart occurred.
 
-While controls were being prepared, resume3 failed naturally at11:36UTC during a
-read-only systemd identity query. Both backup locks are free. No signal, job stop,
-forced unlock or backend restart was performed. The118 committed logs and4 fully
-installed tail logs remain intact; the tail still needs final staging retirement
-and commitment. The next batch directory is completely empty.
+## What happened
 
-The attempted paused activation failed before recovery or launch because the
-consumer scan could not inspect `/proc/1119/cwd` (the same-user systemd manager).
-Privileged inspection requires credentials unavailable to this agent. Automatic
-approval review rejected removing the check and rejected an alternative that
-would retain/reuse the empty directory; neither rejected edit executed. Original
-source pins, watcher/settings, serving identities, journals and locks are unchanged.
+Resume3 failed at11:36UTC November20 on a read-only systemd status query.
+WakeWatch delivered batch8ae7dc66 once to the dedicated chat at11:54UTC; that
+agent finished at12:02UTC without recovering the job because the recovery's
+consumer inspection was permission-blocked. The watcher remained active, but an
+already-delivered event did not create repeated paid response turns.
 
-`ACTIVATION_ATTEMPT`, `ACTIVATION_FAILURE.private.json` and
-`FAILED_ACTIVATION_RECONCILED.private.json` retain the exact outcome. Do not retry
-the consumed activation. Resolve the privileged consumer check or obtain explicit
-approval for an alternative, then reconcile the attempt before proceeding.
-The frontend owner can use normal backup admission now; its publication remains
-separately owned. Finishing historical conversion is not a prerequisite for this
-backup access.
+The November21 route avoids touching the blocked directory altogether. The old
+empty `batch-0037` is neither moved, reused, deleted nor written. Its inode and
+contents remain unchanged. A fresh private directory under the new controls
+package is explicitly mapped to batch37. The original consumer scan and sealed
+legacy conversion/reader/backup/custody code remain unchanged. The rejected
+scan-removal and in-place-reuse proposals were not applied.
 
-## Intended behavior
+The completed batch36 was independently reconciled and finalized using its
+existing recovery proofs and exclusive carrier leases. Counts are now37 batches,
+122 files committed. The next batch has packed441,903,688 raw bytes across4 files;
+packing is not conversion acceptance. Earlier receipts, backup epochs and the
+failed November20 activation package are retained.
 
-- `pause` requests a hold after the current complete batch, including its normal
-  B restore, original-byte checks, journal, staging retirement and committed
-  record. It never interrupts a write. Existing next-batch preparation may finish
-  before the hold.
-- The worker reports `paused` only after closing its backup contexts and proving
-  their lease descriptors are absent from its cgroup. It retains dedup operation
-  ownership, so there is no second converter. Other owners can use normal backup
-  admission while it is paused.
-- `resume` continues the same finite selection from the verified completed
-  prefix. Completed batches are not converted again. Commands have durable IDs;
-  replaying an old command cannot override a later command. Nothing resumes
-  automatically because time elapsed or the backup lock became free.
-- Normal backup contention at either initial conversion lease waits safely.
-  Unexpected errors, partial preparation, incomplete graph checkpoints and
-  uncertain journals require explicit recovery; they are never blindly retried.
-- WakeWatch and the existing progress page distinguish a requested pause,
-  verified pause, backup wait and actual failure. Waiting is not progress. Dead
-  owners, stale pause records, held backup descriptors and failures still alert.
+## Operator controls
 
-## Prepared transition options (not performed)
+- `pause` requests a hold after the current complete batch, including normal B
+  restoration, original-byte checks, journal, staging retirement and commitment.
+  It does not interrupt a write or force-release a lock. Existing next-batch
+  preparation may finish before the hold.
+- `paused` is acknowledged only after backup contexts close and their lease
+  descriptors are absent from the worker cgroup. The dedup operation lock stays
+  owned, preventing a second converter. Other backup owners use normal admission.
+- `resume` continues the same finite selection without reconverting committed
+  batches. Commands have retained UUIDs and sequence numbers; replaying an older
+  command cannot override a newer one. A pause never expires automatically.
+- Initial backup contention waits without pretending to make byte progress.
+  Unexpected errors or uncertain partial work still require exact reconciliation.
+- WakeWatch follows the dedicated chat, existing timer, incident ledger, settings
+  and receipts. Pause requests, verified pauses, backup waits and failures remain
+  distinct. Completed alert responses do not mean conversion was repaired.
 
-For a still-running legacy worker, the old worker cannot consume a pause request. The prepared activation client
-waits for its **existing controller admission lock** to close naturally. It takes
-that normal lock without signals or forced unlocking. The old worker finishes
-local retirement/commit and then refuses its next B admission before conversion.
-
-Continuation is permitted only when the exact old process has exited with that
-specific initial-admission error, all committed batches have complete recovery
-and retirement records, their installed manifest identities/hashes still match,
-and the next batch has no journal, result or archive checkpoint. An unrelated
-failure does not qualify. Every historical receipt and backup epoch is retained.
-
-The same converter unit then starts the controlled driver **paused**. Backend,
-proxy, database, frontend and selected settings are untouched. The frontend owner
-still owns its backup/publication approval and validation. That release must
-finish its normal backup operation before dedup is explicitly resumed.
-
-This is not a backend restart and does not require one. A backend restart, if
-needed for another task, still belongs to the external managing agent.
-
-## Package and activation boundary
-
-Operation directory:
+Operation root:
 `/mnt/vk-storage/vk-log-dedup-20261103-0815/production-20261117/efficiency-20261118/online-20261119-v1`.
-Package beneath it: `checkpoint-controls-20261120`.
-
-`PREPARATION.private.json` pins the exact old process/unit, qualified legacy
-sources, new control code, watcher destination, serving identities and unchanged
-resource limits. `VALIDATION.private.json` records the tests and read-only live
-prefix checks and the reconciled failed activation. The source verification command below
-is read-only; it does not clear or retry the consumed activation:
-
-```sh
-python3 -B PACKAGE/source/activate_checkpoint_controls.py \
-  --preparation PACKAGE/PREPARATION.private.json
-```
-
-The activation client uses `--activate` with a retained `--authorization-ref`.
-The consumed failed attempt must be reconciled before any further activation.
-Its wait is bounded to90minutes; recent completed batches took15–46minutes.
-It never kills the old process on timeout. Any failed or uncertain activation
-requires exact receipt/unit reconciliation, not re-invocation. No activation
-command is scheduled or running now. The natural terminal failure has a separate
-qualified recovery path; it encountered the inspection block described above.
-
-After activation, commands use the existing private package:
+Current package beneath it: `checkpoint-controls-20261121` (`PACKAGE` below).
 
 ```sh
 python3 -B PACKAGE/source/checkpoint_control.py \
@@ -100,21 +56,28 @@ python3 -B PACKAGE/source/checkpoint_control.py \
 # pause/resume additionally require one retained --request-id UUID and --reason.
 ```
 
-Status distinguishes requested intent from the worker's acknowledged state.
-Check `ACTIVE.private.json`, the live process identity, actual released lease
-custody and the next ordinary WakeWatch tick before declaring activation accepted.
-The ordinary watcher reloads its new source/config without any service restart.
+A request is not an acknowledgement. Read status and live process identity before
+reporting a pause. Do not rerun the consumed activation. For future recovery use
+the sealed handoff's batch_override mapping: batch37 lives in isolated staging,
+while the original directory remains untouched. Other batches keep original paths.
+The controls retain the same resource floors and one finite background job.
 
-## Evidence and limits
+## Validation and limits
 
-The new control tests exercise real subprocess/kernel-lock handoff; durable
-commands and interruption; actual driver orchestration with fixture conversion/
-backup adapters; prefix corruption and partial-work refusal; pause/resume without
-replay; and truthful monitoring. Existing reader-custody, packed-graph and staging
-retirement tests also pass. Production prefix receipts and installed manifest
-hashes were read independently; the current in-flight batch correctly refused
-qualification for immediate takeover.
+63 focused tests passed, plus the new isolated-retirement observer test. Real
+fixtures exercise an open consumer of the untouched old directory, exact mapping,
+partial-work/corruption refusal, pause/resume without replay and backup contention.
+The isolated observer counts verified staging retirement and still exposes failure.
 
-These are preparation and failed-activation reconciliation results. They do not claim a production handoff, a new
-Desktop B round trip, completed historical conversion or final backup/UI/growth
-acceptance. Deferred cleanup remains excluded. The native goal remains paused.
+Production activation first acknowledged pause with released backup descriptors;
+a single retained resume then advanced actual source-byte progress and packing.
+The normal timer independently observed both pause and running states, no source
+error, and the original8 delivered events with8 attempts. No synthetic wake was
+sent. Main/protected serving identities and all existing watcher settings match.
+
+Evidence in the current package: PRIOR_ATTEMPT_RECONCILIATION, PREPARATION,
+HANDOFF, ACTIVE, RESUME_INTENT, RESUME_RECEIPT and LIVE_ACCEPTANCE private JSON.
+Full conversion, archive-tree/current-SQL recovery closure, final ordinary-service
+acceptance and net filesystem/growth accounting remain. Deferred cleanup stays
+excluded and the native goal stays paused. Web formatting remains unavailable
+because this worktree lacks Prettier; Rust formatting and Ops checks pass.

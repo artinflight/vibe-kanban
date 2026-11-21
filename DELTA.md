@@ -3015,3 +3015,21 @@ Validation for this wake: ops:check and git diff --check passed; pnpm run
 format completed both Rust formatters then failed because Prettier is absent.
 The existing HTTPS progress page returned200 and displayed the failure with
 118/3362 counts. No conversion, restore or final UI acceptance was performed.
+
+
+## 2026-11-21 — recover without touching blocked staging; controls live
+
+Verified that WakeWatch did deliver the November20 failure once to the separate
+chat; the response was blocked, not a missed wake. Added a fresh isolated staging
+mapping for the next batch, leaving the original directory and active consumers
+untouched. Existing scan/legacy conversion/custody checks remain.63 focused tests
+plus isolated-retirement observer regression pass. Finalized already-installed
+tail batch36 to122 committed files, activated the same finite unit paused, proved
+backup descriptors released, then resumed once after frontend publication proof.
+Actual byte progress advanced to441,903,688 packed bytes in batch37. Normal timer
+observed pause/running with8 historical deliveries/8 attempts; no synthetic wake.
+Main/protected identities and existing watcher settings are unchanged. Updated
+failure wording to distinguish completed alert responses from repaired conversion.
+Current controller PID1316160/invocation3594484094cb4790885a9b4b7570da3f;
+sealed evidence in online-20261119-v1/checkpoint-controls-20261121. Full objective
+remains unfinished. Deferred cleanup and native-goal pause remain unchanged.

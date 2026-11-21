@@ -65,5 +65,27 @@ class ProgressTests(unittest.TestCase):
         Path(self.objects[0]['path']).write_bytes(b'changed')
         with self.assertRaisesRegex(ValueError,'identity changed'):rp.supplement(self.root,self.row,None,self.now)
 
+    def test_isolated_control_observer_follows_new_path_and_still_reports_failure(self):
+        import os
+        from checkpoint_control import atomic
+        from control_observation import retirement_supplement
+        controls=self.root/'checkpoint-controls-fixture';controls.mkdir(mode=0o700)
+        parent=controls/'isolated-preparations';parent.mkdir(mode=0o700)
+        target=parent/self.folder.name;self.folder.rename(target);old_folder=self.folder;self.folder=target
+        for item in self.objects:
+            item['path']=str(target/Path(item['path']).relative_to(old_folder))
+        self.save('STAGING_RETIREMENT_PLAN.private.json',dict(objects=self.objects,original_or_primary_deletion=False))
+        operation='a'*32;handoff=controls/'HANDOFF.private.json'
+        atomic(handoff,dict(batch_override=dict(batch=2,path=str(target))))
+        atomic(controls/'CONTROLLER_SEAL.private.json',dict(operation=operation,attempt='controlled1',handoff=str(handoff)))
+        row=dict(self.row,operation=operation,attempt='controlled1');config=dict(operation_root=str(self.root),checkpoint_controls=str(controls))
+        observed,previous=retirement_supplement(config,row,None,self.now)
+        self.assertEqual(observed['retirement_removed'],0)
+        Path(self.objects[0]['path']).unlink()
+        observed,current=retirement_supplement(config,row,previous,self.now+20)
+        self.assertEqual(observed['retirement_removed'],1);self.assertEqual(current['at'],self.now+20)
+        failed=dict(row,state='failure_recovery_pending')
+        self.assertEqual(retirement_supplement(config,failed,current,self.now+30),(failed,current))
+
 
 if __name__=='__main__':unittest.main()

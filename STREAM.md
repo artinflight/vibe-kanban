@@ -16,8 +16,8 @@ restore, actual allocated/filesystem accounting including objects/staging, compl
 normal-B recovery dependencies, ordinary desktop/mobile histories/review/settings/
 queues and restored monitoring, plus honest future-growth and operating documents.
 The successful switch and production canary are complete. The finite online
-worker is stopped after a natural status-query failure; checkpoint controls are
-tested but activation awaits resolution of a privileged consumer check; full archive-tree/current-SQL recovery, final UI/monitoring and
+worker is running under verified checkpoint pause/resume controls; the recovered
+next batch uses sealed isolated staging while the old directory stays untouched; full archive-tree/current-SQL recovery, final UI/monitoring and
 net accounting remain. A successful switch alone is not completion. Reuse sufficient qualification; do
 not rerun large scans or builds without a new invalidation.
 

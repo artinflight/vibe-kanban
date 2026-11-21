@@ -55,7 +55,20 @@ def assert_leases_closed(paths,pids=None):
                     'backup lease descriptor still open in worker cgroup')
 
 
-def checkpoint(root,verify_installs=False, trusted_prefix=None):
+def batch_folder(root,number,override=None):
+    root=Path(root);usual=root/('batch-'+str(number).zfill(4))
+    if override is None or number!=override['batch']:return usual
+    replacement=Path(override['path'])
+    require(type(override['batch']) is int and override['batch']>=0
+            and replacement.is_absolute() and replacement.resolve()==replacement
+            and replacement.parent.parent.parent==root
+            and replacement.parent.name=='isolated-preparations'
+            and replacement.parent.parent.name.startswith('checkpoint-controls-')
+            and replacement.name==usual.name,'invalid isolated preparation path')
+    return replacement
+
+
+def checkpoint(root,verify_installs=False, trusted_prefix=None,batch_override=None):
     """Completed prefix only; interrupted/uncertain next work is never adopted."""
     root=Path(root);selection=read(root/'FINITE_BATCHES.private.json',8*1024**2)
     committed=read(root/'COMMITTED.private.json',8*1024**2)
@@ -77,6 +90,7 @@ def checkpoint(root,verify_installs=False, trusted_prefix=None):
                 and committed.get('skipped',[])[:len(trusted_prefix['skipped_rows'])]==trusted_prefix['skipped_rows'],
                 'previous committed prefix was rewritten')
         require(pins[1]==trusted_prefix['pins'][1],'finite selection changed')
+        require(batch_override==trusted_prefix.get('batch_override'),'isolated preparation mapping changed')
         pins.extend(trusted_prefix['pins'][2:])
     else:
         canary_result=read(canary)
@@ -84,7 +98,7 @@ def checkpoint(root,verify_installs=False, trusted_prefix=None):
         pins.append(reference(canary))
     for row in rows:
         if row['batch']<trusted_count:continue
-        folder=root/('batch-'+str(row['batch']).zfill(4))
+        folder=batch_folder(root,row['batch'],batch_override)
         require(Path(row['result'])==folder/'RESULT.private.json','foreign result path')
         result=read(folder/'RESULT.private.json');journal=read(folder/'journal/state.json')
         retire=read(folder/'CARRIER_RETIREMENT_RESULT.private.json')
@@ -116,7 +130,7 @@ def checkpoint(root,verify_installs=False, trusted_prefix=None):
             pins.append(reference(path))
     for row in skipped:
         if row['batch']<trusted_count:continue
-        folder=root/('batch-'+str(row['batch']).zfill(4))
+        folder=batch_folder(root,row['batch'],batch_override)
         skipped_result=read(folder/'SKIPPED.private.json')
         excluded=read(folder/'NONBENEFICIAL.private.json')
         require(skipped_result.get('all_nonbeneficial') is True and row['files']==len(selection['batches'][row['batch']]['names'])
@@ -124,7 +138,9 @@ def checkpoint(root,verify_installs=False, trusted_prefix=None):
                 and all(r['reason']=='no_positive_allocated_benefit'for r in excluded), 'incomplete skipped disposition')
         pins.extend([reference(folder/'SKIPPED.private.json'),reference(folder/'NONBENEFICIAL.private.json')])
     next_number=len(numbers)
-    for folder in root.glob('batch-*'):
+    folders=list(root.glob('batch-*'))
+    if batch_override is not None:folders.append(batch_folder(root,batch_override['batch'],batch_override))
+    for folder in folders:
         if not folder.is_dir(): continue
         number=int(folder.name.removeprefix('batch-'))
         if number>=next_number:
@@ -135,7 +151,8 @@ def checkpoint(root,verify_installs=False, trusted_prefix=None):
     return dict(operation=committed['operation'],next_batch=next_number,
                 completed_files=committed['completed_files'],completed_batches=len(rows),
                 total_batches=len(selection['batches']),pins=pins,committed_rows=rows,skipped_rows=skipped,
-                checkpoint_sha256=hashlib.sha256(canonical(pins)).hexdigest())
+                batch_override=batch_override,
+                checkpoint_sha256=hashlib.sha256(canonical(pins if batch_override is None else [pins,batch_override])).hexdigest())
 
 
 def lease_busy_before_capture(error,nightly_root):
@@ -162,7 +179,8 @@ def run(root,control_root,seal_path):
     seal=read(seal_path,8*1024**2);verify_pins(seal['sources'])
     handoff=read(seal['handoff']);require(handoff['operation']==seal['operation'] and handoff['verified'],
                                        'verified exact handoff required')
-    require(handoff['checkpoint']['checkpoint_sha256']==checkpoint(root,True)['checkpoint_sha256'],
+    override=handoff.get('batch_override')
+    require(handoff['checkpoint']['checkpoint_sha256']==checkpoint(root,True,batch_override=override)['checkpoint_sha256'],
             'checkpoint changed since handoff')
     try: old=process_identity(handoff['old_process']['pid'])
     except FileNotFoundError: old=None
@@ -186,16 +204,16 @@ def run(root,control_root,seal_path):
         os.rename(failure,retained)
         atomic(root/'ARMED.private.json',dict(operation=base.operation,attempt=attempt,at=time.time(),
               admission_expires_at=time.time()+3600,scope='finite online conversion with checkpoint controls'))
-        cp=checkpoint(root)
+        cp=checkpoint(root,batch_override=override)
         closed=lambda:assert_leases_closed(seal['backup_leases'])
         try:
             for number in range(cp['next_batch'],len(base.selection['batches'])):
                 controls.boundary(cp,attempt=attempt,verify_released=closed,identity_check=worker.readers.check_identities)
-                row=base.selection['batches'][number];folder=root/('batch-'+str(number).zfill(4))
+                row=base.selection['batches'][number];folder=batch_folder(root,number,override)
                 next_batch=None
                 if number+1<len(base.selection['batches']):
                     nxt=base.selection['batches'][number+1]
-                    next_batch=(root/('batch-'+str(number+1).zfill(4)),nxt['names'],nxt['workspace'])
+                    next_batch=(batch_folder(root,number+1,override),nxt['names'],nxt['workspace'])
                 while True:
                     controls.publish('running',cp,attempt=attempt,detail={'batch':number})
                     stage='preparation'
@@ -216,7 +234,7 @@ def run(root,control_root,seal_path):
                         if stage!='conversion' or not lease_busy_before_capture(error,worker.C['nightly']['folder']):raise
                         closed()
                         # No journal, capture or graph checkpoint may have appeared.
-                        require(checkpoint(root,trusted_prefix=cp)['checkpoint_sha256']==cp['checkpoint_sha256'],
+                        require(checkpoint(root,trusted_prefix=cp,batch_override=override)['checkpoint_sha256']==cp['checkpoint_sha256'],
                                 'busy admission changed checkpoint')
                         controls.publish('waiting_for_backup',cp,attempt=attempt,detail='Normal backup lane is occupied')
                         atomic(Path(control_root)/'ADMISSION_WAIT.private.json',dict(at=time.time(),operation=base.operation,
@@ -230,7 +248,7 @@ def run(root,control_root,seal_path):
                 worker.save(root/'COMMITTED.private.json',base.metadata())
                 worker.progress('finite_batch_committed',dict(batch=number+1,total_batches=len(base.selection['batches']),
                                                               files=base.metadata()['completed_files']))
-                cp=checkpoint(root,trusted_prefix=cp);closed()
+                cp=checkpoint(root,trusted_prefix=cp,batch_override=override);closed()
             worker.save(root/'PHYSICAL_WINDOW_AFTER.private.json',dict(at=time.time(),
                 source=worker.physical_accounting.measure([worker.C['source_root']],guard=worker.readers.check),
                 task=worker.physical_accounting.measure([str(root)],guard=worker.readers.check),

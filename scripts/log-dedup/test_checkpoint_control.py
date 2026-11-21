@@ -223,18 +223,25 @@ class ControlledDriverTests(unittest.TestCase):
     setUp=CheckpointTests.setUp
     def test_real_driver_pauses_between_batches_then_resumes_without_replay(self):
         from types import SimpleNamespace
-        control=self.root/'controls';control.mkdir(mode=0o700);controls=cc.Controls(control,OP)
+        control=self.root/'checkpoint-controls-fixture';control.mkdir(mode=0o700);controls=cc.Controls(control,OP)
         selection=cc.read(self.root/'FINITE_BATCHES.private.json');selection['files']=3
         selection['batches'].append(dict(names=['last']))
         for row in selection['batches']:row['workspace']='fixture'
         cc.atomic(self.root/'FINITE_BATCHES.private.json',selection)
         self.committed.update(total_files=4,total_batches=3);cc.atomic(self.root/'COMMITTED.private.json',self.committed)
-        for number,name in [(1,'next')]:
+        override=None;old_staging=None
+        if getattr(self,'isolated_staging',False):
+            parent=control/'isolated-preparations';parent.mkdir(mode=0o700)
+            override=dict(batch=1,path=str(parent/'batch-0001'))
+            old_staging=self.root/'batch-0001';old_staging.mkdir()
+            (old_staging/'unrelated-consumer').write_text('must remain unchanged')
+            handle=os.open(old_staging,os.O_RDONLY|os.O_DIRECTORY);self.addCleanup(os.close,handle)
+        for number,name in [] if override else [(1,'next')]:
             folder=self.root/('batch-'+str(number).zfill(4));folder.mkdir();cc.atomic(folder/'PREPARATION_COMPLETE.private.json',{'complete':True})
         failure=dict(operation=OP,type='BlockingIOError');cc.atomic(self.root/'FAILURE.private.json',failure)
-        cp=driver.checkpoint(self.root,True)
+        cp=driver.checkpoint(self.root,True,batch_override=override)
         handoff_path=control/'HANDOFF.private.json';cc.atomic(handoff_path,dict(verified=True,operation=OP,
-            old_process={'pid':999999999,'start_ticks':0,'boot_id':'none'},checkpoint=cp,failure_sha256=driver.sha(self.root/'FAILURE.private.json')))
+            old_process={'pid':999999999,'start_ticks':0,'boot_id':'none'},checkpoint=cp,batch_override=override,failure_sha256=driver.sha(self.root/'FAILURE.private.json')))
         lease=self.root/'backup.lock';lease.touch(mode=0o600)
         seal=control/'seal.json';cc.atomic(seal,dict(sources=[],handoff=str(handoff_path),operation=OP,attempt='controlled1',backup_leases=[str(lease)]))
         seen=[];base=SimpleNamespace(operation=OP,selection=selection)
@@ -274,6 +281,10 @@ class ControlledDriverTests(unittest.TestCase):
         worker=SimpleNamespace(C={'source_root':str(self.source),'nightly':{'folder':str(self.root)}},
             readers=SimpleNamespace(check_identities=lambda:None,check=lambda:None),convert=convert,
             save=cc.atomic,progress=lambda *a:None,physical_accounting=SimpleNamespace(measure=lambda *a,**k:{'fixture':True}))
+        def prepare(folder,names,workspace):
+            self.assertEqual(folder,Path(override['path']));self.assertFalse(folder.exists())
+            folder.mkdir();cc.atomic(folder/'PREPARATION_COMPLETE.private.json',{'complete':True})
+        worker.prepare=prepare
         base.w=worker
         real_boundary=cc.Controls.boundary;pauses=[]
         def boundary(instance,checkpoint,**kw):
@@ -298,6 +309,14 @@ class ControlledDriverTests(unittest.TestCase):
         result=cc.read(self.root/'RESULT.private.json');self.assertTrue(result['finite_conversion_complete'])
         self.assertFalse(result['full_objective_verified']);self.assertEqual(result['completed_files'],4)
         self.assertTrue((control/'LEGACY_BOUNDARY_EXIT.private.json').exists())
+        if old_staging is not None:
+            self.assertEqual(old_staging.stat().st_ino,os.fstat(handle).st_ino)
+            self.assertEqual((old_staging/'unrelated-consumer').read_text(),'must remain unchanged')
+            self.assertEqual(sorted(p.name for p in old_staging.iterdir()),['unrelated-consumer'])
+
+    def test_isolated_batch_uses_new_path_and_leaves_live_old_consumer_untouched(self):
+        self.isolated_staging=True
+        self.test_real_driver_pauses_between_batches_then_resumes_without_replay()
 
     def test_initial_backup_contention_waits_without_replay_or_fake_progress(self):
         self.simulate_busy=True
@@ -345,3 +364,43 @@ class TerminalRecoveryTests(unittest.TestCase):
         self.assertTrue((control/'preserved-empty-next-batch').is_dir());self.assertFalse((self.root/'batch-0001').exists())
         self.assertEqual(driver.sha(self.root/'FAILURE.private.json'),digest)
         self.assertTrue((control/'TERMINAL_RECOVERY_ATTEMPT').exists())
+
+
+class IsolatedCheckpointTests(unittest.TestCase):
+    setUp=CheckpointTests.setUp
+    def test_mapping_is_bounded_and_partial_isolated_work_is_refused(self):
+        parent=self.root/'checkpoint-controls-fixture'/'isolated-preparations';parent.mkdir(parents=True)
+        override=dict(batch=1,path=str(parent/'batch-0001'))
+        driver.checkpoint(self.root,True,batch_override=override)
+        bad=dict(override,path=str(self.root/'batch-0001'))
+        with self.assertRaisesRegex(ValueError,'invalid isolated'):driver.checkpoint(self.root,batch_override=bad)
+        folder=Path(override['path']);folder.mkdir();(folder/'journal').mkdir()
+        with self.assertRaisesRegex(ValueError,'unreconciled'):driver.checkpoint(self.root,batch_override=override)
+    def test_cached_prefix_cannot_change_mapping(self):
+        parent=self.root/'checkpoint-controls-fixture'/'isolated-preparations';parent.mkdir(parents=True)
+        override=dict(batch=1,path=str(parent/'batch-0001'))
+        cp=driver.checkpoint(self.root,batch_override=override)
+        with self.assertRaisesRegex(ValueError,'mapping changed'):driver.checkpoint(self.root,trusted_prefix=cp)
+
+class IsolatedRecoveryTests(unittest.TestCase):
+    setUp=CheckpointTests.setUp
+    candidate=TerminalRecoveryTests.candidate
+    def test_recovery_keeps_original_inode_and_open_consumer_and_uses_fresh_path(self):
+        from types import SimpleNamespace
+        import isolated_checkpoint_recovery as recovery
+        _,digest=self.candidate();control=self.root/'checkpoint-controls-fixture';control.mkdir(mode=0o700)
+        original=self.root/'batch-0001';descriptor=os.open(original,os.O_RDONLY|os.O_DIRECTORY)
+        self.addCleanup(os.close,descriptor);before=original.stat();base=SimpleNamespace()
+        base.retire_carriers=lambda folder:cc.atomic(folder/'CARRIER_RETIREMENT_RESULT.private.json',dict(complete=True,primary_objects_and_all_B_epochs_preserved=True))
+        base.metadata=lambda:dict(self.committed,batches=base.committed,completed_batches=1,completed_files=2,resolved_files=2)
+        base.w=SimpleNamespace(save=cc.atomic,progress=lambda *a:None)
+        prep=dict(old_process={'pid':999999999,'start_ticks':0,'boot_id':'none'},sources=[],terminal_failure_sha256=digest)
+        real_exists=Path.exists
+        with patch.object(Path,'exists',lambda p:True if p==self.root.parents[1]/'production-owner.lock' else real_exists(p)),             patch.object(recovery,'locked',side_effect=lambda *a,**k:cc.locked(self.root/'owner.lock',**k)),             patch.object(recovery,'load_legacy',return_value=base):
+            proof=recovery.reconcile(self.root,control,prep)
+        self.assertTrue(proof['verified']);self.assertEqual(proof['checkpoint']['next_batch'],1)
+        self.assertEqual(original.stat().st_ino,os.fstat(descriptor).st_ino)
+        self.assertEqual(original.stat().st_mtime_ns,before.st_mtime_ns);self.assertEqual(list(original.iterdir()),[])
+        self.assertNotEqual(proof['batch_override']['path'],str(original))
+        self.assertFalse(Path(proof['batch_override']['path']).exists())
+        self.assertEqual(driver.sha(self.root/'FAILURE.private.json'),digest)

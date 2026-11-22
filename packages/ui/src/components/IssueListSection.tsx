@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useState, type MouseEvent } from 'react';
+import { useCallback, useState, type ReactNode, type MouseEvent } from 'react';
 import { cn } from '../lib/cn';
 import { Droppable } from '@hello-pangea/dnd';
 import { CaretDownIcon } from '@phosphor-icons/react';
@@ -34,6 +34,7 @@ export interface IssueListSectionProps {
   selectedIssueIds?: Set<string>;
   isMultiSelectActive?: boolean;
   onIssueCheckboxChange?: (issueId: string, checked: boolean) => void;
+  renderIssueAction?: (issueId: string) => ReactNode;
   className?: string;
 }
 
@@ -49,6 +50,7 @@ export function IssueListSection({
   selectedIssueIds,
   isMultiSelectActive,
   onIssueCheckboxChange,
+  renderIssueAction,
   className,
 }: IssueListSectionProps) {
   const storageKey = `ui.issue-list-section.${status.id}`;
@@ -112,6 +114,7 @@ export function IssueListSection({
                   <IssueListRow
                     key={issue.id}
                     issue={issue}
+                    action={renderIssueAction?.(issue.id)}
                     index={index}
                     statusColor={status.color}
                     tags={getTagObjectsForIssue(issue.id)}

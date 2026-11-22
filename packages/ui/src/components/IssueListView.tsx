@@ -1,6 +1,6 @@
 'use client';
 
-import type { MouseEvent } from 'react';
+import type { MouseEvent, ReactNode } from 'react';
 import { cn } from '../lib/cn';
 import type { KanbanAssigneeUser } from './KanbanAssignee';
 import {
@@ -27,6 +27,7 @@ export interface IssueListViewProps {
   selectedIssueIds?: Set<string>;
   isMultiSelectActive?: boolean;
   onIssueCheckboxChange?: (issueId: string, checked: boolean) => void;
+  renderIssueAction?: (issueId: string) => ReactNode;
   className?: string;
 }
 
@@ -42,6 +43,7 @@ export function IssueListView({
   selectedIssueIds,
   isMultiSelectActive,
   onIssueCheckboxChange,
+  renderIssueAction,
   className,
 }: IssueListViewProps) {
   return (
@@ -50,6 +52,7 @@ export function IssueListView({
         <IssueListSection
           key={status.id}
           status={status}
+          renderIssueAction={renderIssueAction}
           issueIds={items[status.id] ?? []}
           issueMap={issueMap}
           issueAssigneesMap={issueAssigneesMap}

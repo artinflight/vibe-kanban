@@ -1,3 +1,4 @@
+import { IssueReadLaterAction } from '@/shared/components/IssueReadLaterAction';
 import { useOpenProjectWorkspace } from '@/shared/hooks/useOpenProjectWorkspace';
 import { DotActivityIndicators } from '@vibe/ui/components/DotActivityIndicators';
 import { useDotNotifications } from '@/shared/hooks/useDotNotifications';
@@ -1292,6 +1293,29 @@ export function KanbanContainer() {
     userId,
   ]);
 
+  const renderReadLaterAction = (issueId: string) => {
+    const issue = issuesById.get(issueId);
+    if (!issue) return null;
+    const unread =
+      dotNotifications.some(
+        (notice) => notice.issue_id === issueId && notice.unread_count > 0
+      ) ||
+      getWorkspacesForIssue(issueId).some((workspace) => {
+        const local = workspace.local_workspace_id
+          ? localWorkspacesById.get(workspace.local_workspace_id)
+          : undefined;
+        return local?.hasUnseenActivity || (local?.dotUnreadCount ?? 0) > 0;
+      });
+    return (
+      <IssueReadLaterAction
+        issueId={issue.id}
+        projectId={issue.project_id}
+        title={issue.title}
+        unread={unread}
+      />
+    );
+  };
+
   const needsReviewByStatusId = useMemo(() => {
     const map = new Map<string, boolean>();
 
@@ -1928,6 +1952,7 @@ export function KanbanContainer() {
                             </span>
                           )}
                         </button>
+                        {renderReadLaterAction(id)}
                         <button
                           type="button"
                           className="phone-row-more"
@@ -2123,6 +2148,7 @@ export function KanbanContainer() {
                                 dragDisabled={isMultiSelectActive}
                               >
                                 <KanbanCardContent
+                                  headerAction={renderReadLaterAction(issue.id)}
                                   displayId={issue.simple_id}
                                   title={issue.title}
                                   isExpanded={
@@ -2238,6 +2264,7 @@ export function KanbanContainer() {
         <div className="flex-1 overflow-y-auto px-double">
           <KanbanProvider onDragEnd={handleDragEnd} className="!block !w-full">
             <IssueListView
+              renderIssueAction={renderReadLaterAction}
               statuses={listViewStatuses}
               items={items}
               issueMap={issueMap}

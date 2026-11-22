@@ -110,6 +110,12 @@
     "label": "標籤"
   },
   "workspaces": {
+    "attention": "需要關注",
+    "readLaterSyncError": "稍後閱讀尚未同步。你的選擇已儲存在此瀏覽器中，連線後將重試。",
+    "readLater": "稍後閱讀",
+    "removeFromReadLater": "從稍後閱讀中移除",
+    "noReadLater": "沒有稍後閱讀的項目",
+    "completed": "已完成",
     "title": "工作區",
     "searchPlaceholder": "搜尋...",
     "active": "活躍",

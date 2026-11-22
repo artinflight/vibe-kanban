@@ -124,6 +124,12 @@
     "label": "Label"
   },
   "workspaces": {
+    "attention": "Attention",
+    "readLaterSyncError": "Read Later has not synced. Your choices are saved in this browser and will retry when connected.",
+    "readLater": "Read Later",
+    "removeFromReadLater": "Remove from Read Later",
+    "noReadLater": "Nothing saved for later",
+    "completed": "Completed",
     "title": "Workspaces",
     "searchPlaceholder": "Search...",
     "active": "Active",

@@ -110,6 +110,12 @@
     "label": "Etiqueta"
   },
   "workspaces": {
+    "attention": "Atención",
+    "readLaterSyncError": "Leer más tarde no se ha sincronizado. Tus selecciones están guardadas en este navegador y se volverán a intentar al conectarte.",
+    "readLater": "Leer más tarde",
+    "removeFromReadLater": "Quitar de Leer más tarde",
+    "noReadLater": "Nada guardado para más tarde",
+    "completed": "Completado",
     "title": "Espacios de trabajo",
     "searchPlaceholder": "Buscar...",
     "active": "Activo",

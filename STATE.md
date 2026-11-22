@@ -11,12 +11,18 @@ The first accelerated batch converted six logs /470,157,093 raw bytes in1154.66s
 including normal-B original/archive restoration, complete Python/Rust history
 readback and verified temporary-copy retirement. Allocated live-log recovery was
 460,996,608 bytes including referenced objects/directories; this is not final
-net filesystem accounting.66 batches/270 logs are committed. The preceding
+net filesystem accounting.69 batches/291 logs were committed before the Desktop connection outage. The preceding
 similar batch took1907.60s for479,344,883 raw bytes. This early comparison does
 not establish an end-to-end ETA for the differently sized remaining backlog.
 
-Fresh uncached safety checks and grouped directory flushes are qualified and
-active. Desktop/Laptop prepare copied future history; MCP alone validates and
+The November22 Desktop SSH outage stopped accelerated2 before batch69 publication.
+Recovery1 now resumes that exact batch after verifying originals, all committed
+manifests and three retained B graph checkpoints. Two returned helper jobs were
+adopted without replay. The missed WakeWatch alert was an overlength resource ID;
+the failure/stall/success paths now pass the actual codec. Normal timer and Desktop
+HUD both report the resumed job. See [recovery](VK_DEDUP_OFFLINE_RECOVERY.md).
+
+Fresh uncached safety checks and grouped directory flushes remain active. Desktop/Laptop prepare copied future history; MCP alone validates and
 publishes live manifests. A measured large Desktop transfer timeout was caught
 before remote processing. The correction uses compressed transport, a measured
 bounded deadline and releases only completed transfer-copy page cache. It adopts

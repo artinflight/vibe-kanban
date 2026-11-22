@@ -74,3 +74,15 @@ then shows stale/offline data; conversion and normal monitoring remain unaffecte
 This completes the requested HUD. Historical conversion and the original final
 recovery/service/accounting acceptance remain separate, unfinished work. The native
 goal stays paused; no second continuation loop was started.
+
+## November22 offline incident
+
+The converter stopped when its Desktop SSH connections timed out. A separate
+producer bug generated an alert resource longer than the shared codec allowed,
+which erased the published process snapshot and made the card show OFFLINE.
+The corrected producer retains fresh process observations if alert routing fails;
+private alert errors remain in the ledger/status and a public warning identifies
+the delivery problem. Bounded alert IDs pass the real failure/stall/success codec.
+The unchanged Rainmeter process128024 received a fresh RUNNING observation at
+1795345033 after the converter resumed. No skin, layout or Rainmeter restart was
+needed. See [recovery evidence](VK_DEDUP_OFFLINE_RECOVERY.md).

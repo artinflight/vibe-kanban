@@ -1,26 +1,35 @@
-# Writer cutover accepted; accelerated finite conversion RUNNING
+# Writer cutover accepted; finite conversion resumed after Desktop outage
 
-November22 acceleration is live in the same finite unit: PID3918687,
-invocation0afe61e507a94b1195f3b8dd55e36951, attempt accelerated2. Current controls
-are `checkpoint-controls-20261122-fast-v4` under the operation root. See
-[acceleration evidence and limits](VK_DEDUP_ACCELERATION.md). The current attempt took over at a
-verified clean pause with66 batches/270 logs committed, then resumed once. The
-first accelerated batch passed full original/graph/control restoration, Python/Rust
-EOF and duplicate retirement:470.2MB raw,461.0MB allocated release,19.2minutes
-versus31.8 for the preceding similar batch. This is an early comparison, not a
-backlog ETA or final net filesystem measurement.
+November22 recovery1 is live in the same finite unit: PID2054584,
+invocation221dd13e67f04147a3113740f9267240. Current controls are
+`checkpoint-controls-20261122-recovery` under the operation root. The stopped
+accelerated2 attempt had committed69 batches/291 logs. All installed manifests
+were rechecked; batch69's seven originals/sidecars still matched their planned
+identities and full hashes, with no conversion journal or installed manifest.
+Three accepted graph backup receipts were retained and reopened; the incomplete
+pack-3 remains untouched. Continuation uses new pack-3-nov22r1. Returned Laptop70
+and Desktop71 preparations were independently bound/hash-checked and adopted
+without dispatching them again. No Vibe/backend/reader restart occurred.
 
-Fresh checks and bounded directory flushes are active. Desktop prepares batch69;
-Laptop's completed batch68 was adopted from the previous attempt without replay.
-MCP alone verifies/imports archives and converts live history. The first large
-Desktop transfer timed out before dispatch; its exact evidence remains. A515MB
-compressed transfer passed in160s. Completed transfer-copy page cache is released
-without changing files or resource limits. Old Desktop batch67 will prepare locally.
-No serving backend/reader restart, selected-setting change or deferred cleanup.
-Normal WakeWatch observed accelerated2 with no source error and the same8 delivered
-batches/8 attempts. It targets the existing dedicated chat. Do not rerun a consumed
-activation or reuse the attempt-specific completed-job adoption configuration;
-inspect actual journals, returned-job receipts and current control path first.
+Desktop SSH transports timed out at02:21UTC; a BrokenPipeError during cleanup
+masked the guard-health failure. The acceleration attempt name also made the
+failure alert resource53characters, exceeding the installed48-character limit.
+That monitoring bug prevented the automatic wake. Bounded deterministic event
+IDs now preserve old valid incident keys, carry the full attempt in event values,
+and pass the actual failure/stall/success codec and no-replay tests. Alert-routing
+errors retain fresh process observations instead of erasing the HUD feed.
+The ordinary timer observed recovery1 paused and running with no source/event
+error and the same8 delivered batches/8 attempts. Desktop's actual HUD receipt
+now says RUNNING. Existing dedicated chat, settings, ledger and timer are retained.
+
+See [recovery evidence](VK_DEDUP_OFFLINE_RECOVERY.md),
+[acceleration](VK_DEDUP_ACCELERATION.md) and
+[controls](VK_DEDUP_CHECKPOINT_CONTROLS.md). The initial accelerated comparison
+remains470.2MB raw/461.0MB allocated release in19.2minutes versus31.8minutes
+for a preceding similar batch; it is not a backlog ETA or final net-space figure.
+No consumed activation or uncertain remote dispatch may be replayed. Recheck
+actual unit, receipts and current control path before acting. Native goal remains
+paused; no new goal or agent continuation loop exists.
 
 Desktop's live dedup Rainmeter card is installed directly below Archive Queue.
 See [HUD operation and acceptance](VK_DEDUP_RAINMETER.md). It uses the existing
@@ -69,7 +78,7 @@ conversion is a finite backlog job; ongoing scheduling remains unimplemented.
 Current operation6d4d022ab2f84d1ea72f39d6a6382d1c:
 /mnt/vk-storage/vk-log-dedup-20261103-0815/production-20261117/efficiency-20261118/online-20261119-v1
 Unit vk-online-dedup-bulk-20261119-v1.service;
-current PID3918687 / invocation0afe61e507a94b1195f3b8dd55e36951; attempt accelerated2.
+current PID2054584 / invocation221dd13e67f04147a3113740f9267240; attempt recovery1.
 Former controlled1 PID1316160 exited at its verified65-batch checkpoint; retained
 handoff in checkpoint-controls-20261122-fast-v2 proves the clean transition.
 OldPID4119270 is gone; its terminal invocation3b0f92bbd65a47afb1a599b7d3015003 is historical.
@@ -129,20 +138,9 @@ Use FULL_OBJECTIVE_CHECKLIST.private.json. Bulk RESULT deliberately says full
 objective unverified. Per-batch checkpoints alone do not close complete-tree backup.
 Preserve current writes, pending inputs, selected settings, all epochs/other owners.
 
-Qualification:170 Python tests ran,165 passed and5 optional probes skipped.
-The resource guard retains3GiB SSD/4GiB available RAM/.10 full PSI thresholds,
-waits up to the existing600s no-progress bound, rechecks owner/mount identities,
-and records exact metrics without crediting waiting as progress. Packed immutable
-B-derived RAM uses1s remote owner polling and64-member read-only graph checks;
-every byte/EOF/metadata is still verified. Publication guards remain uncached.
-Watcher fixture proves accepted issues are not replayed and a manually reconciled
-attempt can report a new issue. No automatic controller retry was added. Real
-production canary passed. Existing Rust lock/reader qualification remains retained.
-Rust formatting passes; web formatting unavailable because Prettier is missing.
-Bulk source/config/inventory pinned in RESUME1_SEAL; do not edit active inputs.
-worker_v3 pipelines the next request through the same real B context and groups
-RAM replays in unchanged32-member sealed caches under a512MiB total batch bound.
-MemoryHigh1.5GiB/Max2GiB; actual SSD/memory/Desktop admission remains enforced.
+Historical170-case qualification, native resume measurement, guards and prior
+resource/custody tests remain in [the retained pickup record](deployment-history/20261122-before-offline-recovery/HANDOFF.md).
+Do not rebuild or repeat sufficient qualification without new invalidation.
 
 History: [before v4](deployment-history/20261119-before-v4-cutover/HANDOFF.md),
 [HANDOFF history](HANDOFF_HISTORY_20261017.md).

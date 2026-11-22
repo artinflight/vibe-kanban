@@ -27,6 +27,13 @@ class FeedTests(unittest.TestCase):
         self.source['resolved_files']=4;self.result['source_error']='private exception'
         self.assertNotIn('private exception',hud.embed('</html>',self.config,self.result))
         self.assertIn('state=unavailable',hud.embed('</html>',self.config,self.result))
+    def test_alert_delivery_error_does_not_hide_fresh_process_observation(self):
+        self.source['state']='failure_recovery_pending'
+        self.result['event_error']='private alert codec failure'
+        value=hud.payload(self.config,self.result)
+        self.assertEqual(value['state'],'failure_recovery_pending')
+        self.assertEqual(value['completed_files'],3)
+        self.assertNotIn('private alert',hud.embed('</html>',self.config,self.result))
     def test_real_phase_names_with_uppercase_tokens_are_normalized(self):
         self.source['phase']='actual_production_reader_full_EOF_verified'
         self.assertEqual(hud.payload(self.config,self.result)['phase'],'actual_production_reader_full_eof_verified')

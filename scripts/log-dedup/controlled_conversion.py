@@ -68,7 +68,7 @@ def batch_folder(root,number,override=None):
     return replacement
 
 
-def checkpoint(root,verify_installs=False, trusted_prefix=None,batch_override=None):
+def checkpoint(root,verify_installs=False, trusted_prefix=None,batch_override=None,pending_graph=None):
     """Completed prefix only; interrupted/uncertain next work is never adopted."""
     root=Path(root);selection=read(root/'FINITE_BATCHES.private.json',8*1024**2)
     committed=read(root/'COMMITTED.private.json',8*1024**2)
@@ -138,12 +138,17 @@ def checkpoint(root,verify_installs=False, trusted_prefix=None,batch_override=No
                 and all(r['reason']=='no_positive_allocated_benefit'for r in excluded), 'incomplete skipped disposition')
         pins.extend([reference(folder/'SKIPPED.private.json'),reference(folder/'NONBENEFICIAL.private.json')])
     next_number=len(numbers)
+    active_pending=None
     folders=list(root.glob('batch-*'))
     if batch_override is not None:folders.append(batch_folder(root,batch_override['batch'],batch_override))
     for folder in folders:
         if not folder.is_dir(): continue
         number=int(folder.name.removeprefix('batch-'))
         if number>=next_number:
+            if pending_graph is not None and number==next_number==pending_graph['batch']:
+                import pending_graph_recovery
+                active_pending=pending_graph_recovery.inspect(root,pending_graph,full_hash=verify_installs)
+                continue
             require(number==next_number and not (folder/'journal').exists()
                     and not (folder/'RESULT.private.json').exists()
                     and not list((folder/'graph-recovery').glob('graph-checkpoint-*.json')),
@@ -151,8 +156,10 @@ def checkpoint(root,verify_installs=False, trusted_prefix=None,batch_override=No
     return dict(operation=committed['operation'],next_batch=next_number,
                 completed_files=committed['completed_files'],completed_batches=len(rows),
                 total_batches=len(selection['batches']),pins=pins,committed_rows=rows,skipped_rows=skipped,
-                batch_override=batch_override,
-                checkpoint_sha256=hashlib.sha256(canonical(pins if batch_override is None else [pins,batch_override])).hexdigest())
+                batch_override=batch_override,pending_graph=active_pending,
+                checkpoint_sha256=hashlib.sha256(canonical(
+                    [pins,batch_override,active_pending] if active_pending is not None else
+                    (pins if batch_override is None else [pins,batch_override]))).hexdigest())
 
 
 def lease_busy_before_capture(error,nightly_root):
@@ -179,8 +186,8 @@ def run(root,control_root,seal_path):
     seal=read(seal_path,8*1024**2);verify_pins(seal['sources'])
     handoff=read(seal['handoff']);require(handoff['operation']==seal['operation'] and handoff['verified'],
                                        'verified exact handoff required')
-    override=handoff.get('batch_override')
-    require(handoff['checkpoint']['checkpoint_sha256']==checkpoint(root,True,batch_override=override)['checkpoint_sha256'],
+    override=handoff.get('batch_override');pending=handoff.get('pending_graph')
+    require(handoff['checkpoint']['checkpoint_sha256']==checkpoint(root,True,batch_override=override,pending_graph=pending)['checkpoint_sha256'],
             'checkpoint changed since handoff')
     try: old=process_identity(handoff['old_process']['pid'])
     except FileNotFoundError: old=None
@@ -218,7 +225,7 @@ def run(root,control_root,seal_path):
                 runtime=fast_runtime.install(base,read(seal['runtime_config']['path']),override)
             atomic(root/'ARMED.private.json',dict(operation=base.operation,attempt=attempt,at=time.time(),
                   admission_expires_at=time.time()+3600,scope='finite online conversion with checkpoint controls'))
-            cp=checkpoint(root,batch_override=override)
+            cp=checkpoint(root,batch_override=override,pending_graph=pending)
             closed=lambda:assert_leases_closed(seal['backup_leases'])
             for number in range(cp['next_batch'],len(base.selection['batches'])):
                 controls.boundary(cp,attempt=attempt,verify_released=closed,identity_check=worker.readers.check_identities)
@@ -248,7 +255,7 @@ def run(root,control_root,seal_path):
                         if stage!='conversion' or not lease_busy_before_capture(error,worker.C['nightly']['folder']):raise
                         closed()
                         # No journal, capture or graph checkpoint may have appeared.
-                        require(checkpoint(root,trusted_prefix=cp,batch_override=override)['checkpoint_sha256']==cp['checkpoint_sha256'],
+                        require(checkpoint(root,trusted_prefix=cp,batch_override=override,pending_graph=pending)['checkpoint_sha256']==cp['checkpoint_sha256'],
                                 'busy admission changed checkpoint')
                         controls.publish('waiting_for_backup',cp,attempt=attempt,detail='Normal backup lane is occupied')
                         atomic(Path(control_root)/'ADMISSION_WAIT.private.json',dict(at=time.time(),operation=base.operation,
@@ -262,7 +269,7 @@ def run(root,control_root,seal_path):
                 worker.save(root/'COMMITTED.private.json',base.metadata())
                 worker.progress('finite_batch_committed',dict(batch=number+1,total_batches=len(base.selection['batches']),
                                                               files=base.metadata()['completed_files']))
-                cp=checkpoint(root,trusted_prefix=cp,batch_override=override);closed()
+                cp=checkpoint(root,trusted_prefix=cp,batch_override=override,pending_graph=pending);closed()
             if runtime is not None:runtime.close();runtime=None
             worker.save(root/'PHYSICAL_WINDOW_AFTER.private.json',dict(at=time.time(),
                 source=worker.physical_accounting.measure([worker.C['source_root']],guard=worker.readers.check),

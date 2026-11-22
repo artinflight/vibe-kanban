@@ -37,9 +37,9 @@ struct StartWorkspaceRequest {
     #[schemars(description = "Repository selection for the workspace")]
     repositories: Vec<McpWorkspaceRepoInput>,
     #[schemars(
-        description = "Optional issue ID to link the workspace to. When provided, the workspace will be associated with this remote issue."
+        description = "Required existing issue ID. Create or select an issue before starting a workspace."
     )]
-    issue_id: Option<Uuid>,
+    issue_id: Uuid,
 }
 
 #[derive(Debug, Serialize, schemars::JsonSchema)]
@@ -148,7 +148,7 @@ impl McpServer {
             })
             .collect();
 
-        let (linked_issue, issue_prompt) = if let Some(issue_id) = issue_id {
+        let (linked_issue, issue_prompt) = {
             let issue_url = self.url(&format!("/api/remote/issues/{issue_id}"));
             let issue: api_types::Issue = match self.send_json(self.client.get(&issue_url)).await {
                 Ok(issue) => issue,
@@ -162,8 +162,6 @@ impl McpServer {
                 }),
                 build_workspace_prompt_from_issue(&issue),
             )
-        } else {
-            (None, None)
         };
 
         let workspace_prompt = match prompt.or(issue_prompt) {
@@ -206,11 +204,10 @@ impl McpServer {
             Err(e) => return Ok(Self::tool_error(e)),
         };
 
-        // Link workspace to remote issue if issue_id is provided
-        if let Some(issue_id) = issue_id
-            && let Err(e) = self
-                .link_workspace_to_issue(create_and_start_response.workspace.id, issue_id)
-                .await
+        // The issue has been verified before any workspace/agent side effects.
+        if let Err(e) = self
+            .link_workspace_to_issue(create_and_start_response.workspace.id, issue_id)
+            .await
         {
             return Ok(Self::tool_error(e));
         }
@@ -241,5 +238,23 @@ impl McpServer {
             workspace_id: workspace_id.to_string(),
             issue_id: issue_id.to_string(),
         })
+    }
+}
+
+#[cfg(test)]
+mod issue_context_tests {
+    use super::StartWorkspaceRequest;
+
+    #[test]
+    fn workspace_start_requires_a_real_issue_id() {
+        let mut request = serde_json::json!({
+            "name": "Example workspace", "prompt": "Inspect copies", "executor": "CODEX",
+            "repositories": [{"repo_id": uuid::Uuid::new_v4(), "branch": "main"}]
+        });
+        assert!(serde_json::from_value::<StartWorkspaceRequest>(request.clone()).is_err());
+        request["issue_id"] = serde_json::Value::Null;
+        assert!(serde_json::from_value::<StartWorkspaceRequest>(request.clone()).is_err());
+        request["issue_id"] = serde_json::json!(uuid::Uuid::new_v4());
+        assert!(serde_json::from_value::<StartWorkspaceRequest>(request).is_ok());
     }
 }

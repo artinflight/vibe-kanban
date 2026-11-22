@@ -44,7 +44,11 @@ export function useCreateWorkspace() {
     mutationFn: async ({ data, linkToIssue }: CreateWorkspaceParams) => {
       const { workspace } = await workspacesApi.createAndStart(data);
 
-      if (linkToIssue && workspace && !workspace.task_id) {
+      if (
+        linkToIssue &&
+        workspace &&
+        workspace.task_id !== linkToIssue.issueId
+      ) {
         try {
           await workspacesApi.linkToIssue(
             workspace.id,

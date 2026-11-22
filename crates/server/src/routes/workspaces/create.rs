@@ -7,7 +7,7 @@ use db::models::{
     project::Project,
     requests::{
         CreateAndStartWorkspaceRequest, CreateAndStartWorkspaceResponse, CreateWorkspaceApiRequest,
-        LinkedIssueInfo, WorkspaceRepoInput,
+        LinkedIssueInfo,
     },
     task::Task,
     workspace::{CreateWorkspace, Workspace},
@@ -41,24 +41,19 @@ pub(crate) async fn create_workspace_record(
         .git_branch_from_workspace(&workspace_id, branch_label)
         .await;
 
-    let workspace = Workspace::create(
+    // Resolve before insertion: invalid explicit links must not leave a workspace
+    // behind, and valid local starts must not create a temporary inbox issue.
+    let task_id = resolve_local_linked_issue_task_id(deployment, linked_issue).await?;
+    let workspace = Workspace::create_with_issue(
         &deployment.db().pool,
         &CreateWorkspace {
             branch: git_branch_name,
             name: name.filter(|workspace_name| !workspace_name.is_empty()),
         },
         workspace_id,
+        task_id,
     )
     .await?;
-
-    if let Some(task_id) = resolve_local_linked_issue_task_id(deployment, linked_issue).await? {
-        Workspace::update_task_id(&deployment.db().pool, workspace_id, Some(task_id)).await?;
-        return Workspace::find_by_id(&deployment.db().pool, workspace_id)
-            .await?
-            .ok_or_else(|| {
-                ApiError::BadRequest("Workspace was created but could not be reloaded".to_string())
-            });
-    }
 
     Ok(workspace)
 }
@@ -73,126 +68,36 @@ async fn resolve_local_linked_issue_task_id(
 
     let project =
         match Project::find_by_id(&deployment.db().pool, linked_issue.remote_project_id).await {
-            Ok(project) => project,
-            Err(SqlxError::RowNotFound) => return Ok(None),
+            Ok(project) => Some(project),
+            Err(SqlxError::RowNotFound) => None,
             Err(e) => return Err(e.into()),
         };
 
-    if project.remote_project_id.is_some() {
-        return Ok(None);
+    if project
+        .as_ref()
+        .is_some_and(|project| project.remote_project_id.is_none())
+    {
+        let task = Task::find_by_id(&deployment.db().pool, linked_issue.issue_id).await?;
+        return task
+            .filter(|task| task.project_id == linked_issue.remote_project_id)
+            .map(|task| Some(task.id))
+            .ok_or_else(|| {
+                ApiError::BadRequest("Issue not found in the selected project".to_string())
+            });
     }
 
-    let task = match Task::find_by_id(&deployment.db().pool, linked_issue.issue_id).await {
-        Ok(task) => task,
-        Err(SqlxError::RowNotFound) => return Ok(None),
-        Err(e) => return Err(e.into()),
-    };
-
-    Ok(task
-        .filter(|task| task.project_id == linked_issue.remote_project_id)
-        .map(|task| task.id))
-}
-
-async fn ensure_local_linked_issue_task_id(
-    deployment: &DeploymentImpl,
-    workspace_id: Uuid,
-    linked_issue: Option<&LinkedIssueInfo>,
-) -> Result<Option<Uuid>, ApiError> {
-    const MAX_ATTEMPTS: usize = 8;
-    const RETRY_DELAY_MS: u64 = 250;
-
-    for attempt in 0..MAX_ATTEMPTS {
-        if let Some(task_id) = resolve_local_linked_issue_task_id(deployment, linked_issue).await? {
-            Workspace::update_task_id(&deployment.db().pool, workspace_id, Some(task_id)).await?;
-            return Ok(Some(task_id));
-        }
-
-        if attempt + 1 < MAX_ATTEMPTS {
-            tokio::time::sleep(tokio::time::Duration::from_millis(RETRY_DELAY_MS)).await;
-        }
-    }
-
-    Ok(None)
-}
-
-fn unique_matching_task_id<'a>(
-    tasks: impl IntoIterator<Item = (Uuid, &'a str)>,
-    workspace_name: &str,
-) -> Option<Uuid> {
-    let mut matching_task_ids = Vec::new();
-    for (task_id, title) in tasks {
-        if title.trim() == workspace_name && !matching_task_ids.contains(&task_id) {
-            matching_task_ids.push(task_id);
-        }
-    }
-
-    match matching_task_ids.as_slice() {
-        [task_id] => Some(*task_id),
-        [] => None,
-        _ => {
-            tracing::warn!(
-                "Could not infer local issue link for workspace {:?}: {} matching tasks",
-                workspace_name,
-                matching_task_ids.len()
-            );
-            None
-        }
-    }
-}
-
-async fn infer_local_linked_issue_task_id_from_repos(
-    deployment: &DeploymentImpl,
-    repos: &[WorkspaceRepoInput],
-    workspace_name: Option<&str>,
-) -> Result<Option<Uuid>, ApiError> {
-    let Some(workspace_name) = workspace_name
-        .map(str::trim)
-        .filter(|name| !name.is_empty())
-    else {
-        return Ok(None);
-    };
-
-    let mut project_ids = Vec::new();
-    for repo in repos {
-        let linked_project_ids = sqlx::query_scalar::<_, Uuid>(
-            r#"SELECT project_id
-               FROM project_repos
-               WHERE repo_id = ?"#,
-        )
-        .bind(repo.repo_id)
-        .fetch_all(&deployment.db().pool)
+    // A remote issue remains tracked remotely; its local workspace also receives
+    // an inbox issue so local history never depends on remote availability.
+    let issue = deployment
+        .remote_client()?
+        .get_issue(linked_issue.issue_id)
         .await?;
-
-        for project_id in linked_project_ids {
-            if !project_ids.contains(&project_id) {
-                project_ids.push(project_id);
-            }
-        }
+    if issue.project_id != linked_issue.remote_project_id {
+        return Err(ApiError::BadRequest(
+            "Issue not found in the selected project".to_string(),
+        ));
     }
-
-    let mut matching_tasks = Vec::new();
-    for project_id in project_ids {
-        let project = match Project::find_by_id(&deployment.db().pool, project_id).await {
-            Ok(project) => project,
-            Err(SqlxError::RowNotFound) => continue,
-            Err(e) => return Err(e.into()),
-        };
-
-        if project.remote_project_id.is_some() {
-            continue;
-        }
-
-        for task in Task::find_by_project(&deployment.db().pool, project_id).await? {
-            matching_tasks.push((task.id, task.title));
-        }
-    }
-
-    Ok(unique_matching_task_id(
-        matching_tasks
-            .iter()
-            .map(|(task_id, title)| (*task_id, title.as_str())),
-        workspace_name,
-    ))
+    Ok(None)
 }
 
 pub async fn create_workspace(
@@ -369,7 +274,6 @@ pub async fn create_and_start_workspace(
         prompt,
         attachment_ids,
     } = payload;
-    let workspace_name_for_link = name.clone();
 
     let mut workspace_prompt = normalize_prompt(&prompt).ok_or_else(|| {
         ApiError::BadRequest(
@@ -390,47 +294,11 @@ pub async fn create_and_start_workspace(
         )
         .await?;
 
-    if linked_issue.is_some()
-        && managed_workspace.workspace.task_id.is_none()
-        && ensure_local_linked_issue_task_id(
-            &deployment,
-            managed_workspace.workspace.id,
-            linked_issue.as_ref(),
-        )
-        .await?
-        .is_some()
-    {
-        managed_workspace = deployment
-            .workspace_manager()
-            .load_managed_workspace(managed_workspace.workspace.clone())
-            .await?;
-    }
-
     for repo in &repos {
         managed_workspace
             .add_repository(repo, deployment.git())
             .await
             .map_err(ApiError::from)?;
-    }
-
-    if managed_workspace.workspace.task_id.is_none()
-        && let Some(task_id) = infer_local_linked_issue_task_id_from_repos(
-            &deployment,
-            &repos,
-            workspace_name_for_link.as_deref(),
-        )
-        .await?
-    {
-        Workspace::update_task_id(
-            &deployment.db().pool,
-            managed_workspace.workspace.id,
-            Some(task_id),
-        )
-        .await?;
-        managed_workspace = deployment
-            .workspace_manager()
-            .load_managed_workspace(managed_workspace.workspace.clone())
-            .await?;
     }
 
     if let Some(ids) = &attachment_ids {
@@ -512,10 +380,7 @@ mod tests {
     use db::models::file::File;
     use uuid::Uuid;
 
-    use super::{
-        ImportedIssueAttachment, rewrite_imported_issue_attachments_markdown,
-        unique_matching_task_id,
-    };
+    use super::{ImportedIssueAttachment, rewrite_imported_issue_attachments_markdown};
 
     fn imported_file(
         attachment_id: Uuid,
@@ -536,30 +401,6 @@ mod tests {
                 updated_at: Utc::now(),
             },
         }
-    }
-
-    #[test]
-    fn infers_exactly_one_matching_local_issue_title() {
-        let task_id = Uuid::new_v4();
-        let tasks = vec![
-            (Uuid::new_v4(), "Other issue"),
-            (task_id, "OSTP::Deploy Ops Pb"),
-        ];
-
-        assert_eq!(
-            unique_matching_task_id(tasks, "OSTP::Deploy Ops Pb"),
-            Some(task_id)
-        );
-    }
-
-    #[test]
-    fn does_not_infer_ambiguous_local_issue_titles() {
-        let tasks = vec![
-            (Uuid::new_v4(), "OSTP::Deploy Ops Pb"),
-            (Uuid::new_v4(), "OSTP::Deploy Ops Pb"),
-        ];
-
-        assert_eq!(unique_matching_task_id(tasks, "OSTP::Deploy Ops Pb"), None);
     }
 
     #[test]

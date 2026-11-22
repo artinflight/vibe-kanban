@@ -374,20 +374,35 @@ impl Workspace {
         data: &CreateWorkspace,
         id: Uuid,
     ) -> Result<Self, WorkspaceError> {
-        Ok(sqlx::query_as!(
+        Self::create_with_issue(pool, data, id, None).await
+    }
+
+    pub async fn create_with_issue(
+        pool: &SqlitePool,
+        data: &CreateWorkspace,
+        id: Uuid,
+        task_id: Option<Uuid>,
+    ) -> Result<Self, WorkspaceError> {
+        sqlx::query_as!(
             Workspace,
             r#"INSERT INTO workspaces (id, task_id, container_ref, branch, setup_completed_at, name)
                VALUES ($1, $2, $3, $4, $5, $6)
                RETURNING id as "id!: Uuid", task_id as "task_id: Uuid", container_ref, branch, setup_completed_at as "setup_completed_at: DateTime<Utc>", created_at as "created_at!: DateTime<Utc>", updated_at as "updated_at!: DateTime<Utc>", archived as "archived!: bool", pinned as "pinned!: bool", name, worktree_deleted as "worktree_deleted!: bool""#,
             id,
-            Option::<Uuid>::None,
+            task_id,
             Option::<String>::None,
             data.branch,
             Option::<DateTime<Utc>>::None,
             data.name
         )
         .fetch_one(pool)
-        .await?)
+        .await?;
+
+        // SQLite RETURNING precedes AFTER triggers. Reload the persisted issue
+        // link so standalone creation returns the same identity as later reads.
+        Self::find_by_id(pool, id)
+            .await?
+            .ok_or(WorkspaceError::WorkspaceNotFound)
     }
 
     pub async fn update_branch_name(
@@ -769,5 +784,74 @@ mod tests {
         );
 
         assert_eq!(selected, None);
+    }
+}
+
+#[cfg(test)]
+mod issue_integrity_tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn standalone_create_returns_its_persisted_issue() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+        sqlx::migrate!("./migrations").run(&pool).await.unwrap();
+        let workspace = Workspace::create(
+            &pool,
+            &CreateWorkspace {
+                branch: "standalone".into(),
+                name: Some("Example workspace".into()),
+            },
+            Uuid::new_v4(),
+        )
+        .await
+        .unwrap();
+        assert_eq!(workspace.task_id, Some(workspace.id));
+        let task = crate::models::task::Task::find_by_id(&pool, workspace.id)
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(task.title, "Example workspace");
+        assert_eq!(
+            Workspace::find_by_id(&pool, workspace.id)
+                .await
+                .unwrap()
+                .unwrap()
+                .task_id,
+            workspace.task_id
+        );
+        assert!(
+            Workspace::update_task_id(&pool, workspace.id, None)
+                .await
+                .is_err()
+        );
+    }
+
+    #[tokio::test]
+    async fn explicit_create_rejects_a_missing_issue_without_a_workspace() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+        sqlx::migrate!("./migrations").run(&pool).await.unwrap();
+        let id = Uuid::new_v4();
+        assert!(
+            Workspace::create_with_issue(
+                &pool,
+                &CreateWorkspace {
+                    branch: "explicit".into(),
+                    name: None
+                },
+                id,
+                Some(Uuid::new_v4()),
+            )
+            .await
+            .is_err()
+        );
+        assert!(Workspace::find_by_id(&pool, id).await.unwrap().is_none());
     }
 }

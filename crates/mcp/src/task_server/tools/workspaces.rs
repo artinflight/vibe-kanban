@@ -28,6 +28,10 @@ struct McpListWorkspacesRequest {
 struct WorkspaceSummary {
     #[schemars(description = "Workspace ID")]
     id: String,
+    #[schemars(
+        description = "Linked local issue ID; null indicates a legacy workspace requiring repair"
+    )]
+    issue_id: Option<String>,
     #[schemars(description = "Workspace branch")]
     branch: String,
     #[schemars(description = "Whether the workspace is archived")]
@@ -49,6 +53,7 @@ struct McpListWorkspacesResponse {
     returned_count: usize,
     limit: usize,
     offset: usize,
+    next_offset: Option<usize>,
 }
 
 #[derive(Debug, Deserialize, schemars::JsonSchema)]
@@ -98,7 +103,9 @@ struct McpDeleteWorkspaceResponse {
 
 #[tool_router(router = workspaces_tools_router, vis = "pub")]
 impl McpServer {
-    #[tool(description = "List local workspaces with optional filters and pagination.")]
+    #[tool(
+        description = "List local workspaces across all assignees with issue links and pagination. A single page is not the full inventory; follow next_offset or use name_search to find older workspaces."
+    )]
     async fn list_workspaces(
         &self,
         Parameters(McpListWorkspacesRequest {
@@ -148,6 +155,7 @@ impl McpServer {
             .take(limit)
             .map(|workspace| WorkspaceSummary {
                 id: workspace.id.to_string(),
+                issue_id: workspace.task_id.map(|id| id.to_string()),
                 branch: workspace.branch,
                 archived: workspace.archived,
                 pinned: workspace.pinned,
@@ -162,6 +170,8 @@ impl McpServer {
             total_count,
             limit,
             offset,
+            next_offset: (limit > 0 && offset.saturating_add(limit) < total_count)
+                .then_some(offset.saturating_add(limit)),
             workspaces: workspace_summaries,
         })
     }

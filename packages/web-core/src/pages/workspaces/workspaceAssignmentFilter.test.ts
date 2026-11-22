@@ -132,3 +132,46 @@ test('every workspace of the same issue inherits its multi-assignees', () => {
     1
   );
 });
+
+test('An older assigned workspace remains discoverable through All and search beyond page 50 without acknowledging unread', () => {
+  const olderWorkspace = {
+    id: '10000000-0000-4000-8000-000000000001',
+    name: 'Older example workspace',
+    hasUnseenActivity: true,
+  };
+  const history = [
+    ...Array.from({ length: 71 }, (_, i) => ({
+      id: `newer-${i}`,
+      name: 'Other work',
+      hasUnseenActivity: false,
+    })),
+    olderWorkspace,
+  ];
+  const assignments = workspaceAssigneesById([
+    {
+      workspace_id: olderWorkspace.id,
+      issue_id: 'example-issue',
+      user_id: dot,
+    },
+  ]);
+  const before = JSON.stringify(history);
+  assert.equal(
+    filterWorkspaceAssignments(history, 'mine', seamus, assignments).includes(
+      olderWorkspace
+    ),
+    false
+  );
+  const all = filterWorkspaceAssignments(history, 'all', seamus, assignments);
+  assert.equal(
+    paginateWorkspaceSidebar(all, 50, false, false).includes(olderWorkspace),
+    false
+  );
+  const matches = all.filter((w) =>
+    w.name.toLowerCase().includes('older example')
+  );
+  assert.deepEqual(paginateWorkspaceSidebar(matches, 50, true, false), [
+    olderWorkspace,
+  ]);
+  assert.equal(JSON.stringify(history), before);
+  assert.equal(olderWorkspace.hasUnseenActivity, true);
+});

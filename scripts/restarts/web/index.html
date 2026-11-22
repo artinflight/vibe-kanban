@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#101b21" />
+    <title>Restart progress · Vibe</title>
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="/style.css" />
+    <script src="/app.js" defer></script>
+  </head>
+  <body>
+    <header class="shell masthead">
+      <div class="brand">
+        <a class="brand-home" href="/" aria-label="Vibe restart progress"
+          ><span class="brand-icon">v</span> Vibe</a
+        >
+        <span class="brand-separator">/</span>
+        <button
+          id="restart-monitor"
+          class="brand-section"
+          type="button"
+          disabled
+        >
+          Restart Monitor
+        </button>
+      </div>
+      <span class="connection" id="connection" role="status"
+        ><span class="dot"></span> Connecting</span
+      >
+    </header>
+    <main class="shell">
+      <div class="intro">
+        <span class="eyebrow">SYSTEM OPERATIONS</span
+        ><a class="vibe-link" href="https://vibe.local/"
+          >Open Vibe <span aria-hidden="true">↗</span></a
+        >
+      </div>
+      <h1>A clear view of<br />your restart.</h1>
+      <p class="lede">
+        Live updates from the restart controller. This page stays available
+        while Vibe restarts.
+      </p>
+      <div id="notice" class="notice" role="alert" hidden></div>
+      <section class="overview panel" aria-labelledby="stage-title">
+        <div class="overview-top">
+          <span class="eyebrow">CURRENT STAGE</span
+          ><span id="run-status" class="badge">Waiting</span>
+        </div>
+        <h2 id="stage-title">Waiting for controller updates</h2>
+        <p id="stage-detail" class="muted">
+          The latest saved restart attempt will appear here.
+        </p>
+        <div class="progress-heading">
+          <span id="step-count">No attempt selected</span
+          ><strong id="overall-percent">—</strong>
+        </div>
+        <progress
+          id="overall-progress"
+          max="100"
+          value="0"
+          aria-label="Overall progress by steps"
+        ></progress>
+        <p class="progress-note">
+          Overall progress is based on completed steps and measured work in the
+          current step. Steps have equal weight.
+        </p>
+        <div class="stats">
+          <div>
+            <span class="stat-label">TIME REMAINING</span
+            ><strong id="eta">Waiting for an attempt</strong
+            ><span id="eta-note" class="stat-note"
+              >Estimates include their assumptions below.</span
+            >
+          </div>
+          <div>
+            <span class="stat-label">ELAPSED</span
+            ><strong id="elapsed">—</strong
+            ><span class="stat-note">Since this restart attempt began</span>
+          </div>
+          <div>
+            <span class="stat-label">LAST UPDATE</span
+            ><strong id="updated">—</strong
+            ><span id="update-note" class="stat-note"
+              >Refreshes automatically every 2 seconds</span
+            >
+          </div>
+        </div>
+        <section class="estimate-context" aria-labelledby="estimate-heading">
+          <div class="estimate-heading">
+            <h3 id="estimate-heading">Estimate assumptions</h3>
+            <span id="estimate-confidence" class="badge">Waiting</span>
+          </div>
+          <p id="estimate-reason" class="muted"></p>
+          <ul id="estimate-assumptions"></ul>
+          <p id="estimate-as-of" class="muted"></p>
+          <p id="estimate-checkpoint" role="status"></p>
+        </section>
+      </section>
+      <div class="columns">
+        <section class="panel steps-panel" aria-labelledby="steps-heading">
+          <div class="section-heading">
+            <h2 id="steps-heading">Restart steps</h2>
+            <span id="remaining" class="muted">—</span>
+          </div>
+          <ol id="steps" class="steps">
+            <li class="empty">Waiting for a restart plan.</li>
+          </ol>
+        </section>
+        <aside>
+          <section class="panel attention" aria-labelledby="attention-heading">
+            <div class="section-heading">
+              <h2 id="attention-heading">Errors &amp; blockers</h2>
+              <span id="attention-count" class="count">0</span>
+            </div>
+            <div id="attention-content">
+              <p class="muted">Waiting for controller updates.</p>
+            </div>
+          </section>
+          <section class="independence">
+            <span class="shield" aria-hidden="true">◇</span>
+            <div>
+              <h3>Available through the restart</h3>
+              <p>
+                Served independently of Vibe. Controller updates are saved on
+                disk, so the latest state survives a restart.
+              </p>
+            </div>
+          </section>
+          <section class="activity" aria-labelledby="activity-heading">
+            <h2 id="activity-heading">Controller activity</h2>
+            <p id="run-title" class="muted">No restart attempt selected.</p>
+            <ul id="events"></ul>
+            <p id="source" class="source"></p>
+          </section>
+        </aside>
+      </div>
+    </main>
+    <footer class="shell">
+      <span><span class="dot small"></span> restarts.local</span
+      ><span>Measured progress. Automatic updates.</span>
+    </footer>
+  </body>
+</html>

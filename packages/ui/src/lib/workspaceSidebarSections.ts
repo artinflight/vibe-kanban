@@ -27,10 +27,11 @@ export function workspaceSidebarSections<T extends SidebarActivity>(
     raisedHandWorkspaces: collection.filter(
       (ws) => !isDeferred(ws) && needsAttention(ws)
     ),
-    readLaterWorkspaces: collection.filter(isDeferred),
-    runningWorkspaces: collection.filter(
-      (ws) => !isDeferred(ws) && isActive(ws)
+    // Activity takes precedence over placement; keep the bookmark on the row.
+    readLaterWorkspaces: collection.filter(
+      (ws) => isDeferred(ws) && !isActive(ws)
     ),
+    runningWorkspaces: collection.filter(isActive),
     idleWorkspaces: collection.filter(
       (ws) => !isDeferred(ws) && !isActive(ws) && !needsAttention(ws)
     ),

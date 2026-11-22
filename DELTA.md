@@ -3042,3 +3042,21 @@ publisher supplies sanitized committed counters; no new watcher, model worker or
 converter. Five Python and twelve real-Rainmeter presentation checks pass; live
 consumption advanced126→130 logs. Other HUDs and saved settings are preserved.
 See VK_DEDUP_RAINMETER.md and private installation/acceptance receipts.
+
+## 2026-11-22 — qualified finite-converter acceleration
+
+Installed faster fresh systemd/mount/SQL checks, bounded staging-directory flushes
+and copied-log preparation on Desktop/Laptop.66 batches/270 logs committed at the
+final clean converter-only handoff; current accelerated2 PID3918687, invocation
+0afe61e507a94b1195f3b8dd55e36951, package checkpoint-controls-20261122-fast-v4.
+First accelerated batch passed full B/native-reader/retirement acceptance in
+1154.66s versus1907.60s for the prior similar batch;461.0MB allocated release.
+A large Desktop pre-dispatch timeout was reconciled; compressed515MB transfer
+passed in160.3s. Adopted exact completed Laptop batch68 without redispatch. Cache
+advice on only completed copied payloads preserves bytes and selected limits.
+83 tests ran/81 passed/2 optional probes skipped; real host and systemd fixtures,
+actual batch checks, Rust formatting and Ops Playbook passed. Web formatting was
+attempted but Prettier is absent. Earlier STATE detail moved to dated history to
+keep pickup documents within16KiB. No Vibe restart, backup-epoch deletion, extra
+model worker, new goal, Nightly enablement or deferred cleanup. Full deduplication
+and final closure remain unfinished; see VK_DEDUP_ACCELERATION.md and HANDOFF.md.

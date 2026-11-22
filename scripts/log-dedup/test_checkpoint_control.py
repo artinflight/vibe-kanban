@@ -242,6 +242,12 @@ class ControlledDriverTests(unittest.TestCase):
         cp=driver.checkpoint(self.root,True,batch_override=override)
         handoff_path=control/'HANDOFF.private.json';cc.atomic(handoff_path,dict(verified=True,operation=OP,
             old_process={'pid':999999999,'start_ticks':0,'boot_id':'none'},checkpoint=cp,batch_override=override,failure_sha256=driver.sha(self.root/'FAILURE.private.json')))
+        if getattr(self,'clean_handoff',False):
+            clean=cc.read(handoff_path)
+            clean['clean_paused_boundary']=True
+            clean['pause_status']={'state':'paused','process':clean['old_process'],'checkpoint':cp}
+            clean.pop('failure_sha256');(self.root/'FAILURE.private.json').unlink()
+            cc.atomic(handoff_path,clean)
         lease=self.root/'backup.lock';lease.touch(mode=0o600)
         seal=control/'seal.json';cc.atomic(seal,dict(sources=[],handoff=str(handoff_path),operation=OP,attempt='controlled1',backup_leases=[str(lease)]))
         seen=[];base=SimpleNamespace(operation=OP,selection=selection)
@@ -308,11 +314,15 @@ class ControlledDriverTests(unittest.TestCase):
         self.assertEqual(cc.read(control/'status.json')['state'],'complete')
         result=cc.read(self.root/'RESULT.private.json');self.assertTrue(result['finite_conversion_complete'])
         self.assertFalse(result['full_objective_verified']);self.assertEqual(result['completed_files'],4)
-        self.assertTrue((control/'LEGACY_BOUNDARY_EXIT.private.json').exists())
+        self.assertEqual((control/'LEGACY_BOUNDARY_EXIT.private.json').exists(),not getattr(self,'clean_handoff',False))
         if old_staging is not None:
             self.assertEqual(old_staging.stat().st_ino,os.fstat(handle).st_ino)
             self.assertEqual((old_staging/'unrelated-consumer').read_text(),'must remain unchanged')
             self.assertEqual(sorted(p.name for p in old_staging.iterdir()),['unrelated-consumer'])
+
+    def test_clean_paused_handoff_preserves_prefix_without_fabricating_failure(self):
+        self.clean_handoff=True
+        self.test_real_driver_pauses_between_batches_then_resumes_without_replay()
 
     def test_isolated_batch_uses_new_path_and_leaves_live_old_consumer_untouched(self):
         self.isolated_staging=True

@@ -1,11 +1,33 @@
-# Writer cutover accepted; finite conversion RUNNING with checkpoint controls
+# Writer cutover accepted; accelerated finite conversion RUNNING
+
+November22 acceleration is live in the same finite unit: PID3918687,
+invocation0afe61e507a94b1195f3b8dd55e36951, attempt accelerated2. Current controls
+are `checkpoint-controls-20261122-fast-v4` under the operation root. See
+[acceleration evidence and limits](VK_DEDUP_ACCELERATION.md). The current attempt took over at a
+verified clean pause with66 batches/270 logs committed, then resumed once. The
+first accelerated batch passed full original/graph/control restoration, Python/Rust
+EOF and duplicate retirement:470.2MB raw,461.0MB allocated release,19.2minutes
+versus31.8 for the preceding similar batch. This is an early comparison, not a
+backlog ETA or final net filesystem measurement.
+
+Fresh checks and bounded directory flushes are active. Desktop prepares batch69;
+Laptop's completed batch68 was adopted from the previous attempt without replay.
+MCP alone verifies/imports archives and converts live history. The first large
+Desktop transfer timed out before dispatch; its exact evidence remains. A515MB
+compressed transfer passed in160s. Completed transfer-copy page cache is released
+without changing files or resource limits. Old Desktop batch67 will prepare locally.
+No serving backend/reader restart, selected-setting change or deferred cleanup.
+Normal WakeWatch observed accelerated2 with no source error and the same8 delivered
+batches/8 attempts. It targets the existing dedicated chat. Do not rerun a consumed
+activation or reuse the attempt-specific completed-job adoption configuration;
+inspect actual journals, returned-job receipts and current control path first.
 
 Desktop's live dedup Rainmeter card is installed directly below Archive Queue.
 See [HUD operation and acceptance](VK_DEDUP_RAINMETER.md). It uses the existing
 public status publisher; source freshness, pause/wait/failure and final-checks
 states remain explicit. It introduces no converter or backend restart.
 
-November21 recovery is live: same finite unit, PID1316160,
+Prior November21 recovery: same finite unit, PID1316160,
 invocation3594484094cb4790885a9b4b7570da3f, attempt controlled1.
 See [controls](VK_DEDUP_CHECKPOINT_CONTROLS.md). Package checkpoint-controls-20261121
 under the operation root retains preparation, recovery, pause/resume and live
@@ -47,7 +69,9 @@ conversion is a finite backlog job; ongoing scheduling remains unimplemented.
 Current operation6d4d022ab2f84d1ea72f39d6a6382d1c:
 /mnt/vk-storage/vk-log-dedup-20261103-0815/production-20261117/efficiency-20261118/online-20261119-v1
 Unit vk-online-dedup-bulk-20261119-v1.service;
-current PID1316160 / invocation3594484094cb4790885a9b4b7570da3f; attempt controlled1.
+current PID3918687 / invocation0afe61e507a94b1195f3b8dd55e36951; attempt accelerated2.
+Former controlled1 PID1316160 exited at its verified65-batch checkpoint; retained
+handoff in checkpoint-controls-20261122-fast-v2 proves the clean transition.
 OldPID4119270 is gone; its terminal invocation3b0f92bbd65a47afb1a599b7d3015003 is historical.
 Read exact unit identity, ARMED, PROGRESS, COMMITTED, RESULT/FAILURE and per-batch
 journals before acting. Never duplicate the worker or replay an uncertain batch.

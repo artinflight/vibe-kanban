@@ -1,11 +1,18 @@
-# Dedup checkpoint controls — live November 21
+# Dedup checkpoint controls — current November22
 
 The finite converter is running again under checkpoint pause/resume controls.
 Operation6d4d022ab2f84d1ea72f39d6a6382d1c uses the same unit
-`vk-online-dedup-bulk-20261119-v1.service`, PID1316160,
-invocation3594484094cb4790885a9b4b7570da3f, attempt controlled1. Recheck these
+`vk-online-dedup-bulk-20261119-v1.service`, PID3918687,
+invocation0afe61e507a94b1195f3b8dd55e36951, attempt accelerated2. Recheck these
 identities before acting. Writer cutover remains complete; full deduplication is
 not complete. No Vibe/backend/proxy restart occurred.
+
+November22 clean handoffs at65 and66 committed batches retained all prior
+receipts and batch37's isolated mapping. Faster checks and two remote copied-log
+preparers are active; [acceleration](VK_DEDUP_ACCELERATION.md) records validation.
+The controls still pause only after full batch commitment and release of backup
+contexts. A remote preparation may remain in flight at a pause; never stop or
+replace a paused worker without reconciling its cgroup and remote job receipts.
 
 ## What happened
 
@@ -48,7 +55,7 @@ failed November20 activation package are retained.
 
 Operation root:
 `/mnt/vk-storage/vk-log-dedup-20261103-0815/production-20261117/efficiency-20261118/online-20261119-v1`.
-Current package beneath it: `checkpoint-controls-20261121` (`PACKAGE` below).
+Current package beneath it: `checkpoint-controls-20261122-fast-v4` (`PACKAGE` below).
 
 ```sh
 python3 -B PACKAGE/source/checkpoint_control.py \

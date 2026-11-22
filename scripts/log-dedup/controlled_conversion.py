@@ -198,17 +198,31 @@ def run(root,control_root,seal_path):
         base.committed=state['batches'];base.skipped=state.get('skipped',[])
         attempt=seal['attempt'];started=time.time()
         failure=root/'FAILURE.private.json'
-        require(sha(failure)==handoff['failure_sha256'],'legacy termination receipt changed')
-        retained=Path(control_root)/'LEGACY_BOUNDARY_EXIT.private.json'
-        require(not retained.exists(),'legacy receipt already archived')
-        os.rename(failure,retained)
-        atomic(root/'ARMED.private.json',dict(operation=base.operation,attempt=attempt,at=time.time(),
-              admission_expires_at=time.time()+3600,scope='finite online conversion with checkpoint controls'))
-        cp=checkpoint(root,batch_override=override)
-        closed=lambda:assert_leases_closed(seal['backup_leases'])
+        if handoff.get('clean_paused_boundary'):
+            require(not failure.exists(),'unexpected failure at clean paused handoff')
+            require(handoff['pause_status']['state']=='paused'
+                    and handoff['pause_status']['process']==handoff['old_process']
+                    and handoff['pause_status']['checkpoint']['checkpoint_sha256']==handoff['checkpoint']['checkpoint_sha256'],
+                    'clean handoff lacks matching paused checkpoint')
+        else:
+            require(sha(failure)==handoff['failure_sha256'],'legacy termination receipt changed')
+            retained=Path(control_root)/'LEGACY_BOUNDARY_EXIT.private.json'
+            require(not retained.exists(),'legacy receipt already archived')
+            os.rename(failure,retained)
+        runtime=None
+        cp=handoff['checkpoint']
         try:
+            if seal.get('runtime_config'):
+                verify_pins([seal['runtime_config']])
+                import fast_runtime
+                runtime=fast_runtime.install(base,read(seal['runtime_config']['path']),override)
+            atomic(root/'ARMED.private.json',dict(operation=base.operation,attempt=attempt,at=time.time(),
+                  admission_expires_at=time.time()+3600,scope='finite online conversion with checkpoint controls'))
+            cp=checkpoint(root,batch_override=override)
+            closed=lambda:assert_leases_closed(seal['backup_leases'])
             for number in range(cp['next_batch'],len(base.selection['batches'])):
                 controls.boundary(cp,attempt=attempt,verify_released=closed,identity_check=worker.readers.check_identities)
+                if runtime is not None:runtime.schedule(number)
                 row=base.selection['batches'][number];folder=batch_folder(root,number,override)
                 next_batch=None
                 if number+1<len(base.selection['batches']):
@@ -249,6 +263,7 @@ def run(root,control_root,seal_path):
                 worker.progress('finite_batch_committed',dict(batch=number+1,total_batches=len(base.selection['batches']),
                                                               files=base.metadata()['completed_files']))
                 cp=checkpoint(root,trusted_prefix=cp,batch_override=override);closed()
+            if runtime is not None:runtime.close();runtime=None
             worker.save(root/'PHYSICAL_WINDOW_AFTER.private.json',dict(at=time.time(),
                 source=worker.physical_accounting.measure([worker.C['source_root']],guard=worker.readers.check),
                 task=worker.physical_accounting.measure([str(root)],guard=worker.readers.check),
@@ -266,6 +281,7 @@ def run(root,control_root,seal_path):
                 type=type(error).__name__,error=str(error),completed_batches=len(base.committed),
                 no_service_actions=True,inspect_exact_batch_journal_before_recovery=True))
             controls.publish('failed',cp,attempt=attempt,detail=type(error).__name__+': '+str(error))
+            if runtime is not None:runtime.close()
             raise
 
 

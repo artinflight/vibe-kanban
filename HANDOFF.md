@@ -1,5 +1,14 @@
 # Writer cutover accepted; finite conversion resumed after Desktop outage
 
+November23 stall wake81f74763: same live recovery1;140 batches/1,093 logs committed.
+Batch140 has7 verified installs awaiting retirement/commitment. All142 journals,
+1,100 manifests/sidecars,77 source pins and live reader identities passed, including
+isolated batch37. PSI0.44 caused the hold; at05:42 it fell to0.00 and21,263 staged
+duplicates retired. Primary paths remain; batch commitment is still pending. No
+restart/replay/settings change occurred; remote141/142 receipts remain.
+Evidence: `wakewatch/chat-handoff-20261120/STALL_81f74763_20261123_RECONCILIATION.private.json`.
+Existing guard/monitoring continues. Final conversion and acceptance remain open.
+
 November22 recovery1 is live in the same finite unit: PID2054584,
 invocation221dd13e67f04147a3113740f9267240. Current controls are
 `checkpoint-controls-20261122-recovery` under the operation root. The stopped

@@ -1,9 +1,9 @@
-# Dedup checkpoint controls — current November22
+# Dedup checkpoint controls — current November23
 
 The finite converter is running again under checkpoint pause/resume controls.
 Operation6d4d022ab2f84d1ea72f39d6a6382d1c uses the same unit
-`vk-online-dedup-bulk-20261119-v1.service`, PID3918687,
-invocation0afe61e507a94b1195f3b8dd55e36951, attempt accelerated2. Recheck these
+`vk-online-dedup-bulk-20261119-v1.service`, PID2054584,
+invocation221dd13e67f04147a3113740f9267240, attempt recovery1. Recheck these
 identities before acting. Writer cutover remains complete; full deduplication is
 not complete. No Vibe/backend/proxy restart occurred.
 
@@ -55,7 +55,7 @@ failed November20 activation package are retained.
 
 Operation root:
 `/mnt/vk-storage/vk-log-dedup-20261103-0815/production-20261117/efficiency-20261118/online-20261119-v1`.
-Current package beneath it: `checkpoint-controls-20261122-fast-v4` (`PACKAGE` below).
+Current package beneath it: `checkpoint-controls-20261122-recovery` (`PACKAGE` below).
 
 ```sh
 python3 -B PACKAGE/source/checkpoint_control.py \

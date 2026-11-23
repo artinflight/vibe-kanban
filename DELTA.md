@@ -3060,3 +3060,31 @@ attempted but Prettier is absent. Earlier STATE detail moved to dated history to
 keep pickup documents within16KiB. No Vibe restart, backup-epoch deletion, extra
 model worker, new goal, Nightly enablement or deferred cleanup. Full deduplication
 and final closure remain unfinished; see VK_DEDUP_ACCELERATION.md and HANDOFF.md.
+
+## 2026-11-23 — recovery1 memory-pressure stall reconciled
+
+Wake81f74763 reached the dedicated chat once. Same controllerPID2054584 and
+invocation221dd13e67f04147a3113740f9267240 remain active.140 batches/1,093 logs
+are committed;7 current logs are installed with retained original/graph/dynamic
+recovery proofs, awaiting staging retirement and final commitment. All142 journals,
+1,100 installed manifests/sidecars,77 sealed sources and live reader identity/
+settings checks passed; isolated batch37 mapping was respected. No corruption
+or terminal failure receipt was found. Full memory PSI was0.44 against the
+unchanged0.10 admission limit; the worker is waiting through its existing guard.
+
+Remote141/142 returned receipts were inspected without dispatch or replay. No
+controller, service, source, settings, resource threshold, backup epoch or cleanup
+action occurred. Operator-control docs now name the actual recovery1 package.
+Private evidence: operation wakewatch/chat-handoff-20261120/
+STALL_81f74763_20261123_RECONCILIATION.private.json, SHA256
+183672700c1e2ae49fd242adffd8a1445a921b1ffc476d3a29ae0e6c297286fb.
+Finite conversion and full final recovery/service/accounting acceptance remain open.
+
+At05:41:41UTC the same worker completed batch140 staging retirement naturally.
+Independent05:42 readback verified all21,263 planned staging paths absent and all
+primary paths present, with matching complete retirement receipt. Host full PSI
+was0.00; no intervention or threshold change occurred. Counts still140 batches/
+1,093 files committed, so tail commitment and full acceptance are not claimed.
+Supplemental private proof: STALL_81f74763_RETIREMENT_RESUMED.private.json in the
+same dedicated-chat evidence directory. Ops/diff checks passed after compacting
+the pickup note; Rust formatting passed, web formatting failed on missing Prettier.

@@ -1,5 +1,8 @@
 # Dedup offline recovery — November22,2026
 
+Historical November22 recovery. The current attempt is documented in
+[November23 installed-tail recovery](VK_DEDUP_INSTALLED_RECOVERY.md).
+
 The HUD's OFFLINE report exposed two failures. Desktop SSH transports timed out
 at02:21UTC during batch69 archive recovery. The converter exited; a cleanup
 BrokenPipeError masked the preceding native-guard health failure. Its completed

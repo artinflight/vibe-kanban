@@ -65,6 +65,29 @@ class RetirementTests(unittest.TestCase):
         with self.assertRaises((ValueError,OSError)):self.run_retirement()
         self.assertEqual(len(self.objects()),129)
 
+    def test_valid_alternate_representation_is_retained_and_accounted(self):
+        chunk=self.chunks[0];p=self.target.parent/'.log-objects'/(chunk['sha256']+'.gz')
+        raw=gzip.decompress(p.read_bytes());p.write_bytes(gzip.compress(raw,mtime=1))
+        staged=self.staging.parent/'.log-objects'/p.name;before=staged.read_bytes()
+        result=self.run_retirement()
+        self.assertEqual(result['duplicate_staging_objects_removed'],128)
+        self.assertEqual(result['retained_alternate_representations'],1)
+        self.assertEqual(result['retained_allocated_bytes'],staged.stat().st_blocks*512)
+        self.assertEqual(staged.read_bytes(),before);self.assert_primary()
+        plan=json.loads((self.folder/'STAGING_RETIREMENT_PLAN.private.json').read_text())
+        self.assertNotIn(str(staged),[r['path'] for r in plan['objects']])
+        self.assertEqual(plan['retained_objects'][0]['path'],str(staged))
+
+    def test_corrupt_staging_is_not_retained_as_encoding_variant(self):
+        p=self.objects()[0];p.write_bytes(b'corrupt')
+        with self.assertRaises((ValueError,OSError)):self.run_retirement()
+        self.assertEqual(len(self.objects()),129);self.assert_primary()
+
+    def test_staging_hardlink_is_refused_before_retirement(self):
+        os.link(self.objects()[0],self.folder/'foreign-link')
+        with self.assertRaises(ValueError):self.run_retirement()
+        self.assertEqual(len(self.objects()),129);self.assert_primary()
+
     def test_lost_custody_flushes_partial_removal_and_records_incomplete(self):
         calls=0
         def guard():

@@ -34,6 +34,11 @@ class ProgressTests(unittest.TestCase):
     def save(self,name,value):
         p=self.folder/name;p.parent.mkdir(parents=True,exist_ok=True);p.write_text(json.dumps(value))
 
+    def test_all_retained_representations_do_not_advance_progress_or_raise(self):
+        self.save('STAGING_RETIREMENT_PLAN.private.json',dict(objects=[],retained_objects=[{'reason':'different_valid_gzip_representation'}],original_or_primary_deletion=False))
+        row,old=rp.supplement(self.root,self.row,None,self.now)
+        self.assertEqual(row,self.row);self.assertIsNone(old)
+
     def test_only_new_verified_removal_advances_progress(self):
         row, old=rp.supplement(self.root,self.row,None,self.now)
         self.assertEqual(row['retirement_removed'],0)

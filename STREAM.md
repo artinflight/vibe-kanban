@@ -16,10 +16,11 @@ restore, actual allocated/filesystem accounting including objects/staging, compl
 normal-B recovery dependencies, ordinary desktop/mobile histories/review/settings/
 queues and restored monitoring, plus honest future-growth and operating documents.
 The successful switch and production canary are complete. The finite online
-worker is running with qualified fresh-check acceleration and bounded Desktop/Laptop
-preparation under verified checkpoint pause/resume controls. The November22
+worker is running with qualified fresh-check acceleration and bounded Laptop
+preparation (the prior disabled Desktop preparer remains disabled) under verified checkpoint pause/resume controls. The November22
 Desktop outage was recovered at unpublished batch69 using retained B graph
-checkpoints; the missed-alert codec bug is fixed. The earlier batch37 isolated
+checkpoints; the missed-alert codec bug is fixed. November23 installed-tail
+recovery retained alternate gzip encodings and committed batch161 without replay. The earlier batch37 isolated
 staging mapping remains preserved. Full archive-tree/current-SQL recovery, final
 UI/monitoring and net accounting remain. A successful switch alone is not completion. Reuse sufficient qualification; do
 not rerun large scans or builds without a new invalidation.

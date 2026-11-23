@@ -45,6 +45,15 @@ class PoolTests(unittest.TestCase):
         with patch.object(self.pool.executor,'submit',side_effect=AssertionError('duplicate dispatch')):self.pool.schedule(1)
         self.assertTrue((self.root/'prep/unavailable-2.json').exists())
 
+    def test_handoff_preserves_disabled_hosts_without_dispatch(self):
+        config=dict(preparations=str(self.root/'disabled'),hosts=['desktop'],source_dir='fixture',
+                    log_module='fixture',initially_disabled=['desktop'])
+        pool=pp.PreparationPool(self.worker,{'batches':self.rows},self.root,config)
+        self.addCleanup(pool.close)
+        with patch.object(pool.executor,'submit',side_effect=AssertionError('disabled host dispatched')):
+            pool.schedule(0)
+        self.assertEqual(pool.jobs,{});self.assertEqual(pool.disabled,{'desktop'})
+
     def test_foreign_prepared_workspace_is_refused(self):
         future=Future();future.set_result(None)
         with patch.object(self.pool.executor,'submit',return_value=future):self.pool.schedule(0)

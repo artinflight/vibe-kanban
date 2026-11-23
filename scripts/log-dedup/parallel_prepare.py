@@ -66,7 +66,8 @@ class PreparationPool:
         self.hosts=list(config['hosts']);require(len(self.hosts)==len(set(self.hosts)) and 1<=len(self.hosts)<=2,'bounded unique preparation hosts required')
         require(all(host in remote_dispatch.HOSTS for host in self.hosts),'unqualified host')
         self.executor=ThreadPoolExecutor(max_workers=len(self.hosts),thread_name_prefix='dedup-copy-preparation')
-        self.jobs={};self.busy={};self.disabled=set()
+        self.jobs={};self.busy={};self.disabled=set(config.get('initially_disabled',[]))
+        require(self.disabled<=set(self.hosts),'Disabled preparation host is outside the saved host roster')
         self.by_names={tuple(row['names']):i for i,row in enumerate(selection['batches'])}
         # A checkpoint handoff may retain already-returned, terminal preparation.
         # Adopt exact receipts, never dispatch that work again.

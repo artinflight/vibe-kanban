@@ -36,19 +36,28 @@ def retire_new_staging_objects(plan,archive,primary,folder,guard,*,complete_stat
   raise ValueError('Actual completed conversion, B original restore and dynamic control recovery required')
  if not archive.resolve().is_relative_to(folder.resolve())or not folder.resolve().is_relative_to('/mnt/vk-storage/vk-log-dedup-20261103-0815/production-20261117'):
   raise ValueError('Only NEW task-owned private staging replicas can retire')
- created=json.loads((folder/'STAGING_CREATED_IDENTITIES.private.json').read_bytes());objects={}
+ created=json.loads((folder/'STAGING_CREATED_IDENTITIES.private.json').read_bytes());objects={};retained={}
  for row in plan['files']:
   source=archive/row['path'];target=primary/row['path']
   if reclaim.file_hash(source)!=reclaim.file_hash(target):raise ValueError('Actual installed manifest differs from own staging')
   for chunk in logs.load_manifest(source)['chunks']:
    name=chunk['sha256']+'.gz';p=source.parent/'.log-objects'/name;q=target.parent/'.log-objects'/name
-   if p in objects:continue
+   if p in objects or p in retained:continue
    guard();reclaim.object_bytes(q,chunk);reclaim.object_bytes(p,chunk)
    before=logs.regular(p)
    if created.get(str(p.relative_to(archive)))!=logs.version(before):raise ValueError('Foreign/newer staging object; preserve it')
-   if before.st_uid!=os.getuid()or before.st_nlink!=1 or reclaim.file_hash(p)!=reclaim.file_hash(q):raise ValueError('Staging replica differs from durable primary object')
-   objects[p]=dict(path=str(p),identity=logs.version(before),physical_sha256=reclaim.file_hash(p),primary=str(q))
- write_new(folder/'STAGING_RETIREMENT_PLAN.private.json',dict(objects=list(objects.values()),original_or_primary_deletion=False,regeneration='Copy exact listed primary CAS bytes back to these staging names, reverify full graph before a future separately admitted raw rollback.'))
+   if before.st_uid!=os.getuid()or before.st_nlink!=1:raise ValueError('Staging ownership or link count changed')
+   physical=reclaim.file_hash(p);primary_hash=reclaim.file_hash(q)
+   if logs.version(logs.regular(p))!=logs.version(before):raise ValueError('Staging changed during verification')
+   row=dict(path=str(p),identity=logs.version(before),physical_sha256=physical,primary=str(q))
+   if physical!=primary_hash:
+    # Different gzip implementations can encode identical logical CAS content.
+    # Preserve the B-backed representation rather than treating it as an exact
+    # physical duplicate regenerable from the primary object.
+    retained[p]=dict(row,reason='different_valid_gzip_representation',chunk=chunk,
+        primary_physical_sha256=primary_hash,allocated_bytes=before.st_blocks*512)
+   else:objects[p]=row
+ write_new(folder/'STAGING_RETIREMENT_PLAN.private.json',dict(objects=list(objects.values()),retained_objects=list(retained.values()),original_or_primary_deletion=False,regeneration='Copy exact listed primary CAS bytes back to deleted staging names only; retained alternate representations remain in place. Reverify full graph before a separately admitted raw rollback.'))
  syncs=DirectorySyncGroup(reclaim.sync_directory)
  previous=signal.getsignal(signal.SIGIO)
  def broken(*_):raise ValueError('Actual staging consumer appeared; preserve unretired replicas')
@@ -69,5 +78,5 @@ def retire_new_staging_objects(plan,archive,primary,folder,guard,*,complete_stat
  finally:
   signal.signal(signal.SIGIO,previous)
   syncs.flush()
-  write_new(folder/'STAGING_RETIREMENT_RESULT.private.json',dict(removed_paths=removed,complete=len(removed)==len(objects),all_primary_objects_preserved=True,source_logs_or_old_epochs_deleted=False))
- return dict(duplicate_staging_objects_removed=len(removed),all_primary_objects_preserved=True)
+  write_new(folder/'STAGING_RETIREMENT_RESULT.private.json',dict(removed_paths=removed,complete=len(removed)==len(objects),retained_objects=list(retained.values()),retained_allocated_bytes=sum(r['allocated_bytes'] for r in retained.values()),all_primary_objects_preserved=True,source_logs_or_old_epochs_deleted=False))
+ return dict(duplicate_staging_objects_removed=len(removed),retained_alternate_representations=len(retained),retained_allocated_bytes=sum(r['allocated_bytes'] for r in retained.values()),all_primary_objects_preserved=True)

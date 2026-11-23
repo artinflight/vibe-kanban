@@ -7,9 +7,12 @@ model-worker delegation, new goal or continuation loop. Current native goal is p
 The accelerated converter is running; its first complete production batch passed.
 
 Operation: online-20261119-v1 under the efficiency-20261118 production evidence.
-Current recovery1 PID2054584 / invocation221dd13e67f04147a3113740f9267240.
-Current controls: checkpoint-controls-20261122-recovery. This supersedes accelerated2
-following the Desktop SSH outage; see [recovery evidence](VK_DEDUP_OFFLINE_RECOVERY.md).
+Current recovery2 PID3798264 / invocation7de4161820194cb68dacb2976e760e9c.
+Current controls: checkpoint-controls-20261123-recovery. This supersedes recovery1
+after installed-batch retirement refused alternate gzip encodings; see
+[installed recovery](VK_DEDUP_INSTALLED_RECOVERY.md). Desktop remains disabled;
+Laptop162 was adopted once. Valid alternate representations remain staged and
+counted; only physically identical copies retire.
 Read actual state before any change.
 Batch37 has an isolated staging override that must survive all continuations.
 

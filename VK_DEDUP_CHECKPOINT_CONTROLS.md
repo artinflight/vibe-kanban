@@ -2,19 +2,26 @@
 
 The finite converter is running again under checkpoint pause/resume controls.
 Operation6d4d022ab2f84d1ea72f39d6a6382d1c uses the same unit
-`vk-online-dedup-bulk-20261119-v1.service`, PID2054584,
-invocation221dd13e67f04147a3113740f9267240, attempt recovery1. Recheck these
+`vk-online-dedup-bulk-20261119-v1.service`, PID3798264,
+invocation7de4161820194cb68dacb2976e760e9c, attempt recovery2. Recheck these
 identities before acting. Writer cutover remains complete; full deduplication is
 not complete. No Vibe/backend/proxy restart occurred.
 
 November22 clean handoffs at65 and66 committed batches retained all prior
-receipts and batch37's isolated mapping. Faster checks and two remote copied-log
-preparers are active; [acceleration](VK_DEDUP_ACCELERATION.md) records validation.
+receipts and batch37's isolated mapping. Faster checks and bounded remote copied-log
+preparation remain active; Desktop stays disabled and Laptop162 was adopted; [acceleration](VK_DEDUP_ACCELERATION.md) records validation.
 The controls still pause only after full batch commitment and release of backup
 contexts. A remote preparation may remain in flight at a pause; never stop or
 replace a paused worker without reconciling its cgroup and remote job receipts.
 
-## What happened
+November23 recovery finalized the installed batch161 after normal-B graph,
+original/control restore and production EOF checks.162 batches/1,332 logs are
+committed. Valid alternate gzip representations remain staged and accounted;
+only physical duplicates retire. See [recovery contract](VK_DEDUP_INSTALLED_RECOVERY.md).
+The new package acknowledged a released pause, then resumed once using retained
+request6a5af7ca-ed37-4b8b-84fb-26a213d3eb6f. No conversion or remote job was replayed.
+
+## Original control history
 
 Resume3 failed at11:36UTC November20 on a read-only systemd status query.
 WakeWatch delivered batch8ae7dc66 once to the dedicated chat at11:54UTC; that
@@ -30,7 +37,7 @@ legacy conversion/reader/backup/custody code remain unchanged. The rejected
 scan-removal and in-place-reuse proposals were not applied.
 
 The completed batch36 was independently reconciled and finalized using its
-existing recovery proofs and exclusive carrier leases. Counts are now37 batches,
+existing recovery proofs and exclusive carrier leases. Counts were then37 batches,
 122 files committed. The next batch has packed441,903,688 raw bytes across4 files;
 packing is not conversion acceptance. Earlier receipts, backup epochs and the
 failed November20 activation package are retained.
@@ -55,7 +62,7 @@ failed November20 activation package are retained.
 
 Operation root:
 `/mnt/vk-storage/vk-log-dedup-20261103-0815/production-20261117/efficiency-20261118/online-20261119-v1`.
-Current package beneath it: `checkpoint-controls-20261122-recovery` (`PACKAGE` below).
+Current package beneath it: `checkpoint-controls-20261123-recovery` (`PACKAGE` below).
 
 ```sh
 python3 -B PACKAGE/source/checkpoint_control.py \

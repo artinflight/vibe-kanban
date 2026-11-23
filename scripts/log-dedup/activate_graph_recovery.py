@@ -28,9 +28,20 @@ def terminal(p):
     failure=read(root/'FAILURE.private.json')
     require(sha(root/'FAILURE.private.json')==p['failure_sha256']
             and failure['operation']==p['operation'] and failure['attempt']==p['old_attempt'], 'failure binding changed')
-    cp=checkpoint(root,True,batch_override=p['batch_override'],pending_graph=p['pending_graph'])
-    require(cp['next_batch']==p['pending_graph']['batch'] and
-            cp['completed_batches']==failure['completed_batches'], 'failure checkpoint differs')
+    pending=p.get('pending_graph');recovered=p.get('recovered_installed')
+    require((pending is None)!=(recovered is None),'exactly one recovery route required')
+    cp=checkpoint(root,True,batch_override=p['batch_override'],pending_graph=pending)
+    if recovered is not None:
+        verify_pins([recovered]);proof=read(recovered['path'],8*1024**2)
+        require(proof['verified'] and proof['operation']==p['operation']
+                and proof['no_conversion_or_dispatch_replayed'] and proof['all_prior_epochs_preserved']
+                and proof['before']['pins'][0]==dict(path=str(root/'FAILURE.private.json'),sha256=p['failure_sha256'])
+                and cp['checkpoint_sha256']==proof['checkpoint']['checkpoint_sha256']
+                and cp['next_batch']==proof['batch']+1
+                and cp['completed_batches']==failure['completed_batches']+1,'recovered installed checkpoint differs')
+    else:
+        require(cp['next_batch']==pending['batch'] and
+                cp['completed_batches']==failure['completed_batches'], 'failure checkpoint differs')
     return cp
 
 
@@ -45,7 +56,8 @@ def activate(path):
             cp=terminal(p);verify_pins(p['sources'])
             atomic(new/'HANDOFF.private.json',dict(verified=True,operation=p['operation'],
                 old_process=p['old_process'],failure_sha256=p['failure_sha256'],checkpoint=cp,
-                batch_override=p['batch_override'],pending_graph=p['pending_graph'],at=time.time(),
+                batch_override=p['batch_override'],pending_graph=p.get('pending_graph'),
+                recovered_installed=p.get('recovered_installed'),at=time.time(),
                 all_prior_receipts_preserved=True,no_backend_restart=True))
             seal=dict(format='vk-controlled-conversion-v1',operation=p['operation'],attempt=p['attempt'],
                 sources=p['runner_sources'],handoff=str(new/'HANDOFF.private.json'),

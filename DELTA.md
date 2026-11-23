@@ -3088,3 +3088,27 @@ was0.00; no intervention or threshold change occurred. Counts still140 batches/
 Supplemental private proof: STALL_81f74763_RETIREMENT_RESUMED.private.json in the
 same dedicated-chat evidence directory. Ops/diff checks passed after compacting
 the pickup note; Rust formatting passed, web formatting failed on missing Prettier.
+
+
+## 2026-11-23 | recover installed tail with alternate gzip staging
+
+- Wake64e99dc4 exposed a real post-publication failure at batch161: all5,358
+  staging/primary objects decode correctly, but2,962 gzip encodings differ.
+  All163 journals/1,332 manifests/capture sidecars and qualified live readers
+  verified before action. Original failure and all backup epochs are retained.
+- Added strict one-shot installed-tail recovery: normal-B graph/original/control
+  reopen, production EOF, original before-accounting and no conversion/dispatch
+  replay. Retained alternate copies are recorded and charged; only identical
+  staging copies retire. Corruption, ownership, consumer and custody guards stay.
+- Finalized batch161 and resumed the same finite unit as recovery2, PID3798264,
+  invocation7de4161820194cb68dacb2976e760e9c, from162 batches/1,332 committed logs.
+  Preserved batch37 mapping, disabled Desktop preparation, and adopted the exact
+  returned Laptop162 job. No backend restart or resource/settings change.
+- Normal watcher and Desktop HUD report RUNNING; actual new carrier checkpoint
+  verified. Ordinary history/status reads pass. Nightly cron remains off and its
+  preexisting observer/delivery failures remain with that owner. No synthetic wake.
+-110 regression tests ran:108 pass,2 unchanged optional Rust-probe cases skipped.
+  Rust formatting/Ops/diff pass; required web format stops at missing Prettier.
+  See VK_DEDUP_INSTALLED_RECOVERY.md and checkpoint-controls-20261123-recovery.
+  Full finite conversion and final archive/SQL/UI/net-space/growth acceptance
+  remain open. Deferred workspace/archive cleanup remains excluded.

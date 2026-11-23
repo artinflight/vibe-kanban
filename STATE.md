@@ -1,4 +1,4 @@
-# Lossless backward deduplication —22 November2026
+# Lossless backward deduplication —23 November2026
 
 Writer cutover is accepted. The finite online converter continues the original
 full objective: preserve every history byte, current writes/pending inputs,
@@ -15,14 +15,15 @@ net filesystem accounting.69 batches/291 logs were committed before the Desktop 
 similar batch took1907.60s for479,344,883 raw bytes. This early comparison does
 not establish an end-to-end ETA for the differently sized remaining backlog.
 
-The November22 Desktop SSH outage stopped accelerated2 before batch69 publication.
-Recovery1 now resumes that exact batch after verifying originals, all committed
-manifests and three retained B graph checkpoints. Two returned helper jobs were
-adopted without replay. The missed WakeWatch alert was an overlength resource ID;
-the failure/stall/success paths now pass the actual codec. Normal timer and Desktop
-HUD both report the resumed job. See [recovery](VK_DEDUP_OFFLINE_RECOVERY.md).
+The November22 Desktop outage and missed-alert codec failure were recovered.
+November23 recovery1 stopped after batch161 publication because valid alternate
+gzip encodings failed the staging physical-duplicate check. All163 journals/1,332
+installed manifests and sidecars and live readers verified. Normal-B graph,
+original and control restore plus production EOF passed again; recovery retained
+alternate encodings and committed the tail without replay. Recovery2 now runs at
+162 committed batches/1,332 logs. See [installed recovery](VK_DEDUP_INSTALLED_RECOVERY.md).
 
-Fresh uncached safety checks and grouped directory flushes remain active. Desktop/Laptop prepare copied future history; MCP alone validates and
+Fresh uncached safety checks and grouped directory flushes remain active. Laptop prepares copied future history; the failed Desktop preparer remains disabled; MCP alone validates and
 publishes live manifests. A measured large Desktop transfer timeout was caught
 before remote processing. The correction uses compressed transport, a measured
 bounded deadline and releases only completed transfer-copy page cache. It adopts

@@ -35,4 +35,34 @@ class TerminalTests(unittest.TestCase):
         self.failure['attempt']='prior';self.cp['next_batch']=70
         with self.assertRaisesRegex(ValueError,'failure checkpoint'):self.inspect()
 
+class InstalledActivationTests(TerminalTests):
+    def setUp(self):
+        super().setUp();self.p.pop('pending_graph')
+        self.p['recovered_installed']={'path':'/recovered','sha256':'proof'}
+        self.cp.update(next_batch=70,completed_batches=70,checkpoint_sha256='checkpoint')
+        self.proof=dict(verified=True,operation='op',no_conversion_or_dispatch_replayed=True,
+            all_prior_epochs_preserved=True,batch=69,checkpoint=dict(checkpoint_sha256='checkpoint'),
+            before=dict(pins=[dict(path='/not-used/FAILURE.private.json',sha256='digest')]))
+
+    def inspect(self):
+        with patch.object(activate,'unit',return_value=self.unit), \
+             patch.object(activate,'process_identity',side_effect=FileNotFoundError), \
+             patch.object(activate,'read',side_effect=lambda path,*a:self.proof if str(path)=='/recovered' else self.failure), \
+             patch.object(activate,'sha',return_value='digest'), \
+             patch.object(activate,'verify_pins'), \
+             patch.object(activate,'checkpoint',return_value=self.cp):
+            return activate.terminal(self.p)
+
+    def test_wrong_failure_or_prefix_is_refused(self):
+        self.cp['completed_batches']=71
+        with self.assertRaisesRegex(ValueError,'installed checkpoint'):self.inspect()
+
+    def test_recovery_cannot_hide_rewritten_failure_or_checkpoint(self):
+        self.proof['before']['pins'][0]['sha256']='changed'
+        with self.assertRaisesRegex(ValueError,'installed checkpoint'):self.inspect()
+
+    def test_two_recovery_routes_are_refused(self):
+        self.p['pending_graph']={'batch':69}
+        with self.assertRaisesRegex(ValueError,'exactly one'):self.inspect()
+
 if __name__=='__main__':unittest.main()

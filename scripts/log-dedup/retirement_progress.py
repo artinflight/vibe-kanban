@@ -49,6 +49,9 @@ def supplement(root, row, previous, now):
     plan, digest, plan_at = read(folder / 'STAGING_RETIREMENT_PLAN.private.json')
     original, _, _ = read(folder / 'PLAN.private.json')
     objects = plan['objects']
+    if not objects and plan.get('retained_objects') and plan.get('original_or_primary_deletion') is False:
+        # Retaining valid alternate encodings is not verified deletion progress.
+        return result, previous
     if plan.get('original_or_primary_deletion') is not False or not 1 <= len(objects) <= 100000:
         raise ValueError('Finite duplicate-only retirement allowlist required')
     if not 0 <= plan_at <= now:

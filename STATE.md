@@ -1,53 +1,42 @@
-# Deduplication completion work — November 24, 2026
+# Deduplication state — November24 scope correction
 
-The original finite conversion is complete: 395 batches, 3,356 converted logs,
-six preserved nonbeneficial originals. Its full archive-tree and consistent
-SQL/software/frontend recovery closure passed through normal Desktop B. The
-accepted writer remains live; no backend restart or setting change occurred.
+The user requested completion of deduplication only and explicitly rejected the
+assistant's inference that this included commissioning Nightly. Earlier scope
+statements are incorrect; their historical copies do not authorize continuation.
 
-The authorized catch-up is accepted:110 batches resolved374 files, converting
-278 and preserving96 nonbeneficial originals. All journals, original/graph B
-restores, local full EOF and source metadata passed. An additional real automatic
-run converted one newly closed log and passed the same acceptance. No newly
-eligible closed logs remained at its final inventory; active/pending data remains.
+The original finite conversion is accepted:395batches,3356converted logs and
+six preserved nonbeneficial originals. Its complete affected archive tree,
+current-at-capture SQL/software/frontend recovery closure and actual readers
+were independently verified. Catch-up accepted110batches/374files:278converted,
+96preserved. One real automatic conversion also passed full recovery/EOF checks.
+Bounded daily closed-log conversion is enabled05:00Toronto. Existing no-replay,
+writer/resource/capacity and pending-data protections remain. This is a daily
+schedule, not a claim that future closed files are instantly converted.
 
-The independently B-restored automatic-v3 package is installed. Its daily timer
-is enabled for05:00 Toronto, nextNovember25 10:00UTC. One bounded invocation uses
-the existing production/B locks; uncertain or incomplete operations retain a
-review hold. The existing WakeWatch hook/ledger now observes successive runs and
-settles its already-accepted catch-up success using pinned evidence. The existing
-hook now monitors the exact Nightly composition, waking on completion or a problem.
-No routine healthy model continuation.
-Actual Rainmeter displays WAITING/resolved3731 with unchanged skin/process.
+Fresh accounting at20:41UTC:source allocated reduction82,437,365,760bytes;
+local task staging growth8,186,118,144bytes; retained remote staging357,604,976bytes;
+net73,893,642,640bytes (68.82GiB). Concurrent source growth, local directory blocks
+and the extra task staging are included. Remote directory metadata and a
+privileged open-deleted-original audit remain outside the verified total; do not
+claim exact exclusive filesystem attribution or that all possible savings are
+maximized. Other owners also affect filesystem free-space changes.
 
-Another 440,885,248 allocated bytes of this task's temporary carrier copies were
-removed after independent B restore/hash verification and exclusive kernel leases.
-All primary archives, backup epochs, catalogs and restore location notes remain.
-Final net accounting must include the new catch-up staging and concurrent growth;
-the earlier 68.24 GiB figure is not a final measurement for this expanded work.
+The source tree fell91,761,684,480→9,324,318,720allocated bytes, while its file count
+rose38,791→1,065,426. Shared-object fanout creates substantial metadata traversal
+cost. This explains why Nightly's broader import/catalog operations remained slow
+after byte savings. Record the trade-off; do not silently start another redesign.
 
-Nightly's prior owner execution is complete and idle. The operator raised the
-live watch limit to3,145,728. All125 roots remain covered by the prepared plan;
-reboot persistence is unverified. The tracker now uses compact alias/type maps,
-with29 inode tests passing. Full real enrollment passed with125 roots,
-2,287,396 watches and peak1,610,854,400bytes under the retained2GiB bound.
-The existing observer is fully ready with2,289,027 watches and no tracking errors.
-Its existing journal delivery independently reopened B and acknowledged the exact
-source sequence. The finite gap scan passed2,449,223paths/150,028directories with
-zero pending/replay errors and independent B readback. The metadata-only import
-accepted1194 existing converter checkpoints, with ten independent B readback
-journals and no source/body recopy. One bounded composition script now assembles
-the current namespace and reuses existing accepted file bodies under WakeWatch. Old tracker outbox, journal latch
-and all backup epochs remain preserved.
+The extra composition job was interrupted and is now inactive, with both its main
+and SSH child gone. Normal native B read-only checks verified the original map
+binding,123746accepted file points and1194imported checkpoints intact. Its partial
+namespace cursor is retained and unaccepted. No Nightly successor or calendar was
+started. Existing tracker/journal/backup epochs are preserved for their owner.
+The same WakeWatch now observes dedup only; Nightly checkpoint wakes are disabled.
 
-Full current-file/SQL/runtime composition and independent restore, ordinary
-incremental/interruption qualification, and final accounting remain unfinished.
-The normal Nightly calendar stays OFF. Full deduplication acceptance is not claimed.
-
-The privileged old-original descriptor audit remains pending; do not claim zero
-open deleted originals. Deferred workspace/archive cleanup and failed remote
-inputs remain excluded. See VK_DEDUP_COMPLETION.md and HANDOFF.md for evidence,
-exact current ownership and remaining steps. Historical notes are retained in
-`deployment-history/20261124-before-catchup-completion`.
+Both live serving identities/settings remain unchanged. Fresh public TLS/index,
+two assets and download-wrapper bytes pass; retained semantic desktop/mobile
+viewport/history/review/settings/queue acceptance remains documented. No new
+physical-phone or full browser test is claimed. See VK_DEDUP_COMPLETION.md for
+recovery evidence and the remaining administrator audit limitation.
 
 Full historical archive: [STATE history](STATE_HISTORY_20261017.md).

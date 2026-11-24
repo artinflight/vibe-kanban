@@ -1,3 +1,41 @@
+# Authoritative scope correction — deduplication only
+
+The user explicitly rejected Nightly commissioning as part of this request.
+Earlier statements below that imply such authorization or require a whole-machine
+Nightly baseline/calendar are superseded history. The assistant incorrectly
+expanded scope. No Nightly successor will run from this chat.
+
+The extra composition job is stopped, not accepted. Its original map binding,
+123746accepted file points and1194imported checkpoints were independently reopened
+read-only and retained. The partial namespace cursor remains for its own owner.
+Existing tracker/journal and backup epochs were preserved. Dedup-only WakeWatch
+continues on the existing timer/ledger; Nightly checkpoint observations are off.
+
+Fresh accounting:73,893,642,640bytes (68.82GiB) net after local task staging,
+concurrent source growth and retained remote temporary file data. Source allocated
+reduction82,437,365,760bytes minus8,186,118,144local staging and357,604,976remote
+staging. Remote directory metadata is excluded. Actual filesystem free-space
+deltas include other owners; privileged open-original verification remains pending.
+
+The sessions tree has38,791files before and1,065,426now, despite falling from
+91,761,684,480 to9,324,318,720allocated bytes. The small shared objects impose real
+metadata costs. The extra1194-checkpoint import spent6760.94seconds visiting
+1,840,007members; the later namespace job ran about55minutes before the correction.
+These were broader Nightly catalog operations, not remaining log conversion.
+No claim is made that all possible savings or performance trade-offs are resolved.
+
+Public TLS/index/two assets/download-wrapper byte checks passed fresh. Original,
+catch-up and automatic lossless conversion/normal-B restore proofs remain accepted.
+The daily converter stays enabled05Toronto with existing guards. The separate
+privileged open-original audit remains unexecuted/unpublished because its earlier
+publication was rejected by automatic approval review. It contained administrative
+code and private operational paths; that restriction has not been bypassed.
+
+Historical implementation/validation detail follows; use current STATE/STREAM/
+HANDOFF and the explicit correction over older scope statements.
+
+---
+
 # Completing deduplication and normal Nightly operation
 
 ## Current scope and acceptance

@@ -1,26 +1,21 @@
-# Finish backward/forward deduplication and Nightly readiness
+# Complete deduplication only
 
-The operator authorized completion on November24. Preserve the accepted writer
-and completed original finite conversion; never replay it. One explicitly bounded
-new catch-up processes newly closed logs using the existing production lock,
-scoped custody, verified normal-B recovery and actual reader checks. A failure
-retains its durable ACTIVE record for exact reconciliation, never blind retry.
+The user's November24 correction is authoritative: do not commission Nightly
+from this chat. Earlier inferred commissioning authorization was the assistant's
+mistake. The extra job has been stopped and its state reconciled read-only.
+Preserve all pending tracker data, committed imports, partial namespace cursors,
+failed inputs, accepted backup epochs, selected settings and other owners.
+No bootstrap, whole-machine backup/restore qualification, schedule activation,
+new agent, goal or model polling loop belongs to this dedup stream.
 
-Finish that catch-up, verify the fresh eligible/excluded inventory, qualify and
-install bounded recurring closed-log conversion with visible failures, and keep
-active/pending data intact. Reuse the already tested original recovery closure.
+Retain accepted original/catch-up conversions and bounded daily closed-log
+conversion. Finish dedup-specific recovery, ordinary behavior, measured savings,
+growth and documentation. Never replay a current/uncertain operation or remove
+active/pending sources. Deferred workspace/archive cleanup stays excluded.
 
-Nightly preparation reuses converter checkpoints and retains every required root,
-backup epoch and predecessor gap/outbox. The operator raised the watch limit to3.15million. Full measured enrollment
-and live tracker/journal delivery passed; persistence is unverified. Current-set restore, ordinary incremental/interruption
-qualification and the exact 22:00–04:00 Toronto schedule remain required.
-
-Retire only exact task-owned verified temporary copies. Deferred workspace/archive
-cleanup, failed remote inputs, user settings, pending writes and other owners stay
-protected. Complete net allocation/filesystem accounting, administrator descriptor
-inspection, ordinary service checks and recovery documentation before acceptance.
-
-No native goal, model continuation loop or new worker is authorized. Existing
-WakeWatch reports actual issues/success to the dedicated chat. See HANDOFF.md.
+Current measured net local/remote-file-staging reduction is68.82GiB. The source
+has substantially more physical files despite lower byte allocation; disclose
+that traversal cost. Privileged open-original visibility is still unverified,
+so strict filesystem attribution and maximum possible savings are not claimed.
 
 Full historical archive: [STREAM history](STREAM_HISTORY_20261017.md).

@@ -1,3 +1,22 @@
+# November24 checkpoint wakes replace model polling
+
+The user requested WakeWatch checkpoints/problems instead of long model polling.
+Existing resource-guard hook now uses dedup completion-20261124/checkpoint-monitor-v1.
+Same timer, ledger, chat, owner/settings and admission; no new controller or agent.
+NORMAL_TICK_ACCEPTED proves a real timer check with no extra attempts and unchanged
+prior batch receipts. The already accepted catch-up success was settled using its
+pinned acceptance/result, preventing a redundant wake. Import-v2 itself is unchanged.
+
+The sensor pins its CONFIG/STARTED and PID/invocation, reads actual progress, and
+wakes on terminal result, failure, changed identity, missing/corrupt evidence,
+600s without progress or its original deadline. Healthy progress never wakes.
+Current config covers import-v2 only. At the actual checkpoint reconcile every
+receipt, start the next prepared finite phase once, and arm the SAME hook for that
+phase's actual receipt format before ending the model turn. Never force a manual
+tick, duplicate a running script or resume repeated model polling. Full Nightly
+restore/ordinary qualification/calendar and final accounting remain unfinished.
+See dedicated CONTEXT.md first; subsequent notes retain current job identities.
+
 # November24 completion — automatic conversion accepted, Nightly gap accepted, import running
 
 Read dedicated WakeWatch CONTEXT.md before alerts. Original finite operation

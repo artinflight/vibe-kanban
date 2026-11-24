@@ -15,7 +15,9 @@ The independently B-restored automatic-v3 package is installed. Its daily timer
 is enabled for05:00 Toronto, nextNovember25 10:00UTC. One bounded invocation uses
 the existing production/B locks; uncertain or incomplete operations retain a
 review hold. The existing WakeWatch hook/ledger now observes successive runs and
-preserves the pending catch-up success. No routine healthy model continuation.
+settles its already-accepted catch-up success using pinned evidence. The existing
+hook also monitors the exact Nightly import, waking on completion or a problem.
+No routine healthy model continuation.
 Actual Rainmeter displays WAITING/resolved3731 with unchanged skin/process.
 
 Another 440,885,248 allocated bytes of this task's temporary carrier copies were

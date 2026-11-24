@@ -111,6 +111,10 @@ def observe_with_initial(config, observe, store, registry, row, now, activated_a
     initial = config['initial_operation']
     folder = Path(config['incremental_state_root'])/'runs'/initial
     if row['operation'] != initial and (folder/'RESULT.private.json').exists():
+        if config.get('initial_acceptance'):
+            import checkpoint_watch
+            checkpoint_watch.acknowledge_initial(config, store, registry, now)
+            return observe(store, registry, row, now, activated_at)
         effective = dict(config, operation=initial, operation_root=str(folder),
                          attempt_label='catchup-r2', terminal_only=True,
                          **config['initial_controller'])
@@ -183,8 +187,28 @@ def main():
     module.__file__=str(source);exec(compile(raw,str(source),'exec'),module.__dict__)
     module.snapshots=snapshot
     original_observe=module.observe
-    module.observe=lambda store,registry,row,now,activated_at:observe_with_initial(
-        config,original_observe,store,registry,row,now,activated_at)
+    def observe_all(store,registry,row,now,activated_at):
+        result=observe_with_initial(config,original_observe,store,registry,row,now,activated_at)
+        if config.get('checkpoint_jobs'):
+            import checkpoint_watch
+            result['checkpoints']=[original_observe(store,registry,
+                checkpoint_watch.snapshot(job,now),now,activated_at)
+                for job in config['checkpoint_jobs']]
+        return result
+    module.observe=observe_all
+    if config.get('checkpoint_jobs'):
+        original_bridge=module.make_bridge
+        def make_bridge(config,store):
+            import checkpoint_watch
+            bridge=original_bridge(config,store)
+            previous_prompt=bridge.event_prompt
+            def prompt(rows,samples,batch):
+                if any(samples[r['volume']]['event']['values'].get('job_kind')=='nightly_checkpoint' for r in rows):
+                    return checkpoint_watch.checkpoint_prompt(rows,samples,batch,config['checkpoint_handoff'])
+                return previous_prompt(rows,samples,batch)
+            bridge.event_prompt=prompt
+            return bridge
+        module.make_bridge=make_bridge
     module.publish_status=publish_status
     module.control_observation.retirement_supplement=lambda config,row,previous,now:(row,None)
     module.rainmeter_feed.payload=payload

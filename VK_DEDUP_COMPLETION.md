@@ -148,3 +148,26 @@ original (3,731 records). It pins its
 identity-list digest and only reads bounded process metadata. It has not been
 published or executed; the prior publication hold remains. Accept its result only
 after this catch-up is terminal and reconciled. Only the operator changed the runtime watch limit; no persistent setting is claimed.
+
+
+## Checkpoint wakes instead of model polling
+
+The existing resource-guard hook now runs the separately pinned checkpoint-monitor-v1
+package. Automatic-v3 conversion remains unchanged. The same WakeWatch ledger,
+owner, chat, saved executor and admission gates cover the exact existing Nightly
+import. Healthy progress creates no alert. Completion requires the pinned start
+and config, full result and stopped process; problems include failure, identity
+change, corrupt evidence, 600 seconds without progress and the original deadline.
+The sensor only reports; it cannot restart or replay the job.
+
+A normal installed timer tick passed with no source/event errors, no additional
+dispatch attempts, and every prior batch receipt unchanged. The already accepted
+catch-up success was settled through the registry recovery path with its pinned
+acceptance and result. Twenty-one focused sensor/ledger tests pass, including
+unknown-delivery replay, terminal result checks, transient-unit collection,
+progress-write races and no model wakes for healthy work. Current import-v2 is
+still running; no full Nightly acceptance is claimed. Bind the next finite phase
+and its receipt format to the same hook after its predecessor is reconciled.
+
+Required formatting was attempted again: Rust passed; frontend formatting is
+blocked by missing Prettier. No frontend or Rust implementation changed.

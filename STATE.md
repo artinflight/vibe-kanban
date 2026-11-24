@@ -1,57 +1,45 @@
-# Lossless backward deduplication —23 November2026
+# Selected finite log conversion — November 24, 2026
 
-Writer cutover is accepted. The finite online converter continues the original
-full objective: preserve every history byte, current writes/pending inputs,
-selected settings and backup epoch; recover actual storage under genuine writer
-custody; finish normal Desktop-B restoration, ordinary-service validation and
-honest growth/restore documentation. Deferred workspace/archive cleanup remains
-excluded. The native goal is paused; no new goal or model continuation loop exists.
+Operation `6d4d022ab2f84d1ea72f39d6a6382d1c` finished395/395 batches:
+3,356 converted logs, six preserved nonbeneficial originals,3,362 selected paths
+resolved and90,889,461,596 raw bytes processed. The existing converter is inactive.
+All396 journals (including canary), installed manifests/capture sidecars,1,134
+graph receipts and102 source pins reconciled. Writer cutover remains accepted.
+This is finite selection success; full acceptance remains pending.
 
-The first accelerated batch converted six logs /470,157,093 raw bytes in1154.66s,
-including normal-B original/archive restoration, complete Python/Rust history
-readback and verified temporary-copy retirement. Allocated live-log recovery was
-460,996,608 bytes including referenced objects/directories; this is not final
-net filesystem accounting.69 batches/291 logs were committed before the Desktop connection outage. The preceding
-similar batch took1907.60s for479,344,883 raw bytes. This early comparison does
-not establish an end-to-end ETA for the differently sized remaining backlog.
+Complete affected archive stores (including unreferenced objects, pending/raw
+adjacent files and Linux metadata) now have a sealed normal Desktop-B catalog.
+The24 new carriers, eight catalog parts and root index passed independent restore;
+prior complete B/Python/Rust per-batch qualification was reused. Current consistent
+SQL, both serving binaries, paired frontend and recovery sources are likewise
+backed and independently restored. All epochs and current writes are preserved.
 
-The November22 Desktop outage and missed-alert codec failure were recovered.
-November23 recovery1 stopped after batch161 publication because valid alternate
-gzip encodings failed the staging physical-duplicate check. All163 journals/1,332
-installed manifests and sidecars and live readers verified. Normal-B graph,
-original and control restore plus production EOF passed again; recovery retained
-alternate encodings and committed the tail without replay. Recovery2 now runs at
-162 committed batches/1,332 logs. See [installed recovery](VK_DEDUP_INSTALLED_RECOVERY.md).
+Public desktop/mobile viewport history, review, settings, queues, monitoring and
+actual attachment downloads passed. The paired frontend lacked its accepted named
+download wrapper; one backed additive file restored it without changing other
+assets, the alias, settings or services. Shared public source now preserves it.
+The same main writer70372 and protected server2573735 remain qualified.
 
-Fresh uncached safety checks and grouped directory flushes remain active. Laptop prepares copied future history; the failed Desktop preparer remains disabled; MCP alone validates and
-publishes live manifests. A measured large Desktop transfer timeout was caught
-before remote processing. The correction uses compressed transport, a measured
-bounded deadline and releases only completed transfer-copy page cache. It adopts
-Laptop's exact returned job instead of repeating it. See HANDOFF for the current
-unit, immutable package, pause/resume controls and validation state.
+Final measured linked-tree reduction after local and remote retained file staging
+is73,271,337,360 bytes (68.24 GiB). Source filesystem availability rose81,060,352,000
+bytes while SSD availability fell27,635,814,400 bytes amid concurrent work. These
+are distinct observations, not interchangeable attribution. An unprivileged scan
+cannot inspect protected-process descriptors; strict zero-open-original acceptance
+is pending administrator evidence. Publication approval for the bounded audit is
+also pending after automatic approval review rejected its private payload.
 
-The serving writer remains PID70372 / invocation81dd8bb21f894aa1bd286f8f0029b770;
-protected server2573735 / unit2573723 is unchanged. The19November cutover involved
-a221s backend restart; the operator's external-manager restart SOP applies to any
-future backend restart. These converter-only changes do not restart Vibe. The
-qualified native Codex path suppresses resumed-history replay; automatic recurring
-closed-log conversion is not configured. Nightly scheduling remains off pending
-full history/recovery acceptance; its preparation must not duplicate this backlog.
+Passive37-minute growth was1,261,568 allocated bytes in one raw log. There are365
+new closed logs outside the frozen selection; active/pending/review and excluded
+originals remain untouched. Recurring conversion is not configured. Nightly's
+calendar stays OFF; its observer/delivery failures remain under its separate owner.
 
-Existing WakeWatch uses the same resource-guard timer, incident ledger, dedicated
-chat and selected executor. It reports real progress, issues and selected finite
-success; finite success does not mean full objective completion. Desktop Rainmeter
-uses the same public feed. Check live artifacts before acting; never replay a
-consumed controller or uncertain dispatch. Archived status alone does not retire
-history to B; previously selected logs remain in this finite operation.
+Normal WakeWatch delivered this success once; Desktop shows CHECKS PENDING.
+No new watcher, controller, native goal, model continuation or service restart.
+Deferred workspace/archive cleanup remains excluded. The original native goal
+is paused; this alert work does not change it.
 
-Full resulting archive-tree/current-SQL/software/frontend backup closure, final
-ordinary desktop/mobile/history/review/settings/queue/monitoring checks, remaining
-eligible-log inventory and net allocated/filesystem/growth accounting remain.
-See [HANDOFF](HANDOFF.md), [acceleration](VK_DEDUP_ACCELERATION.md) and
-[checkpoint controls](VK_DEDUP_CHECKPOINT_CONTROLS.md).
+See [finite acceptance](VK_DEDUP_FINITE_ACCEPTANCE.md) for exact evidence, restore
+instructions and limitations, and [HANDOFF](HANDOFF.md) for the next action.
+Earlier state is retained in deployment-history/20261124-before-final-acceptance.
 
-Earlier detailed evidence is retained in
-[the pre-correction state](deployment-history/20261122-before-acceleration/STATE.md),
-[before v4 cutover](deployment-history/20261119-before-v4-cutover/STATE.md), and
-[older repository history](STATE_HISTORY_20261017.md).
+Full historical archive: [STATE history](STATE_HISTORY_20261017.md).

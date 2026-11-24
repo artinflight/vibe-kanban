@@ -1,6 +1,6 @@
 {
   "schema": 2,
-  "generated_at_utc": "2026-11-19T17:52:01Z",
+  "generated_at_utc": "2026-11-24T05:49:42.151799+00:00",
   "canonical_repo": "/home/mcp/_vibe_kanban_repo",
   "canonical_repo_dirty": true,
   "canonical_branch": "vk/land-live-fixes-20260422",
@@ -32,9 +32,9 @@
   "history_proxy_port": 5640,
   "gateway_port": 4720,
   "public_frontend_pointer": "/home/mcp/.local/share/vibe-kanban/frontend-dist/current",
-  "public_frontend_release": "/mnt/vk-storage/vk-gpt62-models-20261118/release/paired/candidate",
+  "public_frontend_release": "/mnt/vk-storage/vk-codex-menu-20261120/release/paired/candidate",
   "public_assets": [
-    "/assets/index-DxHYbG0e.js",
+    "/assets/index-JmJhaUlX.js",
     "/assets/index-DeUaYq-8.css"
   ],
   "frontend_routing_note": "Existing later owner-published frontend preserved during log-reader activation and recovery; fresh public TLS/index/entry assets match. Prior frontend publication records below are historical.",
@@ -497,8 +497,8 @@
     "archive_aware": true
   },
   "log_deduplication": {
-    "status": "first_batch_installed_full_scope_unfinished",
-    "installed_files": 4,
+    "status": "selected_finite_conversion_complete_final_acceptance_pending",
+    "installed_files": 3360,
     "net_allocated_recovery_including_objects_and_object_directory_bytes": 827506688,
     "first_batch_is_not_total_reclamation": true,
     "native_runtime": "vibe-codex-executor/0.159.2",
@@ -511,8 +511,8 @@
     "isolated_0166_fixture_is_not_deployed_runtime": true,
     "procedure": "VK_LOG_RECLAMATION_READINESS.md",
     "old_attempt_consumed": true,
-    "normal_B_all_object_closure_still_required": true,
-    "rendered_UI_acceptance_still_required": true,
+    "normal_B_all_object_closure_still_required": false,
+    "rendered_UI_acceptance_still_required": false,
     "current_full_history_verification": {
       "verified_at_utc": "2026-11-17T21:59:32.378694+00:00",
       "receipt": "/mnt/vk-storage/vk-log-dedup-20261103-0815/production-20261117/approved-two-build-archives-9816ae8beb404092852093ed2e1c90a0/history-recheck-a094f38beaa14d07a23586a08394ce45/RESULT.private.json",
@@ -539,6 +539,23 @@
       "operation": "6d4d022ab2f84d1ea72f39d6a6382d1c",
       "evidence_root": "/mnt/vk-storage/vk-log-dedup-20261103-0815/production-20261117/efficiency-20261118/online-20261119-v1",
       "unit": "vk-online-dedup-bulk-20261119-v1.service",
+      "state": "complete",
+      "attempt": "recovery2",
+      "completed_batches": 395,
+      "converted_files": 3356,
+      "resolved_files": 3362,
+      "preserved_nonbeneficial_files": 6,
+      "raw_bytes": 90889461596,
+      "controller_running": false,
+      "full_objective_unfinished": true,
+      "finite_reconciliation": "/mnt/vk-storage/vk-log-dedup-20261103-0815/production-20261117/efficiency-20261118/online-20261119-v1/final-acceptance-20261124/FINITE_RECONCILED.private.json",
+      "final_acceptance_root": "/mnt/vk-storage/vk-log-dedup-20261103-0815/production-20261117/efficiency-20261118/online-20261119-v1/final-acceptance-20261124",
+      "progress_url": "https://mcp-server.tail744c4.ts.net/vk-dedup-status"
+    },
+    "previous_online_observation_before_final_acceptance_20261124": {
+      "operation": "6d4d022ab2f84d1ea72f39d6a6382d1c",
+      "evidence_root": "/mnt/vk-storage/vk-log-dedup-20261103-0815/production-20261117/efficiency-20261118/online-20261119-v1",
+      "unit": "vk-online-dedup-bulk-20261119-v1.service",
       "state": "running_stall_reconciled_without_restart",
       "additional_selected_files": 3361,
       "canary_files": 1,
@@ -555,10 +572,20 @@
       "observed_live_allocated_recovery_including_objects_and_directories": 1078501376,
       "final_staging_and_filesystem_accounting_pending": true,
       "stall_reconciliation": "STALL_EVENT_RECONCILIATION.private.json"
+    },
+    "installed_files_scope": "3356 in selected finite operation plus four earlier installed logs",
+    "final_acceptance_20261124": {
+      "evidence_root": "/mnt/vk-storage/vk-log-dedup-20261103-0815/production-20261117/efficiency-20261118/online-20261119-v1/final-acceptance-20261124",
+      "archive_root_index_sha256": "40e916ab11d73a8fc8d87bab0094b71d7d552ac3fcde5ed855c0e27a8dbcf7ef",
+      "normal_B_archive_runtime_frontend_closure_verified": true,
+      "net_measured_tree_reduction_after_local_remote_file_staging_bytes": 73271337360,
+      "strict_open_original_audit_pending": true,
+      "full_objective_complete": false,
+      "nightly_calendar_enabled": false
     }
   },
   "previous_frontend_deployed_at_utc": "2026-11-03T10:55:35.807043+00:00",
-  "frontend_publication_timestamp_status": "Later existing owner release preserved; its publication timestamp was not requalified by this task.",
+  "frontend_publication_timestamp_status": "Current paired release is observed; its original owner publication timestamp is retained in its own evidence. November24 added only the missing download wrapper.",
   "scoped_writer_cutover": {
     "state": "live_verified",
     "operation": "904ccb9583b845d9a6644d02013b8780",
@@ -670,5 +697,27 @@
     "roundtrip": "Fresh current-data candidate/fallback/candidate preserved 60 tables including later-write probe, 99 migrations, 18 protected and four recent histories.",
     "antigravity_execution": "Disabled by fallback; existing Antigravity records remain recognizable; recheck after future writes/schema changes.",
     "usable_with_current_archived_logs": false
+  },
+  "previous_frontend_before_final_acceptance_20261124": {
+    "public_frontend_release": "/mnt/vk-storage/vk-gpt62-models-20261118/release/paired/candidate",
+    "public_assets": [
+      "/assets/index-DxHYbG0e.js",
+      "/assets/index-DeUaYq-8.css"
+    ],
+    "frontend_build": {
+      "qualification_manifest": "/mnt/vk-storage/vk-log-reader-release-20261104/refresh-20261117-v1/FRONTEND_CURRENT.private.json",
+      "verified_manifest_files": 1309,
+      "rebuilt_by_log_deduplication": false
+    },
+    "frontend_deployed_at_utc": null
+  },
+  "frontend_final_acceptance_20261124": {
+    "runtime_closure": "/mnt/vk-storage/vk-log-dedup-20261103-0815/production-20261117/efficiency-20261118/online-20261119-v1/final-acceptance-20261124/RUNTIME_CLOSURE_ACCEPTED.private.json",
+    "additive_download_repair": "/mnt/vk-storage/vk-log-dedup-20261103-0815/production-20261117/efficiency-20261118/online-20261119-v1/final-acceptance-20261124/DOWNLOAD_REPAIR_ACCEPTED.private.json",
+    "actual_desktop_mobile_download": "/mnt/vk-storage/vk-log-dedup-20261103-0815/production-20261117/efficiency-20261118/online-20261119-v1/final-acceptance-20261124/DOWNLOAD_BROWSER_ACCEPTANCE.private.json",
+    "index_sha256": "541661d6294065ae8d2d93df66bc28b507e48ef50c5144125395988e663704b0",
+    "existing_assets_preserved": true,
+    "alias_changed": false,
+    "backend_restarted": false
   }
 }

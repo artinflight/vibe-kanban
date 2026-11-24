@@ -6,6 +6,7 @@ const { chromium } = await import(
 );
 
 const viewer = await readFile('packages/public/vk-artifact-viewer.html');
+const downloadPage = await readFile('packages/public/vk-artifact-download.html');
 const id = 'e4be627d-9de5-4861-8a60-746ffb9f2478';
 const requests = [];
 const report = `<!doctype html><h1>Frame review</h1><button onclick="document.querySelector('h1').textContent='Next frame'">Next</button><button onclick="location.href='https://escape.invalid/report'">Escape</button><script>try { parent.document.body.dataset.leaked='yes'; } catch { window.parentBlocked=true; } fetch('/api/should-never-be-called',{method:'POST'}).catch(()=>{});</script>`;
@@ -14,6 +15,9 @@ const server = createServer((req, res) => {
   if (req.url.startsWith('/vk-artifact-viewer.html')) {
     res.writeHead(200, { 'Content-Type': 'text/html' });
     res.end(viewer);
+  } else if (req.url.startsWith('/vk-artifact-download.html')) {
+    res.writeHead(200, { 'Content-Type': 'text/html' });
+    res.end(downloadPage);
   } else if (req.url === `/api/attachments/${id}/file`) {
     res.writeHead(200, { 'Content-Type': 'application/octet-stream' });
     res.end(report);
@@ -74,9 +78,25 @@ try {
       .getByText('This report link has no valid attachment ID.')
       .waitFor();
     assert.equal(await page.locator('iframe').isVisible(), false);
+    await page.goto(
+      `${origin}/vk-artifact-download.html?id=${id}&name=Review.html`,
+    );
+    const downloaded = page.waitForEvent('download');
+    await page.getByRole('button', { name: 'Download .html' }).click();
+    const file = await downloaded;
+    assert.equal(file.suggestedFilename(), 'Review.html');
+    assert.equal(await readFile(await file.path(), 'utf8'), report);
+    assert.equal(await page.locator('iframe').count(), 0);
+    await page.goto(
+      `${origin}/vk-artifact-download.html?id=${id}&name=..%2Fsecret.txt`,
+    );
+    await page
+      .getByText('This download link has an invalid attachment ID or filename.')
+      .waitFor();
+    assert.equal(await page.getByRole('button').isDisabled(), true);
     await page.close();
     console.log(
-      `PASS report controls, isolation and invalid-ID handling at ${width}px`,
+      `PASS report isolation, named downloads and invalid-link handling at ${width}px`,
     );
   }
   assert.ok(requests.every(([method]) => method === 'GET'));

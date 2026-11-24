@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="vk-artifact-download" content="vk-artifact-download-v1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'">
+<title>Download file — VK</title>
+<style>body{font:17px system-ui,sans-serif;color:#213440;background:#f4f7f9;margin:0;padding:8vh 20px}main{max-width:640px;margin:auto;background:white;border:1px solid #d6e0e5;border-radius:12px;padding:30px}h1{font-size:24px}#name{overflow-wrap:anywhere;font-weight:600}button{font:inherit;color:white;background:#146d86;border:0;border-radius:6px;padding:12px 22px;cursor:pointer}button:disabled{opacity:.55;cursor:wait}#status{line-height:1.5;color:#485d69}</style>
+</head><body><main><h1>Download file</h1><p id="name"></p><button id="download" disabled>Download</button><p id="status">Checking download link…</p></main>
+<script>
+(() => {
+  const query = new URLSearchParams(location.search);
+  const id = query.get('id') || '';
+  const requestedName = query.get('name') || '';
+  const status = document.getElementById('status');
+  const button = document.getElementById('download');
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id) ||
+      !requestedName || requestedName.length > 240 || /[\/\\\u0000-\u001f\u007f]/.test(requestedName) ||
+      requestedName === '.' || requestedName === '..') {
+    status.textContent = 'This download link has an invalid attachment ID or filename.';
+    return;
+  }
+  document.getElementById('name').textContent = requestedName;
+  document.title = requestedName + ' — Download';
+  button.textContent = 'Download ' + (requestedName.includes('.') ? '.' + requestedName.split('.').pop() : 'file');
+  button.disabled = false;
+  status.textContent = 'The download button preserves the original filename and extension.';
+  button.addEventListener('click', async () => {
+    button.disabled = true;
+    status.textContent = 'Preparing download…';
+    try {
+      const response = await fetch('/api/attachments/' + id + '/file', {credentials:'same-origin', redirect:'error'});
+      if (!response.ok) throw new Error('Download unavailable (' + response.status + ').');
+      const data = await response.blob();
+      // Always download, never render or execute attachment contents.
+      const url = URL.createObjectURL(new Blob([data], {type:'application/octet-stream'}));
+      const link = document.createElement('a');
+      link.href = url; link.download = requestedName; link.hidden = true;
+      document.body.appendChild(link); link.click(); link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+      status.textContent = 'Download sent to your browser as ' + requestedName + '.';
+    } catch (error) { status.textContent = error.message || 'Download failed. Please try again.'; }
+    finally { button.disabled = false; }
+  });
+})();
+</script></body></html>

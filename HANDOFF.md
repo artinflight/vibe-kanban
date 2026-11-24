@@ -1,86 +1,73 @@
-# Writer cutover accepted; finite conversion recovered November23
+# Finite conversion complete; protected-process audit pending
 
-Operation6d4d022ab2f84d1ea72f39d6a6382d1c continues under the same finite unit,
-`vk-online-dedup-bulk-20261119-v1.service`. Current attempt recovery2:
-PID3798264, invocation7de4161820194cb68dacb2976e760e9c. Recheck live identities.
-Current control package: `checkpoint-controls-20261123-recovery` beneath
-`/mnt/vk-storage/vk-log-dedup-20261103-0815/production-20261117/efficiency-20261118/online-20261119-v1`.
-No backend/reader restart, new goal, worker delegation or continuation loop occurred.
+Exact success8f42b14b-eb42-4981-a2df-0c01cd2890a7 reached this dedicated chat once.
+Operation6d4d022ab2f84d1ea72f39d6a6382d1c finished at05:03:50UTC November24:
+395/395 batches,3,356 converted, six nonbeneficial originals preserved,3,362/3,362
+resolved,90,889,461,596 raw bytes. The existing finite unit is inactive/MainPID0;
+old recovery2 PID3798264 is gone. Never replay/relaunch it for acceptance work.
 
-## Latest exact recovery
+Evidence root:
+`/mnt/vk-storage/vk-log-dedup-20261103-0815/production-20261117/efficiency-20261118/online-20261119-v1/final-acceptance-20261124`.
+FINITE_RECONCILED verifies396 journals, every installed manifest/sidecar/exclusion,
+1,134 graph receipts and102 source pins. ARCHIVE_CLOSURE_ACCEPTED and
+ARCHIVE_ROOT_INDEX seal1,049,798 physical entries, including all missing/unreferenced
+and raw/pending/adjacent data, Linux metadata and links, through normal Desktop B.
+RUNTIME_CLOSURE_ACCEPTED seals current SQL, both binaries, frontend and recovery
+sources. DOWNLOAD_REPAIR_INDEX adds the backed named-download wrapper. All new
+parts have independent normal restoration; old full per-batch qualification is
+reused. All prior failures, alternate encodings and epochs remain retained.
 
-Wake64e99dc4 reported a real failure after batch161's15 logs were installed.
-All163 journals/1,332 manifests and capture sidecars,77 source pins and qualified
-live reader identities verified.5,358 staging/primary objects decoded correctly;
-2,962 differed only in gzip representation. The failed physical-duplicate check
-had deleted nothing. Recovery reopened all retained B graph/original/control
-checkpoints and reran the production reader to EOF without repeating conversion.
-It retained the2,962 alternate representations (27,607,040 allocated bytes), removed
-2,396 identical copies, finalized accounting and committed the single missing tail.
-Counts at handoff:162/395 batches,1,332 converted logs,1,334/3,362 resolved files.
-The two resolved exclusions were individually nonbeneficial, not lost history.
+FINAL_ACCOUNTING:73,271,337,360-byte (68.24GiB) linked-tree reduction after retained
+local/remote file staging. Filesystem deltas include other work; open-deleted
+inodes are not in linked-tree counts. GROWTH_ACCEPTANCE observed1,261,568 allocated
+bytes added to one raw file over2,240 seconds. No files removed/replaced. Keep365
+new closed logs outside the frozen selection and all active/pending/review data.
 
-A single new activation acknowledged pause at that exact checkpoint with released
-backup descriptors, then accepted resume UUID6a5af7ca-ed37-4b8b-84fb-26a213d3eb6f.
-Laptop batch162 job a78d3ba8-5210-4159-a1d8-137d291c5a24 was adopted without another
-dispatch; its17 logs/514,876,008 source+sidecar bytes were packed and entered normal
-B admission. That is next-batch preparation, not another committed conversion.
-The Desktop optional preparer remains disabled, preserving its prior disposition.
-Do not re-enable or replay it implicitly. Resource floors and unit limits remain.
+Public UI desktop/mobile viewport, history semantics, review/cancel, settings,
+empty queues, TLS/assets, real named downloads and normal monitoring passed.
+No phone/device test is claimed. Browser fixture uses test-only host headless
+mode because Chromium's OS sandbox is unavailable; repository default is unchanged.
+The exact previously accepted download wrapper was restored additively to live
+frontend and shared public source; all existing assets/metadata and alias preserved.
+No backend, protected-reader, frontend pointer, network or power change occurred.
 
-Normal resource-guard observation reports recovery2 RUNNING, no source/event
-errors,10 delivered events/10 attempts. The ordinary history endpoint returned
-HTTP200 with capture complete. Nightly's cron schedule remains off; its existing
-observer and journal-delivery failures remain under the Nightly owner's control.
-Read [installed-tail recovery](VK_DEDUP_INSTALLED_RECOVERY.md) and
-[checkpoint controls](VK_DEDUP_CHECKPOINT_CONTROLS.md). QUALIFICATION.txt records
-110 tests:108 passed,2 optional unchanged Rust-probe cases skipped. Rust format,
-Ops and diff checks pass; required web formatting stops at missing Prettier.
+## Pending strict evidence
+
+The unprivileged old-original descriptor scan cannot read protected processes.
+The installed root helpers permit only other exact registered artifacts; sudo
+requires an administrator for the new audit. Do not change policy or repurpose a
+helper. A bounded read-only `open_original_audit.py` is retained in final evidence;
+its publication was rejected by automatic approval review because of private paths
+and administrative inspection code. The operator was asked for explicit approval
+to publish it for review. That approval and administrator execution remain pending.
+No alternate upload, privilege bypass or zero-open-descriptor claim is permitted.
+Full acceptance and the HUD remain CHECKS PENDING until the result is reconciled.
 
 ## Preserve these bindings
 
 Main writer70372/invocation81dd8bb21f894aa1bd286f8f0029b770,
 SHA01495f7f911a222f022354d406789ffa7f634f6faab81798828413d3582cc0a0.
-Protected server2573735/unit2573723 and proxy2573727 remain qualified.
-The19November writer cutover succeeded with221s maintenance. Any future backend
-restart belongs to the external managing agent; normal conversion needs none.
+Protected server2573735/unit2573723, invocation9c0b08030aa445318309e41dff070786,
+SHA40a91f69f31c1b9751f8f5a699fc8dfaa6f20138ba1b0ab528788aecb7ddd000.
+Backend restarts belong to the external managing agent. Recheck actual identities.
 
-The old empty `batch-0037` remains untouched. HANDOFF.batch_override maps batch37
-to `checkpoint-controls-20261121/isolated-preparations/batch-0037`. Preserve this
-mapping in every journal/closure check. Never reuse or write the old directory.
-All historical control packages, failure receipts, source seals and B epochs remain.
-The original consumer scan and rejected scan-removal alternatives are unchanged.
+Batch37 maps to `checkpoint-controls-20261121/isolated-preparations/batch-0037`.
+The old empty batch-0037 stays untouched. Remote preparations are terminal;
+Desktop remains disabled and failed inputs retained. Do not replay historical
+unfinished job labels that successors already adopted. No pending work was reset.
 
-Read actual ARMED/PROGRESS/COMMITTED/FAILURE/RESULT, current unit and journals
-before acting. Never replay a consumed activation, recovery attempt or uncertain
-dispatch. Initial pause requires a retained explicit resume; ordinary pause takes
-effect only after full batch commit and backup-descriptor release. Status/request
-clients are in the current package. A heartbeat or resource wait is not byte progress.
+WakeWatch uses existing timer/ledger/chat036f0739-6fcc-4e30-911a-e4c6e7e1f388,
+workspace081597f1-4a61-4f6a-8f56-95c2d6bc553c. Read its dedicated CONTEXT.md before
+another event. Do not use the generic disk-watcher outcome CLI: different ledger.
+No synthetic wake, new goal, model loop, watcher or controller is authorized.
+Original native goal ownership remains paused; supporting checklist is evidence.
 
-WakeWatch targets this dedicated session036f0739-6fcc-4e30-911a-e4c6e7e1f388 in
-workspace081597f1-4a61-4f6a-8f56-95c2d6bc553c. Reuse its existing timer, ledger,
-receipt client, selected settings and public HUD; never synthesize a test wake.
-Read `wakewatch/chat-handoff-20261120/CONTEXT.md` before handling another event.
-The generic disk-watcher outcome CLI targets a different ledger; do not use it here.
+Nightly calendar stays OFF; observer and delivery latch remain under owner
+workspace604d90d0-0a23-4fde-bcf7-368486a6959b, session4e89eddc-cecd-48fa-95b2-bd68b0a8458a.
+Reuse converter outputs. Reconcile dispatch3dc9242e-b5bc-494f-a057-be418fc43a40
+before further coordination; no new message/dispatch was sent this turn.
+Deferred workspace/archive cleanup remains excluded. Read
+VK_DEDUP_FINITE_ACCEPTANCE.md for restoration, accounting and test limitations.
+Prior continuity is in deployment-history/20261124-before-final-acceptance.
 
-## Remaining objective
-
-The selected finite conversion is still running. Finite success is not full
-acceptance. On its actual success, complete the resulting archive dependency tree
-and current-SQL/software/frontend normal-B recovery closure, ordinary desktop/
-mobile/history/review/settings/queues and monitoring checks, actual net allocated
-AND filesystem recovery including all staging, growth measurements and restore
-instructions. Preserve current writes, pending inputs, selected settings and every
-backup epoch. Deferred workspace/archive cleanup stays excluded. Native goal
-ownership remains paused; no additional model continuation loop is authorized.
-
-Nightly preparation owner: workspace604d90d0-0a23-4fde-bcf7-368486a6959b,
-session4e89eddc-cecd-48fa-95b2-bd68b0a8458a. Activation follows completed conversion
-and final backup validation; do not duplicate backlog conversion. Reconcile existing
-dispatch3dc9242e-b5bc-494f-a057-be418fc43a40 before any further coordination.
-Prior detailed pickup and historical proof remain in
-[November23 snapshot](deployment-history/20261123-before-installed-tail/HANDOFF.md),
-[November22 recovery](VK_DEDUP_OFFLINE_RECOVERY.md), [acceleration](VK_DEDUP_ACCELERATION.md),
-and [HUD operations](VK_DEDUP_RAINMETER.md).
-
-Full archive: [HANDOFF history](HANDOFF_HISTORY_20261017.md).
+Full historical archive: [HANDOFF history](HANDOFF_HISTORY_20261017.md).

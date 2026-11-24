@@ -3112,3 +3112,31 @@ the pickup note; Rust formatting passed, web formatting failed on missing Pretti
   See VK_DEDUP_INSTALLED_RECOVERY.md and checkpoint-controls-20261123-recovery.
   Full finite conversion and final archive/SQL/UI/net-space/growth acceptance
   remain open. Deferred workspace/archive cleanup remains excluded.
+
+
+## 2026-11-24 | finite conversion and recovery closure; strict audit pending
+
+All395 batches/3,356 converted logs and six preserved exclusions reconciled against
+396 journals,1,134 graph receipts and actual live writer identity. The converter
+is stopped. Sealed complete affected-store normal-B recovery catalog,24 additional
+body carriers/eight catalog parts/root index, current SQL, both serving binaries,
+frontend and recovery sources passed independent restoration. Prior complete
+per-batch B/Python/Rust EOF evidence was reused; no backlog replay or new controller.
+
+Public desktop/mobile viewport history/review/settings/queues/monitoring passed.
+Restored the omitted accepted named-download wrapper additively after B backup;
+all other files/metadata and selected alias unchanged. Shared source and meaningful
+filename/byte/invalid-link browser checks now retain it. Seven HTTP tests and
+both fixture widths pass; real public download checks pass. Chromium OS sandbox
+is unavailable on this host; test-only host mode preserved repository defaults.
+Required formatting passes Rust but stops at missing Prettier for web formatting.
+
+Final measured tree reduction after local/remote retained file staging is
+73,271,337,360bytes (68.24GiB), distinct from concurrent filesystem availability.
+Passive growth added1,261,568 allocated bytes to one raw file in37minutes.
+Protected-process open-original audit remains unavailable to the unprivileged
+account. Automatic approval review rejected publishing the private administrative
+audit; explicit publication approval and administrator evidence remain pending.
+Full acceptance is not claimed. Nightly stays OFF; deferred cleanup, new closed
+logs, selected settings, pending data, backup epochs and other owners preserved.
+See VK_DEDUP_FINITE_ACCEPTANCE.md and final-acceptance-20261124 private receipts.

@@ -30,11 +30,13 @@ Existing journal-v40 unit and timer passed real independent B reopen/exact ACK.
 
 Gap-v22 passed17:07UTC:2,449,223paths/150,028directories, zero pending/replay
 errors; independently reopened normal-B result. Gap unit is inactive/Main0/exit0.
-One existing-checkpoint import now runs:vk-nightly-converter-import-v1-20261124.service,
-PID2115577/invocationd3d4cf9a56784ea39038672da80e8c81. Config SHA
- a1ba8bcf23cb5054a895c9054ecfb06b2c19014aaa15290e3b58b5b57dba97a9.
-Read actual STARTED/PROGRESS/RESULT and unit. Retained FAILURE17:08:26 is a proven
-pre-dispatch journal lease deferral; SAFE_RETRY1 preserves original evidence.
+One existing-checkpoint import now runs:vk-nightly-converter-import-v2-20261124.service,
+PID2526912/invocation2f90588c2a4e41ec8c64dcab81912e90. Config SHA
+ 948cd315b60b439138d96945882cb2957e5cfd44744b2f2f878cfa29c185c0ee.
+Read actual v2 STARTED/RECOVERY_ADMISSION/PROGRESS/RESULT and unit. V1 stopped
+at its4GiB catalog ceiling after222commits; all exact bindings/next absence and
+native quick_check passed. V2 reuses those records with16GiB ceiling,>=40GiB free
+admission and unchanged20:07:44UTC deadline/other guards. V1 artifacts survive.
 Never replay current STARTED. Scope456components/3635logs/1194existing B checkpoints.
 Next: accept imports, compose current namespace, qualify files/SQL/runtime and
 independent full restore, then ordinary incremental/interruption qualification

@@ -92,7 +92,14 @@ B and acknowledged exact source generations. Gap-v22 passed2,449,223paths and
 150,028directories with zero pending/replay errors and independent B readback.
 The import first yielded before dispatch to the normal journal owner; that
 failure is retained and reconciled. One actual import is now running.
-No watch scope or resource floor was reduced.
+V1 reached its configured4GiB catalog ceiling after222records. Native B retained
+77.2GB free; exact committed-prefix readback and full native quick_check passed.
+V2 revalidated all222bindings and resumed metadata reuse with a16GiB catalog
+ceiling, not a preallocation, and a40GiB B free-space check before each batch.
+Its original20:07:44UTC deadline and source/RAM/swap/STOP/identity guards remain.
+The unstarted composition/current-service definitions match this measured bound;
+preimages and all old failure/config/epoch records are retained. No watch scope
+or resource floor was reduced.
 
 Retain the predecessor gap/outbox/latch. Reconcile tracking, import existing
 checkpoint metadata under the same B owner, qualify all current files and actual

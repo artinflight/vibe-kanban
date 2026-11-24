@@ -3194,3 +3194,5 @@ one finite gap reconciliation runs. Calendar/full restore/strict net acceptance
 remain open. No backend restart, epoch deletion, extra worker or Git push.
 
 - 2026-11-24: Nightly gap-v22 independently accepted2,449,223paths/150,028directories with zero pending/replay errors. One1194-checkpoint import now runs; proven pre-dispatch journal contention retained/reconciled, no uncertain replay. Current full restore/ordinary commissioning remain open.
+
+- 2026-11-24: Reconciled the import4GiB catalog stop:222exact commits, next absent, native quick_check passed and77.2GB Bfree. One v2 recovery revalidated the prefix, with16GiB ceiling/40GiB free check and original20:07:44UTC deadline; all old evidence/other guards retained. Unstarted successors updated with preserved preimages.

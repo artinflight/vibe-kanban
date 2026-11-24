@@ -111,3 +111,30 @@ This is a small read improvement, not evidence of a large live/UI speedup. The
 file-count, metadata-walk and allocation gains remain the main measured benefits.
 The server build is still running; normal existing watcher sees 3/4 checkpoints,
 no source/event errors and the held daily timer. Final migration remains open.
+
+## Main accepted; protected and fallback builds
+
+Success wake cf383e6c-6cbf-4bc6-b2cd-bd8ac446986e was accepted once. Reconciliation
+verified terminal unit/process, all pinned source/tool records, sealed server and
+probe hashes, full-EOF results and unchanged live executable identities. Main
+artifact SHA-256 is 4a14b76bc3f0ce85c702f099e901b89fe6cc962df3221ab476845a80d3d87957.
+The build-info asset directory varies with the inspection environment; compiled
+identity/safety fields match exactly. No live environment was changed.
+
+A single compatibility-build-v1 script builds the protected reader and prior
+native-166 fallback with V2 support, retaining each separately verified source
+variant. Both 2,959-file base catalogs and the fallback native overlay match.
+Only archive-reader modules and a probe change. Each variant runs reader tests,
+builds its sealed server, then verifies full EOF on raw-reconstruction-equivalent
+V1/V2 samples. This is build acceptance, not current-data/UI or actual B recovery.
+The fallback retains its prior runtime capabilities, so automatic online conversion
+must remain held when it is used. Unit vk-dedup-packed-compatibility-v1.service,
+PID2330678, invocation87b62ce5c0d04583bbddd548286e903c. Same shared target and lease,
+original resource guards, 600-second progress guard, 90-minute finite pair limit.
+Existing WakeWatch uses checkpoint-monitor-compatibility1; no new watcher or agent.
+
+The normal existing watcher tick accepted compatibility-build-v1 at1/6 after
+protected archive tests passed, with no source/event errors and14 retained
+batches/14attempts. This is current scripted progress, not deployment acceptance.
+Rust formatting and ops/whitespace checks pass; full format still stops at the
+pre-existing missing Prettier executable.

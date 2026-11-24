@@ -3226,3 +3226,13 @@ and live identities unchanged. Started one receipt-bound recovery using original
 immutable overlays/test proof and shared-target artifacts; optimized probe first,
 then server.60-minute cap and600-second no-progress guard; memory/SSD/ownership
 limits preserved. Same existing watcher/owner/settings; no deployment or Nightly.
+
+
+## 2026-11-24 — main packed-reader build accepted; compatibility pair scripted
+
+Reconciled success cf383e6c once: exact4/4 result/artifact/probe/source hashes,
+terminal process/unit and unchanged live readers. Main candidate4a14b76b remains
+undeployed. Verified both sealed base trees and prepared protected/fallback reader
+builds preserving their distinct history/native behavior. One serial bounded job
+uses existing shared target/lease and WakeWatch. Current-data/actual B restore,
+forward/backward migration and final net/performance acceptance remain open.

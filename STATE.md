@@ -15,10 +15,11 @@ Daily conversion is held during repair while preserving its enabled05Toronto
 calendar. A timer maintenance condition prevents host recovery from restarting
 it; exact release instructions and receipts are in the packed repair document.
 Existing WakeWatch owns checkpoint/problem reporting; no model polling loop.
-Main build v1 passed10 optimized reader tests but reached its45-minute cap while
-compiling successfully. Reconciled recovery1 reuses its immutable source, passed
-test evidence and shared-target artifacts, with optimized probe first and a
-60-minute cap/600-second no-progress stop. Nothing has been deployed.
+The main packed-reader artifact is accepted after exact success reconciliation.
+Its hash is4a14b76bc3f0ce85c702f099e901b89fe6cc962df3221ab476845a80d3d87957.
+One compatibility-build-v1 script now serially builds the protected reader and
+V2-aware fallback, preserving their separate source overlays. Shared target and
+resource/ownership guards remain. Nothing has been deployed.
 
 Previously measured net reduction73,893,642,640bytes(68.82GiB) includes prior
 local/remote-file staging and concurrent growth. New qualification/build staging
@@ -37,5 +38,5 @@ Full historical archive: [STATE history](STATE_HISTORY_20261017.md).
 
 Optimized read checkpoint now passed: all five histories/three samples match at
 full EOF; summed medians3.877s loose versus3.769s packed(about2.8% faster, warm
-cache only). Large live/UI speedups are not demonstrated. Server build continues;
-normal existing WakeWatch tick sees recovery1 at3/4 with no errors.
+cache only). Large live/UI speedups are not demonstrated. Main build completed;
+compatible pair builds and fresh current-data/real recovery qualification remain.

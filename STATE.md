@@ -31,8 +31,10 @@ with29 inode tests passing. Full real enrollment passed with125 roots,
 2,287,396 watches and peak1,610,854,400bytes under the retained2GiB bound.
 The existing observer is fully ready with2,289,027 watches and no tracking errors.
 Its existing journal delivery independently reopened B and acknowledged the exact
-source sequence. One finite metadata gap reconciliation is running; old tracker
-outbox, journal latch and all backup epochs remain preserved.
+source sequence. The finite gap scan passed2,449,223paths/150,028directories with
+zero pending/replay errors and independent B readback. One metadata-only import
+now reuses1194 existing converter checkpoints. Old tracker outbox, journal latch
+and all backup epochs remain preserved.
 
 Full current-file/SQL/runtime composition and independent restore, ordinary
 incremental/interruption qualification, and final accounting remain unfinished.

@@ -3192,3 +3192,5 @@ all journals/fullEOF/normal-B recovery proofs. Sealed automatic-v3 and enabled
 3731resolved. Full Nightly tracker coverage and actual B journal delivery passed;
 one finite gap reconciliation runs. Calendar/full restore/strict net acceptance
 remain open. No backend restart, epoch deletion, extra worker or Git push.
+
+- 2026-11-24: Nightly gap-v22 independently accepted2,449,223paths/150,028directories with zero pending/replay errors. One1194-checkpoint import now runs; proven pre-dispatch journal contention retained/reconciled, no uncertain replay. Current full restore/ordinary commissioning remain open.

@@ -73,8 +73,8 @@ vk-nightly-efficiency-20261017/commissioning-20261103/completion-20261124 retain
 All source pins and roots validate. Its metadata-only checkpoint imports reference
 396 original components,3,356 converted logs and1,134 immutable normal-B checkpoints.
 The accepted new runs add60components/279logs/60checkpoints. Total prepared
-references:456components/3635logs/1194checkpoints. No import or whole-backup
-acceptance is claimed yet.
+references:456components/3635logs/1194checkpoints. The actual bounded import is
+running; no import or whole-backup acceptance is claimed yet.
 
 A complete metadata census found at least2,270,077 required inode watches.
 The operator raised the live limit to3,145,728; this was independently verified.
@@ -88,7 +88,10 @@ with peak1,610,854,400bytes under the retained1536MiB soft/2GiB hard limit
 and zero swap. Earlier bounded probes stopped safely and closed their own FDs;
 they did not establish full admission. The existing observer is now fully ready:
 2,289,027watches/zero errors. Existing journal-v40 independently delivered/reopened
-B and acknowledged exact source generations. One bounded gap-v22 job is running.
+B and acknowledged exact source generations. Gap-v22 passed2,449,223paths and
+150,028directories with zero pending/replay errors and independent B readback.
+The import first yielded before dispatch to the normal journal owner; that
+failure is retained and reconciled. One actual import is now running.
 No watch scope or resource floor was reduced.
 
 Retain the predecessor gap/outbox/latch. Reconcile tracking, import existing
@@ -133,7 +136,8 @@ No frontend or Rust implementation changed in this completion step. The broad
 workspace build/lint/test suite was not repeated for these Python/ops changes.
 
 The expanded private administrator audit is prepared with all3,356 original
-converted inodes and374 newly selected versions (3,730 records). It pins its
+converted inodes,374 newly selected versions and the additional automatic
+original (3,731 records). It pins its
 identity-list digest and only reads bounded process metadata. It has not been
 published or executed; the prior publication hold remains. Accept its result only
 after this catch-up is terminal and reconciled. Only the operator changed the runtime watch limit; no persistent setting is claimed.

@@ -1,4 +1,4 @@
-# November24 completion — automatic conversion accepted, Nightly gap running
+# November24 completion — automatic conversion accepted, Nightly gap accepted, import running
 
 Read dedicated WakeWatch CONTEXT.md before alerts. Original finite operation
 6d4d022ab2f84d1ea72f39d6a6382d1c is complete and immutable; never replay it.
@@ -28,16 +28,17 @@ under unchanged1536MiB high/2GiB max/zero swap. Runtime watchlimit3145728 verifi
 persistent sysctl question is pending. Do not ask again to raise the live limit.
 Existing journal-v40 unit and timer passed real independent B reopen/exact ACK.
 
-One actual gap job:vk-nightly-gap-v22-20261124.service, PID1495017,
-invocationdb45412896f545b3b8ad55065a5b512b. Config SHA
-947bd536eeaf1b09f4e1340b94bcebe6c4e6af83e97a25d1b6d1e792ed2bb781.
-Read actual gap-v22-prepared STATUS/RESULT and unit before acting. Its preserved
-STOP_RESUME11:16:17Toronto records a preflight lease deferral before any B action;
-preflight-r2 passed, then the single real launch began. Never duplicate/replay.
-Prepared imports cover456components/3635logs/1194Bcheckpoints; not yet imported.
-Next: finish gap, import existing graphs, compose current namespace, qualify all
-files/SQL/runtime and independent full restore, then ordinary incremental and
-interruption/Desktop-off acceptance before22–04Toronto/hard04 schedule activation.
+Gap-v22 passed17:07UTC:2,449,223paths/150,028directories, zero pending/replay
+errors; independently reopened normal-B result. Gap unit is inactive/Main0/exit0.
+One existing-checkpoint import now runs:vk-nightly-converter-import-v1-20261124.service,
+PID2115577/invocationd3d4cf9a56784ea39038672da80e8c81. Config SHA
+ a1ba8bcf23cb5054a895c9054ecfb06b2c19014aaa15290e3b58b5b57dba97a9.
+Read actual STARTED/PROGRESS/RESULT and unit. Retained FAILURE17:08:26 is a proven
+pre-dispatch journal lease deferral; SAFE_RETRY1 preserves original evidence.
+Never replay current STARTED. Scope456components/3635logs/1194existing B checkpoints.
+Next: accept imports, compose current namespace, qualify files/SQL/runtime and
+independent full restore, then ordinary incremental/interruption qualification
+before22–04Toronto/hard04 activation. Current-v41 definitions remain unstarted.
 Nightly calendar remains OFF. Old outboxes/latches/epochs and B ownership survive.
 
 Final accounting must include all new staging and growth. Exactly24 temporary

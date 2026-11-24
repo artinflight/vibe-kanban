@@ -35,7 +35,7 @@ def snapshot(source_root,names,workspace,folder,guard):
             total+=before.st_size;require(total<=MAX_BYTES,'remote input bound exceeded')
             with source.open('rb') as body:
                 require(logs.version(os.fstat(body.fileno()))==logs.version(before),'source changed on open')
-                require(body.read(len(logs.MAGIC))!=logs.MAGIC,'already archived source cannot be prepared again')
+                require(not logs.is_archive_header(body.read(len(logs.MAGIC))),'already archived source cannot be prepared again')
                 body.seek(0);reader=HashingReader(body)
                 info=tarfile.TarInfo(str(index)+'.bin');info.size=before.st_size;info.mode=0o600
                 output.addfile(info,reader)

@@ -11,6 +11,7 @@ pub mod execution_logs;
 pub mod http_headers;
 pub mod jwt;
 pub mod log_archive;
+mod log_archive_packed;
 pub mod log_msg;
 pub mod log_mutation;
 pub mod msg_store;

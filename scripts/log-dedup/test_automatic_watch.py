@@ -78,5 +78,20 @@ class WatchTests(unittest.TestCase):
         self.assertEqual(values['state'],'waiting_for_current_turn')
         self.assertEqual(values['resolved_files'],3)
 
+    def test_intentional_pause_is_visible_and_unexpected_restart_is_a_problem(self):
+        hold = self.root/'pause'
+        hold.write_bytes(b'owned hold')
+        self.config['maintenance_pause'] = dict(path=str(hold), sha256=hashlib.sha256(hold.read_bytes()).hexdigest(), timer='timer')
+        row = subject.snapshot(self.config, 110, self.service)
+        self.assertEqual(row['phase'], 'automatic_paused_for_file_count_repair')
+        self.assertFalse(row['needs_attention'])
+        restarted = lambda name: dict(ActiveState='active' if name=='timer' else 'inactive', MainPID='0', Result='success')
+        self.assertTrue(subject.snapshot(self.config, 110, restarted)['needs_attention'])
+        values = dict(state='waiting_for_current_turn', observed=110, resolved_files=0, total_files=0, completed_files=0)
+        self.assertIn('paused while the file-count', subject.public_html(values,dict(source=row)))
+        hold.write_bytes(b'changed')
+        with self.assertRaisesRegex(ValueError, 'hold changed'):
+            subject.snapshot(self.config, 110, self.service)
+
 
 if __name__=='__main__':unittest.main()

@@ -1,40 +1,34 @@
-# Dedup only — Nightly continuation explicitly disallowed
+# Dedup file-count repair — preserve live history
 
-Read dedicated WakeWatch CONTEXT.md first. User correction:"I didn't ask you to
-get nightlies ready, I asked you to complete the dedup work." Earlier Nightly
-commissioning authorization was inferred incorrectly. Do not run the prepared
-current41 binder/seal/bootstrap/qualification/calendar from this chat.
+Read dedicated WakeWatch CONTEXT.md first. User wants dedup completion and rejects
+Nightly commissioning. The speed objective is NOT met: previous conversion made
+1,065,426files from38,791. Shared pieces must be packed, with real recovery and
+compatible serving readers, before removing proven-unreferenced loose objects.
+
+[Design/validation/remaining work](VK_DEDUP_PACKED_LAYOUT.md). Private evidence:
+`/mnt/vk-storage/vk-log-dedup-20261103-0815/packed-object-qualification-20261124`.
+The main-build-v1 package preserves exact deployed source/native/private inputs;
+only the packed reader and qualification probe change. Reconcile CONFIG,
+STARTED,PROGRESS,RESULT/FAILURE and actual unit before any action. No uncertain
+relaunch. Build does not deploy. Existing WakeWatch will handle its checkpoint.
 
 Original operation6d4d022ab2f84d1ea72f39d6a6382d1c, catch-up
- e3787e2e49124284a1f023d061f967f7 and automatic qualification
-8d866da98492464f9867137092623b20 remain accepted and immutable. Daily converter
-05Toronto remains enabled. No replay or further ad-hoc conversion is required.
-Active/pending/nonbeneficial sources and all backup epochs remain protected.
+ e3787e2e49124284a1f023d061f967f7 and automatic8d866da98492464f9867137092623b20
+remain accepted and immutable. No V2 source manifests have been installed.
+Main70372/invocation81dd8bb21f894aa1bd286f8f0029b770 and protected2573723/
+server2573735/invocation9c0b08030aa445318309e41dff070786 remain the serving owners.
 
-The extra unit vk-nightly-composition-v22-20261124.service was interrupted through
-its Python handler. UNIT_STOPPED proves inactive/Main0 and both owned processes
-gone; SCOPE_STOP_READBACK independently verified original map binding,
-123746accepted file points and1194converted checkpoints. Its namespace cursor
-is partial/unaccepted and retained for Nightly's independently authorized owner.
-Read these receipts under Nightly commissioning-20261103/completion-20261124/
-composition-v22-prepared. Do not resume STARTED. Existing observer/journal stay.
+The ordinary daily timer was stopped, then restarted by mcp-boot-recovery.
+Final TIMER_MAINTENANCE_HOLD_ACCEPTED pins its owned condition/drop-in/flag,
+preserving enabled schedule and blocking conversion during repair. Earlier
+runtime-mask proof failed because user-unit precedence won; that mask is removed.
+Release only exact owned hold after qualification, then start same timer.
 
-Existing resource-guard hook uses dedup completion-20261124/dedup-only-monitor-v1
-config with checkpoint_jobs empty and unchanged source/ledger/owner/settings.
-Normal tick passed, no source/event errors or pending Nightly wake. Accepted and
-uncertain delivery receipts remain. No new watcher or model continuation loop.
+No Nightly successor, calendar, new agent, goal or polling loop. Preserve every
+backup epoch, failed input, pending draft, selection and other owner. Previous
+68.82GiB net accounting predates new qualification/build staging; refresh at end.
+Privileged3731-inode audit publication was rejected by automatic approval;
+retain that limitation and never claim zero open originals or bypass it.
 
-LATEST_ACCOUNTING_REF points to fresh measured net73,893,642,640bytes (68.82GiB)
-after local staging/concurrent growth and remote temporary file allocation.
-Source files38,791→1,065,426; allocated91,761,684,480→9,324,318,720bytes. The file
-fanout is a real metadata-cost limitation; smaller bytes did not imply fewer
-backup-index operations. Do not claim maximum savings or zero-open originals.
-Privileged3731-inode audit sharing/execution remains pending after automatic
-approval rejected publication; no bypass. All independent work is recorded.
-
-Main70372/invocation81dd8bb21f894aa1bd286f8f0029b770 and protected unit2573723/
-server2573735/invocation9c0b08030aa445318309e41dff070786 remain unchanged.
-Fresh TLS/index/two assets/download bytes pass; earlier ordinary UI/history
-proofs remain. No backend restart, user-setting change, deferred cleanup or push.
-
+Previous handoff: [before packed repair](deployment-history/20261124-before-packed-repair/HANDOFF.md).
 Full historical archive: [HANDOFF history](HANDOFF_HISTORY_20261017.md).

@@ -3202,3 +3202,16 @@ remain open. No backend restart, epoch deletion, extra worker or Git push.
 - 2026-11-24: WakeWatch delivered the actual import checkpoint once. Reconciled1194references/10B journals,972new/222reused, preserved123746accepted file points and zero body recopy. Started one preflighted current-namespace composition with exclusive STARTED guard; existing watcher now handles its STATUS/STOP/RESULT.27 focused tests pass; full restore/commissioning remain open.
 
 - 2026-11-24 user scope correction: dedup only; prior inferred Nightly commissioning authority was wrong. Disabled Nightly checkpoint wakes in the existing monitor; interrupted exact composition main, verified both owned processes stopped, and independently reopened retained B state read-only (123746accepted file points/1194imports intact). No successor/calendar or cleanup. Fresh net68.82GiB includes staging/growth; disclosed39k→1.07mfile fanout and pending privileged open-original audit.
+
+
+## 2026-11-24 — file-count regression and isolated packed qualification
+
+User clarified speed and file count are required, not bytes alone. Paused daily
+conversion with an owned condition preserving its enabled calendar after host
+recovery undid a plain stop. Prepared V2 packed readers and recovery compatibility;
+old live publication refuses V2 until guarded migration is qualified. 100 Python
+archive/recovery tests,10 Rust archive tests and24 watcher tests passed. Real
+sample7,229→8files and exact hashes; debug Rust warm reads show little change,
+so optimized/live speed remains unverified. No live history migration, Nightly
+commissioning or cleanup. See VK_DEDUP_PACKED_LAYOUT.md; matched build checkpoint
+is the next scripted step through existing WakeWatch.

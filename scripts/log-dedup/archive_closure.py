@@ -80,7 +80,7 @@ def extract_verify(carrier,manifest,destination,guard,*,fragments=None,record=la
 def closure_layout(root,converted):
  """Include every directory/link in every affected process namespace."""
  root=Path(root);stores={str(Path(n).parent)for n in converted}
- stores.update(str(p.parent.relative_to(root))for p in root.glob('*/*/processes/.log-objects'))
+ stores.update(str(p.parent.relative_to(root))for name in('.log-objects','.log-packs')for p in root.glob('*/*/processes/'+name))
  directories={'.'};links=[]
  for name in sorted(stores):
   parent=root/name
@@ -95,7 +95,7 @@ def closure_layout(root,converted):
     mode=p.lstat().st_mode;relative=str(p.relative_to(root))
     if stat.S_ISDIR(mode):directories.add(relative);pending.append(p)
     elif stat.S_ISLNK(mode):
-     if p.name=='.log-objects':raise ValueError('Object store substituted')
+     if p.name in('.log-objects','.log-packs'):raise ValueError('Object store substituted')
      links.append(dict(path=relative,target=os.readlink(p),metadata=metadata(p)))
     elif not stat.S_ISREG(mode):raise ValueError('Unknown special closure member; preserve it')
  return dict(format='vk-complete-streamed-session-archive-closure-v3',root=str(root),complete_session_stores=sorted(stores),directories=[dict(path=n,metadata=metadata(root/n))for n in sorted(directories)],symlinks=sorted(links,key=lambda r:r['path']),includes_unreferenced_objects=True,includes_raw_and_adjacent_files=True,maximum_body_bytes=16*B)

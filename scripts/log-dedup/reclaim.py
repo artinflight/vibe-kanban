@@ -278,7 +278,10 @@ class Batch:
             manifest_path = self.archive / entry['path']
             size = logs.regular(manifest_path).st_size
             total += ((size + fragment - 1) // fragment + 1) * fragment
-            for chunk in logs.load_manifest(manifest_path)['chunks']:
+            manifest = logs.load_manifest(manifest_path)
+            if manifest['version'] != 1:
+                raise logs.ArchiveError('Packed publication requires a qualified separate migration')
+            for chunk in manifest['chunks']:
                 relative = str(Path(entry['path']).parent / '.log-objects' / (chunk['sha256'] + '.gz'))
                 if relative in seen:
                     continue
@@ -295,6 +298,8 @@ class Batch:
         for entry in self.plan['files']:
             self.guard()
             manifest = logs.load_manifest(self.archive / entry['path'])
+            if manifest['version'] != 1:
+                raise logs.ArchiveError('Packed publication requires a qualified separate migration')
             source_dir = (self.archive / entry['path']).parent / '.log-objects'
             target_dir = (self.root / entry['path']).parent / '.log-objects'
             if target_dir.exists() and not stat.S_ISDIR(target_dir.lstat().st_mode):

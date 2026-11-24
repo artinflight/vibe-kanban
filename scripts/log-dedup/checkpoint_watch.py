@@ -26,16 +26,16 @@ def unit(name):
 
 
 def snapshot(job, now, service_reader=unit):
-    """Success signals a review checkpoint, never full Nightly acceptance."""
+    """Success signals a review checkpoint, never full objective acceptance."""
     row = dict(operation=job['operation'], attempt=job['attempt'],
-               job_kind='nightly_checkpoint', evidence_root=job['folder'],
+               job_kind=job.get('job_kind', 'nightly_checkpoint'), evidence_root=job['folder'],
                controller_unit=job['unit'], state='running',
                phase='script_running', needs_attention=False, checked_at=now,
                progress_at=0, completed=0, total=job['total'])
     try:
         folder = Path(job['folder'])
         receipt_format = job.get('receipt_format', 'import-v2')
-        if receipt_format not in ('import-v2', 'composition-v1'):
+        if receipt_format not in ('import-v2', 'composition-v1', 'dedup-build-v1'):
             raise ValueError('unsupported script receipt format')
         composition = receipt_format == 'composition-v1'
         read(folder / ('config.private.json' if composition else 'CONFIG.private.json'), job['config_sha256'])
@@ -138,12 +138,13 @@ def acknowledge_initial(config, store, registry, now):
 def checkpoint_prompt(rows, samples, batch, handoff):
     data = [samples[row['volume']]['event']['values'] for row in rows]
     return (
-        '[storage-response ' + batch + '] [Deduplication/Nightly checkpoint] '
+        '[storage-response ' + batch + '] [Deduplication checkpoint] '
         'The user requested scripted work with WakeWatch wakes at checkpoints or problems, '
         'instead of model polling. Read ' + handoff + ' first. Reconcile the exact job, '
         'its receipts and live unit before acting. A script success is only a checkpoint; '
-        'finish the already-authorized deduplication and Nightly objective with real current '
-        'files/SQL/software restore, ordinary qualification and final space accounting. '
+        'finish the deduplication objective, including file-count and performance repair, '
+        'compatible readers, verified recovery and final space accounting. '
+        'The user explicitly excluded Nightly commissioning; do not resume it. '
         'On an issue inspect recovery first. Preserve pending inputs, settings, backup epochs, '
         'other owners and deferred cleanup. Never replay an uncertain dispatch or duplicate '
         'a job, watcher, goal or agent. Use scripts for long work and arm the existing watcher '

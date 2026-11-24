@@ -14,7 +14,7 @@ import log_dedup as logs
 
 MAX_READ = 1024 * 1024
 BASE = rf'[0-9a-f]{{2}}/{logs.UUID}/processes/'
-MEMBER = re.compile(BASE + rf'(?:{logs.UUID}\.(?:jsonl|capture\.json|recovered-final\.json)|\.log-objects/[0-9a-f]{{64}}\.gz)')
+MEMBER = re.compile(BASE + rf'(?:{logs.UUID}\.(?:jsonl|capture\.json|recovered-final\.json)|\.log-objects/[0-9a-f]{{64}}\.gz|\.log-packs/[0-9a-f]{{64}}\.pack)')
 
 
 class Body:
@@ -111,6 +111,6 @@ class NormalRecovery:
         self.check()
 
     def open_original(self, relative, expected_sha256):
-        if '/.log-objects/' in relative:
+        if '/.log-objects/' in relative or '/.log-packs/' in relative:
             raise logs.ArchiveError('Original recovery requires a log or sidecar')
         return self.open_member(relative, expected_sha256)

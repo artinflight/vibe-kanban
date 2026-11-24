@@ -51,7 +51,7 @@ def inventory(root, database, *, maximum_files=200_000, seconds=60):
         match = logs.LOG_PATH.fullmatch(relative)
         session, execution = match[2], match[3]
         with path.open('rb') as source:
-            archived = source.read(len(logs.MAGIC)) == logs.MAGIC
+            archived = logs.is_archive_header(source.read(len(logs.MAGIC)))
         if archived:
             raw_bytes = logs.load_manifest(path)['raw_bytes']
             totals['archived_files'] += 1
@@ -105,7 +105,8 @@ def inventory(root, database, *, maximum_files=200_000, seconds=60):
     # Account for shared objects separately; never add decoded size to allocation.
     object_allocated = 0
     object_count = 0
-    for directory in root.glob('*/*/processes/.log-objects'):
+    for directory in (p for name in ('.log-objects', '.log-packs')
+                      for p in root.glob('*/*/processes/' + name)):
         if directory.is_symlink() or not directory.is_dir():
             raise logs.ArchiveError('Object store is an alias')
         for obj in directory.iterdir():

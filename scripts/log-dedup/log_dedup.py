@@ -11,6 +11,12 @@ import stat
 import sys
 
 MAGIC = b'VKLOGCAS1\n'
+PACKED_MAGIC = b'VKLOGCAS2\n'
+
+
+def is_archive_header(header):
+    return header in (MAGIC, PACKED_MAGIC)
+
 MIN_CHUNK = 16 * 1024
 MAX_CHUNK = 256 * 1024
 MAX_MANIFEST = 16 * 1024 * 1024
@@ -84,6 +90,9 @@ def chunks(stream):
 
 
 def encode(manifest):
+    if manifest.get('version') == 2:
+        from packed_objects import encode as encode_packed
+        return encode_packed(manifest)
     data = MAGIC + json.dumps(manifest, separators=(',', ':')).encode() + b'\n'
     if len(data) - len(MAGIC) > MAX_MANIFEST:
         raise ArchiveError('Manifest exceeds reader bound')
@@ -95,7 +104,7 @@ def manifest_for(path, objects, output=None):
     digest = hashlib.sha256()
     records = []
     with path.open('rb') as source:
-        if source.read(len(MAGIC)) == MAGIC:
+        if is_archive_header(source.read(len(MAGIC))):
             raise ArchiveError('Source is already archived; use verify or restore')
         source.seek(0)
         if version(os.fstat(source.fileno())) != version(before):
@@ -191,20 +200,30 @@ def measured_plan(root, files, stores):
 def load_manifest(path):
     regular(path)
     with path.open('rb') as source:
-        if source.read(len(MAGIC)) != MAGIC:
-            raise ArchiveError('Not a log archive')
-        data = source.read(MAX_MANIFEST + 1)
-    if len(data) > MAX_MANIFEST:
+        data = source.read(MAX_MANIFEST + len(MAGIC) + 1)
+    return decode_manifest(data)
+
+
+def decode_manifest(data):
+    if len(data) > MAX_MANIFEST + len(MAGIC):
         raise ArchiveError('Oversized manifest')
-    value = json.loads(data)
-    if (set(value) != {'version', 'raw_bytes', 'sha256', 'chunks'}
-            or value['version'] != 1 or not valid_hash(value['sha256'])
+    header = data[:len(MAGIC)]
+    if not is_archive_header(header):
+        raise ArchiveError('Not a log archive')
+    value = json.loads(data[len(MAGIC):])
+    if header == PACKED_MAGIC:
+        from packed_objects import validate_manifest
+        return validate_manifest(value)
+    if (not isinstance(value, dict) or set(value) != {'version', 'raw_bytes', 'sha256', 'chunks'}
+            or type(value['version']) is not int or value['version'] != 1
+            or not valid_hash(value['sha256'])
             or type(value['raw_bytes']) is not int or value['raw_bytes'] < 0
-            or len(value['chunks']) > MAX_CHUNKS):
+            or not isinstance(value['chunks'], list) or len(value['chunks']) > MAX_CHUNKS):
         raise ArchiveError('Invalid manifest')
     total = 0
     for chunk in value['chunks']:
-        if (set(chunk) != {'sha256', 'bytes'} or not valid_hash(chunk['sha256'])
+        if (not isinstance(chunk, dict) or set(chunk) != {'sha256', 'bytes'}
+                or not valid_hash(chunk['sha256'])
                 or type(chunk['bytes']) is not int or not 0 < chunk['bytes'] <= MAX_CHUNK):
             raise ArchiveError('Invalid chunk')
         total += chunk['bytes']
@@ -213,12 +232,24 @@ def load_manifest(path):
     return value
 
 
+def physical_objects(path, manifest):
+    """Validated immutable dependencies, unique within this manifest."""
+    if manifest['version'] == 2:
+        return [path.parent / '.log-packs' / (key + '.pack') for key in manifest['packs']]
+    return [path.parent / '.log-objects' / (key + '.gz')
+            for key in dict.fromkeys(c['sha256'] for c in manifest['chunks'])]
+
+
 def valid_hash(value):
     return isinstance(value, str) and re.fullmatch('[0-9a-f]{64}', value) is not None
 
 
 def reconstruct(path, target=None):
     manifest = load_manifest(path)
+    if manifest['version'] == 2:
+        from packed_objects import verify
+        verify(path, target)
+        return manifest
     digest = hashlib.sha256()
     directory = path.parent / '.log-objects'
     if not stat.S_ISDIR(directory.lstat().st_mode):

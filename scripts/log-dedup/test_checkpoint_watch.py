@@ -94,6 +94,16 @@ class CheckpointTests(unittest.TestCase):
             self.assertTrue(self.snapshot()['needs_attention'])
             (self.root/name).write_bytes(old)
 
+    def test_dedup_build_keeps_scope_and_requires_a_finished_job(self):
+        self.job.update(receipt_format='dedup-build-v1', job_kind='dedup_checkpoint')
+        self.assertEqual(self.snapshot()['job_kind'], 'dedup_checkpoint')
+        self.finish()
+        self.assertFalse(self.snapshot()['needs_attention'])
+        self.status.update(ActiveState='inactive', MainPID='0')
+        self.assertEqual(self.snapshot()['state'], 'success')
+        prompt = subject.checkpoint_prompt([], {}, 'fixture', '/handoff')
+        self.assertIn('explicitly excluded Nightly commissioning', prompt)
+
     def composition(self):
         (self.root/'CONFIG.private.json').rename(self.root/'config.private.json')
         self.job.update(receipt_format='composition-v1', total=1,

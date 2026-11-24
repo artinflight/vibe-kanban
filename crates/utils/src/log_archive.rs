@@ -45,7 +45,8 @@ fn valid_hash(hash: &str) -> bool {
 pub fn is_archive(path: &Path) -> io::Result<bool> {
     let mut prefix = [0; 10];
     match File::open(path) {
-        Ok(mut file) => Ok(file.read(&mut prefix)? == MAGIC.len() && prefix == MAGIC),
+        Ok(mut file) => Ok(file.read(&mut prefix)? == MAGIC.len()
+            && (prefix == MAGIC || prefix == crate::log_archive_packed::MAGIC)),
         Err(e) if e.kind() == io::ErrorKind::NotFound => Ok(false),
         Err(e) => Err(e),
     }
@@ -119,6 +120,12 @@ pub fn open(path: &Path) -> io::Result<Box<dyn Read + Send>> {
 /// Accept the caller's descriptor so integrity readers keep their inode binding.
 pub fn open_file(path: &Path, file: File) -> io::Result<Box<dyn Read + Send>> {
     let mut input = BufReader::new(file);
+    if input
+        .fill_buf()?
+        .starts_with(crate::log_archive_packed::MAGIC)
+    {
+        return crate::log_archive_packed::open_buffered(path, input);
+    }
     if !input.fill_buf()?.starts_with(MAGIC) {
         return Ok(Box::new(input));
     }

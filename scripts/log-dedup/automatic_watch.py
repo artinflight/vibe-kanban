@@ -81,6 +81,16 @@ def snapshot(config, now, service_reader=unit):
     elif automatic and automatic['phase'] == 'idle':
         if hashlib.sha256((root/'ROLLUP.private.json').read_bytes()).hexdigest()!=automatic['rollup_sha256']:
             raise ValueError('automatic cumulative result changed')
+    if config.get('maintenance_pause') and not row['needs_attention']:
+        pause = config['maintenance_pause']
+        body = Path(pause['path']).read_bytes()
+        if hashlib.sha256(body).hexdigest() != pause['sha256']:
+            raise ValueError('dedup maintenance hold changed')
+        timer = service_reader(pause['timer'])
+        if timer['ActiveState'] != 'inactive' or status['ActiveState'] != 'inactive':
+            row.update(state='failure_recovery_pending', phase='maintenance_pause_not_respected', needs_attention=True)
+        else:
+            row['phase'] = 'automatic_paused_for_file_count_repair'
     return row
 
 
@@ -135,6 +145,8 @@ def public_html(values, result):
                   controller_stopped='Conversion stopped and needs review.',
                   unavailable='Current progress is unavailable.')
     state = values.get('state', 'unavailable')
+    if result.get('source', {}).get('phase') == 'automatic_paused_for_file_count_repair':
+        labels[state] = 'Automatic conversion is paused while the file-count problem is repaired.'
     if any(not re.fullmatch('[a-z][a-z0-9_]*',str(k)) or
            not re.fullmatch('[a-z0-9_]+',str(v)) for k,v in values.items()):
         raise ValueError('bounded public HUD tokens required')
@@ -156,7 +168,7 @@ def public_html(values, result):
         '<dt>Space released from logs</dt><dd>'+format(recovered,'.2f')+' GiB</dd>'
         '<dt>Last monitoring check</dt><dd>'+checked+'</dd></dl>'
         '<p>These savings are before retained working copies and other staging. '
-        'Final disk-space checks and Nightly backup qualification are still pending.</p>'
+        'File-count repair and final deduplication checks are still pending.</p>'
         '<p>Active logs and pending inputs are preserved. The original conversion '
         'and subsequent catch-up are included in these totals.</p>'
         '<p id="stale"></p><script>if(Date.now()/1000-'+str(values['observed'])+
@@ -203,7 +215,7 @@ def main():
             bridge=original_bridge(config,store)
             previous_prompt=bridge.event_prompt
             def prompt(rows,samples,batch):
-                if any(samples[r['volume']]['event']['values'].get('job_kind')=='nightly_checkpoint' for r in rows):
+                if any(samples[r['volume']]['event']['values'].get('job_kind') in ('nightly_checkpoint','dedup_checkpoint') for r in rows):
                     return checkpoint_watch.checkpoint_prompt(rows,samples,batch,config['checkpoint_handoff'])
                 return previous_prompt(rows,samples,batch)
             bridge.event_prompt=prompt

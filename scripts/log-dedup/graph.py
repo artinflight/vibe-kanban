@@ -27,8 +27,8 @@ def inventory(root, plan):
         if manifest['sha256'] != entry['sha256'] or manifest['raw_bytes'] != entry['raw_bytes']:
             raise logs.ArchiveError('Logical archive does not match selected original')
         selected = [(path, 'manifest')]
-        selected += [(path.parent / '.log-objects' / (chunk['sha256'] + '.gz'), 'object')
-                     for chunk in manifest['chunks']]
+        kind = 'pack' if manifest['version'] == 2 else 'object'
+        selected += [(member, kind) for member in logs.physical_objects(path, manifest)]
         selected += [(path.with_suffix('.' + sidecar['extension']), 'sidecar')
                      for sidecar in entry['sidecars']]
         for member, kind in selected:
@@ -70,7 +70,8 @@ def verify_provider(graph, provider, guard, *, progress=lambda value:None, guard
     base = rf'[0-9a-f]{{2}}/{logs.UUID}/processes/'
     patterns = {'manifest': base + logs.UUID + r'\.jsonl',
                 'sidecar': base + logs.UUID + r'\.(capture|recovered-final)\.json',
-                'object': base + r'\.log-objects/[0-9a-f]{64}\.gz'}
+                'object': base + r'\.log-objects/[0-9a-f]{64}\.gz',
+                'pack': base + r'\.log-packs/[0-9a-f]{64}\.pack'}
     verified_members = 0
     for member in graph['members']:
         path = Path(member['path'])
@@ -96,9 +97,7 @@ def verify_provider(graph, provider, guard, *, progress=lambda value:None, guard
         if total != member['bytes'] or digest.hexdigest() != member['sha256']:
             raise logs.ArchiveError('B archive graph member mismatch')
         if member['kind'] == 'manifest':
-            if not manifest_body.startswith(logs.MAGIC):
-                raise logs.ArchiveError('B member is not an archive manifest')
-            manifests[member['path']] = json.loads(manifest_body[len(logs.MAGIC):])
+            manifests[member['path']] = logs.decode_manifest(manifest_body)
         verified_members += 1
         if verified_members % 64 == 0 or verified_members == len(graph['members']):
             progress(dict(verified_members=verified_members, total_members=len(graph['members'])))
@@ -109,12 +108,21 @@ def verify_provider(graph, provider, guard, *, progress=lambda value:None, guard
         expected = graph['logical_originals'][relative]
         if manifest['sha256'] != expected['sha256'] or manifest['raw_bytes'] != expected['bytes']:
             raise logs.ArchiveError('B manifest differs from selected logical original')
-        for chunk in manifest['chunks']:
-            if not logs.valid_hash(chunk['sha256']):
-                raise logs.ArchiveError('Invalid B manifest object reference')
-            reference = str(Path(relative).parent / '.log-objects' / (chunk['sha256'] + '.gz'))
-            if reference not in members or members[reference]['kind'] != 'object':
-                raise logs.ArchiveError('B graph omits a referenced object')
+        kind = 'pack' if manifest['version'] == 2 else 'object'
+        for path in logs.physical_objects(Path(relative), manifest):
+            reference = str(path)
+            if reference not in members or members[reference]['kind'] != kind:
+                raise logs.ArchiveError('B graph omits a referenced object or pack')
+            if kind == 'pack':
+                from packed_objects import MAX_PACK, PACK_MAGIC
+                row = members[reference]
+                if row['sha256'] != path.stem or not len(PACK_MAGIC) <= row['bytes'] <= MAX_PACK:
+                    raise logs.ArchiveError('B graph pack identity/size differs')
+        if kind == 'pack':
+            for chunk in manifest['chunks']:
+                path = Path(relative).parent / '.log-packs' / (manifest['packs'][chunk['pack']] + '.pack')
+                if chunk['offset'] + chunk['encoded_bytes'] > members[str(path)]['bytes']:
+                    raise logs.ArchiveError('B graph reference exceeds pack')
     return {'independent_backup_verified': True, 'physical_members': len(graph['members']),
             'verification_scope': 'Physical members and reference closure; normal restore and Linux metadata require owner acceptance.'}
 

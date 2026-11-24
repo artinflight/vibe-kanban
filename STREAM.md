@@ -1,21 +1,19 @@
-# Complete deduplication only
+# Complete deduplication, including file-count and speed requirements
 
-The user's November24 correction is authoritative: do not commission Nightly
-from this chat. Earlier inferred commissioning authorization was the assistant's
-mistake. The extra job has been stopped and its state reconciled read-only.
-Preserve all pending tracker data, committed imports, partial namespace cursors,
-failed inputs, accepted backup epochs, selected settings and other owners.
-No bootstrap, whole-machine backup/restore qualification, schedule activation,
-new agent, goal or model polling loop belongs to this dedup stream.
+Fix the one-file-per-piece layout while preserving exact readable history and
+all accepted recovery epochs. Prepare compatible readers and forward/backward
+packed conversion; prove real recovery and ordinary behavior before retiring
+old loose pieces. Measure file count, performance and net allocation including
+staging. [Current design and evidence](VK_DEDUP_PACKED_LAYOUT.md).
 
-Retain accepted original/catch-up conversions and bounded daily closed-log
-conversion. Finish dedup-specific recovery, ordinary behavior, measured savings,
-growth and documentation. Never replay a current/uncertain operation or remove
-active/pending sources. Deferred workspace/archive cleanup stays excluded.
+Nightly commissioning is explicitly excluded by the user. Do not resume its
+composition/current41/bootstrap/calendar work. Preserve its existing tracking,
+pending inputs, partial cursor, imports and owners. No new goal/agent/watcher,
+uncertain replay, model polling or deferred workspace/archive cleanup.
 
-Current measured net local/remote-file-staging reduction is68.82GiB. The source
-has substantially more physical files despite lower byte allocation; disclose
-that traversal cost. Privileged open-original visibility is still unverified,
-so strict filesystem attribution and maximum possible savings are not claimed.
+Daily dedup is held by an exact owned maintenance condition; its saved enabled
+calendar is preserved. Long work uses bounded scripts and the same WakeWatch.
+Build/test success is a checkpoint, not live migration or final acceptance.
 
+Previous scope: [before packed repair](deployment-history/20261124-before-packed-repair/STREAM.md).
 Full historical archive: [STREAM history](STREAM_HISTORY_20261017.md).

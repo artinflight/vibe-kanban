@@ -1,42 +1,32 @@
-# Deduplication state — November24 scope correction
+# Deduplication state — November24 file-count repair
 
-The user requested completion of deduplication only and explicitly rejected the
-assistant's inference that this included commissioning Nightly. Earlier scope
-statements are incorrect; their historical copies do not authorize continuation.
+The lossless original/catch-up/automatic conversions remain accepted, but the
+performance objective is open: source files grew38,791→1,065,426. The user
+explicitly requested both lower storage use and faster operation. The prior
+space-only acceptance was insufficient. See [packed repair](VK_DEDUP_PACKED_LAYOUT.md).
 
-The original finite conversion is accepted:395batches,3356converted logs and
-six preserved nonbeneficial originals. Its complete affected archive tree,
-current-at-capture SQL/software/frontend recovery closure and actual readers
-were independently verified. Catch-up accepted110batches/374files:278converted,
-96preserved. One real automatic conversion also passed full recovery/EOF checks.
-Bounded daily closed-log conversion is enabled05:00Toronto. Existing no-replay,
-writer/resource/capacity and pending-data protections remain. This is a daily
-schedule, not a claim that future closed files are instantly converted.
+A packed layout and actual Rust reader pass isolated integrity tests. Five real
+sample histories went7,229→8files with identical decoded bytes; optimized and
+live performance remain separate. No V2 manifests are published live. Both
+serving processes and all history, pending inputs, settings and backup epochs
+remain intact. The old mutator refuses unqualified V2 publication.
 
-Fresh accounting at20:41UTC:source allocated reduction82,437,365,760bytes;
-local task staging growth8,186,118,144bytes; retained remote staging357,604,976bytes;
-net73,893,642,640bytes (68.82GiB). Concurrent source growth, local directory blocks
-and the extra task staging are included. Remote directory metadata and a
-privileged open-deleted-original audit remain outside the verified total; do not
-claim exact exclusive filesystem attribution or that all possible savings are
-maximized. Other owners also affect filesystem free-space changes.
+Daily conversion is held during repair while preserving its enabled05Toronto
+calendar. A timer maintenance condition prevents host recovery from restarting
+it; exact release instructions and receipts are in the packed repair document.
+Existing WakeWatch owns checkpoint/problem reporting; no model polling loop.
 
-The source tree fell91,761,684,480→9,324,318,720allocated bytes, while its file count
-rose38,791→1,065,426. Shared-object fanout creates substantial metadata traversal
-cost. This explains why Nightly's broader import/catalog operations remained slow
-after byte savings. Record the trade-off; do not silently start another redesign.
+Previously measured net reduction73,893,642,640bytes(68.82GiB) includes prior
+local/remote-file staging and concurrent growth. New qualification/build staging
+must be included in final accounting. Privileged open-original visibility and
+remote directory metadata remain unverified; do not claim maximum savings or
+strict exclusive filesystem attribution.
 
-The extra composition job was interrupted and is now inactive, with both its main
-and SSH child gone. Normal native B read-only checks verified the original map
-binding,123746accepted file points and1194imported checkpoints intact. Its partial
-namespace cursor is retained and unaccepted. No Nightly successor or calendar was
-started. Existing tracker/journal/backup epochs are preserved for their owner.
-The same WakeWatch now observes dedup only; Nightly checkpoint wakes are disabled.
+Nightly commissioning is explicitly excluded. Its extra composition job remains
+stopped with accepted state and partial cursor preserved. No bootstrap, calendar
+activation, unrelated backup work or deferred cleanup belongs to this stream.
+Earlier full source/SQL/software/frontend recovery proofs remain historical
+acceptance of the old layout; they do not qualify future packed retirement.
 
-Both live serving identities/settings remain unchanged. Fresh public TLS/index,
-two assets and download-wrapper bytes pass; retained semantic desktop/mobile
-viewport/history/review/settings/queue acceptance remains documented. No new
-physical-phone or full browser test is claimed. See VK_DEDUP_COMPLETION.md for
-recovery evidence and the remaining administrator audit limitation.
-
+Previous state: [before packed repair](deployment-history/20261124-before-packed-repair/STATE.md).
 Full historical archive: [STATE history](STATE_HISTORY_20261017.md).

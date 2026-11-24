@@ -219,16 +219,16 @@ def readback_members(plan):
     for row in plan['files']:
         path = logs.safe_path(root, row['path'])
         with path.open('rb') as f:
-            archived = f.read(len(logs.MAGIC)) == logs.MAGIC
+            archived = logs.is_archive_header(f.read(len(logs.MAGIC)))
         members = [path]
         if archived:
             manifest = logs.load_manifest(path)
             if manifest['sha256'] != row['sha256'] or manifest['raw_bytes'] != row['raw_bytes']:
                 raise logs.ArchiveError('Readback manifest differs from original')
-            store = path.parent / '.log-objects'
+            store = path.parent / ('.log-packs' if manifest['version'] == 2 else '.log-objects')
             if store.is_symlink() or not store.is_dir():
                 raise logs.ArchiveError('Invalid readback object store')
-            members += [store / (chunk['sha256'] + '.gz') for chunk in manifest['chunks']]
+            members += logs.physical_objects(path, manifest)
         sides = logs.sidecars(path)
         if {ext: logs.sha(data) for ext, data, _ in sides} != {
                 side['extension']: side['sha256'] for side in row.get('sidecars', [])}:

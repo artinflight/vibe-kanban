@@ -89,7 +89,7 @@ def snapshot(config, now, service_reader=unit):
     elif now-progress['at'] >= 600:
         state = 'stalled'
         attention = True
-    return dict(operation=expected, attempt='catchup-r2', state=state, phase=phase,
+    return dict(operation=expected, attempt=config.get('attempt_label','catchup-r2'), state=state, phase=phase,
                 needs_attention=attention, checked_at=now, progress_at=progress['at'],
                 recovered=False, cutover_only=False, completed_files=converted,
                 resolved_files=converted+excluded, total_files=current['selected_files'],

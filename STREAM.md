@@ -11,9 +11,8 @@ install bounded recurring closed-log conversion with visible failures, and keep
 active/pending data intact. Reuse the already tested original recovery closure.
 
 Nightly preparation reuses converter checkpoints and retains every required root,
-backup epoch and predecessor gap/outbox. Its 2.27-million-watch requirement exceeds
-the host's 1.05-million limit. Administrator action and real resource admission
-precede tracker activation. Current-set restore, ordinary incremental/interruption
+backup epoch and predecessor gap/outbox. The operator raised the watch limit to3.15million. Full measured enrollment
+and memory admission still precede tracker activation; persistence is unverified. Current-set restore, ordinary incremental/interruption
 qualification and the exact 22:00–04:00 Toronto schedule remain required.
 
 Retire only exact task-owned verified temporary copies. Deferred workspace/archive

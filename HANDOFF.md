@@ -26,17 +26,40 @@ failures. The current sensor binds this finite run, not future automatic runs.
 
 Nightly old execution `3dc9242e-b5bc-494f-a057-be418fc43a40` is completed; its owner
 has no running execution. Prepared package is commissioning-20261103/
-completion-20261124/observer-v21-prepared under vk-nightly-efficiency-20261017.
+completion-20261124/observer-v22-prepared under vk-nightly-efficiency-20261017.
 It retains125 roots, actual frontend/binaries and all old outboxes/epochs. Metadata
 imports cover396 components/3,356 logs/1,134 checkpoints; add this new catch-up
 only after actual committed receipts. No B import or baseline acceptance claimed.
 
-Blocker: needed inode watches >=2,270,077, kernel maximum1,048,576. Operator was
-asked to run `sudo sysctl -w fs.inotify.max_user_watches=3145728`; no response or
-change yet. Verify actual limit, memory/cgroup admission and usable B delivery
-before starting the tracker. Then reconcile gap, build/restore current files + SQL
-+ runtime, qualify an ordinary incremental/interruption cycle and install the
-exact22:00–04:00 Toronto calendar. Do not drop coverage or weaken resource floors.
+The operator raised the live kernel watch limit to3,145,728. Do not ask again.
+Reboot persistence is unverified. Compact source v22 replaces per-file sets and
+integer-type maps without dropping aliases or external-hardlink coverage;29 inode
+checks pass. Source modifications in Nightly's repo are not committed yet.
+One finite metadata-only enrollment measurement is running:
+`vk-nightly-watch-memory-v3-20261124.service`, invocation
+`de5ae3f477104475a0786fbe9ef0e212`. It uses observer-v22-prepared/config SHA
+823ba15efca02e1b0b494d031b43eb37aa1909f9cba58549b21cf8ea3ce06d4e,
+actual MemoryHigh1536MiB/Max2GiB/Swap0, a30-minute bound, no outbox/epoch/B writes.
+Read WATCH_MEMORY_V3_RESULT/PROGRESS in the Nightly completion folder. Do not
+create a duplicate. Earlier probes finished and closed their own watch FDs;
+v2 stopped at1.82GiB before its1900MiB soft reclaim threshold. V3 measures the
+actual retained production limits and memory.stat attribution. Full coverage
+and error-free completion are required before starting the real observer.
+
+Prepared journal-v40 and gap-v22 packages retain old epoch/outbox/latch. Bind
+only the actual accepted successor instance. Do not start gap recovery before
+catch-up completes and releases the existing shared B leases. Boot recovery
+may retry the old failed observer; it is not a new owner. Recheck MainPID0.
+No broad recovery, backend restart, other-owner changes or extra schedule.
+
+Prepared automatic-v1 under incremental-20261124 has15passing focused tests.
+Its exact05:00 Toronto service/timer is NOT installed. Source/config/unit/monitor
+need independent B sealing and a real qualified run after terminal acceptance.
+Existing monitor-v3 must report finite completion before switching to the prepared
+automatic sensor. The existing ledger/timer/chat/settings remain unchanged.
+Read-only terminal reconciliation is prepared as completion-20261124/
+accept_incremental.py; it checks all selected journals, full local EOF, preserved
+nonbeneficial originals/sidecars and independently restored control bindings.
 
 The final privileged old-original audit is also pending. The prior bounded audit
 publication was rejected by automatic approval review; explicit publication

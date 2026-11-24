@@ -24,14 +24,21 @@ All primary archives, backup epochs, catalogs and restore location notes remain.
 Final net accounting must include the new catch-up staging and concurrent growth;
 the earlier 68.24 GiB figure is not a final measurement for this expanded work.
 
-Nightly's prior owner execution was verified complete and idle. Its next package
-is prepared with all 125 required roots, the actual frontend and both binaries,
-and reusable references to 1,134 historical checkpoints. Activation is blocked:
-its scope needs at least 2,270,077 inode watches; the host allows 1,048,576.
-Administrator action is required, followed by actual memory/admission validation,
-tracking-gap reconciliation and full current-set restore/incremental acceptance.
-The normal Nightly calendar remains OFF. Automatic recurring conversion is also
-not installed yet. Full deduplication acceptance is not claimed.
+Nightly's prior owner execution is complete and idle. The operator raised the
+live watch limit to3,145,728. All125 roots remain covered by the prepared plan;
+reboot persistence is unverified. The tracker now uses compact alias/type maps,
+with29 inode tests passing. Full real enrollment under the retained2GiB bound
+is being measured; no production successor has started. The old failed tracker,
+outbox, journal latch and backup epochs remain preserved. Gap recovery and
+journal-delivery packages are prepared, pending actual source acceptance.
+
+Daily closed-log conversion is implemented and passes15 focused tests, plus the
+retained14 incremental tests. Its pinned package uses the existing writer/B
+custody, stops for uncertain or incomplete operations, and preserves the normal
+Nightly window. It is not installed: current catch-up terminal reconciliation
+and independent B package recovery come first. The normal Nightly calendar also
+remains OFF pending full current-set and ordinary incremental restore acceptance.
+Full deduplication acceptance is not claimed.
 
 The privileged old-original descriptor audit remains pending; do not claim zero
 open deleted originals. Deferred workspace/archive cleanup and failed remote

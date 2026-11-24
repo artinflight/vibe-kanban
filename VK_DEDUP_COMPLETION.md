@@ -49,11 +49,18 @@ batch/result digests and counters. Success requires complete committed selection
 missing progress, reused/dead process and retained failure stay visible. The
 cumulative HUD retains original recovery and avoids duplicate historical exclusions.
 
-The installed monitor-v3 binds the current finite run. Before recurring activation,
-qualify successive-run and preflight-failure observation, the ordinary no-work path,
-Nightly cooperation and bounded failure holds. Enable only one scheduled converter,
-using the existing lock and pinned package. Do not silently install a recurring
-job whose later operations the current finite sensor cannot observe.
+The installed monitor-v3 still binds the current finite run. `automatic.py` and
+`automatic_watch.py` now provide one bounded daily conversion and successive-run
+monitoring through the same WakeWatch hook. Fifteen focused tests pass, including
+retained failure holds, missing recovery proofs, dead owners, double-counting
+races and the ordinary no-work path. The package is pinned under automatic-v1.
+The prepared timer runs at05:00 Toronto; late boot starts outside05:00–17:00 defer,
+preserving the22:00–04:00 Nightly window. Routine healthy jobs create no model
+continuation. Failures require exact review and cannot replay an uncertain run.
+
+The package is not installed yet. Current-run terminal reconciliation,
+independent B package restore and a real qualified run remain prerequisites.
+Preserve finite success reporting before replacing the existing sensor.
 
 ## Nightly commissioning
 
@@ -64,18 +71,19 @@ All source pins and roots validate. Its metadata-only checkpoint imports referen
 396 original components,3,356 converted logs and1,134 immutable normal-B checkpoints.
 This is not a live import or a current whole-backup acceptance claim.
 
-A complete metadata census found at least2,270,077 required inode watches, while
-`fs.inotify.max_user_watches` is1,048,576. The operator must make the administrator
-change; an ordinary agent cannot perform it. Proposed runtime command:
+A complete metadata census found at least2,270,077 required inode watches.
+The operator raised the live limit to3,145,728; this was independently verified.
+No persistent administrator setting was found in the usual sysctl files.
+Reboot persistence remains unverified.
 
-```sh
-sudo sysctl -w fs.inotify.max_user_watches=3145728
-```
-
-This command does not prove memory fit or survive reboot. Verify actual available
-memory/cgroup budget and existing B delivery before enrollment, then qualify a
-persistent administrator setting if the deployment passes. Do not reduce watch
-coverage or expand memory limits to disguise failed admission.
+The compact observer preserves every path/hardlink alias and exact watch type,
+using a string for single-name inodes and sparse byte pages for type lookup.
+Twenty-nine inode tests,23tracking tests and one outbox test pass. Full actual
+memory enrollment is in progress under the retained1536MiB soft/2GiB hard limit
+with zero swap. Earlier bounded probes stopped safely and closed their own FDs;
+they did not establish full admission. No production successor is active yet.
+Journal-v40 and gap-v22 are prepared, with actual instance binding still required.
+No watch scope or resource floor was reduced.
 
 Retain the predecessor gap/outbox/latch. Reconcile tracking, import existing
 checkpoint metadata under the same B owner, qualify all current files and actual
@@ -122,4 +130,4 @@ The expanded private administrator audit is prepared with all3,356 original
 converted inodes and374 newly selected versions (3,730 records). It pins its
 identity-list digest and only reads bounded process metadata. It has not been
 published or executed; the prior publication hold remains. Accept its result only
-after this catch-up is terminal and reconciled. No administrator setting changed.
+after this catch-up is terminal and reconciled. Only the operator changed the runtime watch limit; no persistent setting is claimed.

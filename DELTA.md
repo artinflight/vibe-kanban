@@ -3161,3 +3161,16 @@ and whole Nightly commissioning remain open. See VK_DEDUP_COMPLETION.md.
 Expanded the bounded administrator audit to3,730 original identity records;
 publication/execution remain pending. Ops/diff and Rust formatting pass; required
 frontend formatting remains unavailable because Prettier is absent.
+
+
+## 2026-11-24 — automatic conversion and watch admission preparation
+
+Verified operator's live3,145,728watch limit. Prepared pinned daily conversion
+and existing-WakeWatch successor observation;15focused tests plus14retained
+incremental tests pass. No recurring activation yet. Current110-batch catch-up
+continues under its original operation/owner. Prepared read-only terminal audit
+and exact normal-B automatic-package seal; neither replays conversion.
+Nightly compact tracking passes29inode/23tracking/one-outbox tests. Full real
+memory admission uses the unchanged1536MiB/2GiB limits; no production successor
+or backup calendar started. Old epochs and failures remain. Reboot persistence
+and privileged open-original inspection still need evidence.

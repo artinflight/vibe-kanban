@@ -5,18 +5,18 @@ six preserved nonbeneficial originals. Its full archive-tree and consistent
 SQL/software/frontend recovery closure passed through normal Desktop B. The
 accepted writer remains live; no backend restart or setting change occurred.
 
-The operator then authorized finishing backward catch-up, automatic conversion,
-safe savings and Nightly commissioning. One new finite catch-up now owns the
-existing production lock. It selected 374 eligible closed files in 110 bounded
-workspace batches. Active, pending, invalid and unknown captures are preserved.
-Its durable receipts and scoped writer fence prevent uncertain publication replay.
-Every converted batch independently restores normal-B originals and graphs and
-passes full production-reader EOF verification. This job is still running.
+The authorized catch-up is accepted:110 batches resolved374 files, converting
+278 and preserving96 nonbeneficial originals. All journals, original/graph B
+restores, local full EOF and source metadata passed. An additional real automatic
+run converted one newly closed log and passed the same acceptance. No newly
+eligible closed logs remained at its final inventory; active/pending data remains.
 
-The existing WakeWatch hook now observes that exact catch-up. It retains the
-same timer, incident ledger, owner/chat, executor settings and capacity gates.
-The cumulative HUD preserves earlier savings and removes overlap with the six
-historical exclusions. No additional watcher, agent, goal or model loop exists.
+The independently B-restored automatic-v3 package is installed. Its daily timer
+is enabled for05:00 Toronto, nextNovember25 10:00UTC. One bounded invocation uses
+the existing production/B locks; uncertain or incomplete operations retain a
+review hold. The existing WakeWatch hook/ledger now observes successive runs and
+preserves the pending catch-up success. No routine healthy model continuation.
+Actual Rainmeter displays WAITING/resolved3731 with unchanged skin/process.
 
 Another 440,885,248 allocated bytes of this task's temporary carrier copies were
 removed after independent B restore/hash verification and exclusive kernel leases.
@@ -29,16 +29,14 @@ live watch limit to3,145,728. All125 roots remain covered by the prepared plan;
 reboot persistence is unverified. The tracker now uses compact alias/type maps,
 with29 inode tests passing. Full real enrollment passed with125 roots,
 2,287,396 watches and peak1,610,854,400bytes under the retained2GiB bound.
-The existing observer service now runs that package and is enrolling its live epoch. The old failed tracker,
-outbox, journal latch and backup epochs remain preserved. Gap recovery and
-journal-delivery packages are prepared, pending actual source acceptance.
+The existing observer is fully ready with2,289,027 watches and no tracking errors.
+Its existing journal delivery independently reopened B and acknowledged the exact
+source sequence. One finite metadata gap reconciliation is running; old tracker
+outbox, journal latch and all backup epochs remain preserved.
 
-Daily closed-log conversion is implemented and passes19 focused tests, plus15 incremental tests. Its pinned package uses the existing writer/B
-custody, stops for uncertain or incomplete operations, and preserves the normal
-Nightly window. It is not installed: current catch-up terminal reconciliation
-and independent B package recovery come first. The normal Nightly calendar also
-remains OFF pending full current-set and ordinary incremental restore acceptance.
-Full deduplication acceptance is not claimed.
+Full current-file/SQL/runtime composition and independent restore, ordinary
+incremental/interruption qualification, and final accounting remain unfinished.
+The normal Nightly calendar stays OFF. Full deduplication acceptance is not claimed.
 
 The privileged old-original descriptor audit remains pending; do not claim zero
 open deleted originals. Deferred workspace/archive cleanup and failed remote

@@ -3183,3 +3183,12 @@ preserves the pending catch-up success across sensor replacement, keeps public
 and HUD totals identical, and normalizes tokens for the installed Rainmeter
 parser.34 focused automatic/incremental tests and real RAM-only codec pass;
 no synthetic dispatch. Initial catch-up remains active.
+
+## 2026-11-24 — caught up and daily conversion enabled
+
+Accepted110catch-up batches/374files plus one real automatic conversion, with
+all journals/fullEOF/normal-B recovery proofs. Sealed automatic-v3 and enabled
+05Toronto timer; existing WakeWatch and unchanged Rainmeter show cumulative
+3731resolved. Full Nightly tracker coverage and actual B journal delivery passed;
+one finite gap reconciliation runs. Calendar/full restore/strict net acceptance
+remain open. No backend restart, epoch deletion, extra worker or Git push.

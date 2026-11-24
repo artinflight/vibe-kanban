@@ -6,8 +6,8 @@ The operator requested completion on November24 after the original selected
 finite conversion passed. This expands work to newly closed logs, bounded future
 conversion and actual Nightly commissioning. The old finite result is immutable;
 its 84.65GiB processed and76.64GiB gross recovery are not final expanded net savings.
-The new catch-up is still running; neither forward completion nor Nightly readiness
-is accepted. Deferred workspace/archive cleanup remains excluded.
+The new catch-up and automatic daily conversion are accepted. Nightly readiness
+remains pending. Deferred workspace/archive cleanup remains excluded.
 
 ## Bounded catch-up and recovery
 
@@ -35,7 +35,8 @@ Never label that full catch-up success. No automatic continuation has been insta
 Current private deployment: production-20261117/incremental-20261124 under the
 vk-log-dedup-20261103-0815 SSD task. CONFIG pin:
 `ac53ba6ec44d87fd7e5332fef8d8a25a443addc4fc09f29039336060b13e74d3`.
-One live run `e3787e2e49124284a1f023d061f967f7`; its source is immutable while active.
+Accepted terminal run `e3787e2e49124284a1f023d061f967f7`:278converted/96preserved,
+110batches/374resolved. Source and all receipts remain immutable.
 The first launch failed before inventory/selection because Python `-S` hid dbus;
 r2 uses the installed system packages and disables user-site packages. It did not
 retry an uncertain conversion. Source/config passed independent normal-B restore.
@@ -49,7 +50,7 @@ batch/result digests and counters. Success requires complete committed selection
 missing progress, reused/dead process and retained failure stay visible. The
 cumulative HUD retains original recovery and avoids duplicate historical exclusions.
 
-The installed monitor-v3 still binds the current finite run. `automatic.py` and
+The installed automatic-v3 retains finite success and observes later runs. `automatic.py` and
 `automatic_watch.py` now provide one bounded daily conversion and successive-run
 monitoring through the same WakeWatch hook. Nineteen focused tests pass, including
 retained failure holds, missing recovery proofs, dead owners, double-counting
@@ -58,9 +59,11 @@ The prepared timer runs at05:00 Toronto; late boot starts outside05:00–17:00 d
 preserving the22:00–04:00 Nightly window. Routine healthy jobs create no model
 continuation. Failures require exact review and cannot replay an uncertain run.
 
-The package is not installed yet. Current-run terminal reconciliation,
-independent B package restore and a real qualified run remain prerequisites.
-Preserve finite success reporting before replacing the existing sensor.
+The package passed independent normal-B restoration and is installed. One actual
+run converted and independently verified another closed log; final inventory had
+no newly eligible paths. The timer is enabled, nextNovember25 10:00UTC. Same
+WakeWatch ledger retains pending finite success; actual Rainmeter displays WAITING
+and3731resolved with unchanged Lua/process. All current source/event errors are null.
 
 ## Nightly commissioning
 
@@ -69,7 +72,9 @@ vk-nightly-efficiency-20261017/commissioning-20261103/completion-20261124 retain
 125 roots and adds the actual paired frontend plus both serving binary inodes.
 All source pins and roots validate. Its metadata-only checkpoint imports reference
 396 original components,3,356 converted logs and1,134 immutable normal-B checkpoints.
-This is not a live import or a current whole-backup acceptance claim.
+The accepted new runs add60components/279logs/60checkpoints. Total prepared
+references:456components/3635logs/1194checkpoints. No import or whole-backup
+acceptance is claimed yet.
 
 A complete metadata census found at least2,270,077 required inode watches.
 The operator raised the live limit to3,145,728; this was independently verified.
@@ -81,9 +86,9 @@ using a string for single-name inodes and sparse byte pages for type lookup.
 Twenty-nine inode tests,23tracking tests and one outbox test pass. Full actual memory enrollment passed across all125roots and2,287,396watches,
 with peak1,610,854,400bytes under the retained1536MiB soft/2GiB hard limit
 and zero swap. Earlier bounded probes stopped safely and closed their own FDs;
-they did not establish full admission. The existing observer service now runs the qualified package and is enrolling
-its actual epoch. Journal-v40 is bound to that instance; service adoption still
-waits for healthy full coverage. Gap-v22 remains prepared.
+they did not establish full admission. The existing observer is now fully ready:
+2,289,027watches/zero errors. Existing journal-v40 independently delivered/reopened
+B and acknowledged exact source generations. One bounded gap-v22 job is running.
 No watch scope or resource floor was reduced.
 
 Retain the predecessor gap/outbox/latch. Reconcile tracking, import existing
@@ -112,7 +117,7 @@ No zero-open-original or final strict filesystem-attribution claim is made.
 
 ## Validation status
 
-Fourteen focused runner/monitor tests pass, including uncertain-publication refusal,
+Nineteen automatic and fifteen incremental tests pass, including uncertain-publication refusal,
 active/pending exclusions, bounded batches, changed exclusions, missing recovery
 proof, incomplete terminal selection, reused process identity and cumulative HUD.
 Real catch-up batches pass independent normal-B restore and full actual-reader EOF.

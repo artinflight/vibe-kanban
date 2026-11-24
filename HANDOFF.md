@@ -1,85 +1,57 @@
-# November24 completion work — one live catch-up
+# November24 completion — automatic conversion accepted, Nightly gap running
 
-Read the dedicated WakeWatch CONTEXT.md before handling an alert. Original operation
-`6d4d022ab2f84d1ea72f39d6a6382d1c` completed 395 batches; never replay it. Its accepted
-archive/SQL/runtime/frontend recovery and ordinary UI proofs remain retained.
+Read dedicated WakeWatch CONTEXT.md before alerts. Original finite operation
+6d4d022ab2f84d1ea72f39d6a6382d1c is complete and immutable; never replay it.
+Its archive/current-SQL/runtime/frontend recovery and ordinary UI proofs remain.
 
-Current finite operation: `e3787e2e49124284a1f023d061f967f7`, under production
-`incremental-20261124/runs/`. One unit `vk-log-dedup-catchup-20261124-r2.service`,
-PID238885, invocation `5ef404e052b849bd8476bf1fa3040dae`. Recheck live identity.
-374 selected files /110 batches; ACTIVE, BATCH receipts and per-batch RESULT are
-actual progress. No recurring timer is installed. Never replay an ACTIVE run.
-The initial launch failed before any selection or backup operation because `-S`
-hid the installed dbus library; r2 corrected that only. Both attempts are retained.
+Catch-up e3787e2e49124284a1f023d061f967f7 is terminal/inactive:110batches,
+374resolved,278converted/96nonbeneficial preserved. In dedup completion-20261124,
+CATCHUP_TERMINAL_ACCEPTANCE verifies59journals,590B-restored control bindings,
+full manifest/original EOF and metadata. Additional automatic qualification
+8d866da98492464f9867137092623b20 accepted one converted log; no newly eligible
+closed files remained. Active/pending/invalid captures are untouched.
 
-Source/config are pinned under `incremental-20261124/source` and independently
-backed. Do not modify them while running. Same production lock, qualified worker,
-normal-B owner/restore and per-execution custody. Current data/settings preserved.
-Existing resource-guard hook uses `incremental-20261124/monitor-v3`; it passed14
-focused tests and actual sensor/codec checks. Normal timer observations have no
-source/event errors, and no synthetic delivery was sent. The old ledger survives.
+Sealed automatic-v3 is installed under production-20261117/incremental-20261124.
+Config SHA24ad8dc495b28fa62d37ded36a4c289384c3b2b1f02308079973adfc273e9b60.
+vk-log-dedup-daily.timer enabled05:00Toronto; nextNov25 10:00UTC. Actual run uses
+the original production/B locks and pinned adapter. Never replay ACTIVE or
+AUTOMATIC_HOLD. Same WakeWatch timer/ledger/chat preserves pending finite success;
+source/event errors null. Actual unchanged Rainmeter PID128024 shows WAITING,
+resolved3731. Routine healthy daily jobs create no model continuation.
 
-Next: reconcile the terminal result and ALL batch receipts; verify fresh eligible
-inventory; seal final catch-up restoration/accounting; implement/qualify and enable
-bounded recurring conversion with monitoring of successive runs and preflight
-failures. The current sensor binds this finite run, not future automatic runs.
+Nightly prior owner execution is terminal/idle. Current packages are under
+vk-nightly-efficiency-20261017/commissioning-20261103/completion-20261124.
+Existing observer-v22 fully ready:PID1266882/start274355047,
+invocation589ec42327a146d7b932f8c8d46a6498, instanceabd172673978422cb0bc3db939ec0958.
+All125roots/2,289,027watches covered, zero errors. Full memory qualification passed
+under unchanged1536MiB high/2GiB max/zero swap. Runtime watchlimit3145728 verified;
+persistent sysctl question is pending. Do not ask again to raise the live limit.
+Existing journal-v40 unit and timer passed real independent B reopen/exact ACK.
 
-Nightly old execution `3dc9242e-b5bc-494f-a057-be418fc43a40` is completed; its owner
-has no running execution. Prepared package is commissioning-20261103/
-completion-20261124/observer-v22-prepared under vk-nightly-efficiency-20261017.
-It retains125 roots, actual frontend/binaries and all old outboxes/epochs. Metadata
-imports cover396 components/3,356 logs/1,134 checkpoints; add this new catch-up
-only after actual committed receipts. No B import or baseline acceptance claimed.
+One actual gap job:vk-nightly-gap-v22-20261124.service, PID1495017,
+invocationdb45412896f545b3b8ad55065a5b512b. Config SHA
+947bd536eeaf1b09f4e1340b94bcebe6c4e6af83e97a25d1b6d1e792ed2bb781.
+Read actual gap-v22-prepared STATUS/RESULT and unit before acting. Its preserved
+STOP_RESUME11:16:17Toronto records a preflight lease deferral before any B action;
+preflight-r2 passed, then the single real launch began. Never duplicate/replay.
+Prepared imports cover456components/3635logs/1194Bcheckpoints; not yet imported.
+Next: finish gap, import existing graphs, compose current namespace, qualify all
+files/SQL/runtime and independent full restore, then ordinary incremental and
+interruption/Desktop-off acceptance before22–04Toronto/hard04 schedule activation.
+Nightly calendar remains OFF. Old outboxes/latches/epochs and B ownership survive.
 
-The operator raised the live kernel watch limit to3,145,728. Do not ask again.
-Reboot persistence is unverified. Compact source v22 replaces per-file sets and
-integer-type maps without dropping aliases or external-hardlink coverage;29 inode
-checks pass. Nightly source is committed as0c31a1e09, not pushed.
-Full metadata-only memory qualification completed with125roots,2,287,396watches,
-peak1,610,854,400bytes and zero OOM/coverage errors; owned test FD closed.
-The existing vk-nightly-observer.service now runs observer-v22-prepared/config SHA
-823ba15efca02e1b0b494d031b43eb37aa1909f9cba58549b21cf8ea3ce06d4e.
-Actual PID1266882/start274355047, invocation589ec42327a146d7b932f8c8d46a6498,
-instance abd172673978422cb0bc3db939ec0958, started15:57:54UTC. Live enrollment
-is still pending. Never duplicate it or replay activate_observer22.py.
-Read STATUS and OBSERVER22_STARTED/ACTIVATION_STARTED in the Nightly completion
-folder. All old observer19/outbox/epoch/latch and unit preimage remain.
-
-Prepared journal-v40 and gap-v22 packages retain old epoch/outbox/latch. Bind
-only the actual accepted successor instance. Do not start gap recovery before
-catch-up completes and releases the existing shared B leases. Boot recovery
-may retry the old failed observer; it is not a new owner. Recheck MainPID0.
-No broad recovery, backend restart, other-owner changes or extra schedule.
-
-Prepared automatic-v3 under incremental-20261124 has19passing focused and15incremental tests.
-Its exact05:00 Toronto service/timer is NOT installed. Source/config/unit/monitor
-need independent B sealing and a real qualified run after terminal acceptance.
-The new sensor refreshes the initial finite success through the same ledger
-while later runs execute; accepted/uncertain dispatches cannot replay. Public
-counts match the HUD and phase/idle tokens remain compatible with Rainmeter. The existing ledger/timer/chat/settings remain unchanged.
-Read-only terminal reconciliation is prepared as completion-20261124/
-accept_incremental.py; it checks all selected journals, full local EOF, preserved
-nonbeneficial originals/sidecars and independently restored control bindings.
-
-The final privileged old-original audit is also pending. The prior bounded audit
-publication was rejected by automatic approval review; explicit publication
-approval and administrator execution remain pending. Do not bypass that rejection
-or repurpose other registered privileged inspectors. The completion case now has an expanded, pinned audit covering3,730 original
-records; execute/accept only after catch-up is terminal and reconciled.
-
-Safe additional savings:24 exact verified temporary carriers retired,
-440,885,248 allocated bytes, with exclusive inode leases and B-selector location
-notes. Keep all catalogs/receipts, failed remote inputs and deferred archive/
-workspace cleanup. New task staging must be included in final accounting.
+Final accounting must include all new staging and growth. Exactly24 temporary
+closure carriers were retired with independent B proof/exclusive inode leases:
+440,885,248allocated bytes. New accepted runs retired101,183,488more duplicate
+carrier bytes. Keep catalogs, failed remote inputs and deferred workspace/archive
+cleanup. Privileged old-original descriptor audit sharing/execution permission is
+pending after automatic approval rejected publication; never bypass that hold.
 
 Main writer70372/invocation81dd8bb21f894aa1bd286f8f0029b770 and protected server
-2573735/unit2573723/invocation9c0b08030aa445318309e41dff070786 are unchanged.
-The public site/health and exact accepted download wrapper pass verified TLS
-using the existing homelab CA. Earlier desktop/mobile viewport and semantic
-history acceptance remains valid; no new physical-phone test is claimed.
-
-See VK_DEDUP_COMPLETION.md. Fixed work requirements/evidence are retained in
-`/mnt/vk-storage/vk-log-dedup-20261103-0815/completion-20261124`.
-No new goal, worker, watcher, uncertain dispatch or model continuation loop.
+2573735/unit2573723/invocation9c0b08030aa445318309e41dff070786 remain unchanged.
+Public TLS/index/health/download checks and earlier desktop/mobile viewport and
+semantic history acceptance are retained; no physical-phone test is claimed.
+See VK_DEDUP_COMPLETION.md and fixed private WORKPLAN. No new goal, agent, model
+loop, backend restart or Git push. Full objective remains unfinished.
 
 Full historical archive: [HANDOFF history](HANDOFF_HISTORY_20261017.md).

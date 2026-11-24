@@ -12,7 +12,7 @@ active/pending data intact. Reuse the already tested original recovery closure.
 
 Nightly preparation reuses converter checkpoints and retains every required root,
 backup epoch and predecessor gap/outbox. The operator raised the watch limit to3.15million. Full measured enrollment
-and memory admission still precede tracker activation; persistence is unverified. Current-set restore, ordinary incremental/interruption
+and live tracker/journal delivery passed; persistence is unverified. Current-set restore, ordinary incremental/interruption
 qualification and the exact 22:00–04:00 Toronto schedule remain required.
 
 Retire only exact task-owned verified temporary copies. Deferred workspace/archive

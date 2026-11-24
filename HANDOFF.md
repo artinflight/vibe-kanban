@@ -1,73 +1,62 @@
-# Finite conversion complete; protected-process audit pending
+# November24 completion work — one live catch-up
 
-Exact success8f42b14b-eb42-4981-a2df-0c01cd2890a7 reached this dedicated chat once.
-Operation6d4d022ab2f84d1ea72f39d6a6382d1c finished at05:03:50UTC November24:
-395/395 batches,3,356 converted, six nonbeneficial originals preserved,3,362/3,362
-resolved,90,889,461,596 raw bytes. The existing finite unit is inactive/MainPID0;
-old recovery2 PID3798264 is gone. Never replay/relaunch it for acceptance work.
+Read the dedicated WakeWatch CONTEXT.md before handling an alert. Original operation
+`6d4d022ab2f84d1ea72f39d6a6382d1c` completed 395 batches; never replay it. Its accepted
+archive/SQL/runtime/frontend recovery and ordinary UI proofs remain retained.
 
-Evidence root:
-`/mnt/vk-storage/vk-log-dedup-20261103-0815/production-20261117/efficiency-20261118/online-20261119-v1/final-acceptance-20261124`.
-FINITE_RECONCILED verifies396 journals, every installed manifest/sidecar/exclusion,
-1,134 graph receipts and102 source pins. ARCHIVE_CLOSURE_ACCEPTED and
-ARCHIVE_ROOT_INDEX seal1,049,798 physical entries, including all missing/unreferenced
-and raw/pending/adjacent data, Linux metadata and links, through normal Desktop B.
-RUNTIME_CLOSURE_ACCEPTED seals current SQL, both binaries, frontend and recovery
-sources. DOWNLOAD_REPAIR_INDEX adds the backed named-download wrapper. All new
-parts have independent normal restoration; old full per-batch qualification is
-reused. All prior failures, alternate encodings and epochs remain retained.
+Current finite operation: `e3787e2e49124284a1f023d061f967f7`, under production
+`incremental-20261124/runs/`. One unit `vk-log-dedup-catchup-20261124-r2.service`,
+PID238885, invocation `5ef404e052b849bd8476bf1fa3040dae`. Recheck live identity.
+374 selected files /110 batches; ACTIVE, BATCH receipts and per-batch RESULT are
+actual progress. No recurring timer is installed. Never replay an ACTIVE run.
+The initial launch failed before any selection or backup operation because `-S`
+hid the installed dbus library; r2 corrected that only. Both attempts are retained.
 
-FINAL_ACCOUNTING:73,271,337,360-byte (68.24GiB) linked-tree reduction after retained
-local/remote file staging. Filesystem deltas include other work; open-deleted
-inodes are not in linked-tree counts. GROWTH_ACCEPTANCE observed1,261,568 allocated
-bytes added to one raw file over2,240 seconds. No files removed/replaced. Keep365
-new closed logs outside the frozen selection and all active/pending/review data.
+Source/config are pinned under `incremental-20261124/source` and independently
+backed. Do not modify them while running. Same production lock, qualified worker,
+normal-B owner/restore and per-execution custody. Current data/settings preserved.
+Existing resource-guard hook uses `incremental-20261124/monitor-v3`; it passed14
+focused tests and actual sensor/codec checks. Normal timer observations have no
+source/event errors, and no synthetic delivery was sent. The old ledger survives.
 
-Public UI desktop/mobile viewport, history semantics, review/cancel, settings,
-empty queues, TLS/assets, real named downloads and normal monitoring passed.
-No phone/device test is claimed. Browser fixture uses test-only host headless
-mode because Chromium's OS sandbox is unavailable; repository default is unchanged.
-The exact previously accepted download wrapper was restored additively to live
-frontend and shared public source; all existing assets/metadata and alias preserved.
-No backend, protected-reader, frontend pointer, network or power change occurred.
+Next: reconcile the terminal result and ALL batch receipts; verify fresh eligible
+inventory; seal final catch-up restoration/accounting; implement/qualify and enable
+bounded recurring conversion with monitoring of successive runs and preflight
+failures. The current sensor binds this finite run, not future automatic runs.
 
-## Pending strict evidence
+Nightly old execution `3dc9242e-b5bc-494f-a057-be418fc43a40` is completed; its owner
+has no running execution. Prepared package is commissioning-20261103/
+completion-20261124/observer-v21-prepared under vk-nightly-efficiency-20261017.
+It retains125 roots, actual frontend/binaries and all old outboxes/epochs. Metadata
+imports cover396 components/3,356 logs/1,134 checkpoints; add this new catch-up
+only after actual committed receipts. No B import or baseline acceptance claimed.
 
-The unprivileged old-original descriptor scan cannot read protected processes.
-The installed root helpers permit only other exact registered artifacts; sudo
-requires an administrator for the new audit. Do not change policy or repurpose a
-helper. A bounded read-only `open_original_audit.py` is retained in final evidence;
-its publication was rejected by automatic approval review because of private paths
-and administrative inspection code. The operator was asked for explicit approval
-to publish it for review. That approval and administrator execution remain pending.
-No alternate upload, privilege bypass or zero-open-descriptor claim is permitted.
-Full acceptance and the HUD remain CHECKS PENDING until the result is reconciled.
+Blocker: needed inode watches >=2,270,077, kernel maximum1,048,576. Operator was
+asked to run `sudo sysctl -w fs.inotify.max_user_watches=3145728`; no response or
+change yet. Verify actual limit, memory/cgroup admission and usable B delivery
+before starting the tracker. Then reconcile gap, build/restore current files + SQL
++ runtime, qualify an ordinary incremental/interruption cycle and install the
+exact22:00–04:00 Toronto calendar. Do not drop coverage or weaken resource floors.
 
-## Preserve these bindings
+The final privileged old-original audit is also pending. The prior bounded audit
+publication was rejected by automatic approval review; explicit publication
+approval and administrator execution remain pending. Do not bypass that rejection
+or repurpose other registered privileged inspectors. The completion case now has an expanded, pinned audit covering3,730 original
+records; execute/accept only after catch-up is terminal and reconciled.
 
-Main writer70372/invocation81dd8bb21f894aa1bd286f8f0029b770,
-SHA01495f7f911a222f022354d406789ffa7f634f6faab81798828413d3582cc0a0.
-Protected server2573735/unit2573723, invocation9c0b08030aa445318309e41dff070786,
-SHA40a91f69f31c1b9751f8f5a699fc8dfaa6f20138ba1b0ab528788aecb7ddd000.
-Backend restarts belong to the external managing agent. Recheck actual identities.
+Safe additional savings:24 exact verified temporary carriers retired,
+440,885,248 allocated bytes, with exclusive inode leases and B-selector location
+notes. Keep all catalogs/receipts, failed remote inputs and deferred archive/
+workspace cleanup. New task staging must be included in final accounting.
 
-Batch37 maps to `checkpoint-controls-20261121/isolated-preparations/batch-0037`.
-The old empty batch-0037 stays untouched. Remote preparations are terminal;
-Desktop remains disabled and failed inputs retained. Do not replay historical
-unfinished job labels that successors already adopted. No pending work was reset.
+Main writer70372/invocation81dd8bb21f894aa1bd286f8f0029b770 and protected server
+2573735/unit2573723/invocation9c0b08030aa445318309e41dff070786 are unchanged.
+The public site/health and exact accepted download wrapper pass verified TLS
+using the existing homelab CA. Earlier desktop/mobile viewport and semantic
+history acceptance remains valid; no new physical-phone test is claimed.
 
-WakeWatch uses existing timer/ledger/chat036f0739-6fcc-4e30-911a-e4c6e7e1f388,
-workspace081597f1-4a61-4f6a-8f56-95c2d6bc553c. Read its dedicated CONTEXT.md before
-another event. Do not use the generic disk-watcher outcome CLI: different ledger.
-No synthetic wake, new goal, model loop, watcher or controller is authorized.
-Original native goal ownership remains paused; supporting checklist is evidence.
-
-Nightly calendar stays OFF; observer and delivery latch remain under owner
-workspace604d90d0-0a23-4fde-bcf7-368486a6959b, session4e89eddc-cecd-48fa-95b2-bd68b0a8458a.
-Reuse converter outputs. Reconcile dispatch3dc9242e-b5bc-494f-a057-be418fc43a40
-before further coordination; no new message/dispatch was sent this turn.
-Deferred workspace/archive cleanup remains excluded. Read
-VK_DEDUP_FINITE_ACCEPTANCE.md for restoration, accounting and test limitations.
-Prior continuity is in deployment-history/20261124-before-final-acceptance.
+See VK_DEDUP_COMPLETION.md. Fixed work requirements/evidence are retained in
+`/mnt/vk-storage/vk-log-dedup-20261103-0815/completion-20261124`.
+No new goal, worker, watcher, uncertain dispatch or model continuation loop.
 
 Full historical archive: [HANDOFF history](HANDOFF_HISTORY_20261017.md).

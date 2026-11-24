@@ -1,21 +1,27 @@
-# Scoped writer and finite backward log conversion
+# Finish backward/forward deduplication and Nightly readiness
 
-The selected finite operation is complete:395 batches,3,356 converted logs and
-six preserved exclusions. Do not start another converter or replay an uncertain
-activation/dispatch. The successful writer cutover and genuine scoped custody
-remain qualified; current data, settings, pending inputs and backup epochs remain.
+The operator authorized completion on November24. Preserve the accepted writer
+and completed original finite conversion; never replay it. One explicitly bounded
+new catch-up processes newly closed logs using the existing production lock,
+scoped custody, verified normal-B recovery and actual reader checks. A failure
+retains its durable ACTIVE record for exact reconciliation, never blind retry.
 
-Final normal-B archive dependency-tree, SQL/software/frontend recovery closure
-and desktop/mobile viewport/history/review/settings/queues/monitoring checks pass.
-Honest staging-inclusive allocation, filesystem and growth observations and restore
-instructions are recorded in VK_DEDUP_FINITE_ACCEPTANCE.md. Protected-process
-old-original descriptor visibility still blocks strict reclamation acceptance.
-Administrator audit/publication approval is pending; do not bypass inspection
-policy, infer zero open originals or claim the full objective complete.
+Finish that catch-up, verify the fresh eligible/excluded inventory, qualify and
+install bounded recurring closed-log conversion with visible failures, and keep
+active/pending data intact. Reuse the already tested original recovery closure.
 
-Deferred workspace/archive cleanup and later-created closed logs remain outside
-this finite selection. Nightly stays off under its separate owner. No new goal or
-continuation loop is authorized. Reuse sufficient qualification and the existing
-normal watcher. See HANDOFF.md for exact bindings and current evidence.
+Nightly preparation reuses converter checkpoints and retains every required root,
+backup epoch and predecessor gap/outbox. Its 2.27-million-watch requirement exceeds
+the host's 1.05-million limit. Administrator action and real resource admission
+precede tracker activation. Current-set restore, ordinary incremental/interruption
+qualification and the exact 22:00–04:00 Toronto schedule remain required.
+
+Retire only exact task-owned verified temporary copies. Deferred workspace/archive
+cleanup, failed remote inputs, user settings, pending writes and other owners stay
+protected. Complete net allocation/filesystem accounting, administrator descriptor
+inspection, ordinary service checks and recovery documentation before acceptance.
+
+No native goal, model continuation loop or new worker is authorized. Existing
+WakeWatch reports actual issues/success to the dedicated chat. See HANDOFF.md.
 
 Full historical archive: [STREAM history](STREAM_HISTORY_20261017.md).

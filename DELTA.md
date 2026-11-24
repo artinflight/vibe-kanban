@@ -3140,3 +3140,24 @@ audit; explicit publication approval and administrator evidence remain pending.
 Full acceptance is not claimed. Nightly stays OFF; deferred cleanup, new closed
 logs, selected settings, pending data, backup epochs and other owners preserved.
 See VK_DEDUP_FINITE_ACCEPTANCE.md and final-acceptance-20261124 private receipts.
+
+## 2026-11-24 — authorized completion work and bounded closed-log catch-up
+
+Preserved original finite success and started one independently B-sealed pinned
+catch-up for374 newly eligible closed files/110 batches. Retained the first
+pre-selection Python/dbus startup failure, then corrected system package discovery
+without replaying any backup/conversion. The r2 unit holds original production
+custody; current receipts remain authoritative. Added tested runner/owner/sensor
+source and adopted the sensor on the existing WakeWatch hook/ledger/chat.
+Fourteen focused tests pass; normal observation has no source/event errors.
+Retired24 exact independently restored temporary carriers under exclusive kernel
+leases, releasing440,885,248 allocated bytes with restore-location notes.
+Nightly predecessor is idle;125-root successor and1,134 checkpoint imports are
+prepared. Required2,270,077 watches exceed1,048,576 host limit; administrator action
+and real resource/restore/incremental/schedule qualification remain pending.
+No new goal, worker, watcher, model loop, backend restart or settings change.
+Forward recurring activation, catch-up completion, final net/descriptor acceptance
+and whole Nightly commissioning remain open. See VK_DEDUP_COMPLETION.md.
+Expanded the bounded administrator audit to3,730 original identity records;
+publication/execution remain pending. Ops/diff and Rust formatting pass; required
+frontend formatting remains unavailable because Prettier is absent.

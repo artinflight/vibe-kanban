@@ -26,7 +26,9 @@ def snapshot(config, now, service_reader=unit):
     folder = Path(config['operation_root'])
     expected = config['operation']
     status = service_reader(config['controller_unit'])
-    current = read(state_root/'ACTIVE.private.json') if (state_root/'ACTIVE.private.json').exists() else read(folder/'RESULT.private.json')
+    current = (read(state_root/'ACTIVE.private.json')
+               if not config.get('terminal_only', False) and (state_root/'ACTIVE.private.json').exists()
+               else read(folder/'RESULT.private.json'))
     if current['operation'] != expected or Path(current['folder']) != folder:
         raise ValueError('foreign incremental run')
     selection = read(folder/'SELECTION.private.json')
@@ -108,7 +110,7 @@ def cumulative_payload(config, result):
     keys = ['completed_files', 'resolved_files', 'total_files', 'completed_batches',
             'total_batches', 'completed_raw_bytes']
     payload = dict(version=1, observed=int(result['at']), progress=int(row['progress_at']),
-                   state=row['state'], phase=row['phase'])
+                   state=row['state'].lower(), phase=row['phase'].lower())
     payload.update({key:int(old[key])+int(row[key]) for key in keys})
     payload['total_files'] -= row.get('historically_resolved_overlap', 0)
     payload['resolved_files'] -= row.get('historically_resolved_completed', 0)

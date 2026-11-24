@@ -1,5 +1,10 @@
 """Observe recurring conversion through the same installed WakeWatch tick."""
 import hashlib
+import html
+import os
+import re
+import time
+import uuid
 import importlib.util
 import json
 from pathlib import Path
@@ -91,7 +96,78 @@ def payload(config, result):
                        total_batches='total_batches',completed_raw_bytes='raw_bytes',
                        allocated_recovery_bytes='allocated_recovery_bytes')
         for target,key in mapping.items():row[target]=row.get(target,0)+totals[key]
-    return cumulative_payload(config,dict(result,source=row))
+    values = cumulative_payload(config,dict(result,source=row))
+    # Keep the already-installed Rainmeter parser compatible. Its WAITING
+    # presentation accepts this token; a new idle token would look OFFLINE.
+    if values['state'] == 'idle':values['state'] = 'waiting_for_current_turn'
+    return values
+
+
+def observe_with_initial(config, observe, store, registry, row, now, activated_at,
+                         initial_reader=finite_snapshot):
+    # Keep the already-authorized finite success fresh until the SAME ledger
+    # accepts it. An active owner can defer delivery across monitor replacement.
+    # Original observe() preserves accepted/queued/uncertain dispatches exactly.
+    initial = config['initial_operation']
+    folder = Path(config['incremental_state_root'])/'runs'/initial
+    if row['operation'] != initial and (folder/'RESULT.private.json').exists():
+        effective = dict(config, operation=initial, operation_root=str(folder),
+                         attempt_label='catchup-r2', terminal_only=True,
+                         **config['initial_controller'])
+        previous = initial_reader(effective, now)
+        if previous['state'] != 'success':
+            raise ValueError('initial catch-up terminal acceptance changed')
+        observe(store, registry, previous, now, activated_at)
+    return observe(store, registry, row, now, activated_at)
+
+
+def public_html(values, result):
+    labels = dict(idle='Automatic conversion is ready for its next daily run.',
+                  waiting_for_current_turn='Automatic conversion is ready for its next daily run.',
+                  running='Closed logs are being converted.',
+                  success='Selected conversion finished; final checks are pending.',
+                  stalled='Conversion needs attention: no recent verified progress.',
+                  failure_recovery_pending='Conversion stopped and needs review.',
+                  controller_stopped='Conversion stopped and needs review.',
+                  unavailable='Current progress is unavailable.')
+    state = values.get('state', 'unavailable')
+    if any(not re.fullmatch('[a-z][a-z0-9_]*',str(k)) or
+           not re.fullmatch('[a-z0-9_]+',str(v)) for k,v in values.items()):
+        raise ValueError('bounded public HUD tokens required')
+    resolved,total,converted = (values.get(k,0) for k in ('resolved_files','total_files','completed_files'))
+    if not 0 <= converted <= resolved <= total:
+        raise ValueError('inconsistent cumulative public counts')
+    recovered = values.get('reclaimed_bytes',0)/1024**3
+    checked = time.strftime('%Y-%m-%d %H:%M:%S UTC',time.gmtime(values['observed']))
+    alert = '<p>Alert delivery needs attention.</p>' if result.get('event_error') else ''
+    block = '<!-- VK_DEDUP_HUD_V1\n' + '\n'.join(f'{k}={v}' for k,v in values.items()) + '\nEND_VK_DEDUP_HUD -->'
+    return ('<!doctype html><html lang="en"><meta charset="utf-8">'
+        '<meta name="viewport" content="width=device-width,initial-scale=1">'
+        '<title>Deduplication progress</title><style>body{font:18px system-ui;'
+        'max-width:750px;margin:7vh auto;padding:24px;background:#101725;color:#e7edf6}'
+        'dt{color:#aebed4;margin-top:18px}dd{margin:5px 0}</style>'
+        '<h1>Deduplication progress</h1><p>'+html.escape(labels.get(state,'Progress needs review.'))+'</p>'
+        +alert+'<dl><dt>Logs resolved / selected</dt><dd>'+str(resolved)+' / '+str(total)+'</dd>'
+        '<dt>Logs converted and verified</dt><dd>'+str(converted)+'</dd>'
+        '<dt>Space released from logs</dt><dd>'+format(recovered,'.2f')+' GiB</dd>'
+        '<dt>Last monitoring check</dt><dd>'+checked+'</dd></dl>'
+        '<p>These savings are before retained working copies and other staging. '
+        'Final disk-space checks and Nightly backup qualification are still pending.</p>'
+        '<p>Active logs and pending inputs are preserved. The original conversion '
+        'and subsequent catch-up are included in these totals.</p>'
+        '<p id="stale"></p><script>if(Date.now()/1000-'+str(values['observed'])+
+        '>150)document.getElementById("stale").textContent="Monitoring is stale.";'
+        'setTimeout(()=>location.replace(location.pathname+"?refresh="+Date.now()),10000);</script>'
+        +block+'</html>')
+
+
+def publish_status(config, result):
+    raw = public_html(payload(config,result),result)
+    target = Path(config['public_status'])
+    temporary = target.with_name('.status-'+uuid.uuid4().hex)
+    temporary.write_text(raw)
+    temporary.chmod(0o644)
+    os.replace(temporary,target)
 
 
 def main():
@@ -106,6 +182,10 @@ def main():
     module=importlib.util.module_from_spec(importlib.util.spec_from_loader('existing_dedup_watch',loader=None))
     module.__file__=str(source);exec(compile(raw,str(source),'exec'),module.__dict__)
     module.snapshots=snapshot
+    original_observe=module.observe
+    module.observe=lambda store,registry,row,now,activated_at:observe_with_initial(
+        config,original_observe,store,registry,row,now,activated_at)
+    module.publish_status=publish_status
     module.control_observation.retirement_supplement=lambda config,row,previous,now:(row,None)
     module.rainmeter_feed.payload=payload
     module.main()

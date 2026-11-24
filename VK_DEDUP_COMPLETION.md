@@ -51,9 +51,9 @@ cumulative HUD retains original recovery and avoids duplicate historical exclusi
 
 The installed monitor-v3 still binds the current finite run. `automatic.py` and
 `automatic_watch.py` now provide one bounded daily conversion and successive-run
-monitoring through the same WakeWatch hook. Fifteen focused tests pass, including
+monitoring through the same WakeWatch hook. Nineteen focused tests pass, including
 retained failure holds, missing recovery proofs, dead owners, double-counting
-races and the ordinary no-work path. The package is pinned under automatic-v1.
+races and the ordinary no-work path. The package is pinned under automatic-v3.
 The prepared timer runs at05:00 Toronto; late boot starts outside05:00–17:00 defer,
 preserving the22:00–04:00 Nightly window. Routine healthy jobs create no model
 continuation. Failures require exact review and cannot replay an uncertain run.
@@ -78,11 +78,12 @@ Reboot persistence remains unverified.
 
 The compact observer preserves every path/hardlink alias and exact watch type,
 using a string for single-name inodes and sparse byte pages for type lookup.
-Twenty-nine inode tests,23tracking tests and one outbox test pass. Full actual
-memory enrollment is in progress under the retained1536MiB soft/2GiB hard limit
-with zero swap. Earlier bounded probes stopped safely and closed their own FDs;
-they did not establish full admission. No production successor is active yet.
-Journal-v40 and gap-v22 are prepared, with actual instance binding still required.
+Twenty-nine inode tests,23tracking tests and one outbox test pass. Full actual memory enrollment passed across all125roots and2,287,396watches,
+with peak1,610,854,400bytes under the retained1536MiB soft/2GiB hard limit
+and zero swap. Earlier bounded probes stopped safely and closed their own FDs;
+they did not establish full admission. The existing observer service now runs the qualified package and is enrolling
+its actual epoch. Journal-v40 is bound to that instance; service adoption still
+waits for healthy full coverage. Gap-v22 remains prepared.
 No watch scope or resource floor was reduced.
 
 Retain the predecessor gap/outbox/latch. Reconcile tracking, import existing

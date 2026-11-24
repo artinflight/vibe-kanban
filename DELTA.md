@@ -3174,3 +3174,12 @@ Nightly compact tracking passes29inode/23tracking/one-outbox tests. Full real
 memory admission uses the unchanged1536MiB/2GiB limits; no production successor
 or backup calendar started. Old epochs and failures remain. Reboot persistence
 and privileged open-original inspection still need evidence.
+
+
+November24 follow-up: full watch enrollment passed125roots/2,287,396watches,
+peak1,610,854,400bytes, zero OOM/errors. Existing Nightly observer replaced only
+after original terminal proof; actual new epoch is enrolling. Automatic-v3
+preserves the pending catch-up success across sensor replacement, keeps public
+and HUD totals identical, and normalizes tokens for the installed Rainmeter
+parser.34 focused automatic/incremental tests and real RAM-only codec pass;
+no synthetic dispatch. Initial catch-up remains active.

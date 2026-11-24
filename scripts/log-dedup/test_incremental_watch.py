@@ -76,11 +76,20 @@ class WatchTests(unittest.TestCase):
         self.assertEqual(payload['reclaimed_bytes'],80)
         self.assertEqual(payload['total_files'],4)
         self.assertEqual(payload['state'],'running')
+        mixed=dict(row,phase='actual_production_reader_full_EOF_verified')
+        self.assertEqual(subject.cumulative_payload(self.config,{'at':110,'source':mixed})['phase'],
+                         'actual_production_reader_full_eof_verified')
         self.config['historically_resolved_paths']=['log']
         row=subject.snapshot(self.config,110,self.service)
         payload=subject.cumulative_payload(self.config,{'at':110,'source':row})
         self.assertEqual(payload['total_files'],3)
         self.assertEqual(payload['resolved_files'],3)
+
+    def test_terminal_only_snapshot_ignores_a_later_active_run(self):
+        self.write(self.folder/'RESULT.private.json',self.state)
+        self.write(self.root/'ACTIVE.private.json',dict(self.state,operation='later'))
+        row=subject.snapshot(dict(self.config,terminal_only=True),110,self.service)
+        self.assertEqual(row['operation'],'abc')
 
 
 if __name__=='__main__':

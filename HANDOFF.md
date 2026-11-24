@@ -34,17 +34,16 @@ only after actual committed receipts. No B import or baseline acceptance claimed
 The operator raised the live kernel watch limit to3,145,728. Do not ask again.
 Reboot persistence is unverified. Compact source v22 replaces per-file sets and
 integer-type maps without dropping aliases or external-hardlink coverage;29 inode
-checks pass. Source modifications in Nightly's repo are not committed yet.
-One finite metadata-only enrollment measurement is running:
-`vk-nightly-watch-memory-v3-20261124.service`, invocation
-`de5ae3f477104475a0786fbe9ef0e212`. It uses observer-v22-prepared/config SHA
-823ba15efca02e1b0b494d031b43eb37aa1909f9cba58549b21cf8ea3ce06d4e,
-actual MemoryHigh1536MiB/Max2GiB/Swap0, a30-minute bound, no outbox/epoch/B writes.
-Read WATCH_MEMORY_V3_RESULT/PROGRESS in the Nightly completion folder. Do not
-create a duplicate. Earlier probes finished and closed their own watch FDs;
-v2 stopped at1.82GiB before its1900MiB soft reclaim threshold. V3 measures the
-actual retained production limits and memory.stat attribution. Full coverage
-and error-free completion are required before starting the real observer.
+checks pass. Nightly source is committed as0c31a1e09, not pushed.
+Full metadata-only memory qualification completed with125roots,2,287,396watches,
+peak1,610,854,400bytes and zero OOM/coverage errors; owned test FD closed.
+The existing vk-nightly-observer.service now runs observer-v22-prepared/config SHA
+823ba15efca02e1b0b494d031b43eb37aa1909f9cba58549b21cf8ea3ce06d4e.
+Actual PID1266882/start274355047, invocation589ec42327a146d7b932f8c8d46a6498,
+instance abd172673978422cb0bc3db939ec0958, started15:57:54UTC. Live enrollment
+is still pending. Never duplicate it or replay activate_observer22.py.
+Read STATUS and OBSERVER22_STARTED/ACTIVATION_STARTED in the Nightly completion
+folder. All old observer19/outbox/epoch/latch and unit preimage remain.
 
 Prepared journal-v40 and gap-v22 packages retain old epoch/outbox/latch. Bind
 only the actual accepted successor instance. Do not start gap recovery before
@@ -52,11 +51,12 @@ catch-up completes and releases the existing shared B leases. Boot recovery
 may retry the old failed observer; it is not a new owner. Recheck MainPID0.
 No broad recovery, backend restart, other-owner changes or extra schedule.
 
-Prepared automatic-v1 under incremental-20261124 has15passing focused tests.
+Prepared automatic-v3 under incremental-20261124 has19passing focused and15incremental tests.
 Its exact05:00 Toronto service/timer is NOT installed. Source/config/unit/monitor
 need independent B sealing and a real qualified run after terminal acceptance.
-Existing monitor-v3 must report finite completion before switching to the prepared
-automatic sensor. The existing ledger/timer/chat/settings remain unchanged.
+The new sensor refreshes the initial finite success through the same ledger
+while later runs execute; accepted/uncertain dispatches cannot replay. Public
+counts match the HUD and phase/idle tokens remain compatible with Rainmeter. The existing ledger/timer/chat/settings remain unchanged.
 Read-only terminal reconciliation is prepared as completion-20261124/
 accept_incremental.py; it checks all selected journals, full local EOF, preserved
 nonbeneficial originals/sidecars and independently restored control bindings.

@@ -42,5 +42,41 @@ class WatchTests(unittest.TestCase):
         save(self.root/'ACTIVE.private.json',dict(operation='d'*32,folder='/somewhere'))
         with self.assertRaises(ValueError):subject.snapshot(self.config,110,self.service)
 
+    def test_initial_success_remains_fresh_during_new_automatic_run(self):
+        folder=self.root/'runs'/self.config['initial_operation'];folder.mkdir(parents=True)
+        save(folder/'RESULT.private.json',{})
+        observations=[]
+        def reader(config,now):
+            self.assertTrue(config['terminal_only'])
+            self.assertEqual(config['attempt_label'],'catchup-r2')
+            return dict(operation=config['operation'],state='success')
+        def observe(store,registry,row,now,activated):
+            observations.append(row['operation']);return row
+        current=dict(operation='d'*32,state='running')
+        self.assertEqual(subject.observe_with_initial(self.config,observe,None,None,current,110,0,reader),current)
+        self.assertEqual(observations,['a'*32,'d'*32])
+    def test_same_finite_operation_is_not_observed_twice(self):
+        observations=[];current=dict(operation='a'*32,state='running')
+        def observe(*args):observations.append(args[2]);return args[2]
+        subject.observe_with_initial(self.config,observe,None,None,current,110,0)
+        self.assertEqual(observations,[current])
+    def test_public_page_and_hud_use_the_same_cumulative_counts(self):
+        values=dict(version=1,observed=110,state='idle',completed_files=3600,
+                    resolved_files=3700,total_files=3700,reclaimed_bytes=1024**3)
+        page=subject.public_html(values,{})
+        self.assertIn('3700 / 3700',page);self.assertIn('resolved_files=3700',page)
+        self.assertIn('1.00 GiB',page);self.assertIn('checks',page)
+        with self.assertRaises(ValueError):subject.public_html(dict(values,completed_files=4000),{})
+
+    def test_idle_feed_remains_compatible_with_installed_rainmeter(self):
+        old=self.root/'old';old.mkdir()
+        save(old/'COMMITTED.private.json',dict(operation='old',completed_files=2,resolved_files=3,
+             total_files=3,completed_batches=1,total_batches=1,completed_raw_bytes=100,batches=[]))
+        self.config.update(historical_operation='old',historical_operation_root=str(old))
+        row=subject.snapshot(self.config,110,self.service)
+        values=subject.payload(self.config,dict(at=110,source=row))
+        self.assertEqual(values['state'],'waiting_for_current_turn')
+        self.assertEqual(values['resolved_files'],3)
+
 
 if __name__=='__main__':unittest.main()

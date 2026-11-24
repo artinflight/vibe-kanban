@@ -3215,3 +3215,14 @@ sample7,229→8files and exact hashes; debug Rust warm reads show little change,
 so optimized/live speed remains unverified. No live history migration, Nightly
 commissioning or cleanup. See VK_DEDUP_PACKED_LAYOUT.md; matched build checkpoint
 is the next scripted step through existing WakeWatch.
+
+
+## 2026-11-24 — recover known build deadline with completed artifacts
+
+Reconciled WakeWatch failure b87e8bd4 once. Original build ended on its45-minute
+cap while progressing;10 optimized archive tests passed and689 server dependency
+artifacts completed without a compiler error. Old unit/processes terminal, source
+and live identities unchanged. Started one receipt-bound recovery using original
+immutable overlays/test proof and shared-target artifacts; optimized probe first,
+then server.60-minute cap and600-second no-progress guard; memory/SSD/ownership
+limits preserved. Same existing watcher/owner/settings; no deployment or Nightly.

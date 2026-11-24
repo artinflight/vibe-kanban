@@ -15,6 +15,10 @@ Daily conversion is held during repair while preserving its enabled05Toronto
 calendar. A timer maintenance condition prevents host recovery from restarting
 it; exact release instructions and receipts are in the packed repair document.
 Existing WakeWatch owns checkpoint/problem reporting; no model polling loop.
+Main build v1 passed10 optimized reader tests but reached its45-minute cap while
+compiling successfully. Reconciled recovery1 reuses its immutable source, passed
+test evidence and shared-target artifacts, with optimized probe first and a
+60-minute cap/600-second no-progress stop. Nothing has been deployed.
 
 Previously measured net reduction73,893,642,640bytes(68.82GiB) includes prior
 local/remote-file staging and concurrent growth. New qualification/build staging
@@ -30,3 +34,8 @@ acceptance of the old layout; they do not qualify future packed retirement.
 
 Previous state: [before packed repair](deployment-history/20261124-before-packed-repair/STATE.md).
 Full historical archive: [STATE history](STATE_HISTORY_20261017.md).
+
+Optimized read checkpoint now passed: all five histories/three samples match at
+full EOF; summed medians3.877s loose versus3.769s packed(about2.8% faster, warm
+cache only). Large live/UI speedups are not demonstrated. Server build continues;
+normal existing WakeWatch tick sees recovery1 at3/4 with no errors.

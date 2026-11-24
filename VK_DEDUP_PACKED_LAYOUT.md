@@ -85,3 +85,29 @@ Live checkpoint: operation6cfd3d05308b431aa7e3a9a51d60b131, unit
 `e7def46cdf3c4033b393f56c3ad32a88`. Normal existing WakeWatch tick sees the
 healthy exact build and maintenance hold, with no source/event errors. No new
 delivery was requested. Reconcile current receipts; never relaunch this identity.
+
+## Build deadline recovery
+
+Wake b87e8bd4-7a8f-4c8e-b835-e98dd78c11de arrived once after the first build
+hit its 45-minute deadline. It had passed all 10 archive tests in the optimized
+profile and completed 689 server dependency artifacts with zero compiler errors;
+the last artifact finished 21.2 seconds before termination. Unit failed/MainPID0,
+original processes gone, lease available and frozen/live executable hashes intact.
+BUILD_FAILURE_RECONCILED retains exact evidence; original logs remain immutable.
+
+The current attempt is main-build-recovery1, same operation and shared target,
+using original frozen overlays without changing mtimes. Its exact successful
+reader-test proof is reused. The optimized probe and full-EOF comparison run
+before completing the server build. A 60-minute finite cap replaces the inadequate
+first cap; 600-second no-progress, memory/SSD/no-swap/CPU and ownership protections
+remain. Unit vk-dedup-packed-main-build-recovery1.service, PID2109474, invocation
+2b2f09983334496691cc5d1bc95d3c98. Existing WakeWatch package is now
+checkpoint-monitor-recovery1; no new watcher, agent, target or deployment.
+
+The optimized sample checkpoint passed during recovery: all five histories across
+three groups reconstruct exactly to full EOF. Summed medians were 3.877284 seconds
+loose and 3.768843 packed (2.8% lower, three alternating warm-cache trials).
+This is a small read improvement, not evidence of a large live/UI speedup. The
+file-count, metadata-walk and allocation gains remain the main measured benefits.
+The server build is still running; normal existing watcher sees 3/4 checkpoints,
+no source/event errors and the held daily timer. Final migration remains open.

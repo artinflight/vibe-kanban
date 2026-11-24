@@ -1,21 +1,29 @@
-# November24 checkpoint wakes replace model polling
+# November24 import accepted; one composition script runs under WakeWatch
 
-The user requested WakeWatch checkpoints/problems instead of long model polling.
-Existing resource-guard hook now uses dedup completion-20261124/checkpoint-monitor-v1.
-Same timer, ledger, chat, owner/settings and admission; no new controller or agent.
-NORMAL_TICK_ACCEPTED proves a real timer check with no extra attempts and unchanged
-prior batch receipts. The already accepted catch-up success was settled using its
-pinned acceptance/result, preventing a redundant wake. Import-v2 itself is unchanged.
+Wake cabd393e-2ca7-4715-8812-e9983e42dc91 entered the correct existing owner.
+Nightly IMPORT_V2_TERMINAL_ACCEPTED verifies1194references/10journals,972new and
+222reused, independent normal-B readback, unchanged original123746file-history
+points and zero source/body recopy. Import is terminal; never replay STARTED.
 
-The sensor pins its CONFIG/STARTED and PID/invocation, reads actual progress, and
-wakes on terminal result, failure, changed identity, missing/corrupt evidence,
-600s without progress or its original deadline. Healthy progress never wakes.
-Current config covers import-v2 only. At the actual checkpoint reconcile every
-receipt, start the next prepared finite phase once, and arm the SAME hook for that
-phase's actual receipt format before ending the model turn. Never force a manual
-tick, duplicate a running script or resume repeated model polling. Full Nightly
-restore/ordinary qualification/calendar and final accounting remain unfinished.
-See dedicated CONTEXT.md first; subsequent notes retain current job identities.
+One successor is running:vk-nightly-composition-v22-20261124.service,
+PID3906400/invocation113f344349c542d9a60c8a94d722a3df. Nightly completion-20261124/
+composition-v22-prepared contains exact STARTED/STATUS/RESULT/STOP and launch intent.
+ConfigSHA45e8ba855f158c3dda74a8a02f26f2bfefc6ff8777ff5c562c39825bf2c63d7d.
+Actual preflight passed current tracker and2449223namespace paths. Deadline22:40:33UTC;
+unchanged2GiB/zero-swap metadata limits,16GiB catalog bound/40GiB Bfree floor.
+New exclusive STARTED wrapper prevents duplicate or uncertain dispatch.
+
+Existing resource-guard hook now uses dedup completion-20261124/checkpoint-monitor-v2.
+Same timer/ledger/owner/settings/queues; accepted import event remains immutable.
+Composition uses real STATUS/STOP receipts and exact start identity. Healthy work
+never wakes;600s without verified progress, a stop/failure or success does. Lease
+waiting is not progress.27 focused tests pass. Do not resume model polling.
+
+On actual composition success reconcile B/current namespace/suffix/history, then
+use prepared bind_current41.py and package seal, current files/SQL/runtime restore,
+ordinary qualification and exact-package calendar gate. Full Nightly acceptance,
+final accounting and administrator checks remain unfinished. Calendar OFF.
+Read dedicated CONTEXT.md first. Following notes retain predecessor history.
 
 # November24 completion — automatic conversion accepted, Nightly gap accepted, import running
 

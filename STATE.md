@@ -16,7 +16,7 @@ is enabled for05:00 Toronto, nextNovember25 10:00UTC. One bounded invocation use
 the existing production/B locks; uncertain or incomplete operations retain a
 review hold. The existing WakeWatch hook/ledger now observes successive runs and
 settles its already-accepted catch-up success using pinned evidence. The existing
-hook also monitors the exact Nightly import, waking on completion or a problem.
+hook now monitors the exact Nightly composition, waking on completion or a problem.
 No routine healthy model continuation.
 Actual Rainmeter displays WAITING/resolved3731 with unchanged skin/process.
 
@@ -34,8 +34,10 @@ with29 inode tests passing. Full real enrollment passed with125 roots,
 The existing observer is fully ready with2,289,027 watches and no tracking errors.
 Its existing journal delivery independently reopened B and acknowledged the exact
 source sequence. The finite gap scan passed2,449,223paths/150,028directories with
-zero pending/replay errors and independent B readback. One metadata-only import
-now reuses1194 existing converter checkpoints. Old tracker outbox, journal latch
+zero pending/replay errors and independent B readback. The metadata-only import
+accepted1194 existing converter checkpoints, with ten independent B readback
+journals and no source/body recopy. One bounded composition script now assembles
+the current namespace and reuses existing accepted file bodies under WakeWatch. Old tracker outbox, journal latch
 and all backup epochs remain preserved.
 
 Full current-file/SQL/runtime composition and independent restore, ordinary

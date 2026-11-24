@@ -94,6 +94,40 @@ class CheckpointTests(unittest.TestCase):
             self.assertTrue(self.snapshot()['needs_attention'])
             (self.root/name).write_bytes(old)
 
+    def composition(self):
+        (self.root/'CONFIG.private.json').rename(self.root/'config.private.json')
+        self.job.update(receipt_format='composition-v1', total=1,
+                        result_fields=dict(actual_independent_normal_B_composition_reopen_verified=True,
+                                           current_baseline_accepted=False, schedule_enabled=False))
+        self.write('STATUS.private.json', dict(phase='assembling', at_EDT='1970-01-01T00:01:45+00:00'))
+
+    def test_composition_uses_actual_status_and_stop_receipts(self):
+        self.composition()
+        result = self.snapshot()
+        self.assertFalse(result['needs_attention'])
+        self.assertEqual(result['progress_at'], 105)
+        self.assertEqual(result['phase'], 'assembling')
+        self.assertEqual(self.snapshot(706)['state'], 'failure_recovery_pending')
+        self.write('STOP.private.json', dict(phase='retained-fault'))
+        self.assertEqual(self.snapshot()['state'], 'failure_recovery_pending')
+
+    def test_repeated_lease_wait_does_not_disguise_stall(self):
+        self.composition()
+        self.write('STATUS.private.json', dict(phase='waiting-for-existing-owned-backup-or-journal-lease',
+                                              at_EDT='1970-01-01T00:11:40+00:00'))
+        self.assertEqual(self.snapshot(701)['state'], 'failure_recovery_pending')
+
+    def test_composition_independent_readback_is_not_full_baseline_acceptance(self):
+        self.composition()
+        self.write('RESULT.private.json', dict(at_EDT='1970-01-01T00:01:48+00:00', **self.job['result_fields']))
+        self.assertFalse(self.snapshot()['needs_attention'])
+        self.status.update(ActiveState='inactive', MainPID='0', InvocationID='')
+        result = self.snapshot()
+        self.assertEqual(result['state'], 'success')
+        self.assertEqual(result['completed'], 1)
+        self.write('RESULT.private.json', dict(at_EDT='1970-01-01T00:01:48+00:00', current_baseline_accepted=True))
+        self.assertEqual(self.snapshot()['state'], 'failure_recovery_pending')
+
     @unittest.skipUnless(SHARED.is_dir(), 'installed WakeWatch codec unavailable')
     def test_real_ledger_replay_and_acknowledgment_preserve_receipts(self):
         target = dict(enabled=True, workspace_id='081597f1-4a61-4f6a-8f56-95c2d6bc553c',

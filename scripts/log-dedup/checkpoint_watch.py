@@ -1,6 +1,7 @@
 """Read one exact scripted job; reuse WakeWatch delivery, never launch work."""
 import hashlib
 import json
+from datetime import datetime
 from pathlib import Path
 import subprocess
 import uuid
@@ -33,7 +34,11 @@ def snapshot(job, now, service_reader=unit):
                progress_at=0, completed=0, total=job['total'])
     try:
         folder = Path(job['folder'])
-        read(folder / 'CONFIG.private.json', job['config_sha256'])
+        receipt_format = job.get('receipt_format', 'import-v2')
+        if receipt_format not in ('import-v2', 'composition-v1'):
+            raise ValueError('unsupported script receipt format')
+        composition = receipt_format == 'composition-v1'
+        read(folder / ('config.private.json' if composition else 'CONFIG.private.json'), job['config_sha256'])
         start = read(folder / 'STARTED.private.json', job['started_sha256'])
         if (start['config_sha256'] != job['config_sha256'] or
                 start['pid'] != job['pid'] or start['invocation'] != job['invocation']):
@@ -44,14 +49,23 @@ def snapshot(job, now, service_reader=unit):
         if status['InvocationID'] != job['invocation'] and not (
                 status['ActiveState'] == 'inactive' and status['InvocationID'] == ''):
             raise ValueError('script invocation changed')
-        progress = folder / 'PROGRESS.private.json'
+        progress = folder / ('STATUS.private.json' if composition else 'PROGRESS.private.json')
         value = read(progress) if progress.exists() else dict(at=start['at'], completed=0, total=job['total'])
+        if composition and progress.exists():
+            phase = value['phase']
+            if not isinstance(phase, str) or not phase or len(phase) > 160:
+                raise ValueError('invalid composition phase')
+            row['phase'] = phase
+            progress_at = datetime.fromisoformat(value['at_EDT']).timestamp()
+            if phase == 'waiting-for-existing-owned-backup-or-journal-lease':
+                progress_at = start['at']  # Waiting is not verified progress.
+            value = dict(at=progress_at, completed=0, total=1)
         if (type(value['at']) not in (int, float) or not start['at'] <= value['at'] <= now + 5
                 or type(value['completed']) is not int
                 or not 0 <= value['completed'] <= job['total'] or value['total'] != job['total']):
             raise ValueError('invalid script progress')
         row.update(progress_at=value['at'], completed=value['completed'])
-        failure = folder / 'FAILURE.private.json'
+        failure = folder / ('STOP.private.json' if composition else 'FAILURE.private.json')
         result = folder / 'RESULT.private.json'
         if failure.exists():
             read(failure)
@@ -68,13 +82,16 @@ def snapshot(job, now, service_reader=unit):
         elif (status['ActiveState'] == 'inactive' and status['MainPID'] == '0'
               and status['Result'] == 'success' and status['ExecMainStatus'] == '0' and result.exists()):
             result_value = read(result)
-            if not start['at'] <= result_value['at'] <= now + 5 or value['completed'] != job['total']:
+            result_at = datetime.fromisoformat(result_value['at_EDT']).timestamp() if composition else result_value['at']
+            if not start['at'] <= result_at <= now + 5 or (not composition and value['completed'] != job['total']):
                 raise ValueError('script result has incomplete or foreign progress')
             for key, expected in job['result_fields'].items():
                 actual = result_value.get(key)
                 if type(actual) is not type(expected) or actual != expected:
                     raise ValueError('script result is incomplete')
             row.update(state='success', phase='script_complete_review_next_stage', needs_attention=True)
+            if composition:
+                row.update(completed=1, progress_at=result_at)
         else:
             raise ValueError('script stopped without verified success')
     except (OSError, ValueError, KeyError, TypeError, subprocess.SubprocessError) as error:

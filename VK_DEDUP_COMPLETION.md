@@ -171,3 +171,22 @@ and its receipt format to the same hook after its predecessor is reconciled.
 
 Required formatting was attempted again: Rust passed; frontend formatting is
 blocked by missing Prettier. No frontend or Rust implementation changed.
+
+
+## Import accepted; current backup composition running
+
+All1194import references match ten independently reopened B catalog journals:
+972new references and222previously committed references reused. The original
+123746accepted file-history points are unchanged, and no source or backup bodies
+were copied. Final source journal delivery independently reopened B and ACKed
+sequence6498864. Import RESULT/STARTED/config/source hashes and terminal process
+were reconciled in IMPORT_V2_TERMINAL_ACCEPTED; the old capacity fault is preserved.
+
+One finite composition script passed preflight against the current tracker and
+2449223namespace paths, then started once with a durable exclusive STARTED claim.
+Its existing2GiB/zero-swap metadata limits and B capacity floors remain. The same
+WakeWatch hook now reads composition STATUS/STOP/RESULT with exact config/start
+identity. Lease waiting cannot reset the no-progress clock.27 focused tests cover
+both receipt formats, duplicate/uncertain launch refusal and ledger preservation.
+No full current backup acceptance or calendar activation is claimed. Next steps
+remain current files/SQL/runtime restore, ordinary qualification and accounting.

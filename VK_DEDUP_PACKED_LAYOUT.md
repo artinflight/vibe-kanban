@@ -1,6 +1,6 @@
 # Deduplication file-count repair
 
-Status: isolated format/build and all11current-data stages accepted; live original restoration accepted; production packing independently accepted; normal-B recovery independently accepted; reader lifetime protection accepted; packed publication rehearsal running.
+Status: isolated format/build and all11current-data stages accepted; live original restoration accepted; production packing independently accepted; normal-B recovery independently accepted; reader lifetime protection accepted; packed publication rehearsal accepted; production admission recovery running.
 No packed manifests are installed live.
 The speed/file-count objective remains unfinished. Original lossless conversion
 acceptance is retained; it does not establish performance acceptance.
@@ -337,3 +337,24 @@ Next: independently accept the rehearsal, integrate exact normal-B proof and
 production ownership, cover only changed artifacts in B, prepare measured cutover,
 then final current recovery/ordinary qualification and net space accounting.
 Nightly commissioning and deferred cleanup remain excluded.
+
+November25: PACKED_TRANSACTION_REHEARSAL_ACCEPTED independently reconciles all12
+stages,11API/table phases,60/59original tables and9/4later-write sentinels. Three
+actual isolated scoped transactions retire7,854copied loose objects after busy
+reader/interruption checks; ordinary APIs remain identical. No live mutation.
+
+Production integration adds exact immutable-checkpoint reads with no local-body
+fallback, B-restored metadata/sidecar mapping, both SQL bindings, actual serving
+root/database mounts and the qualified scoped writer/pinned-reader adapters.
+Eleven tests pass. Preparation groups are storage-sharing units, not transaction
+limits:13of274groups exceed64files/2GiB. They now split into311bounded transactions
+while reusing the same580packs; no second packing pass or duplicate data.
+The first read-only admission run stopped before B capture/mutation and is
+independently reconciled. Its recovery job is a separate finite witnessed dispatch.
+
+The current five-stage job prepares all311plans, protects the exact mapping,
+three new reader binaries(330,824,784bytes) and tools, exercises actual normal-B
+admission for three production groups, and seals a recovery index. New-control
+input ceiling512MiB; unchanged4,219packed files retain their existing proof.
+No current-SQL recapture or Nightly commissioning is performed in this stage.
+Final controller/activation/live qualification/accounting remain open.

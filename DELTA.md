@@ -3384,3 +3384,11 @@ server compilation is running. No model polling or additional dispatch.
  12stages with fresh SQL and actual isolated-server custody. Existing WakeWatch
   rearmed with unchanged owner/ledger. No live publication, cutover, Nightly
   commissioning or cleanup. Final controller/recovery/qualification/accounting open.
+
+- 2026-11-25: Accepted packed-transaction-rehearsal-v1(all12stages,60/59tables,
+  9/4later-write sentinels,7,854fixture objects retired). Added exact B-backed
+  production admission and plan integration;11tests pass. First planning run
+  safely refused oversize groups before B capture/mutation; reconciled terminal
+  evidence retained.311bounded transactions reuse274groups/580packs. One finite
+  packed-admission-recovery1 now covers only changed software/tools/metadata and
+  three actual B admission checks. Existing WakeWatch rearmed; no live changes.

@@ -1,89 +1,65 @@
-# Deduplication state — November24 file-count repair
+# Deduplication state — November25 packed-layout qualification
 
-November25: allthree reader-pin builds are accepted. Guarded packed publication
-and direct forward packing pass14focused tests. One12-stage isolated current-data
-rehearsal is running under existing WakeWatch. Production integration, activation
-and final acceptance remain open; see HANDOFF and the packed-layout document.
+The original finite log conversion and catch-up are accepted. Full deduplication
+acceptance remains open because the first layout reduced bytes while increasing
+file count from38,791 to1,065,426. The user requires storage AND performance repair.
+Nightly commissioning and deferred workspace/archive cleanup are excluded.
 
-The lossless original/catch-up/automatic conversions remain accepted, but the
-performance objective is open: source files grew38,791→1,065,426. The user
-explicitly requested both lower storage use and faster operation. The prior
-space-only acceptance was insufficient. See [packed repair](VK_DEDUP_PACKED_LAYOUT.md).
+All274 prepared session groups,3,639 histories and580 packs are independently
+verified. Selected files go from1,057,171 to4,219 in preparation, using
+6,768,685,056allocated bytes including directories. This is staging, not a live
+file-count reduction or additional net savings.
 
-A packed layout and actual Rust reader pass isolated integrity tests. Five real
-sample histories went7,229→8files with identical decoded bytes; optimized and
-live performance remain separate. No V2 manifests are published live. Both
-serving processes, selected packing sources, pending inputs, settings and backup
-epochs remain preserved. The18missing historical dependencies are addressed below. The old mutator refuses unqualified V2 publication.
+Allthree reader-pin binaries are accepted:36Rust archive tests and18actual full
+EOF checks pass. They retain manifest descriptors for safe lazy-reader retirement.
+The repaired bounded replay behavior/private/native/scoped inputs are preserved.
+Only these newest candidates should be used; prior packed candidates are history.
+Live main/protected readers and frontend remain unchanged; see LIVE_DEPLOYMENT.json
+and actual process/hash checks. No packed manifests are published live.
 
-Daily conversion is held during repair while preserving its enabled05Toronto
-calendar. A timer maintenance condition prevents host recovery from restarting
-it; exact release instructions and receipts are in the packed repair document.
-Existing WakeWatch owns checkpoint/problem reporting; no model polling loop.
-Current-data qualification exposed a real history-display bug in old main and
-packed readers: raw broadcast replay dropped entries even though stored bytes
-matched exactly. Those older main/fallback packed artifacts are not deployable.
+The12-stage current-data/transaction rehearsal is independently accepted. Main
+reference→candidate→migration→packed→fallback→candidate and protected comparisons
+preserve60/59original tables and9/4later-write sentinels. Histories, pagination,
+settings/review/queues/frontend match; allthree corrupted packs are refused.
+Actual isolated scoped publication survives interruption and busy old readers;
+7,854copied loose objects retire safely across three sessions. This is isolated
+qualification, not live deployment or whole-objective completion.
 
-The repaired main/fallback builds now pass28focused replay/archive tests each,
-full-EOF sample checks and independent source/artifact reconciliation. Main hash:
-c4895660de59f1624205c1868301afaf0c1659189103230b274eb2e854330406. Fallback hash:
-c6362dd1c9b5285dec1413ba7ec0ed195369ae3f1dfaf915dfcd9ec3c482d290. The protected
-reader already has the bounded replay mechanism and its accepted artifact is reused.
+Normal Desktop-B recovery already covers all4,219packed files, both recorded SQL
+points, five earlier software artifacts and1,465frontend files:223checkpoint
+triples and5,862independent file restores are accepted. New reader artifacts and
+new migration metadata/tools need their own bounded recovery closure. Current
+SQL points must still be refreshed at the final boundary; never overwrite later data.
 
-All11current-data rehearsal stages are now independently accepted: main loose/
-packed/fallback/return histories match; protected six native targets and18retained
-replies match with verified original dependencies; all original tables/later writes,
-pagination/settings/review/queues/frontend pass; three corrupt packs are rejected.
-This qualifies reader behavior in isolation, not live deployment or full acceptance.
+Production admission now binds the exact B-restored plan, original metadata,
+sidecars, actual reader root/database mounts, both SQL owners, scoped locks and
+fresh immutable B bodies. Eleven tests pass, including corrupt/missing remote
+bytes with good local copies, owner loss and foreign file/metadata refusal.
+Prepared session groups are split into311transactions within64files/2GiB each;
+shared packs and all old backup epochs remain unchanged.
 
-All18missing original capture dependencies are now restored byte-for-byte.
-Independent acceptance verified18restored inodes and36normal protected/public
-replies, with recovery notices and incomplete-original status preserved. Both
-current SQL target bindings, settings, sidecars, serving identities and backups
-remain intact. Restoration added16,752,640allocated payload bytes and4,096observed
-parent-directory bytes; private SSD copies add16,752,640Bto staging. The script's
-final memory-pressure refusal was reconciled through fresh read-only acceptance;
-no restore was replayed. Why the originals disappeared remains unresolved.
+One finite `packed-admission-recovery1` job is running. It checks all311plans,
+backs up only metadata/tools and330,824,784bytes of changed reader software,
+and exercises actual existing-B admission for three production groups. Its512MiB
+new-control-input ceiling does not authorize recapturing unchanged6.77GB packs.
+The prior v1 stopped during read-only planning before any B capture or mutation;
+its exact terminal unit, inputs and live owners are reconciled and preserved.
+Existing WakeWatch owns the next event; no extra watcher/goal/agent/polling loop.
 
-Packing is independently accepted: all 274 groups and 3,639 histories match,
-with 580 full pack hashes and unchanged sources/sidecars/current SQL bindings.
-The selected layout goes from 1,057,171 files to 4,219 prepared files. Prepared
-allocation is 6,768,685,056 bytes including directories. This is still staging;
-no live file-count reduction or additional net savings is claimed.
+Daily conversion remains held with its saved enabled05Toronto calendar preserved.
+Still required: accept current recovery, finish finite migration/forward controller
+integration and the measured serving-owner activation/fallback package, perform
+live publication/retirement and ordinary desktop/mobile/history/review/settings/
+queues/monitoring checks, and finish current recovery plus net space/count/
+performance/growth accounting including ALL staging and B growth.
 
-Normal Desktop-B recovery is independently accepted: all223 checkpoint journals,
-5,862 actual file restores (7,504,774,098bytes), both consistent SQL points, five
-software artifacts and1,465frontend files passed reconciliation. All4,219 prepared
-packed files have exact byte/metadata restore proofs. No epoch was replaced.
+All18previously missing historical originals are restored and their36normal
+protected/public replies verified. Why they disappeared remains unresolved.
+Previous net reduction73,893,642,640bytes(68.82GiB) predates new packing/build/test
+staging. Privileged old-open-file visibility and remote directory allocation are
+not fully verified; maximum savings/exclusive filesystem attribution are unclaimed.
 
-Retirement qualification found that archive readers released their manifest
-before finishing lazy object reads. The reader now retains that exact descriptor
-until drop, allowing kernel leases to detect an ongoing read after replacement.
-Both real lease regressions and all12main archive tests pass. One reader-pin-build-v1
-script now builds main/fallback/protected variants under the existing shared lease;
-WakeWatch owns the next event. New binaries are not yet qualified or deployed.
+[Packed design/evidence](VK_DEDUP_PACKED_LAYOUT.md).
+[Previous state](deployment-history/20261125-before-packed-admission/STATE.md).
 
-No V2 manifests or serving binaries have been activated. Guarded migration,
-compatible live readers/real recovery, ordinary live qualification, safe loose
-retirement and final space/file-count/performance acceptance remain unfinished.
-
-
-Previously measured net reduction73,893,642,640bytes(68.82GiB) includes prior
-local/remote-file staging and concurrent growth. New qualification/build staging
-must be included in final accounting. Privileged open-original visibility and
-remote directory metadata remain unverified; do not claim maximum savings or
-strict exclusive filesystem attribution.
-
-Nightly commissioning is explicitly excluded. Its extra composition job remains
-stopped with accepted state and partial cursor preserved. No bootstrap, calendar
-activation, unrelated backup work or deferred cleanup belongs to this stream.
-Earlier full source/SQL/software/frontend recovery proofs remain historical
-acceptance of the old layout; they do not qualify future packed retirement.
-
-Previous state: [before packed repair](deployment-history/20261124-before-packed-repair/STATE.md).
 Full historical archive: [STATE history](STATE_HISTORY_20261017.md).
-
-Optimized read checkpoint now passed: all five histories/three samples match at
-full EOF; summed medians3.877s loose versus3.769s packed(about2.8% faster, warm
-cache only). Large live/UI speedups are not demonstrated. Main build completed;
-compatible pair/current-data and normal-B recovery passed; retirement-safe reader builds are running.

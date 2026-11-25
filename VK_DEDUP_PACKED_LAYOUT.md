@@ -138,3 +138,21 @@ protected archive tests passed, with no source/event errors and14 retained
 batches/14attempts. This is current scripted progress, not deployment acceptance.
 Rust formatting and ops/whitespace checks pass; full format still stops at the
 pre-existing missing Prettier executable.
+
+
+Current-data checkpoint preparation: both compatibility artifacts independently
+accepted, with unchanged serving readers. Protected SHA65fbcb15ea6e006c5f2e66b0d94b9d464576c01bc8be52dbbafe98087b3c3073;
+fallback SHAfcfe4d7fbaac25ee5763e5b6b9b930fe71b6068f0063851534525690180bbb02.
+Each passed10reader tests and exact sample full-EOF checks. The separate existing
+protected-history and native166 behavior remains in its respective artifact.
+Fallback does not provide the current writer's mutation protocol; automatic
+conversion must stay held while that fallback serves.
+
+One finite current-data-v1 job now snapshots the actual current main and protected
+DBs, checks all tables and later writes through candidate/fallback/return, exercises
+packed histories through real HTTP APIs, compares protected replies/pagination,
+settings/review/queues and frontend assets, and rejects corruption in a disposable
+pack. Six closed histories are prepared on SSD; live sessions stay read-only.
+Private network/PID/manager namespaces and disabled provider command prevent live
+execution. No production migration or Desktop-B restore is implied by this test.
+The same WakeWatch hook/ledger reports its next checkpoint; no model polling.

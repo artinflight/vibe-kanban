@@ -3236,3 +3236,14 @@ undeployed. Verified both sealed base trees and prepared protected/fallback read
 builds preserving their distinct history/native behavior. One serial bounded job
 uses existing shared target/lease and WakeWatch. Current-data/actual B restore,
 forward/backward migration and final net/performance acceptance remain open.
+
+
+- Accepted exact compatibility-build-v1 success once: both source seals/overlays,
+  binary/probe/build-info hashes,10tests each and live serving identities verified.
+  Started one isolated current-data-v1 rehearsal under existing WakeWatch; fresh
+  main/protected99-migration DB copies, real packed-history/read APIs, later writes
+  and corruption rejection. No live deployment/history mutation, Nightly work or
+  deferred cleanup. Full dedup acceptance remains open.
+  Normal WakeWatch tick independently accepted current-data-v1 without new
+  dispatch/error (15batches/15attempts). Ops/whitespace checks and Rust formatting
+  pass; full formatter stops at the existing missing Prettier dependency.

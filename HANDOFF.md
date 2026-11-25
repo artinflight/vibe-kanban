@@ -10,16 +10,21 @@ compatible serving readers, before removing proven-unreferenced loose objects.
 Main recovery1 is independently accepted4/4 with terminal unit/process and exact
 source/binary/probe hashes. MAIN_BUILD_ACCEPTED retains the success wake receipt.
 Main candidate SHA4a14b76bc3f0ce85c702f099e901b89fe6cc962df3221ab476845a80d3d87957.
-One current script:vk-dedup-packed-compatibility-v1.service,PID2330678,
-invocation87b62ce5c0d04583bbddd548286e903c,attemptcompatibility-build-v1 under same
-operation6cfd3d05308b431aa7e3a9a51d60b131. It serially builds/tests protected and
-V2-aware fallback readers from their exact preserved source variants. Six steps,
-90-minute finite cap/600-second no-progress stop, unchanged resource guards and
-shared build target/lease. Reconcile receipts/unit; never replay STARTED.
-Existing watcher package checkpoint-monitor-compatibility1 owns the next wake.
-No deployment/current-data rehearsal occurs in the build. On success, validate
-both artifacts then prepare fresh isolated current-data/packed-history/recovery
-rehearsals before live migration. Keep automatic conversion held on fallback.
+Compatibility success5b9ac81d-60f8-4344-a815-2a1825472aeb accepted once.
+COMPATIBILITY_BUILD_ACCEPTED verifies both2959-file base seals/overlays,10tests
+per variant, exact binaries/probes/build info and unchanged live identities.
+One current script:vk-dedup-packed-current-data-v1.service,PID2856561,
+invocation7f1bae65bdeb46e082e33d570c3c32a1,attemptcurrent-data-v1 under the same
+operation6cfd3d05308b431aa7e3a9a51d60b131. Fresh main/protected snapshots, actual
+packed history/settings/review/queue APIs, fallback/return, all-table preservation,
+later writes,6protected/18private retained replies and deliberate isolated pack
+corruption rejection. Both exact current source DBs have99migrations. Ten steps,
+two-hour cap/600-second progress guard, original resource limits, no provider calls.
+Reconcile CONFIG/STARTED/PROGRESS/RESULT/FAILURE and live unit; never replay.
+Existing watcher checkpoint-monitor-current-data1 owns the next problem/result.
+No serving reader or source history changes. Keep automatic conversion held.
+After success, review evidence and finish guarded publisher/backward migration,
+compatible live deployment and actual B recovery before loose-object retirement.
 
 Original operation6d4d022ab2f84d1ea72f39d6a6382d1c, catch-up
  e3787e2e49124284a1f023d061f967f7 and automatic8d866da98492464f9867137092623b20
@@ -45,4 +50,4 @@ Full historical archive: [HANDOFF history](HANDOFF_HISTORY_20261017.md).
 Optimized read checkpoint now passed: all five histories/three samples match at
 full EOF; summed medians3.877s loose versus3.769s packed(about2.8% faster, warm
 cache only). Large live/UI speedups are not demonstrated. Main build is accepted;
-compatible pair and actual current-data/recovery acceptance remain unfinished.
+compatible pair passed; actual current-data/recovery acceptance remains unfinished.

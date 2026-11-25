@@ -17,9 +17,11 @@ it; exact release instructions and receipts are in the packed repair document.
 Existing WakeWatch owns checkpoint/problem reporting; no model polling loop.
 The main packed-reader artifact is accepted after exact success reconciliation.
 Its hash is4a14b76bc3f0ce85c702f099e901b89fe6cc962df3221ab476845a80d3d87957.
-One compatibility-build-v1 script now serially builds the protected reader and
-V2-aware fallback, preserving their separate source overlays. Shared target and
-resource/ownership guards remain. Nothing has been deployed.
+Both compatible builds are now independently accepted: protected reader and
+V2-aware fallback retain their separate source overlays and pass10reader tests
+each. One current-data-v1 script checks fresh main/protected database copies,
+actual packed-history APIs, fallback/return, all tables and later writes. Existing
+WakeWatch owns its next result. Nothing has been deployed.
 
 Previously measured net reduction73,893,642,640bytes(68.82GiB) includes prior
 local/remote-file staging and concurrent growth. New qualification/build staging
@@ -39,4 +41,4 @@ Full historical archive: [STATE history](STATE_HISTORY_20261017.md).
 Optimized read checkpoint now passed: all five histories/three samples match at
 full EOF; summed medians3.877s loose versus3.769s packed(about2.8% faster, warm
 cache only). Large live/UI speedups are not demonstrated. Main build completed;
-compatible pair builds and fresh current-data/real recovery qualification remain.
+compatible pair builds passed; fresh current-data/real recovery qualification remains.

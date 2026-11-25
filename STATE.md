@@ -40,12 +40,18 @@ parent-directory bytes; private SSD copies add16,752,640Bto staging. The script'
 final memory-pressure refusal was reconciled through fresh read-only acceptance;
 no restore was replayed. Why the originals disappeared remains unresolved.
 
-One packed-production-preparation-v1 script now prepares eligible closed V1
-archives into per-session packs on the SSD, with unchanged source versions,
-actual production-reader full-EOF hashes and staged file/allocation measurements.
-It first checks conservative staging demand and existing resource reserves.
-Raw/active/pending/unbound captures, including restored incomplete originals, stay
-untouched. Existing WakeWatch owns the next meaningful checkpoint.
+Packing is independently accepted: all 274 groups and 3,639 histories match,
+with 580 full pack hashes and unchanged sources/sidecars/current SQL bindings.
+The selected layout goes from 1,057,171 files to 4,219 prepared files. Prepared
+allocation is 6,768,685,056 bytes including directories. This is still staging;
+no live file-count reduction or additional net savings is claimed.
+
+One packed-normal-recovery-v1 script now verifies all prepared files through the
+existing normal Desktop-B recovery owner, then both current SQL points, five
+current/compatible binaries, the current frontend and a sealed reconstruction
+index. Every capture intent and restore receipt is durable; uncertain work is
+never replayed. The first checkpoint restored 47 files/49,865,526 bytes. WakeWatch
+owns the next completion/problem notification. No Nightly commissioning occurs.
 
 No V2 manifests or serving binaries have been activated. Guarded migration,
 compatible live readers/real recovery, ordinary live qualification, safe loose
@@ -70,4 +76,4 @@ Full historical archive: [STATE history](STATE_HISTORY_20261017.md).
 Optimized read checkpoint now passed: all five histories/three samples match at
 full EOF; summed medians3.877s loose versus3.769s packed(about2.8% faster, warm
 cache only). Large live/UI speedups are not demonstrated. Main build completed;
-compatible pair builds passed; fresh current-data/real recovery qualification remains.
+compatible pair builds and current-data rehearsal passed; real packed recovery is running.

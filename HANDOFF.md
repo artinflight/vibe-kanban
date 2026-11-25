@@ -65,21 +65,29 @@ All recovered replies retain notices and original_capture_complete=false. Payloa
 allocation16,752,640B,parent delta4,096B,private SSD copies16,752,640B; account at end.
 Original failure receipts retained, no re-publication or cleanup. Cause unresolved.
 
-ONE current job:vk-dedup-packed-production-preparation-v1.service,PID357504,
-invocation5dbdd186e3774a3a8b0013b5cb115995; same operation. Evidence folder
-packed-production-preparation-v1. Three stages: eligible V1selection/capacity;
-per-session16MiBpacked copies with actual production-reader fullEOF; final source/
-sidecar preservation and file/allocation counts. Read CONFIG/STARTED/PROGRESS/
-RESULT/FAILURE,SELECTION,CAPACITY_PLAN and every GROUP receipt. No live mutation,
-retirement, reader switch, provider work or Nightly action. Never replay a partial
-preparation; preserve receipts and outputs. Raw/pending/unknown inputs preserved.
-Existing checkpoint-monitor-packed-production1 and daily maintenance hold remain.
+Packing success bdd7a069 independently accepted: all 274 groups, 3,639 source/SQL
+bindings, 580 pack hashes and actual production-reader EOF proofs reconciled.
+Selected files 1,057,171 -> 4,219 prepared files; staging allocation6,768,685,056B.
+This has not changed the live layout or realized new net savings.
 
-After success accept allgroups/every source version/actual reader EOF/staging space,
-then finish guarded idempotent forward/backward publication, compatible live readers,
-normal-B packed/currentSQL/software/frontend recovery and cutback, ordinary behavior,
-safe loose retirement and final net savings/performance including allnewstaging.
-No Nightly commissioning/deferred cleanup/new watcher/agent/goal/model polling.
+ONE current job: vk-dedup-packed-normal-recovery-v1.service, PID1391859,
+invocationecb6a2a89e33495ebab665e99333faec; same operation. Evidence folder
+packed-normal-recovery-v1. Five stages: fresh inputs; all packed files via160
+bounded normal-B captures/restores; both current SQL points; five current/compatible
+binaries/current frontend/recovery sources; sealed reconstruction index. Same
+normal B owner and leases, no new scheduler. Six-hour cap/600s progress/resource
+bounds. Inspect CONFIG/STARTED/PROGRESS/RESULT/FAILURE and every intent/capture/
+verified receipt before action. Never replay uncertain capture or SQL intent.
+First actual checkpoint restored47files/49,865,526B. Existing monitor is
+checkpoint-monitor-packed-normal-recovery1; daily maintenance hold remains.
+
+After success reconcile every checkpoint and root index. Guarded forward/backward
+packed publication is still unimplemented. Finish that, compatible live readers
+under the measured authorized serving-owner boundary, latest-data cutback and full
+current recovery, ordinary checks, safe loose retirement and final net accounting
+including new packs, SQL/build/recovery staging and B growth. Normal-B file restore
+plus equal production-reader input hashes is compositional proof; no B-mounted
+full-graph server run is claimed. No Nightly commissioning/deferred cleanup.
 
 Original operation6d4d022ab2f84d1ea72f39d6a6382d1c, catch-up
  e3787e2e49124284a1f023d061f967f7 and automatic8d866da98492464f9867137092623b20
@@ -105,4 +113,4 @@ Full historical archive: [HANDOFF history](HANDOFF_HISTORY_20261017.md).
 Optimized read checkpoint now passed: all five histories/three samples match at
 full EOF; summed medians3.877s loose versus3.769s packed(about2.8% faster, warm
 cache only). Large live/UI speedups are not demonstrated. Main build is accepted;
-compatible pair passed; actual current-data/recovery acceptance remains unfinished.
+compatible pair and current-data rehearsal passed; actual packed recovery is running.

@@ -1,6 +1,6 @@
 # Deduplication file-count repair
 
-Status: isolated format/build and all11current-data stages accepted; live original restoration accepted; offline production packing running.
+Status: isolated format/build and all11current-data stages accepted; live original restoration accepted; production packing independently accepted; normal-B recovery running.
 No packed manifests are installed live.
 The speed/file-count objective remains unfinished. Original lossless conversion
 acceptance is retained; it does not establish performance acceptance.
@@ -275,3 +275,21 @@ every packed log using the optimized production reader and records file/allocati
 counts. Sources and sidecars stay unchanged; raw/incomplete/pending/unbound captures
 are excluded. No live publication/retirement/reader cutover or normal-B acceptance
 is implied. Existing WakeWatch owns completion/problems; no model polling.
+
+
+November25 packing acceptance reconciles every selected source, sidecar and SQL
+binding, all274 group receipts,580 complete pack hashes and3,639 production-reader
+EOF results (92,399,255,974 decoded bytes). Selected physical files fall from
+1,057,171 to4,219 in the prepared copy. Its6,768,685,056 allocated bytes include
+549directories; the prior8,835,260,416 counts selected files only. Final live and
+net filesystem figures remain pending. All raw/pending/incomplete captures stay.
+
+One finite packed-normal-recovery-v1 job now uses the existing normal Desktop-B
+owner to independently restore all4,219 files, both current SQL points, five
+current/compatible binaries,1,465frontend files and recovery sources, then seals
+the complete reconstruction index. Separate immutable intents/capture/restore
+receipts prevent uncertain replay; six regressions pass. Bounded48MiB/64file
+checkpoints use RAM, preserving SSD staging and all backup epochs. It does not
+commission Nightly or publish/retire live archives. After recovery acceptance,
+guarded migration/forward publication, live reader activation, ordinary behavior
+and final staging-inclusive savings/count/performance checks remain required.

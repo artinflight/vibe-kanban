@@ -3343,3 +3343,20 @@ conservative packing staging ceiling7,966,554,493B fits14,751,617,024Bavailable
 with the existing3GiBreserve. These are preparation inputs, not realized savings.
 Eight restore regressions passed; Rust formatting passed; web formatting remains
 unavailable because Prettier is absent. Ops and diff checks pass.
+
+
+November25 — packing wake bdd7a069 accepted independently:274 groups,3,639 histories,
+580 pack hashes, source/sidecar/SQL bindings and actual production-reader receipts
+match; previous unit inactive and PID gone. Prepared files1,057,171->4,219,
+allocation6,768,685,056B incl directories. This is staging, not live/net savings.
+Added packed_recovery.py with6 meaningful scope/bounds/no-replay tests. One fresh
+packed-normal-recovery-v1 performs real normal-B file and current SQL/software/
+frontend restoration, keeping every intent/capture/proof. First checkpoint restored
+47files/49,865,526B. Existing WakeWatch rearmed, no duplicate owner/watcher or
+Nightly commissioning. Live migration/retirement and full acceptance remain open.
+Rust formatting/Ops/diff pass; web formatting unavailable (missing Prettier).
+
+Normal WakeWatch tick accepted for exact recovery PID1391859/invocationecb6a2a8:
+22batches/22attempts, no source/event errors. Four actual checkpoints restored
+71files/171,473,822B. New checkpoint tests live separately in test_packed_checkpoint.py;
+existing packed reconstruction tests are preserved unchanged.

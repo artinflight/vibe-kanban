@@ -8,8 +8,8 @@ space-only acceptance was insufficient. See [packed repair](VK_DEDUP_PACKED_LAYO
 A packed layout and actual Rust reader pass isolated integrity tests. Five real
 sample histories went7,229→8files with identical decoded bytes; optimized and
 live performance remain separate. No V2 manifests are published live. Both
-serving processes and all history, pending inputs, settings and backup epochs
-remain intact. The old mutator refuses unqualified V2 publication.
+serving processes, selected packing sources, pending inputs, settings and backup
+epochs remain preserved. The18missing historical dependencies are addressed below. The old mutator refuses unqualified V2 publication.
 
 Daily conversion is held during repair while preserving its enabled05Toronto
 calendar. A timer maintenance condition prevents host recovery from restarting
@@ -25,21 +25,31 @@ c4895660de59f1624205c1868301afaf0c1659189103230b274eb2e854330406. Fallback hash:
 c6362dd1c9b5285dec1413ba7ec0ed195369ae3f1dfaf915dfcd9ec3c482d290. The protected
 reader already has the bounded replay mechanism and its accepted artifact is reused.
 
-Five main current-data phases now pass exact reference/loose/packed/fallback/
-return comparisons and all-table/later-write preservation. Protected qualification
-found18original capture files missing from live storage; their recovery records
-remain, but the serving reader correctly refuses unverified recovered replies.
-All18preserved independent copies match the recorded original hashes (16,713,100B).
-Their disappearance is not yet explained; no live restoration has been performed.
+All11current-data rehearsal stages are now independently accepted: main loose/
+packed/fallback/return histories match; protected six native targets and18retained
+replies match with verified original dependencies; all original tables/later writes,
+pagination/settings/review/queues/frontend pass; three corrupt packs are rejected.
+This qualifies reader behavior in isolation, not live deployment or full acceptance.
 
-One current-data-originals-v1 script tests those exact originals as read-only
-private overlays, with fresh SQL copies and the same accepted reader binaries.
-All11current-data/corruption/ordinary phases must pass. Seven overlay regressions
-pass. Only the previously proven two-diagnostic order exception is allowed;
-every other content/order/metadata remains strict. WakeWatch owns the next wake.
-After qualification, restore only absent exact dependencies without overwrite,
-then verify serving history. Live packing/deployment/recovery and final accounting
-remain unfinished; pending inputs, settings and all backup epochs are preserved.
+All18missing original capture dependencies are now restored byte-for-byte.
+Independent acceptance verified18restored inodes and36normal protected/public
+replies, with recovery notices and incomplete-original status preserved. Both
+current SQL target bindings, settings, sidecars, serving identities and backups
+remain intact. Restoration added16,752,640allocated payload bytes and4,096observed
+parent-directory bytes; private SSD copies add16,752,640Bto staging. The script's
+final memory-pressure refusal was reconciled through fresh read-only acceptance;
+no restore was replayed. Why the originals disappeared remains unresolved.
+
+One packed-production-preparation-v1 script now prepares eligible closed V1
+archives into per-session packs on the SSD, with unchanged source versions,
+actual production-reader full-EOF hashes and staged file/allocation measurements.
+It first checks conservative staging demand and existing resource reserves.
+Raw/active/pending/unbound captures, including restored incomplete originals, stay
+untouched. Existing WakeWatch owns the next meaningful checkpoint.
+
+No V2 manifests or serving binaries have been activated. Guarded migration,
+compatible live readers/real recovery, ordinary live qualification, safe loose
+retirement and final space/file-count/performance acceptance remain unfinished.
 
 
 Previously measured net reduction73,893,642,640bytes(68.82GiB) includes prior

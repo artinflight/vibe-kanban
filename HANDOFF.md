@@ -51,20 +51,35 @@ remain. Direct serving API also refuses them. Exact hash-matching saved original
 exist (16,713,100bytes); disappearance cause is unknown. See
 CURRENT_DATA_REPAIRED_V2_FAILURE_RECONCILED and protected-originals-diagnosis-v1.
 
-One job:vk-dedup-packed-current-data-originals-v1.service,PID4138484,
-invocation18b552f9900f48a29e7b875c999d81cd, same operation6cfd3d05308b431aa7e3a9a51d60b131.
-Evidence current-data-originals-v1; CONFIG/STARTED/PROGRESS/RESULT/FAILURE/unit first.
-All11phases use fresh SQL/reused packs/same readers plus READ-ONLY private mounts
-of all18verified originals. No live files restored. Seven mount-plan regressions
-pass; existing files/symlinks/escapes fail, neighbours/records/packs preserved.
-Do not restore live destinations while this script runs; its guard requires absence.
-Existing checkpoint-monitor-current-data-originals1 owns next wake; daily hold stays.
-After actual success accept all18replies and all-phase evidence, then restore only
-those exact absent files under fresh ownership/pin checks, without overwrite, and
-verify serving/public history. Do not relax capture checks or omit retained targets.
-Investigate disappearance evidence; preserve every backup and unrelated owner.
-Then finish guarded packed migration, compatible deployment, real B recovery,
-ordinary qualification, retirement and full net staging/growth accounting.
+Successa6495901 independently accepted: CURRENT_DATA_ORIGINALS_ACCEPTED verifies
+all11stages; five main transitions, protected6+18replies, exact pages/pagination,
+settings/review/queues/frontend, original tables and later writes,3corruption
+refusals, terminal/PIDgone and every input/live identity. Isolated proof only.
+
+Both original restore attempts are terminal; never replay. Initial source0664
+refusal published nothing. Recovery1 restored all18files and passed36normal
+protected/public reply checks, then failed only on final resource PSI .18>.10.
+LIVE_ORIGINAL_RESTORE_ACCEPTED independently revalidated all18bytes/inodes/sidecars,
+source copies, SQL targets/settings/live owners and36API receipts with fresh PSI .01.
+All recovered replies retain notices and original_capture_complete=false. Payload
+allocation16,752,640B,parent delta4,096B,private SSD copies16,752,640B; account at end.
+Original failure receipts retained, no re-publication or cleanup. Cause unresolved.
+
+ONE current job:vk-dedup-packed-production-preparation-v1.service,PID357504,
+invocation5dbdd186e3774a3a8b0013b5cb115995; same operation. Evidence folder
+packed-production-preparation-v1. Three stages: eligible V1selection/capacity;
+per-session16MiBpacked copies with actual production-reader fullEOF; final source/
+sidecar preservation and file/allocation counts. Read CONFIG/STARTED/PROGRESS/
+RESULT/FAILURE,SELECTION,CAPACITY_PLAN and every GROUP receipt. No live mutation,
+retirement, reader switch, provider work or Nightly action. Never replay a partial
+preparation; preserve receipts and outputs. Raw/pending/unknown inputs preserved.
+Existing checkpoint-monitor-packed-production1 and daily maintenance hold remain.
+
+After success accept allgroups/every source version/actual reader EOF/staging space,
+then finish guarded idempotent forward/backward publication, compatible live readers,
+normal-B packed/currentSQL/software/frontend recovery and cutback, ordinary behavior,
+safe loose retirement and final net savings/performance including allnewstaging.
+No Nightly commissioning/deferred cleanup/new watcher/agent/goal/model polling.
 
 Original operation6d4d022ab2f84d1ea72f39d6a6382d1c, catch-up
  e3787e2e49124284a1f023d061f967f7 and automatic8d866da98492464f9867137092623b20

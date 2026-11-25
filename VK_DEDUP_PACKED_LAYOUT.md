@@ -1,6 +1,6 @@
 # Deduplication file-count repair
 
-Status: isolated format/build tests passed; current-data rehearsal remains open.
+Status: isolated format/build and all11current-data stages accepted; live original restoration accepted; offline production packing running.
 No packed manifests are installed live.
 The speed/file-count objective remains unfinished. Original lossless conversion
 acceptance is retained; it does not establish performance acceptance.
@@ -244,3 +244,34 @@ success, restore only exact absent dependencies with create-only publication and
 fresh owner/hash checks; verify all18normal API replies before final acceptance.
 Include any restored allocation in final growth accounting. Recovery originals,
 old epochs, missing-file evidence and deferred cleanup remain untouched.
+
+
+November25 current-data acceptance: all11stages independently verified, including
+protected6native+18retained histories, compatible fallback/return, original tables,
+later writes, pagination/ordinary APIs/frontend and3corrupt-pack rejections. The
+18originals were private read-only overlays; acceptance did not restore live data.
+
+The create-only restoration ran separately as live-original-restore-recovery1.
+It held protocol1mutation locks for each exact terminal execution, preserves both
+current SQL bindings/settings/sidecars and refuses any existing destination. The
+first attempt stopped before payload creation on saved0664permissions; preserved
+copies were left untouched and18verified private0600SSD copies prepared. Additional
+staging16,752,640B. Eight targeted tests pass. Success requires18restores plus all
+36protected/public normal API reply checks with explicit incomplete-capture recovery
+notices preserved; the independent acceptance below now verifies these results.
+No new packed publication, reader cutover or full acceptance.
+
+
+Original recovery independently accepted: all18exact original files and36protected/
+public replies verified, SQL targets/settings/readers/backups preserved. The script
+finished these steps before a final nonmutating memory-pressure guard refused; a
+fresh read-only reconciliation accepted the actual result without replaying writes.
+Restored allocation16,752,640B,parent delta4,096B,private staging16,752,640B. Source
+absence cause remains unresolved. Both failed script receipts stay immutable.
+
+One packed-production-preparation-v1 script now selects eligible closed terminal
+V1archives, checks conservative SSD demand, prepares per-session packs, verifies
+every packed log using the optimized production reader and records file/allocation
+counts. Sources and sidecars stay unchanged; raw/incomplete/pending/unbound captures
+are excluded. No live publication/retirement/reader cutover or normal-B acceptance
+is implied. Existing WakeWatch owns completion/problems; no model polling.

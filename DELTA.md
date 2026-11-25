@@ -3313,3 +3313,33 @@ Validation:7overlay regressions passed; actual loose/packed mount plans preserve
 format remains blocked by missing Prettier. Normal WakeWatch tick accepted for
 the exact running recovery rehearsal,20batches/20attempts and no source/event
 errors. Script reached2/11stages; no live recovery publication or full acceptance.
+
+
+November25 — successa6495901 accepted: all11current-data stages, exact main/protected
+history,6native+18retained targets, all tables/later writes and3corruption failures
+verified. Main60/protected59original tables and8/4sentinels preserved. Live owners
+unchanged. Create-only recovery helper added with8regressions. First restoration
+stopped before payload publication on0664source permissions; one intent/no restores,
+all18destinations absent, failed job reconciled.18private0600copies preserve hashes
+and old backups (16,752,640Bstaging). One live-original-restore-recovery1 script
+restores18exact originals and verifies36normal API replies. Same WakeWatch rearmed;
+no SQL/settings/service/V2/Nightly changes. Full dedup remains unfinished.
+
+
+Same-turn recovery closure: all18originals restored and36normal replies passed.
+Recovery1 stopped only at final memory PSI .18>.10; unit terminal/PIDgone. Fresh
+read-only acceptance verified every inode/hash/source/sidecar/SQL target/API receipt
+and current owners/resources(.01). No restore replay. Added16,752,640Bpayload,
+4,096Bobserved directory growth and16,752,640Bprivate SSD staging. All backups kept.
+One packed-production-preparation-v1 now handles closed V1selection/capacity,
+per-session packs, actual reader EOF and staging measurement; same watcher rearmed.
+No live packed publication or reader cutover. Final dedup remains open.
+
+Normal WakeWatch tick independently accepted for the exact packing job: same owner,
+hook/config/source pins,21batches/21attempts, no source/event errors or pending
+incidents. Actual verified chunk progress is fresh; no synthetic tick or dispatch.
+Capacity selection covers1,057,171referenced files/8,835,260,416allocated bytes;
+conservative packing staging ceiling7,966,554,493B fits14,751,617,024Bavailable
+with the existing3GiBreserve. These are preparation inputs, not realized savings.
+Eight restore regressions passed; Rust formatting passed; web formatting remains
+unavailable because Prettier is absent. Ops and diff checks pass.

@@ -211,3 +211,19 @@ Any broadcast-loss log fails the check. All tables/later writes/settings/review/
 queues/frontend checks and3deliberate corruption rejections remain mandatory.
 No live source or reader change, Nightly commissioning or final acceptance is
 implied. Existing WakeWatch owns the next checkpoint.
+
+
+Current-data-repaired-v1 exposed only a two-entry diagnostic-order race: both
+readers return149and50entries with identical replies and no broadcast-loss logs.
+A bounded four-start diagnostic reproduces two leading startup records exchanging
+positions0/1; exact content multisets, all remaining order and metadata match.
+Both failed original hashes match those reproduced permutations. Original tables,
+later writes, snapshots and live/source identities remain verified intact.
+
+The test helper now permits only the two independently pinned entry-body hashes
+at indices0/1 for those two specific histories. Raw page hashes remain in receipts.
+Everything else remains exact, including contents, duplicates, remaining indices,
+pagination and error metadata. Eight tests reject broader changes, and all four
+real diagnostic runs validate the narrow rule. No production code or artifact
+changed. One current-data-repaired-v2 job runs the same11steps under WakeWatch;
+full current-data/recovery and dedup acceptance remain open.

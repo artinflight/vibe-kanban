@@ -36,19 +36,25 @@ SHAc4895660de59f1624205c1868301afaf0c1659189103230b274eb2e854330406; fallback
 SHAc6362dd1c9b5285dec1413ba7ec0ed195369ae3f1dfaf915dfcd9ec3c482d290.
 Older main/fallback packed binaries must not be deployed; protected is unchanged.
 
-One job:vk-dedup-packed-current-data-repaired-v1.service,PID3844407,
-invocation0f4d63349a2e47b0b5ce041276e25a81, same operation6cfd3d05308b431aa7e3a9a51d60b131.
-Fresh main/protected SQL copies; existing bounded protected reader on main loose
-histories is the reference; repaired main loose/packed/fallback/return, protected
-cases and3corruption rejections. Eleven steps, same resource/two-hour/600second
-limits and readonly real inputs. Exact replies/pages/pagination, no replay-loss
-logs, all-table/later-write/settings/queue/review/frontend checks. The strictly
-tested first-start orphan exception remains; all later phases require equality.
-Existing checkpoint-monitor-current-data-repaired1 owns the next wake. Read
-CONFIG/STARTED/PROGRESS/RESULT/FAILURE/unit first; no replay/new goal/model polling.
-No live deployment/format change or full acceptance. After verified success,
-finish guarded migration, compatible deployment, real B recovery, ordinary checks,
-retirement and net staging accounting. Daily maintenance hold remains.
+Failurea42d06f2-a84a-425f-96ac-f1156bea2339 independently reconciled; old job terminal.
+No replay loss, content difference or table/later-write mutation. Four isolated
+starts reproduce only the same leading system/error diagnostic swap at indices0/1;
+every other entry/body/order/metadata matches, and both failed hashes explained.
+CURRENT_DATA_REPAIRED_V1_FAILURE_RECONCILED and page-difference-diagnosis-v1 hold proof.
+Eight tests validate the narrowly pinned2entry/2history comparison policy; raw
+page hashes retained separately. No arbitrary sorting or relaxed content checks.
+
+One job:vk-dedup-packed-current-data-repaired-v2.service,PID3955951,
+invocationda8b0c5ce8574fae96fbffb67158c4d1, same operation6cfd3d05308b431aa7e3a9a51d60b131.
+Same accepted binaries and11steps, fresh DB copies/reused packs. Exact same-data
+reference/loose/packed/fallback/return, protected replies/pagination, all tables/
+later writes/settings/queues/review/frontend; rejects broadcast loss/corruption.
+Only strict expected initial orphan bookkeeping and proven diagnostic pair ordering
+are allowed. Existing checkpoint-monitor-current-data-repaired2 owns next wake.
+Read CONFIG/STARTED/PROGRESS/RESULT/FAILURE/unit first; never replay uncertain work.
+Same two-hour/600second/resource/namespace guards. No live changes or full acceptance.
+After success complete guarded migration, deployment, actual B recovery, ordinary
+qualification, retirement and net staging accounting. Daily hold remains.
 
 Original operation6d4d022ab2f84d1ea72f39d6a6382d1c, catch-up
  e3787e2e49124284a1f023d061f967f7 and automatic8d866da98492464f9867137092623b20

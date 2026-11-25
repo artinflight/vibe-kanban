@@ -3283,3 +3283,18 @@ forward/backward migration and final net/performance acceptance remain open.
   The lossless reference phase passed and the main candidate comparison started
   (2/11). Normal WakeWatch tick verified18batches/18attempts without errors or
   extra dispatch. Ops/diff/Rust format pass; web format still lacks Prettier.
+
+
+- Reconciled a42d06f2 once: repaired readers have identical content/replies with
+  no loss; four isolated starts prove only the exact leading diagnostic pair swaps.
+  Both original failed hashes explained; all tables/later writes/inputs preserved.
+  Added8tested narrowly pinned comparison checks retaining raw hashes and strict
+  other contents/order/pagination. One current-data-repaired-v2 runs same11steps
+  under existing WakeWatch; no new build, live changes, Nightly or cleanup.
+
+Validation:8comparison regressions passed; all4actual diagnostic captures match
+under the exact pinned pair rule. Rust formatting, Ops Playbook and diff check
+pass. Full format stops at the existing missing Prettier dependency. Normal
+WakeWatch tick verified the exact running v2 job with no source/event errors,
+19batches/19attempts and no duplicate dispatch; acceptance receipt retained.
+Six of11script stages passed at final handoff; full dedup remains unfinished.

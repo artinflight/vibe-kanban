@@ -34,6 +34,24 @@ class CheckpointTests(unittest.TestCase):
         args.update(overrides)
         return recovery.checkpoint_once(self.root, 'PACK_0', [self.row], **args)
 
+    def test_invalid_name_refuses_before_any_side_effect(self):
+        with self.assertRaisesRegex(ValueError, 'checkpoint name'):
+            recovery.checkpoint_once(
+                self.root, 'SOFTWARE_main_0', [self.row],
+                guard=lambda: self.calls.append('guard'), capture=self.capture,
+                restore=self.restore, progress=lambda *args: None)
+        self.assertEqual(self.calls, [])
+        self.assertEqual([p.name for p in self.root.iterdir()], ['source'])
+
+    def test_software_part_names_pass_preflight(self):
+        for variant in ('main', 'fallback', 'protected'):
+            for offset in (0, 16 * 1024**2, 128 * 1024**2):
+                name = f'SOFTWARE_{variant.upper()}_{offset}'
+                self.assertEqual(recovery.validate_checkpoint_name(name), name)
+        for invalid in ('lowercase', 'X' * 81, '../FILE', None):
+            with self.assertRaises(ValueError):
+                recovery.validate_checkpoint_name(invalid)
+
     def test_exact_restore_and_no_repeat(self):
         self.run_checkpoint()
         self.assertEqual(self.calls, ['capture', 'restore', 'progress'])

@@ -3392,3 +3392,19 @@ server compilation is running. No model polling or additional dispatch.
   evidence retained.311bounded transactions reuse274groups/580packs. One finite
   packed-admission-recovery1 now covers only changed software/tools/metadata and
   three actual B admission checks. Existing WakeWatch rearmed; no live changes.
+
+
+- 2026-11-25: Reconciled wake05642787 and stopped admission recovery1: all311
+  plans complete, shared lease busy before any B connection. Recovery2 reused
+  the map and restored it through actual B, then rejected a lowercase software
+  checkpoint name before its intent. Both failures retain all evidence; zero
+  uncertain captures. Added bounded lease availability and checkpoint-name
+  preflight;4lock+8checkpoint tests pass. One finite recovery3 reopens the
+  accepted map without recapture and continues only changed-artifact recovery.
+  Existing WakeWatch rearmed to PID3805715/invocation99685132202240d8b271d0678e505148.
+  No live history/readers/settings or Nightly/deferred cleanup changes.
+
+Recovery3 ordinary WakeWatch tick accepted:26batches/26attempts, no source/event
+errors, actual current job running. Map read plus four16MiB software-part restores
+verified76,784,940bytes across5files; no live history change. Required Rust format
+passes; web formatting remains unavailable because Prettier is missing.

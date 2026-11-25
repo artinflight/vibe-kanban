@@ -50,11 +50,17 @@ def write_new(path, value):
         os.close(directory)
 
 
+def validate_checkpoint_name(name):
+    """Validate planned names before opening a remote recovery context."""
+    if not isinstance(name, str) or not re.fullmatch(r'[A-Z][A-Z0-9_-]{0,79}', name):
+        raise ValueError('Exact bounded checkpoint name required')
+    return name
+
+
 def checkpoint_once(folder, name, rows, *, guard, capture, restore, progress):
     """Persist intent, capture and restore separately; never replay uncertain work."""
     folder = Path(folder)
-    if not re.fullmatch(r'[A-Z][A-Z0-9_-]{0,79}', name):
-        raise ValueError('Exact bounded checkpoint name required')
+    validate_checkpoint_name(name)
     if len(list(batches(rows))) != 1:
         raise ValueError('Exactly one bounded checkpoint required')
     paths = [folder / (name + suffix + '.private.json')

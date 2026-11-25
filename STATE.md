@@ -38,13 +38,22 @@ bytes with good local copies, owner loss and foreign file/metadata refusal.
 Prepared session groups are split into311transactions within64files/2GiB each;
 shared packs and all old backup epochs remain unchanged.
 
-One finite `packed-admission-recovery1` job is running. It checks all311plans,
-backs up only metadata/tools and330,824,784bytes of changed reader software,
-and exercises actual existing-B admission for three production groups. Its512MiB
-new-control-input ceiling does not authorize recapturing unchanged6.77GB packs.
-The prior v1 stopped during read-only planning before any B capture or mutation;
-its exact terminal unit, inputs and live owners are reconciled and preserved.
-Existing WakeWatch owns the next event; no extra watcher/goal/agent/polling loop.
+The completed311-plan mapping is preserved and freshly revalidated against all
+3,639original files/metadata/sidecars, both SQL owners and4,219unchanged prepared
+members. Recovery1 stopped before any B connection because the shared lease was
+busy. Recovery2 restored the9,676,076-byte map through actual normal B, then
+rejected a lowercase software checkpoint name before any software capture.
+Both exact terminal jobs and all receipts are independently reconciled; there
+are no uncertain captures. Live history/readers remain unchanged.
+
+One finite `packed-admission-recovery3` is running. It reopens the accepted map
+checkpoint read-only, protects only new reader software/tools, checks three
+actual B admission groups, and seals the index. It never recaptures the map or
+unchanged6.77GB packed data. A five-minute lease-availability preflight preserves
+other owners; the original recovery context is still attempted only once.
+Every generated checkpoint name is checked before the connection opens. Twelve
+focused tests pass for lease ownership and checkpoint bounds/no-replay/names.
+Existing WakeWatch owns its next event; no extra watcher/goal/agent/polling loop.
 
 Daily conversion remains held with its saved enabled05Toronto calendar preserved.
 Still required: accept current recovery, finish finite migration/forward controller

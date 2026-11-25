@@ -25,19 +25,36 @@ its terminal unit/inputs/absence of capture intents. Thirteen of274session group
 exceed64files or2GiB; split_group now yields311bounded transactions without
 repacking or creating duplicate data. Single files remain below325MB.
 
-ONE job:packed-admission-recovery1; operation6cfd3d05308b431aa7e3a9a51d60b131;
-unit vk-dedup-packed-admission-recovery1.service; PID3548126;
-invocation75ced432971643acb30250acf3ffc862; config SHA
-40b56dda44a06af7127de8aa3741e0e9f16e1e9c58b6ac70e1aa27e6e84748a7.
+Wake05642787-123e-4805-bc3f-1b06f6580e59: recovery1 completed all311plans then
+failed before remote connection on a busy shared lease. Its frozen map is reused.
+PACKED_ADMISSION_RECOVERY1_FAILURE_RECONCILED preserves exact terminal identity,
+all source seals/live owners and zero B captures. Four real-lock tests pass;
+lease_preflight waits at most300seconds for availability without changing the
+inode/owner. The original context constructor still acquires its own lease ONCE.
+
+Recovery2 passed fresh mapping validation and actual B restore of9,676,076bytes,
+then lowercase SOFTWARE_main_0 failed name validation before software intent.
+PACKED_ADMISSION_RECOVERY2_FAILURE_RECONCILED accepts the one complete map
+intent/capture/restore triple, zero uncertain/other captures, terminal/empty unit
+and unchanged live owners. Preserve/reuse this map checkpoint; never recapture.
+Checkpoint names now preflight before B context; eight checkpoint tests pass.
+
+ONE job:packed-admission-recovery3; operation6cfd3d05308b431aa7e3a9a51d60b131;
+unit vk-dedup-packed-admission-recovery3.service; PID3805715;
+invocation99685132202240d8b271d0678e505148; config SHA
+c5354a250218ba14042593e38734c193d32138a6e961bf05485d18c7cdc22ab3.
 Read exact STARTED/PROGRESS/RESULT/FAILURE, every intent/capture/verified receipt,
-PUBLICATION_MAPPING, ADMISSION_PROOFS, RECOVERY_INDEX and VALIDATION before action.
-Five stages check311plans/3,639files, restore the metadata/sidecar mapping, protect
-three new reader binaries/tools, reopen three production groups through actual B,
-and seal the index. Cap512MiB new control input; shared4,219packed-file B proof is
-reused. No SQL recapture, source mutation, publication, retirement or commissioning.
+MAPPING_REUSE_VERIFIED/CAPTURE_PREFLIGHT/LEASE_PREFLIGHT/MAPPING_REOPENED,
+ADMISSION_PROOFS, RECOVERY_INDEX and VALIDATION before action.
+Mapping source remains recovery1/PUBLICATION_MAPPING; its accepted B checkpoint
+is recovery2/PUBLICATION_MAPPING_VERIFIED. These are deliberately reused refs.
+Five stages validate retained map/current inputs, reopen actual B map, protect
+three new binaries/tools, reopen three actual B production groups and seal index.
+Cap512MiB new control input; no old packed data/SQL recapture or live mutation.
 High4G/Max5G/Swap0/CPU100/Nice15/Tasks160,2h cap,600s verified-progress watchdog.
-Existing checkpoint-monitor-packed-admission1 points to this exact job using the
+Existing checkpoint-monitor-packed-admission3 points to this exact job using the
 same resource-guard hook, owner, incident ledger and activation settings.
+End the model turn while healthy scripted work runs; no polling/continuation loop.
 
 After success independently accept it, finish the finite migration/forward
 controller and concrete measured serving-owner activation/fallback package. Reuse

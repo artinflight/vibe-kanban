@@ -358,3 +358,19 @@ admission for three production groups, and seals a recovery index. New-control
 input ceiling512MiB; unchanged4,219packed files retain their existing proof.
 No current-SQL recapture or Nightly commissioning is performed in this stage.
 Final controller/activation/live qualification/accounting remain open.
+
+
+November25 admission recovery: the311-plan mapping is retained, with fresh
+original-byte/metadata/sidecar/SQL checks and unchanged prepared-file versions.
+The first stopped attempt held no remote backup context. The next restored the
+map through actual normal B, then hit a lowercase software-checkpoint naming bug
+before any software capture. Both failures are reconciled with zero uncertain
+captures. The map checkpoint is reused read-only; no repeated data packing/backup.
+
+A bounded five-minute availability check now precedes the single authoritative
+backup lease acquisition. It preserves competing owners and refuses inode changes;
+it never retries a recovery context or capture. Checkpoint names are validated
+before opening that context. Four real-lock tests and eight checkpoint tests pass.
+The single recovery3 job protects only new reader artifacts/tools and completes
+actual B admission proof; existing WakeWatch handles its result. Live migration,
+forward activation and final acceptance remain open.

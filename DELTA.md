@@ -3456,3 +3456,28 @@ Daily rehearsal ordinary WakeWatch tick accepted for PID311927/invocation
 037e7a0964ed4ee7b767ae5d4676ad9c:27batches/27attempts, no source/event errors.
 Live resource bounds verified4G high/5G max/swap0/CPU100/Nice15/Tasks160. Fresh SQL
 and initial ordinary API checks passed; healthy isolated work continues.
+
+
+November25 daily rehearsal accepted against exact receipts and current live owners:
+four stages/three API phases,60original tables/four later writes, three converted
+raw histories, both EOF probes, monitoring verification and a second idle run.
+All16fixture checkpoints/70files/54,263,636bytes reconcile. Old unit empty/PIDgone;
+no actual B claim for these fixtures and no live file-count/net-saving claim.
+
+Prepared one finite paired-switch rehearsal with release-matched tiny guard build,
+fresh private SQL, actual systemd/capacity handover, backup refusal, normal-B SQL
+restore and rejected-candidate latest-data fallback. Reviewed namespace path
+preflight caught a read-only mount-target error before dispatch; no job was replayed.
+Private ledger/loopback route are explicitly distinguished from production.
+Source seals, per-SQL durable receipts, bounded resources/termination cleanup and
+exact private owners apply. Existing WakeWatch rearmed to the single unit,
+PID611948/invocation33d81f5d0aed42e6b8de193d80805c61. Live owners, daily hold,
+Nightly commissioning and deferred cleanup remain unchanged. Full dedup remains
+open: actual activation/live conversion/current recovery/ordinary checks and final
+allocation/filesystem/count/performance accounting including staging/B growth.
+
+Paired-switch normal WakeWatch tick accepted:28batches/28attempts, no source or
+event errors; exact running PID/invocation/resource bounds verified. The matched
+guard build and private backup-refusal recovery passed; actual B SQL restoration
+is running. Required Rust format passes; web formatting remains unavailable
+because Prettier is missing. Ops Playbook and whitespace checks pass.

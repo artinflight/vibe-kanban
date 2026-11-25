@@ -70,14 +70,22 @@ One normal-B context serves the run; new body catalog entries preserve earlier
 selectors. Batches stay within one session. Measured selected-file/pack/directory
 allocation is separate from staging/whole-filesystem savings. Three new integration
 tests and7runner/9automatic regressions pass. The daily timer remains held.
-One packed-daily-rehearsal-v1 job now exercises the actual runner with fresh main
-SQL/three copied raw histories, real isolated writer/reader locks, both qualified
-EOF probes, ordinary APIs and latest-copy fallback. Fixture restoration is
-explicitly NOT Desktop B; accepted actual B recovery is reused separately.
+The actual daily runner rehearsal is independently accepted: four stages, three
+ordinary API phases,60original tables/four later writes, three raw histories and
+both reader EOF probes. Monitoring verification and the second idle run pass.
+All16fixture checkpoints/70restored files reconcile. Fixture restoration remains
+explicitly distinct from accepted actual normal-B recovery. Old unit empty/PIDgone.
+
+One packed-switch-rehearsal-v1 job now qualifies a matched capacity guard, paired
+private service activation, backup-refusal recovery and compatible fallback with
+latest private SQL. Its successful path restores both fresh detached SQL copies
+through actual normal B (384MiB total cap). It measures backup and activation
+separately, preserving production service/data/route/capacity ownership. Private
+loopback and empty capacity fixtures are not final production qualification.
 
 Daily conversion remains held with its saved enabled05Toronto calendar preserved.
-Still required: accept daily-entrypoint qualification, bind its post-activation
-configuration and measured serving-owner activation/fallback package, perform
+Still required: accept paired-switch qualification and finish the actual activation/
+fallback supervisor, bind the daily post-activation configuration, perform
 live publication/retirement and ordinary desktop/mobile/history/review/settings/
 queues/monitoring checks, and finish current recovery plus net space/count/
 performance/growth accounting including ALL staging and B growth.

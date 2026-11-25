@@ -44,17 +44,27 @@ CURRENT_DATA_REPAIRED_V1_FAILURE_RECONCILED and page-difference-diagnosis-v1 hol
 Eight tests validate the narrowly pinned2entry/2history comparison policy; raw
 page hashes retained separately. No arbitrary sorting or relaxed content checks.
 
-One job:vk-dedup-packed-current-data-repaired-v2.service,PID3955951,
-invocationda8b0c5ce8574fae96fbffb67158c4d1, same operation6cfd3d05308b431aa7e3a9a51d60b131.
-Same accepted binaries and11steps, fresh DB copies/reused packs. Exact same-data
-reference/loose/packed/fallback/return, protected replies/pagination, all tables/
-later writes/settings/queues/review/frontend; rejects broadcast loss/corruption.
-Only strict expected initial orphan bookkeeping and proven diagnostic pair ordering
-are allowed. Existing checkpoint-monitor-current-data-repaired2 owns next wake.
-Read CONFIG/STARTED/PROGRESS/RESULT/FAILURE/unit first; never replay uncertain work.
-Same two-hour/600second/resource/namespace guards. No live changes or full acceptance.
-After success complete guarded migration, deployment, actual B recovery, ordinary
-qualification, retirement and net staging accounting. Daily hold remains.
+Failurebd227f38-7601-4dd8-82d6-e31094781566 independently reconciled. Five main
+phases passed exact API/all-table/later-write checks. Protected failed at first
+retained recovery: all18original capture dependencies are missing live, records
+remain. Direct serving API also refuses them. Exact hash-matching saved originals
+exist (16,713,100bytes); disappearance cause is unknown. See
+CURRENT_DATA_REPAIRED_V2_FAILURE_RECONCILED and protected-originals-diagnosis-v1.
+
+One job:vk-dedup-packed-current-data-originals-v1.service,PID4138484,
+invocation18b552f9900f48a29e7b875c999d81cd, same operation6cfd3d05308b431aa7e3a9a51d60b131.
+Evidence current-data-originals-v1; CONFIG/STARTED/PROGRESS/RESULT/FAILURE/unit first.
+All11phases use fresh SQL/reused packs/same readers plus READ-ONLY private mounts
+of all18verified originals. No live files restored. Seven mount-plan regressions
+pass; existing files/symlinks/escapes fail, neighbours/records/packs preserved.
+Do not restore live destinations while this script runs; its guard requires absence.
+Existing checkpoint-monitor-current-data-originals1 owns next wake; daily hold stays.
+After actual success accept all18replies and all-phase evidence, then restore only
+those exact absent files under fresh ownership/pin checks, without overwrite, and
+verify serving/public history. Do not relax capture checks or omit retained targets.
+Investigate disappearance evidence; preserve every backup and unrelated owner.
+Then finish guarded packed migration, compatible deployment, real B recovery,
+ordinary qualification, retirement and full net staging/growth accounting.
 
 Original operation6d4d022ab2f84d1ea72f39d6a6382d1c, catch-up
  e3787e2e49124284a1f023d061f967f7 and automatic8d866da98492464f9867137092623b20

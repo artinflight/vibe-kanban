@@ -227,3 +227,20 @@ pagination and error metadata. Eight tests reject broader changes, and all four
 real diagnostic runs validate the narrow rule. No production code or artifact
 changed. One current-data-repaired-v2 job runs the same11steps under WakeWatch;
 full current-data/recovery and dedup acceptance remain open.
+
+
+Current-data recovery dependency checkpoint — November25: all five main reader
+transitions passed exact page/settings/table/later-write comparison. The protected
+baseline then found18original capture dependencies absent while recovered-final
+records remained. The serving reader reproduces refusal. Preserved independent
+originals match historical and sidecar hashes exactly (16,713,100B); cause of
+absence is unproven. This invalidates present retained-history acceptance.
+
+current-data-originals-v1 uses only private read-only mounts of those18originals;
+seven mount-plan tests cover neighbour preservation and refusal to shadow existing
+data or follow symlinks/escaping paths. The same11phase rehearsal and existing
+WakeWatch remain responsible. No live restore/packing/deployment yet. Following
+success, restore only exact absent dependencies with create-only publication and
+fresh owner/hash checks; verify all18normal API replies before final acceptance.
+Include any restored allocation in final growth accounting. Recovery originals,
+old epochs, missing-file evidence and deferred cleanup remain untouched.

@@ -3298,3 +3298,18 @@ pass. Full format stops at the existing missing Prettier dependency. Normal
 WakeWatch tick verified the exact running v2 job with no source/event errors,
 19batches/19attempts and no duplicate dispatch; acceptance receipt retained.
 Six of11script stages passed at final handoff; full dedup remains unfinished.
+
+
+November25 — wakebd227f38 reconciled: main five phases passed, protected retained
+history failed because18original capture files are missing live. All18saved copies
+match both reference and recovery-record hashes;16,713,100bytes, cause unproven.
+Serving API reproduces refusal. Inputs/owners/tables/sentinels preserved. No skipped
+history or relaxed validation. Added safe read-only process overlays;7tests pass.
+One current-data-originals-v1 job runs all11phases with private recovery mounts;
+existing watcher rearmed, daily conversion still held. No live restoration yet.
+
+Validation:7overlay regressions passed; actual loose/packed mount plans preserve
+1,566/2,885read-only bindings. Rust formatting, Ops and diff check pass; complete
+format remains blocked by missing Prettier. Normal WakeWatch tick accepted for
+the exact running recovery rehearsal,20batches/20attempts and no source/event
+errors. Script reached2/11stages; no live recovery publication or full acceptance.

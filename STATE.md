@@ -25,16 +25,21 @@ c4895660de59f1624205c1868301afaf0c1659189103230b274eb2e854330406. Fallback hash:
 c6362dd1c9b5285dec1413ba7ec0ed195369ae3f1dfaf915dfcd9ec3c482d290. The protected
 reader already has the bounded replay mechanism and its accepted artifact is reused.
 
-One current-data-repaired-v2 script uses fresh main/protected database copies,
-compares repaired loose/packed/fallback/return histories against the existing
-bounded protected reader, checks exact pages/pagination and all tables/later
-writes/settings/review/queues, and rejects deliberate corruption and replay loss.
-The preceding comparison found only a two-entry startup-diagnostic order race.
-Four actual runs preserve every entry and explain both failed hashes exactly.
-A tested rule permits only those two pinned diagnostic bodies at indices0/1;
-all other content/order/metadata remains strict, with raw hashes retained.
-Nothing has been deployed. Current-data, real recovery and full acceptance remain
-open; live services, source history, pending inputs and selected settings preserved.
+Five main current-data phases now pass exact reference/loose/packed/fallback/
+return comparisons and all-table/later-write preservation. Protected qualification
+found18original capture files missing from live storage; their recovery records
+remain, but the serving reader correctly refuses unverified recovered replies.
+All18preserved independent copies match the recorded original hashes (16,713,100B).
+Their disappearance is not yet explained; no live restoration has been performed.
+
+One current-data-originals-v1 script tests those exact originals as read-only
+private overlays, with fresh SQL copies and the same accepted reader binaries.
+All11current-data/corruption/ordinary phases must pass. Seven overlay regressions
+pass. Only the previously proven two-diagnostic order exception is allowed;
+every other content/order/metadata remains strict. WakeWatch owns the next wake.
+After qualification, restore only absent exact dependencies without overwrite,
+then verify serving history. Live packing/deployment/recovery and final accounting
+remain unfinished; pending inputs, settings and all backup epochs are preserved.
 
 
 Previously measured net reduction73,893,642,640bytes(68.82GiB) includes prior

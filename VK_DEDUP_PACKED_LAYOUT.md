@@ -195,3 +195,19 @@ loose/packed storage, fallback/return and protected histories. The demonstrated
 lossy old-main response cannot certify complete expected history. Never remove
 the affected history or ignore dropped-message errors to make the test pass.
 Keep all-table/later-write/settings/queue, corruption and real recovery checks.
+
+
+Replay-repair-build-v1 is independently accepted: main and fallback each pass
+10input replay,8historical output and10archive tests; sealed binaries/probes and
+full-EOF sample hashes match. Serving identities remain unchanged. Main artifact
+SHAc4895660de59f1624205c1868301afaf0c1659189103230b274eb2e854330406, fallback
+SHAc6362dd1c9b5285dec1413ba7ec0ed195369ae3f1dfaf915dfcd9ec3c482d290.
+
+Current-data-repaired-v1 now runs11finite steps against fresh main/protected DB
+copies, reusing verified pack fixtures. The existing bounded protected reader
+supplies the same-data reference for main histories; repaired loose/packed,
+fallback/return and protected cases must match exactly, including pagination.
+Any broadcast-loss log fails the check. All tables/later writes/settings/review/
+queues/frontend checks and3deliberate corruption rejections remain mandatory.
+No live source or reader change, Nightly commissioning or final acceptance is
+implied. Existing WakeWatch owns the next checkpoint.

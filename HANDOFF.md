@@ -7,9 +7,8 @@ compatible serving readers, before removing proven-unreferenced loose objects.
 
 [Design/validation/remaining work](VK_DEDUP_PACKED_LAYOUT.md). Private evidence:
 `/mnt/vk-storage/vk-log-dedup-20261103-0815/packed-object-qualification-20261124`.
-Main recovery1 is independently accepted4/4 with terminal unit/process and exact
-source/binary/probe hashes. MAIN_BUILD_ACCEPTED retains the success wake receipt.
-Main candidate SHA4a14b76bc3f0ce85c702f099e901b89fe6cc962df3221ab476845a80d3d87957.
+The original main build-only receipt remains historical. Its candidate was later
+disqualified by the replay defect; use only the repaired artifacts listed below.
 Compatibility success5b9ac81d-60f8-4344-a815-2a1825472aeb accepted once.
 COMPATIBILITY_BUILD_ACCEPTED verifies both2959-file base seals/overlays,10tests
 per variant, exact binaries/probes/build info and unchanged live identities.
@@ -30,20 +29,26 @@ Fix replay; never weaken comparison or deploy the old packed main/fallback build
 Proven protected-source-v1 differs from main base in only container.rs/msg_store.rs.
 Its bounded Codex replay/failure handling and tests are applied to the branch and
 new main/fallback overlays; scoped writer/private/native inputs remain intact.
-One script:vk-dedup-packed-replay-repair-build-v1.service,PID3051193,
-invocationf9501ac898304b1d8610f5fb986f365f, same operation6cfd3d05308b431aa7e3a9a51d60b131.
-Ten steps: replay input/output/archive tests, sealed server/probe and full EOF for
-main/fallback. Same shared target/lease and resources; two-hour/600second guards.
-Existing checkpoint-monitor-replay-repair1 owns next result/problem. Read exact
-CONFIG/STARTED/PROGRESS/RESULT/FAILURE and unit; never replay uncertain dispatch.
-No serving deployment or current-data acceptance in this build.
+Replay-build success5248d22b-de5e-421f-8aeb-5589fb4921fa independently accepted.
+REPLAY_REPAIR_BUILD_ACCEPTED proves both source seals/overlays/artifacts,28focused
+tests per reader, full-EOF samples and unchanged serving identities. Main artifact
+SHAc4895660de59f1624205c1868301afaf0c1659189103230b274eb2e854330406; fallback
+SHAc6362dd1c9b5285dec1413ba7ec0ed195369ae3f1dfaf915dfcd9ec3c482d290.
+Older main/fallback packed binaries must not be deployed; protected is unchanged.
 
-Next use bounded protected replay as a lossless reference on the same raw/loose
-fixture data, compare repaired main loose/packed/fallback/return and protected
-histories, require exact replies/pagination/table/settings/queue preservation and
-corruption rejection. Old main's lossy page is diagnostic, not canonical history.
-Guarded forward/backward migration, compatible live deployment, real B restore,
-ordinary qualification and net staging accounting still remain. Daily hold stays.
+One job:vk-dedup-packed-current-data-repaired-v1.service,PID3844407,
+invocation0f4d63349a2e47b0b5ce041276e25a81, same operation6cfd3d05308b431aa7e3a9a51d60b131.
+Fresh main/protected SQL copies; existing bounded protected reader on main loose
+histories is the reference; repaired main loose/packed/fallback/return, protected
+cases and3corruption rejections. Eleven steps, same resource/two-hour/600second
+limits and readonly real inputs. Exact replies/pages/pagination, no replay-loss
+logs, all-table/later-write/settings/queue/review/frontend checks. The strictly
+tested first-start orphan exception remains; all later phases require equality.
+Existing checkpoint-monitor-current-data-repaired1 owns the next wake. Read
+CONFIG/STARTED/PROGRESS/RESULT/FAILURE/unit first; no replay/new goal/model polling.
+No live deployment/format change or full acceptance. After verified success,
+finish guarded migration, compatible deployment, real B recovery, ordinary checks,
+retirement and net staging accounting. Daily maintenance hold remains.
 
 Original operation6d4d022ab2f84d1ea72f39d6a6382d1c, catch-up
  e3787e2e49124284a1f023d061f967f7 and automatic8d866da98492464f9867137092623b20

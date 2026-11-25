@@ -3272,3 +3272,14 @@ forward/backward migration and final net/performance acceptance remain open.
   tests/build are still running. Normal WakeWatch tick confirms17batches/17attempts
   without errors/extra dispatch. Rust format/Ops/diff pass; web format lacks
   Prettier. Full current-data/live acceptance remains open.
+
+
+- Accepted replay-repair-build-v1 success5248d22b once:28focused tests per reader,
+  full-EOF samples, both source/artifact seals and live identities verified.
+  Started one current-data-repaired-v1 rehearsal with fresh DB copies, bounded
+  protected-reader reference, exact loose/packed/fallback/return pages/pagination,
+  all tables/later writes and corruption/loss rejection. Existing WakeWatch owns
+  next checkpoint; no live deployment, Nightly activity or deferred cleanup.
+  The lossless reference phase passed and the main candidate comparison started
+  (2/11). Normal WakeWatch tick verified18batches/18attempts without errors or
+  extra dispatch. Ops/diff/Rust format pass; web format still lacks Prettier.

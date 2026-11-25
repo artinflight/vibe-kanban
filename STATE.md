@@ -3,7 +3,16 @@
 The original finite log conversion and catch-up are accepted. Full deduplication
 acceptance remains open because the first layout reduced bytes while increasing
 file count from38,791 to1,065,426. The user requires storage AND performance repair.
-Nightly commissioning and deferred workspace/archive cleanup are excluded.
+New operator scope (November25): prepare workspace archive separation, automatic
+movement on future archive actions, automatic message-triggered revival, and
+Nightly active-payload selection before the managed restart. Nightly scheduling
+remains off. Actual backend restarts belong to the external managing agent.
+[Archive integration status](VK_WORKSPACE_ARCHIVAL.md): source-only durable intent
+outbox and metadata inventory implemented; mover/revival/Nightly integration is
+unfinished. Eleven fixture tests pass. Read-only inventory:1,052 archived,
+244 active;1,016 metadata candidates, with no movement or exclusion authority.
+No live schema migration or payload movement occurred. The sealed dedup-only
+activation package does not include this new feature.
 
 All274 prepared session groups,3,639 histories and580 packs are independently
 verified. Selected files go from1,057,171 to4,219 in preparation, using

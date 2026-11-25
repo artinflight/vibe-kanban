@@ -3540,3 +3540,28 @@ checkpoints;16tests include real-ledger uncertain-delivery preservation. Same ho
 owner/session/ledger, no manual tick/new watcher. Await explicit cutover decision.
 Thirty focused tests across four suites pass. Full formatter still lacks Prettier;
 Rust format passes. Production and saved settings/inputs remain unchanged.
+
+
+## 2026-11-25 — archive lifecycle scope and durable intent
+
+Operator added workspace separation before the managed restart, automatic
+movement on future archive actions, send-triggered revival and active-payload
+Nightly selection. Nightly scheduling remains off; actual backend restarts
+belong to the external managing agent. Sealed dedup packages remain unchanged
+and are not a combined archive/revival release.
+
+Added source-only workspace_archive_requests migration: initial archived
+population and future archive/unarchive transitions share one transactional
+outbox; repeated flags are idempotent and revival invalidates old generations.
+Added read-only ownership inventory with real uppercase/tagged draft handling.
+Current SQL/native metadata:1,052 archived,244 active,1,016 metadata candidates.
+Candidate status explicitly grants no movement or backup-exclusion authority.
+No live migration, data movement, Nightly setting change or restart occurred.
+
+Eleven fixture tests pass, including transaction rollback, transition generations,
+shared/unknown ownership and pending-input protection. Ops and diff checks pass.
+Rust formatting passes; full format reaches the existing missing-Prettier error.
+No backend build, real B archive/restore, UI revival or Nightly acceptance was
+performed. Mover/catalog/revival/readers/Nightly integration remains required.
+Archive requirements and remaining acceptance are in VK_WORKSPACE_ARCHIVAL.md;
+prior STATE/STREAM/HANDOFF preserved before compacting current continuity.

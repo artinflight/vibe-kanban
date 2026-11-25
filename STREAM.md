@@ -1,19 +1,25 @@
-# Complete deduplication, including file-count and speed requirements
+# Deduplication and workspace archive separation
 
-Fix the one-file-per-piece layout while preserving exact readable history and
-all accepted recovery epochs. Prepare compatible readers and forward/backward
-packed conversion; prove real recovery and ordinary behavior before retiring
-old loose pieces. Measure file count, performance and net allocation including
-staging. [Current design and evidence](VK_DEDUP_PACKED_LAYOUT.md).
+Finish lossless packed deduplication and the newly authorized workspace archive
+lifecycle before proposing the combined managed restart. Archive actions should
+automatically move eligible workspace payloads to verified Desktop B storage;
+sending a message should revive the same workspace and preserve the input and
+selected settings. Nightly should retain active payloads plus SQL/catalog/shared
+recovery dependencies, with cold payloads separately restorable.
 
-Nightly commissioning is explicitly excluded by the user. Do not resume its
-composition/current41/bootstrap/calendar work. Preserve its existing tracking,
-pending inputs, partial cursor, imports and owners. No new goal/agent/watcher,
-uncertain replay, model polling or deferred workspace/archive cleanup.
+[Archive scope and acceptance](VK_WORKSPACE_ARCHIVAL.md).
+[Packed dedup evidence](VK_DEDUP_PACKED_LAYOUT.md).
 
-Daily dedup is held by an exact owned maintenance condition; its saved enabled
-calendar is preserved. Long work uses bounded scripts and the same WakeWatch.
-Build/test success is a checkpoint, not live migration or final acceptance.
+Existing archive flags need one migration through the same lifecycle. Preserve
+active/pinned/dirty/shared data, queued inputs, backup epochs and existing owners.
+The intent outbox is source-only; it grants no retirement or backup exclusion.
+Do not claim the mover, revival or Nightly integration is implemented.
 
-Previous scope: [before packed repair](deployment-history/20261124-before-packed-repair/STREAM.md).
+Nightly calendar activation remains excluded. Preserve its tracking and partial
+cursor; no uncertain replay or duplicate jobs/watchers/agents/model polling.
+Daily dedup remains held under its existing maintenance condition.
+Backend restarts are performed by the managing agent outside Vibe. The sealed
+dedup-only candidate remains unarmed and is not the combined archive release.
+
+[Previous scope](deployment-history/20261125-before-workspace-archival/STREAM.md).
 Full historical archive: [STREAM history](STREAM_HISTORY_20261017.md).

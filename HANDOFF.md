@@ -72,15 +72,12 @@ not public-host guarantees. Public access/new work briefly pause during the swit
 Before packing, automatic fallback uses original software with BOTH latest SQLs.
 After packing, only the qualified packed fallback is compatible; daily stays held.
 
-Existing WakeWatch now uses checkpoint-monitor-awaiting-approval1, same hook,
-owner/session/ledger/activation. Exact accepted-result hashes let its NORMAL
-observer retire only an unsubmitted success; existing queued/uncertain receipts
-and failure incidents stay intact. No manual tick or new watcher exists.
-New dedup-cutover-v1 support reads the sealed supervisor receipts directly and
-checks terminal owner/result operation/time. Sixteen observer tests pass, including
-real-ledger preservation of uncertain delivery and no repeat accepted wake.
-Its ordinary post-install observation still needs readback. The future arm.py
-binds the exact fresh STARTED PID/invocation and removes prior accepted-job fields.
+Existing WakeWatch uses checkpoint-monitor-awaiting-approval1 with the same hook,
+owner/session/ledger. Normal observations retire only accepted unsubmitted success;
+queued/uncertain receipts remain. No manual tick/new watcher. Sixteen observer tests
+cover cutover receipts and real-ledger preservation. Future arm.py binds fresh
+STARTED and removes prior acceptance fields. NORMAL_ACCEPTANCE_OBSERVED verifies its normal tick: no repeat,30batches/30attempts,
+no source/event errors.
 
 After actual activation, use its POST_ACTIVATION reader binding. The prepared
 run_publication.py publish command needs the frozen config SHA and refuses prior

@@ -70,24 +70,34 @@ bindings, 580 pack hashes and actual production-reader EOF proofs reconciled.
 Selected files 1,057,171 -> 4,219 prepared files; staging allocation6,768,685,056B.
 This has not changed the live layout or realized new net savings.
 
-ONE current job: vk-dedup-packed-normal-recovery-v1.service, PID1391859,
-invocationecb6a2a89e33495ebab665e99333faec; same operation. Evidence folder
-packed-normal-recovery-v1. Five stages: fresh inputs; all packed files via160
-bounded normal-B captures/restores; both current SQL points; five current/compatible
-binaries/current frontend/recovery sources; sealed reconstruction index. Same
-normal B owner and leases, no new scheduler. Six-hour cap/600s progress/resource
-bounds. Inspect CONFIG/STARTED/PROGRESS/RESULT/FAILURE and every intent/capture/
-verified receipt before action. Never replay uncertain capture or SQL intent.
-First actual checkpoint restored47files/49,865,526B. Existing monitor is
-checkpoint-monitor-packed-normal-recovery1; daily maintenance hold remains.
+Normal-B success734d8efa accepted in PACKED_NORMAL_RECOVERY_ACCEPTED:223 complete
+checkpoint triples,5,862actual restores/7,504,774,098B, both SQL points,5binaries,
+1,465frontend files and root index verified. Old unit empty/PIDgone. All4,219packed
+files restored with metadata. Current owners/artifacts/pointer preserved. Reuse
+these accepted packed-data proofs; do not retransmit the unchanged whole tree.
 
-After success reconcile every checkpoint and root index. Guarded forward/backward
-packed publication is still unimplemented. Finish that, compatible live readers
-under the measured authorized serving-owner boundary, latest-data cutback and full
-current recovery, ordinary checks, safe loose retirement and final net accounting
-including new packs, SQL/build/recovery staging and B growth. Normal-B file restore
-plus equal production-reader input hashes is compositional proof; no B-mounted
-full-graph server run is claimed. No Nightly commissioning/deferred cleanup.
+Real retirement gap: both Rust archive readers dropped manifest descriptors after
+parsing while reading chunks lazily. They now retain the original inode through
+reader drop and advertise executionLogArchiveReaderPinProtocol=1. Two actual Linux
+lease tests prove retirement refusal across manifest replacement, before read and
+after EOF, until drop; exact bytes preserved. All12main archive tests passed.
+
+ONE job: vk-dedup-reader-pin-build-v1.service, PID2439585,
+invocation0072da5d1db04e59ac35bc5c173937f9. Evidence reader-pin-build-v1;
+CONFIG/STARTED/PROGRESS/RESULT/FAILURE/SOURCE/COMMANDS plus per-variant ARTIFACT/READS.
+Nine serial steps for main/fallback/protected: archive tests, sealed server, real
+EOF probe. Same shared target/owned-build lease/resource bounds, two-hour cap and
+600s progress guard. Existing checkpoint-monitor-reader-pin1 owns next wake.
+No live reader change, V2 publication, loose retirement or Nightly commissioning.
+
+After success accept all3builds, add only changed artifacts to normal-B recovery,
+then implement/qualify guarded forward/backward publication and retirement. Retain
+replaced manifest inodes in journals and hold their exclusive kernel leases before
+retiring any unreferenced loose pieces; require complete pin-aware reader/consumer
+qualification plus per-object guards. Old byte-compatible builds lack that proof.
+Migration/forward publisher remain unimplemented. Then complete measured authorized
+live activation/latest-data fallback, ordinary behavior and full net/file-count/
+performance accounting including all staging and B growth. Daily hold stays.
 
 Original operation6d4d022ab2f84d1ea72f39d6a6382d1c, catch-up
  e3787e2e49124284a1f023d061f967f7 and automatic8d866da98492464f9867137092623b20
@@ -113,4 +123,4 @@ Full historical archive: [HANDOFF history](HANDOFF_HISTORY_20261017.md).
 Optimized read checkpoint now passed: all five histories/three samples match at
 full EOF; summed medians3.877s loose versus3.769s packed(about2.8% faster, warm
 cache only). Large live/UI speedups are not demonstrated. Main build is accepted;
-compatible pair and current-data rehearsal passed; actual packed recovery is running.
+compatible pair/current-data and packed recovery passed; reader-pin builds are running.

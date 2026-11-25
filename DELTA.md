@@ -3360,3 +3360,19 @@ Normal WakeWatch tick accepted for exact recovery PID1391859/invocationecb6a2a8:
 22batches/22attempts, no source/event errors. Four actual checkpoints restored
 71files/171,473,822B. New checkpoint tests live separately in test_packed_checkpoint.py;
 existing packed reconstruction tests are preserved unchanged.
+
+
+November25 — recovery wake734d8efa independently accepted:223 checkpoint triples,
+5,862normal file restorations/7,504,774,098B, two SQL points, five binaries and1,465
+frontend files plus root index verified; old unit empty/PIDgone. Existing packed
+files and live owners unchanged. Found lazy archive reader lifetime gap relevant
+to loose retirement. Both readers now keep the original manifest descriptor until
+drop and expose the pin protocol. Two real kernel-lease regressions and all12main
+archive tests pass. One nine-stage compatible build reader-pin-build-v1 runs under
+the shared build lease; existing WakeWatch rearmed. No live switch, packed manifest,
+retirement, Nightly commissioning or deferred cleanup. Full dedup remains open.
+Rust format/Ops/diff pass; web formatter unavailable because Prettier is absent.
+
+Normal WakeWatch tick accepted for the exact reader-pin build:23batches/23attempts,
+no source/event errors, same owner and hook/config pins. Main archive tests passed;
+server compilation is running. No model polling or additional dispatch.

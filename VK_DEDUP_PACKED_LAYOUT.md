@@ -1,6 +1,6 @@
 # Deduplication file-count repair
 
-Status: isolated format/build and all11current-data stages accepted; live original restoration accepted; production packing independently accepted; normal-B recovery running.
+Status: isolated format/build and all11current-data stages accepted; live original restoration accepted; production packing independently accepted; normal-B recovery independently accepted; reader lifetime protection building.
 No packed manifests are installed live.
 The speed/file-count objective remains unfinished. Original lossless conversion
 acceptance is retained; it does not establish performance acceptance.
@@ -293,3 +293,20 @@ checkpoints use RAM, preserving SSD staging and all backup epochs. It does not
 commission Nightly or publish/retire live archives. After recovery acceptance,
 guarded migration/forward publication, live reader activation, ordinary behavior
 and final staging-inclusive savings/count/performance checks remain required.
+
+
+November25 normal-B acceptance:223 checkpoint triples and the root index reconcile
+5,862real file restorations/7,504,774,098B, two consistent SQL points, five binaries
+and1,465frontend files. Every prepared packed file has an exact normal restore proof.
+No live publication or retirement has happened. Reuse unchanged packed proofs.
+
+Reader lifetime correction: parsing previously closed the original manifest before
+lazy chunks finished. Both archive readers now retain that descriptor until drop;
+Linux build-info advertises executionLogArchiveReaderPinProtocol=1. Two real kernel
+lease tests exercise a renamed/replaced manifest and verify that retirement remains
+excluded until the old reader drops, including after full EOF. All12main archive
+tests pass. Nine-step reader-pin-build-v1 builds allthree compatible variants using
+the existing shared target and WakeWatch. New artifacts still need acceptance and
+recovery coverage. Retirement must retain old manifest inodes and prove reader
+release with exclusive leases, alongside remaining-reference and object guards.
+No migration/publisher or live performance/file-count acceptance is implied.

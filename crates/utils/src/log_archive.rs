@@ -12,6 +12,9 @@ use serde::Deserialize;
 use sha2::{Digest, Sha256};
 
 pub const MAGIC: &[u8] = b"VKLOGCAS1\n";
+/// Readers retain the original manifest descriptor until their stream is dropped.
+/// Linux exclusive file leases can therefore detect even a paused lazy reader.
+pub const READER_PIN_PROTOCOL: u32 = if cfg!(target_os = "linux") { 1 } else { 0 };
 const MAX_MANIFEST: u64 = 16 * 1024 * 1024;
 const MAX_CHUNK: u64 = 256 * 1024;
 
@@ -62,6 +65,10 @@ struct ArchiveReader {
     digest: Sha256,
     remaining: u64,
     verified: bool,
+    // Keep the exact opened inode visible to retirement after atomic replacement.
+    // Object reads remain lazy; a temporary object descriptor alone is insufficient.
+    // Declared last so object descriptors close before the manifest pin.
+    _manifest: File,
 }
 
 impl Read for ArchiveReader {
@@ -131,7 +138,9 @@ pub fn open_file(path: &Path, file: File) -> io::Result<Box<dyn Read + Send>> {
     }
     input.consume(MAGIC.len());
     let mut bytes = Vec::new();
-    input.take(MAX_MANIFEST + 1).read_to_end(&mut bytes)?;
+    (&mut input)
+        .take(MAX_MANIFEST + 1)
+        .read_to_end(&mut bytes)?;
     if bytes.len() as u64 > MAX_MANIFEST {
         return Err(invalid("Log archive manifest exceeds bound"));
     }
@@ -160,6 +169,7 @@ pub fn open_file(path: &Path, file: File) -> io::Result<Box<dyn Read + Send>> {
         return Err(invalid("Log archive store must be a directory"));
     }
     Ok(Box::new(ArchiveReader {
+        _manifest: input.into_inner(),
         directory,
         chunks: manifest.chunks,
         pending: Cursor::new(Vec::new()),
@@ -171,7 +181,7 @@ pub fn open_file(path: &Path, file: File) -> io::Result<Box<dyn Read + Send>> {
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use std::io::Write;
 
     use flate2::{Compression, write::GzEncoder};
@@ -219,6 +229,48 @@ mod tests {
             bytes.push(b'\n');
         }
         bytes
+    }
+
+    #[cfg(target_os = "linux")]
+    pub(crate) fn assert_manifest_pinned_until_drop(path: &Path, expected: &[u8]) {
+        use std::os::fd::AsRawFd;
+        let mut reader = open(path).unwrap();
+        let retired = path.with_extension("retired");
+        std::fs::rename(path, &retired).unwrap();
+        std::fs::write(path, b"new unrelated capture").unwrap();
+        let lease = std::fs::OpenOptions::new()
+            .write(true)
+            .open(&retired)
+            .unwrap();
+        let try_exclusive = || unsafe {
+            // The descriptor stays owned here; no other thread manipulates it.
+            nix::libc::fcntl(lease.as_raw_fd(), nix::libc::F_SETLEASE, nix::libc::F_WRLCK)
+        };
+        assert_eq!(try_exclusive(), -1);
+        assert_eq!(io::Error::last_os_error().kind(), io::ErrorKind::WouldBlock);
+        let mut body = Vec::new();
+        reader.read_to_end(&mut body).unwrap();
+        assert_eq!(body, expected);
+        // Even after EOF, retain the pin until the consumer releases the reader.
+        assert_eq!(try_exclusive(), -1);
+        assert_eq!(io::Error::last_os_error().kind(), io::ErrorKind::WouldBlock);
+        drop(reader);
+        assert_eq!(try_exclusive(), 0);
+        assert_eq!(
+            unsafe {
+                nix::libc::fcntl(lease.as_raw_fd(), nix::libc::F_SETLEASE, nix::libc::F_UNLCK)
+            },
+            0
+        );
+        assert_eq!(std::fs::read(path).unwrap(), b"new unrelated capture");
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn loose_reader_prevents_retirement_after_manifest_replacement() {
+        let original = raw();
+        let (_root, path) = fixture(&original, 7);
+        assert_manifest_pinned_until_drop(&path, &original);
     }
 
     #[tokio::test]

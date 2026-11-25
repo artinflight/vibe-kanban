@@ -46,12 +46,17 @@ The selected layout goes from 1,057,171 files to 4,219 prepared files. Prepared
 allocation is 6,768,685,056 bytes including directories. This is still staging;
 no live file-count reduction or additional net savings is claimed.
 
-One packed-normal-recovery-v1 script now verifies all prepared files through the
-existing normal Desktop-B recovery owner, then both current SQL points, five
-current/compatible binaries, the current frontend and a sealed reconstruction
-index. Every capture intent and restore receipt is durable; uncertain work is
-never replayed. The first checkpoint restored 47 files/49,865,526 bytes. WakeWatch
-owns the next completion/problem notification. No Nightly commissioning occurs.
+Normal Desktop-B recovery is independently accepted: all223 checkpoint journals,
+5,862 actual file restores (7,504,774,098bytes), both consistent SQL points, five
+software artifacts and1,465frontend files passed reconciliation. All4,219 prepared
+packed files have exact byte/metadata restore proofs. No epoch was replaced.
+
+Retirement qualification found that archive readers released their manifest
+before finishing lazy object reads. The reader now retains that exact descriptor
+until drop, allowing kernel leases to detect an ongoing read after replacement.
+Both real lease regressions and all12main archive tests pass. One reader-pin-build-v1
+script now builds main/fallback/protected variants under the existing shared lease;
+WakeWatch owns the next event. New binaries are not yet qualified or deployed.
 
 No V2 manifests or serving binaries have been activated. Guarded migration,
 compatible live readers/real recovery, ordinary live qualification, safe loose
@@ -76,4 +81,4 @@ Full historical archive: [STATE history](STATE_HISTORY_20261017.md).
 Optimized read checkpoint now passed: all five histories/three samples match at
 full EOF; summed medians3.877s loose versus3.769s packed(about2.8% faster, warm
 cache only). Large live/UI speedups are not demonstrated. Main build completed;
-compatible pair builds and current-data rehearsal passed; real packed recovery is running.
+compatible pair/current-data and normal-B recovery passed; retirement-safe reader builds are running.

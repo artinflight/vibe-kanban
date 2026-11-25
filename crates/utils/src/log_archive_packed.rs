@@ -54,6 +54,9 @@ struct Reader {
     digest: Sha256,
     remaining: u64,
     verified: bool,
+    // Retain the original manifest inode for the entire lazy stream lifetime.
+    // Declared last so object descriptors close before the manifest pin.
+    _manifest: File,
 }
 
 impl Reader {
@@ -161,7 +164,9 @@ pub(crate) fn open_buffered(
 ) -> io::Result<Box<dyn Read + Send>> {
     input.consume(MAGIC.len());
     let mut raw = Vec::new();
-    input.take(16 * 1024 * 1024 + 1).read_to_end(&mut raw)?;
+    (&mut input)
+        .take(16 * 1024 * 1024 + 1)
+        .read_to_end(&mut raw)?;
     if raw.len() > 16 * 1024 * 1024 {
         return Err(invalid("Packed log manifest exceeds bound"));
     }
@@ -202,6 +207,7 @@ pub(crate) fn open_buffered(
     }
     let remaining = manifest.raw_bytes;
     Ok(Box::new(Reader {
+        _manifest: input.into_inner(),
         directory,
         manifest,
         remaining,
@@ -268,6 +274,14 @@ mod tests {
             data.push(b'\n');
         }
         data
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn packed_reader_prevents_retirement_after_manifest_replacement() {
+        let original = raw();
+        let (_root, path, _) = fixture(&original);
+        log_archive::tests::assert_manifest_pinned_until_drop(&path, &original);
     }
 
     #[tokio::test]

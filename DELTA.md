@@ -3507,3 +3507,26 @@ errors, exact PID/invocation and resource bounds. Initial private current-copy A
 checks passed. Rust formatting passes; web format lacks Prettier. Initial Ops
 pickup-budget failure was corrected by shortening HANDOFF and retaining detailed
 history in existing acceptance receipts/DELTA. Whitespace correction included.
+
+
+## 2026-11-25 — reconcile private pair failure and correct fixture runtime
+
+Wake edb69534: retained both transition journals; verified180 source pins,
+stopped test units, no B capture and unchanged serving identities/SQL bindings.
+Protected test startup failed with AddrInUse. A bounded diagnostic isolated two
+npm discovery children behind repeated69s waits. Added tested private port
+reservation outside the ephemeral range and offline-only fixture discovery.
+Production package and transition helper are unchanged. One corrected finite
+attempt packed-pair-package-recovery1 uses the same WakeWatch owner/session/ledger;
+no replay, new watcher, production activation or Nightly commissioning. Three
+socket regressions and six ownership/uncertainty regressions pass. All test
+staging remains accounted for; full dedup acceptance is open.
+
+Corrected private qualification accepted in this turn:13.678s switch/15.525s
+fallback, later writes preserved, all units empty. Two B triples restore93files/
+1,260,029bytes; encoded growth1,576,960bytes. Added packed_finite production wiring
+and five activation/custody/no-replay tests. Read-only sealed selection confirms
+311transactions/3,639files. One new finite package verification is bound to the
+same WakeWatch; it performs no live activation/conversion or SQL/history capture.
+Rust formatting, Ops and whitespace checks pass; full format remains blocked by
+existing missing Prettier. No push, Nightly commissioning or deferred cleanup.

@@ -87,12 +87,24 @@ A new unarmed paired-reader package passes read-only owner/configuration checks.
 It preserves both current SQL paths and refuses an unapproved worker invocation.
 The matched guard and existing settings are packaged; post-activation process/
 mount bindings will prepare the existing daily configuration without releasing
-its hold. Six transition ownership/uncertainty tests pass. One finite
-packed-pair-package-v1 now qualifies the exact shared transition helper against
-private services and restores only new package/guard controls through normal B.
+its hold. Six transition ownership/uncertainty tests pass. The first exact-engine test failed on a private port collision; both journals,
+180 source pins and complete test-unit cleanup reconcile. No B capture began and
+production stayed unchanged. A bounded diagnostic found two npm discovery
+processes behind the repeated69s helper wait. The isolated fixture now reserves
+ports outside the ephemeral range and uses offline npm discovery; three port
+regressions pass. PACKED_PAIR_PACKAGE_ACCEPTED now accepts all five corrected stages. The private
+switch13.678s and fallback15.525s preserve later writes; both test units are empty.
+Two B checkpoint triples restore93files/1,260,029bytes and add1,576,960encoded bytes.
+The source-sealed finite publication entrypoint now binds the accepted actual
+activation, existing lease and B mapping and refuses uncertain replay. Five new
+activation/custody tests pass. One finite packed-finite-package-v1 verifies the
+new source package, actual read-only production preflight and source/control B
+restore. No live packed conversion is admitted before actual paired activation.
+The failed test took151.979s for its successful first transition, so the earlier
+54.423s private result is not a current interruption promise.
 
 Daily conversion remains held with its saved enabled05Toronto calendar preserved.
-Still required: accept actual transition/package recovery qualification and finish
+Still required: accept the new finite-entrypoint package recovery and finish
 production readiness review, bind the daily post-activation configuration, perform
 live publication/retirement and ordinary desktop/mobile/history/review/settings/
 queues/monitoring checks, and finish current recovery plus net space/count/

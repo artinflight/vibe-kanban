@@ -429,3 +429,33 @@ Fixture restoration is clearly distinct from the accepted actual Desktop-B proof
 No live/timer/Nightly changes. Required Rust format passes; web formatting cannot
 run because Prettier is absent. Ops and whitespace checks pass. Full dedup remains
 open pending deployment/configuration/live conversion/final checks/accounting.
+
+
+## November25 private transition test recovery
+
+Wake edb69534 stopped before package backup: the protected test reader exited
+with AddrInUse, after one successful151.979s private transition. Both service
+journals and180source pins were reconciled; both test units are empty and live
+readers/settings/SQL bindings are unchanged. The colliding socket’s exact owner
+is unknown. Test ports54765/54265 were in the32768–60999ephemeral range.
+A separate bounded copied-data diagnostic recorded two npm discovery helpers;
+the previous transition waited about69s for helpers to drain on each startup.
+The isolated runtime now reserves both ports outside that range and makes npm
+discovery offline. This changes no production settings or qualified binaries.
+Three actual socket tests and six exact-transition safeguard tests pass.
+The corrected finite job and existing watcher are recorded in HANDOFF; success
+is still only a checkpoint, not deployment or full acceptance. Both failed test
+copies and the diagnostic SQL remain in staging and must count in final
+net accounting. No deferred cleanup or Nightly commissioning was resumed.
+
+
+The corrected exact-engine qualification is independently accepted: switch13.678s,
+fallback15.525s, all later copied SQL writes preserved. Two normal-B checkpoint
+triples restore93new package files/1,260,029bytes; new encoded checkpoint growth
+is1,576,960bytes. These timings exclude final SQL backup and real public routing.
+The new packed_finite entrypoint closes production invocation wiring: actual
+accepted reader identities/protocols, B-restored exact mapping, existing converter
+lease, bounded recovery controls, all311batch journals and final recovery seal.
+Five guards cover absent activation, changed owners/lock and uncertain replay.
+A bounded script verifies its new package; no publication or daily activation
+has started. Final acceptance still needs the actual live conversion and checks.

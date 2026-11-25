@@ -1,83 +1,80 @@
 # Dedup completion — current pickup
 
-Read dedicated WakeWatch CONTEXT.md first. User excludes Nightly commissioning,
-deferred cleanup, uncertain replay, duplicate jobs/watchers/goals/agents and model
-polling. Use finite scripts and the existing watcher. No native goal is active.
+Read dedicated WakeWatch CONTEXT.md first. No native goal. User excludes Nightly
+commissioning, deferred cleanup, duplicate jobs/watchers/agents, uncertain replay
+and model polling. Run finite scripts, use the existing watcher, then end the turn.
+Preserve current data, pending inputs, settings, backup epochs and other owners.
 
-Evidence root:
+Evidence root R:
 `/mnt/vk-storage/vk-log-dedup-20261103-0815/packed-object-qualification-20261124`.
-Earlier preparation,311-plan admission, controller/forward recovery and daily
-checks are independently accepted in PACKED_ADMISSION_RECOVERY_ACCEPTED,
-PACKED_CONTROLLER_REHEARSAL_ACCEPTED, PACKED_FORWARD_NORMAL_ACCEPTED and
-PACKED_DAILY_REHEARSAL_ACCEPTED.private.json. Read these exact receipts for delayed
-wakes; never replay them or recapture retained bodies. Current STATE/DELTA record
-scope and limits. No live packed publication, retirement or daily activation yet.
+Earlier PACKED_*_ACCEPTED receipts cover prepared311plans/3,639histories,
+4,219packed files, exact reader builds, original recovery, controller/forward/daily
+rehearsals and paired latest-copy SQL/fallback. Reuse valid evidence.
+No live packed publication/retirement or daily activation yet; STATE has limits.
 
-PACKED_SWITCH_REHEARSAL_ACCEPTED accepts wake733d53e9. Five stages and
-three cases passed. Actual normal-B restoration verified306,405,376SQL bytes
-through eight durable receipts, adding98,507,803encoded bytes including controls.
-Successful private switch54.423s =33.189s BSQL +13.399s activation +other checks;
-backup refusal recovered7.975s, rejected-candidate latest-copy fallback13.014s.
-All three old units are inactive/empty, PID611948 gone; source/live pins unchanged.
-This used a private loopback route and empty private capacity ledger. It does not
-claim full public-host timing, real managed-goal handover or final SQL freshness.
+Wake edb69534 is reconciled in PACKED_PAIR_PACKAGE_FAILURE_RECONCILED.private.json.
+The protected TEST reader failed with AddrInUse; the other socket owner is unknown.
+Both journals/180source pins, empty test units, no B capture and unchanged live
+readers/SQL bindings verified. A bounded diagnostic found two npm discovery
+children behind repeated69s waits. Test ports were in the host ephemeral range.
+private_reader_runtime now reserves ports outside that range and makes fixture
+npm discovery offline. Three real-socket tests pass. No production settings changed.
 
-Prepared unarmed packed-reader-cutover-v1. Its read-only preflight passes against
-current live owners/settings; an unapproved worker invocation is refused before
-activation. No APPROVAL/ARMED/ATTEMPT or installed controls exists. Package CONFIG
-SHA0270b4ad9d0dd7991b86808978b2db8fbe9c0e32e0b66d7f1088da50d3f15e44.
-Release symlinks reuse the three sealed reader binaries with a matched514,688-byte
-guard. Capacity settings preserve the current profile. The protected launcher
-keeps its exact current SQL/bindings; no obsolete86cache sync/replacement occurs.
-Host ingress/queue/review/fence recovery is reused. Final SQL capture is after
-both readers are physically frozen. Only exact owned reader drop-ins are changed.
-Activation failure recovers original software before any packed publication,
-using both latest SQL files. After packed publication only the qualified packed
-fallback is compatible; automatic conversion must remain held under that fallback.
-The post-activation generator binds actual process/mount identities and prepares
-existing daily runner/configuration, preserving owner/state/limits/calendar.
-It neither installs that configuration nor releases the daily hold.
+PACKED_PAIR_PACKAGE_ACCEPTED accepts corrected recovery1: all5stages,
+183source pins, both journals and empty units. Switch13.678s (5.537s activation),
+fallback15.525s; later SQL writes/settings/capacity preserved. Two actual B triples
+restore93package files/1,260,029bytes, adding1,576,960encoded checkpoint bytes.
+No SQL/history/binary bulk recapture. Normal tick accepted:30batches/30attempts,
+no errors. A delayed recovery1 wake must reuse acceptance, not repeat work.
+Private loopback/empty-ledger tests exclude final SQL backup/public-host timing.
 
-New paired_reader_services helper records intent/observed owner before each
-stop/start/freeze, refuses uncertain dispatch replay and preserves foreign owners.
-Six focused ownership/residual-process/uncertainty regressions pass.
-ONE job: packed-pair-package-v1; operation6cfd3d05308b431aa7e3a9a51d60b131;
-unit vk-dedup-packed-pair-package-v1.service; PID909475;
-invocationc1f11a576e4b4d588ecd574846ef0214; CONFIG SHA
-8aaa559ed55295bbf7e83a87e61b705598933918281b4646e8528566272b4b52.
-Five stages reuse accepted guard/build evidence, copy current SQL into private
-fixtures, exercise the EXACT paired helper for candidate/fallback with later
-writes, and restore only the new package/guard controls through normal B.
-No SQL/history/binary bulk recapture. Private unit names:
-vk-dedup-private-pair-package-v1-main.service and -protected.service.
-Read CONFIG/STARTED/PROGRESS/RESULT/FAILURE, both *-SERVICES journals, CASES,
-PACKAGE_RECOVERY and every recovery/*INTENT/CAPTURE/VERIFIED, PRIVATE_OWNERS,
-VALIDATION and PRIVATE_CLEANUP. Reconcile every uncertain receipt before action.
-Current readers/settings/backups/other owners remain preserved. Parent4/5GiB,
-swap0/CPU100/Nice15/Tasks160,2h/600s limits; private services2GiB/no swap/finite
-lifetimes. Existing checkpoint-monitor-pair-package1 uses the same owner/session/
-ledger/hook/activation. No synthetic ticks, new timer, model polling or extra job.
+The paired activation package `packed-reader-cutover-v1` is unchanged and UNARMED:
+CONFIG SHA0270b4ad9d0dd7991b86808978b2db8fbe9c0e32e0b66d7f1088da50d3f15e44.
+No APPROVAL/ARMED/ATTEMPT or installed activation controls exists. Actual shared
+transition helper is qualified (six ownership/no-replay tests plus real services).
+Current SQL paths and settings remain; the protected launcher keeps its current
+SQL/bindings. Original software is fallback only BEFORE live packed publication;
+afterward use the qualified packed fallback, with automatic conversion held.
+Post-activation generator binds actual PID/mount identities and prepares existing
+daily configuration without installing it or releasing the saved daily hold.
 
-After success independently accept the exact shared transition code, private-unit
-cleanup and new-package B receipts. Review the production wrapper and recovery
-edge paths against its unchanged primitives; reconcile source pins and its real
-readiness gaps before marking the package ready. Record the accepted qualification
-as PACKED_PAIR_PACKAGE_ACCEPTED with cutover_config_sha256 and actual_pair_engine_
-qualified/package_B_recovery_verified booleans. This is not full dedup completion.
-Confirm post-activation daily binding and the source-sealed finite publication
-entrypoint; only then present a concrete measured activation proposal,
-then follow VK_BACKEND_RESTART_PROTOCOL's explicit cutover contract with a concrete
-reviewable proposal. Live migration, current recovery, ordinary desktop/mobile/
-history/review/settings/queues/monitoring and final allocation/filesystem/count/
-performance/growth accounting including ALL staging/B growth remain open.
-Preserve all inputs/settings/backup epochs/other owners and daily hold/calendar.
+packed_finite.py now wires the sealed311-batch production entrypoint: accepted
+actual paired activation/identities/protocols, exact B mapping, existing converter
+lease, bounded B controls, all batch journals and final seal. Five new activation/
+foreign-owner/lock/no-replay tests pass. Frozen read-only selection check confirms
+311transactions/3,639files. No publication dispatch exists.
 
-Rust format passes; web format lacks Prettier. Ops and whitespace checks are
-recorded in DELTA with the final turn check. No new live net-saving claim.
-[Design/evidence](VK_DEDUP_PACKED_LAYOUT.md).
-[Earlier pickup](deployment-history/20261125-before-packed-admission/HANDOFF.md).
+ONE current verification job: `packed-finite-package-v1`;
+unit `vk-dedup-packed-finite-package-v1.service`; PID1227320;
+invocation2f206de9c7d8484ca7d54c927730c687; operation6cfd3d05308b431aa7e3a9a51d60b131;
+CONFIG SHA2bef0d7bf2345c27c1ff4d78a09d9faa6011f4e92896b28f88e0f77003fd9233.
+Three stages: sealed entrypoint tests/unactivated refusal; actual read-only paired
+production preflight; reopen existing B mapping and restore ONLY new source/control
+package. No new private readers, SQL/history recapture or production activation.
+Read STARTED/PROGRESS/RESULT/FAILURE, VALIDATION, PACKAGE_RECOVERY,
+PRODUCTION_PREFLIGHT and every recovery/*INTENT/CAPTURE/VERIFIED before action.
+Parent4/5GiB,swap0/CPU100/Nice15/Tasks160,2h/600s supervision. Existing WakeWatch
+uses `checkpoint-monitor-finite-package1` with the same owner/session/ledger and
+activation. Do not manually tick it. Verify its ordinary observation independently.
+
+Next: accept this exact package's receipts/unit/source/live identities. Reconcile
+remaining wrapper edges/current settings and prepare the concrete activation/
+fallback command with explicit drain policy. Follow VK_BACKEND_RESTART_PROTOCOL's
+fresh **cut over now** contract; never manufacture approval. Earlier full private
+switch54.423s included33.189s B SQL recovery; current13.678s excludes that backup.
+Neither is a public-host outage guarantee. Required capacity live-check follows
+actual activation. Source preparation/static review is not live failure recovery.
+
+After actual activation, use its POST_ACTIVATION reader binding. The prepared
+run_publication.py publish command needs the frozen config SHA and refuses prior
+publication output; supervise one exact finite dispatch via the existing watcher.
+Preserve daily hold until forward qualification under actual readers is accepted.
+Then finish live retirement, current recovery, ordinary desktop/mobile/history/
+review/settings/queues/monitoring and final allocation/filesystem/file-count/speed/
+growth accounting including ALL retained staging and Desktop B growth. Full dedup
+is unfinished. Existing original73,893,642,640B recovery predates new staging.
+
+Rust format passes; full format lacks Prettier. Ops/diff and commit details are in
+DELTA. [Design/evidence](VK_DEDUP_PACKED_LAYOUT.md).
+[Expanded pickup](deployment-history/20261125-pair-package-accepted/HANDOFF.md).
 Full historical archive: [HANDOFF history](HANDOFF_HISTORY_20261017.md).
-
-NORMAL_TICK_ACCEPTED for pair-package1 proves an ordinary running observation,
-29batches/29attempts, no source/event errors and exact resource bounds. Current-copy
-readers passed their initial API checks; actual shared-engine qualification runs.

@@ -374,3 +374,56 @@ before opening that context. Four real-lock tests and eight checkpoint tests pas
 The single recovery3 job protects only new reader artifacts/tools and completes
 actual B admission proof; existing WakeWatch handles its result. Live migration,
 forward activation and final acceptance remain open.
+
+
+November25 recovery3 is independently accepted:25checkpoint triples/94files,
+341,068,615bytes restored,331,392,539new control bytes, three reader binaries and
+three real B admission groups. All311plans/current source and owner bindings
+reconcile. The completed map and unchanged packed data were reused, not recaptured.
+
+The finite controller now journals a frozen selection under the existing lock
+and refuses existing/failed runs. Production integration requires actual reader,
+writer and B ownership plus both exact reader-build EOF probes before retirement.
+Forward inventory checks both SQL owners and prepares raw captures directly as
+packs with session reuse; it preserves pending/active/nonterminal/unbound logs.
+Eleven new controller/forward tests and eleven admission regressions pass;
+fourteen existing publication/forward regressions also pass. Daily production
+wiring and new forward graph/map normal-B closure remain open.
+
+One narrow isolated rehearsal exercises this controller with fresh main SQL and
+three current history copies, real writer/reader protocols/kernel locks, both
+qualified EOF probes, ordinary API comparison and latest-copy fallback. It reuses
+accepted protected/corruption coverage; fixture recovery is explicitly not B.
+Live data, services, calendar and Nightly commissioning remain untouched.
+
+
+November25 controller qualification is independently accepted: four stages, three
+API phases,60original tables/four later-write sentinels and latest-copy fallback.
+Two backward+one raw-forward transaction reduce copied histories7,826files to18;
+allocation71,741,440B to54,546,432B. Both exact reader probes pass before original
+retirement; all31fixture journals reconcile. This is isolated evidence, not live
+reclamation or normal-B recovery. Original owners and inputs remain unchanged.
+
+Forward recovery now restores the prepared graph and metadata mapping through
+actual B, preserving canonical backup selectors and capturing only new bodies.
+Four tests cover body reuse, new manifests, nonbeneficial refusal and damaged
+remote data with no local fallback. One finite packed-forward-normal-v1 qualifies
+one actual closed1,577,508-byte log and a second prepared namespace to prove zero
+new body captures on reuse. Cap64MiB control input; existing WakeWatch rearmed.
+No live mutation, daily activation, Nightly commissioning or deferred cleanup.
+Production invocation/cutover/current final recovery/ordinary checks/whole staging
+and filesystem accounting remain required before full dedup acceptance.
+
+
+November25 actual forward recovery accepted:6checkpoint triples,84files/5,948,994B;
+one1,577,508-byte raw original preserved;212,719-byte graph reused with zero new
+body captures. All intents/restores/identities reconciled; unit empty/PID180142 gone.
+Added packed_incremental.Adapter using existing daily runner/lock/automatic hold/
+monitor contract. One normal-B context/run, exact-session selection and preserved
+prior catalog selectors.3new integration tests plus7runner/9automatic regressions
+pass. One isolated packed-daily-rehearsal-v1 now qualifies actual daily execution,
+both reader EOF probes, ordinary APIs and latest-copy fallback against fresh SQL.
+Fixture restoration is clearly distinct from the accepted actual Desktop-B proof.
+No live/timer/Nightly changes. Required Rust format passes; web formatting cannot
+run because Prettier is absent. Ops and whitespace checks pass. Full dedup remains
+open pending deployment/configuration/live conversion/final checks/accounting.

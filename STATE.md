@@ -25,39 +25,59 @@ Actual isolated scoped publication survives interruption and busy old readers;
 7,854copied loose objects retire safely across three sessions. This is isolated
 qualification, not live deployment or whole-objective completion.
 
-Normal Desktop-B recovery already covers all4,219packed files, both recorded SQL
-points, five earlier software artifacts and1,465frontend files:223checkpoint
-triples and5,862independent file restores are accepted. New reader artifacts and
-new migration metadata/tools need their own bounded recovery closure. Current
-SQL points must still be refreshed at the final boundary; never overwrite later data.
+Normal Desktop-B recovery covers all4,219packed files, both recorded SQL points,
+five earlier artifacts and1,465frontend files. The new reader binaries and exact
+311-plan mapping are now independently accepted too:25checkpoint triples,
+94restored files/341,068,615bytes, including21software parts. New control input
+was331,392,539bytes; the9,676,076-byte map was reopened without recapture. Three
+actual normal-B admission groups passed. All current selected originals,
+metadata/sidecars/both SQL bindings/prepared versions and live owners reconcile.
+The exact successful unit is inactive/empty; PID3805715 is gone. Do not replay it.
+Recorded SQL snapshots must still be refreshed at the final boundary.
 
-Production admission now binds the exact B-restored plan, original metadata,
-sidecars, actual reader root/database mounts, both SQL owners, scoped locks and
-fresh immutable B bodies. Eleven tests pass, including corrupt/missing remote
-bytes with good local copies, owner loss and foreign file/metadata refusal.
-Prepared session groups are split into311transactions within64files/2GiB each;
-shared packs and all old backup epochs remain unchanged.
+The finite packed controller now retains one exact selection under the existing
+converter lease, writes intent before each batch, refuses automatic replay and
+seals the completed journal. Its production adapter binds actual live readers,
+writer custody and normal B, and requires full-EOF verification through probes
+from both exact reader builds before original retirement. Reader verification
+is reused after retirement only while published manifest versions remain unchanged.
+Forward selection checks both SQL owners and preserves active/pending/unbound
+captures. It prepares raw histories directly as packs, reusing session chunks;
+no loose-object fanout is created. Production forward/daily invocation
+wiring is still unfinished. Eleven new tests, eleven admission regressions and
+fourteen existing publication/forward regressions pass.
 
-The completed311-plan mapping is preserved and freshly revalidated against all
-3,639original files/metadata/sidecars, both SQL owners and4,219unchanged prepared
-members. Recovery1 stopped before any B connection because the shared lease was
-busy. Recovery2 restored the9,676,076-byte map through actual normal B, then
-rejected a lowercase software checkpoint name before any software capture.
-Both exact terminal jobs and all receipts are independently reconciled; there
-are no uncertain captures. Live history/readers remain unchanged.
+The finite controller rehearsal is independently accepted. Two backward and one
+raw-forward transaction reduced7,826copied files/71,741,440allocated bytes to
+18files/54,546,432bytes. Three ordinary API phases preserve60original tables,
+four later-write sentinels, histories/pagination/settings/review/queues/frontend;
+only one legitimate startup orphan correction occurs. Both exact reader probes
+verify full EOF before retirement. Latest-copy fallback passes. All31fixture
+journals reconcile; their recovery is explicitly not normal Desktop B.
 
-One finite `packed-admission-recovery3` is running. It reopens the accepted map
-checkpoint read-only, protects only new reader software/tools, checks three
-actual B admission groups, and seals the index. It never recaptures the map or
-unchanged6.77GB packed data. A five-minute lease-availability preflight preserves
-other owners; the original recovery context is still attempted only once.
-Every generated checkpoint name is checked before the connection opens. Twelve
-focused tests pass for lease ownership and checkpoint bounds/no-replay/names.
-Existing WakeWatch owns its next event; no extra watcher/goal/agent/polling loop.
+The forward recovery adapter captures only new bodies and restores its mapping
+and catalog from actual Desktop B. Identical existing bodies retain their old
+selectors, with new names/metadata in the separately restored mapping. Four new
+tests cover reuse, new-body capture, nonbeneficial refusal and remote corruption
+without local fallback. Actual forward recovery is independently accepted:
+six checkpoint triples/84files/5,948,994bytes restored; one1,577,508-byte original
+remains unchanged. Its212,719-byte prepared graph was restored, then reused in
+a second namespace with zero new body captures. Exact unit empty/PID180142 gone.
+
+packed_incremental.Adapter now connects these functions to the existing daily
+runner/lock, failure hold, saved daytime window and monitoring result contract.
+One normal-B context serves the run; new body catalog entries preserve earlier
+selectors. Batches stay within one session. Measured selected-file/pack/directory
+allocation is separate from staging/whole-filesystem savings. Three new integration
+tests and7runner/9automatic regressions pass. The daily timer remains held.
+One packed-daily-rehearsal-v1 job now exercises the actual runner with fresh main
+SQL/three copied raw histories, real isolated writer/reader locks, both qualified
+EOF probes, ordinary APIs and latest-copy fallback. Fixture restoration is
+explicitly NOT Desktop B; accepted actual B recovery is reused separately.
 
 Daily conversion remains held with its saved enabled05Toronto calendar preserved.
-Still required: accept current recovery, finish finite migration/forward controller
-integration and the measured serving-owner activation/fallback package, perform
+Still required: accept daily-entrypoint qualification, bind its post-activation
+configuration and measured serving-owner activation/fallback package, perform
 live publication/retirement and ordinary desktop/mobile/history/review/settings/
 queues/monitoring checks, and finish current recovery plus net space/count/
 performance/growth accounting including ALL staging and B growth.

@@ -3408,3 +3408,51 @@ Recovery3 ordinary WakeWatch tick accepted:26batches/26attempts, no source/event
 errors, actual current job running. Map read plus four16MiB software-part restores
 verified76,784,940bytes across5files; no live history change. Required Rust format
 passes; web formatting remains unavailable because Prettier is missing.
+
+
+- 2026-11-25: Accepted wake0c3ea9f7/recovery3:25checkpoint triples,94restored
+  files/341,068,615B, all three new reader binaries, exact311plan mapping and
+  three actual B admission groups. Unit empty/PIDgone; current sources/owners
+  unchanged. Added finite no-replay packed controller, actual reader/writer/B
+  adapter and before-retirement reader-probe gate; added both-owner raw forward
+  selection/preparation with session pack reuse.11new+11admission tests pass;
+ 14existing publication/forward regressions also pass. One isolated four-stage
+  controller rehearsal runs as PID4125186/invocationdaeb785bd7904430981f4aaf151d89f2.
+  Existing WakeWatch rearmed; no live migration, schedule or Nightly action.
+
+
+November25 controller qualification is independently accepted: four stages, three
+API phases,60original tables/four later-write sentinels and latest-copy fallback.
+Two backward+one raw-forward transaction reduce copied histories7,826files to18;
+allocation71,741,440B to54,546,432B. Both exact reader probes pass before original
+retirement; all31fixture journals reconcile. This is isolated evidence, not live
+reclamation or normal-B recovery. Original owners and inputs remain unchanged.
+
+Forward recovery now restores the prepared graph and metadata mapping through
+actual B, preserving canonical backup selectors and capturing only new bodies.
+Four tests cover body reuse, new manifests, nonbeneficial refusal and damaged
+remote data with no local fallback. One finite packed-forward-normal-v1 qualifies
+one actual closed1,577,508-byte log and a second prepared namespace to prove zero
+new body captures on reuse. Cap64MiB control input; existing WakeWatch rearmed.
+No live mutation, daily activation, Nightly commissioning or deferred cleanup.
+Production invocation/cutover/current final recovery/ordinary checks/whole staging
+and filesystem accounting remain required before full dedup acceptance.
+
+
+November25 actual forward recovery accepted:6checkpoint triples,84files/5,948,994B;
+one1,577,508-byte raw original preserved;212,719-byte graph reused with zero new
+body captures. All intents/restores/identities reconciled; unit empty/PID180142 gone.
+Added packed_incremental.Adapter using existing daily runner/lock/automatic hold/
+monitor contract. One normal-B context/run, exact-session selection and preserved
+prior catalog selectors.3new integration tests plus7runner/9automatic regressions
+pass. One isolated packed-daily-rehearsal-v1 now qualifies actual daily execution,
+both reader EOF probes, ordinary APIs and latest-copy fallback against fresh SQL.
+Fixture restoration is clearly distinct from the accepted actual Desktop-B proof.
+No live/timer/Nightly changes. Required Rust format passes; web formatting cannot
+run because Prettier is absent. Ops and whitespace checks pass. Full dedup remains
+open pending deployment/configuration/live conversion/final checks/accounting.
+
+Daily rehearsal ordinary WakeWatch tick accepted for PID311927/invocation
+037e7a0964ed4ee7b767ae5d4676ad9c:27batches/27attempts, no source/event errors.
+Live resource bounds verified4G high/5G max/swap0/CPU100/Nice15/Tasks160. Fresh SQL
+and initial ordinary API checks passed; healthy isolated work continues.

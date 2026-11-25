@@ -101,7 +101,7 @@ def compile_group(reference, source_root, databases, selected_paths=None):
                 prepared=str(prepared),files=sealed_rows,packs=packs)
 
 
-def migrate_group(group, journal, readers, recovery, *, reserve_bytes, checkpoint=lambda phase,path:None):
+def migrate_group(group, journal, readers, recovery, *, reserve_bytes, checkpoint=lambda phase,path:None, verify_published=None):
     """Inert until actual new serving readers and the held B adapter qualify.
 
     No service actions or scheduling. The finite controller owns its single run
@@ -123,6 +123,8 @@ def migrate_group(group, journal, readers, recovery, *, reserve_bytes, checkpoin
         readers.check()
         for owner,database in group['databases'].items():check_bindings(database,group['source_rows'],owner)
     owners()
+    if not callable(verify_published):
+        raise logs.ArchiveError('Qualified production-reader verification required before retirement')
     pins=PinnedReaders([dict(pid=r['server_pid'],sha256=r['sha256'])for r in readers.config['readers'].values()],owners)
     main=readers.config['readers']['main']
     writer=WriterRoster([dict(pid=main['server_pid'],sha256=main['sha256'])],owners)
@@ -131,6 +133,10 @@ def migrate_group(group, journal, readers, recovery, *, reserve_bytes, checkpoin
     with fence.held():
         # Completed retirement is reconciled, never published again.
         if not (Path(journal)/'RETIRED.json').exists():batch.publish(checkpoint)
+        proof=verify_published(group,Path(journal))
+        if (proof.get('plan_sha256')!=group['plan_sha256'] or proof.get('full_EOF_verified')is not True
+                or proof.get('files')!=len(group['files'])):
+            raise logs.ArchiveError('Actual published-reader proof is incomplete; originals retained')
         result=batch.retire(checkpoint)
         owners();recovery.check()
         return result

@@ -57,6 +57,26 @@ class CheckpointCatalog:
         if set(self.rows) != set(expected):
             raise logs.ArchiveError('Packed checkpoint union is incomplete')
 
+    def add_aliases(self, aliases):
+        """Bind new prepared names to identical, already restored B bodies.
+
+        The caller must obtain these aliases and new metadata from its actual
+        B-restored mapping. Original checkpoint points/selectors stay unchanged.
+        This does not claim the old point's metadata is the new file's metadata.
+        """
+        for alias in aliases:
+            expected = alias['expected']
+            name, source = expected['path'], alias['checkpoint_source']
+            original = self.rows.get(source)
+            if (name in self.rows or original is None
+                    or (expected['bytes'],expected['sha256']) != (
+                        original['point']['member']['bytes'],original['point']['member']['sha256'])
+                    or not Path(name).is_absolute() or Path(name).resolve(strict=True)!=Path(name)
+                    or logs.version(logs.regular(Path(name))) != expected['version']
+                    or reclaim.file_hash(Path(name))!=expected['sha256']):
+                raise logs.ArchiveError('Exact unchanged prepared alias and restored B body required')
+            self.rows[name] = dict(original, expected=expected)
+
     def members(self, sealed):
         folder = Path(sealed['prepared'])
         names = {str(folder / Path(r['path']).name): r['packed_sha256'] for r in sealed['files']}

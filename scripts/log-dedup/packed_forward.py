@@ -6,6 +6,7 @@ recovery gates. No loose-object fanout is created, including in staging.
 import gzip
 import hashlib
 import os
+import stat
 from pathlib import Path
 
 import log_dedup as logs
@@ -25,14 +26,22 @@ def prepare(plan, destination, *, reuse=(), maximum_pack_bytes=packed.DEFAULT_PA
     destination = logs.create_destination(Path(destination), parent)
     store = destination / '.log-packs'; store.mkdir(mode=0o700)
     refs, pack_paths, pending, manifests = {}, {}, {}, []
+    reuse_versions = {}
+    if reuse and not stat.S_ISDIR((parent / '.log-packs').lstat().st_mode):
+        raise logs.ArchiveError('Reuse pack directory must not be a symlink')
     for source in reuse:
         source = Path(source)
         if source.parent != parent:
             raise logs.ArchiveError('Reuse must stay in the exact session')
-        packed.verify(source)
+        before = logs.version(logs.regular(source))
         manifest = packed.load_manifest(source)
+        if logs.version(logs.regular(source)) != before:
+            raise logs.ArchiveError('Reuse manifest changed during read')
+        reuse_versions[source] = before
         for key in manifest['packs']:
+            if key in pack_paths:continue
             path = parent / '.log-packs' / (key + '.pack')
+            logs.regular(path)
             if reclaim.file_hash(path) != key:
                 raise logs.ArchiveError('Existing pack hash differs')
             pack_paths[key] = path
@@ -115,6 +124,8 @@ def prepare(plan, destination, *, reuse=(), maximum_pack_bytes=packed.DEFAULT_PA
                          chunks=[dict(refs[key], pack=indices[refs[key]['pack']]) for key in keys])
             target = destination / name
             logs.write_new(target, packed.encode(value)); packed.verify(target)
+        if any(logs.version(logs.regular(path)) != identity for path,identity in reuse_versions.items()):
+            raise logs.ArchiveError('Reuse manifest changed during preparation')
         reclaim.sync_directory(store); reclaim.sync_directory(destination)
         return dict(manifests=len(rows), packs=len(used), new_packs=serial,
                     loose_objects_created=0, source_mutations=False)

@@ -90,7 +90,8 @@ def execute(config, adapter, *, clock=time.time):
         raise ValueError('duplicate inventory path')
     if len(rows) > config['maximum_run_files'] or sum(r['bytes'] for r in rows) > config['maximum_run_bytes']:
         raise ValueError('current backlog exceeds admitted finite run; explicit review required')
-    selection = batches(rows, maximum_files=config['maximum_batch_files'], maximum_bytes=config['maximum_batch_bytes'])
+    batcher = getattr(adapter, 'batches', batches)
+    selection = batcher(rows, maximum_files=config['maximum_batch_files'], maximum_bytes=config['maximum_batch_bytes'])
     if not selection:
         state = dict(phase='idle', at=clock(), selected_files=0, converted_files=0,
                      selected_scope_resolved=True, backup_payload_bytes=0)
@@ -176,7 +177,12 @@ def main():
         module = importlib.util.module_from_spec(importlib.util.spec_from_loader('incremental_owner', loader=None))
         module.__file__ = config['adapter']['path']
         exec(compile(raw, module.__file__, 'exec'), module.__dict__)
-        print(json.dumps(execute(config, module.Adapter(config)), sort_keys=True))
+        adapter = module.Adapter(config)
+        try:
+            print(json.dumps(execute(config, adapter), sort_keys=True))
+        finally:
+            if hasattr(adapter, 'close'):
+                adapter.close()
     finally:
         os.close(fd)
 

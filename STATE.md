@@ -1,5 +1,10 @@
 # Deduplication state — November24 file-count repair
 
+November25: allthree reader-pin builds are accepted. Guarded packed publication
+and direct forward packing pass14focused tests. One12-stage isolated current-data
+rehearsal is running under existing WakeWatch. Production integration, activation
+and final acceptance remain open; see HANDOFF and the packed-layout document.
+
 The lossless original/catch-up/automatic conversions remain accepted, but the
 performance objective is open: source files grew38,791→1,065,426. The user
 explicitly requested both lower storage use and faster operation. The prior

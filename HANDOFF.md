@@ -1,5 +1,12 @@
 # Dedup file-count repair — preserve live history
 
+November25: allthree reader-pin builds accepted (36Rust tests/18EOF checks).
+Guarded packed publication, safe retirement and direct forward packing/reuse pass
+14focused tests. One12-stage `packed-transaction-rehearsal-v1` is running with
+fresh copied SQL and actual isolated-server custody. Existing WakeWatch is armed.
+Live history, owners and daily hold remain unchanged. Production integration,
+activation and final acceptance are open. Read CONTEXT for exact receipts/job ID.
+
 Read dedicated WakeWatch CONTEXT.md first. User wants dedup completion and rejects
 Nightly commissioning. The speed objective is NOT met: previous conversion made
 1,065,426files from38,791. Shared pieces must be packed, with real recovery and

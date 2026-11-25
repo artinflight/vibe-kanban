@@ -3376,3 +3376,11 @@ Rust format/Ops/diff pass; web formatter unavailable because Prettier is absent.
 Normal WakeWatch tick accepted for the exact reader-pin build:23batches/23attempts,
 no source/event errors, same owner and hook/config pins. Main archive tests passed;
 server compilation is running. No model polling or additional dispatch.
+
+- 2026-11-25: Accepted reader-pin-build-v1 against all3 source/binary seals,
+  36Rust tests and18EOF checks. Added scoped packed publisher/retirement and
+  direct forward packing/reuse;14focused tests pass. Packed transaction rehearsal
+  v1 launched once (PID3150659, invocationbb29392a50dd42a8a80e335e5182787c),
+ 12stages with fresh SQL and actual isolated-server custody. Existing WakeWatch
+  rearmed with unchanged owner/ledger. No live publication, cutover, Nightly
+  commissioning or cleanup. Final controller/recovery/qualification/accounting open.

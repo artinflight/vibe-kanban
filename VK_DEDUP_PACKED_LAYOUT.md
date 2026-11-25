@@ -1,6 +1,6 @@
 # Deduplication file-count repair
 
-Status: isolated format/build and all11current-data stages accepted; live original restoration accepted; production packing independently accepted; normal-B recovery independently accepted; reader lifetime protection building.
+Status: isolated format/build and all11current-data stages accepted; live original restoration accepted; production packing independently accepted; normal-B recovery independently accepted; reader lifetime protection accepted; packed publication rehearsal running.
 No packed manifests are installed live.
 The speed/file-count objective remains unfinished. Original lossless conversion
 acceptance is retained; it does not establish performance acceptance.
@@ -310,3 +310,30 @@ the existing shared target and WakeWatch. New artifacts still need acceptance an
 recovery coverage. Retirement must retain old manifest inodes and prove reader
 release with exclusive leases, alongside remaining-reference and object guards.
 No migration/publisher or live performance/file-count acceptance is implied.
+
+November25 reader-pin build acceptance reconciles the exact terminal unit,
+allthree binary/probe hashes,36archive tests and18actual full-EOF checks. This
+adds runtime capability proof; it does not activate the readers.
+
+`packed_publication.py` uses actual scoped writer locks and reader-process
+qualification, create-only content-addressed packs, atomic manifest replacement,
+original-inode hard links and durable replacement identities. Retirement refuses
+unreleased lazy readers, open objects, other manifest references, unexpected
+inodes/metadata and missing original pins. Durable safe-release evidence precedes
+original unlink, so an interrupted release can be reconciled without guessing.
+`packed_forward.py` prepares raw files directly into packs and reuses existing
+session chunks; neither live nor staged loose-object fanout is required.
+Fourteen focused tests cover those boundaries. The complete existing packed test
+set passed before the last two recovery tests, which also pass. Recovery/consumer
+adapters remain controller responsibilities; fixture callbacks cannot authorize
+production. No automatic timer release or live migration has occurred.
+
+The new12-stage finite rehearsal uses current SQL copies, allthree qualified
+readers and a copied-session scoped publication under the actual isolated main
+process. It deliberately interrupts publication and holds an old reader before
+retirement, then checks API history, tables and ordinary routes. Existing
+WakeWatch handles completion/problems. Its fixture recovery is not a new B proof.
+Next: independently accept the rehearsal, integrate exact normal-B proof and
+production ownership, cover only changed artifacts in B, prepare measured cutover,
+then final current recovery/ordinary qualification and net space accounting.
+Nightly commissioning and deferred cleanup remain excluded.

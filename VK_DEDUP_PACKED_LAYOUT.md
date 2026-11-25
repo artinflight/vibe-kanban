@@ -173,3 +173,25 @@ tables exactly. Eight tests reject input/history changes, missing/extra rows,
 incomplete orphan cleanup and invalid/out-of-window timestamps. One recovery
 script takes fresh DB snapshots and reuses verified pack fixtures; the existing
 WakeWatch reports results. This does not claim live deployment or full recovery.
+
+
+Current-data replay failure (November25): one1,814,677-byte history rendered109
+entries under the existing main reader and103 under the packed candidate, with
+different reply hashes. Both logs reported raw MsgStore broadcast drops. Actual
+compiled full-EOF reads of loose and packed originals have identical SHA-256;
+storage integrity passed, but display integrity did not. The previously built
+main/fallback packed binaries must not be deployed on that evidence.
+
+The existing protected reader already uses bounded Codex replay input queues.
+Slow normalization backpressures the reader; input failure cannot produce a
+successful EOF. That preserved patch and its tests are now applied to main and
+fallback, retaining all writer/native/private inputs. One serial script runs
+replay input/output and archive tests, builds/seals both artifacts and verifies
+full EOF. Protected already includes the mechanism and needs no repeat build.
+
+After build acceptance, require exact current-data API results against the bounded
+protected implementation on the same raw/loose fixtures, then repaired main on
+loose/packed storage, fallback/return and protected histories. The demonstrated
+lossy old-main response cannot certify complete expected history. Never remove
+the affected history or ignore dropped-message errors to make the test pass.
+Keep all-table/later-write/settings/queue, corruption and real recovery checks.

@@ -19,12 +19,18 @@ The main packed-reader artifact is accepted after exact success reconciliation.
 Its hash is4a14b76bc3f0ce85c702f099e901b89fe6cc962df3221ab476845a80d3d87957.
 Both compatible builds are now independently accepted: protected reader and
 V2-aware fallback retain their separate source overlays and pass10reader tests
-each. The first copied-data baseline stopped because its equality assertion
-incorrectly rejected expected orphan bookkeeping by the existing reader. Only
-two copied running records changed status/completion; all other fields/tables
-matched. One current-data-recovery1 script now permits only that exact initial
-behavior and retains strict equality afterward. It takes fresh DB copies and
-reuses verified packed fixtures. Existing WakeWatch owns its result; no deployment.
+each. Current-data qualification found a real display-replay defect: the existing
+main reader and packed candidate both drop raw broadcast messages when
+normalization falls behind. One tested history rendered109versus103entries with
+different replies despite identical decoded stored bytes. Those main/fallback
+packed artifacts are not approved for deployment.
+
+The already-preserved protected reader's bounded finite-replay mechanism is now
+applied to main/fallback sources. One replay-repair-build-v1 script runs focused
+replay/archive tests and serial builds under the existing shared target, resource
+limits and WakeWatch. Fresh current-data/real recovery qualification remains open.
+No live service, source history, pending input or selected setting was changed.
+
 
 Previously measured net reduction73,893,642,640bytes(68.82GiB) includes prior
 local/remote-file staging and concurrent growth. New qualification/build staging

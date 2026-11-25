@@ -3259,3 +3259,16 @@ forward/backward migration and final net/performance acceptance remain open.
   Recovery passed its initial main baseline and reached the packed candidate
   phase (2/10). Normal WakeWatch tick verified16batches/16attempts with no errors
   or extra dispatch. Ops/diff/Rust format pass; web format lacks Prettier.
+
+
+- Reconciled recovery1 failureceff03c2 once. Actual API lost/differed entries in
+  one history; both old/new main readers logged raw broadcast drops. Compiled
+  full-EOF loose/packed bytes match exactly. Applied the preserved protected
+  finite-replay mechanism to main/fallback without changing writer/native inputs.
+  One replay-repair-build-v1 runs10focused build/test/EOF steps under existing
+  WakeWatch/shared target/resource guards. No live deployment, Nightly or cleanup.
+  Current-data canonical reference must be bounded/lossless; no relaxed hashes.
+  The actual optimized main replay-input suite passed10/10; historical-output
+  tests/build are still running. Normal WakeWatch tick confirms17batches/17attempts
+  without errors/extra dispatch. Rust format/Ops/diff pass; web format lacks
+  Prettier. Full current-data/live acceptance remains open.

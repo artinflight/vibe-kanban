@@ -20,18 +20,30 @@ only2copied running rows to failed/completed_at, as normal isolated orphan clean
 all other rows/fields/tables and main3history/settings/review/queue/frontend passed.
 Packed-reader phases had not begun. Original failed evidence remains immutable.
 
-One current script:vk-dedup-packed-current-data-recovery1.service,PID2955698,
-invocation8d546a86a0dd446698e515d3d3f5439c, same operation6cfd3d05308b431aa7e3a9a51d60b131.
-Fresh main/protected copies reuse18verified fixture files. Strict tested audit
-allows exact expected orphan bookkeeping only on each existing reader's first
-startup; complete all-table equality on every candidate/fallback/later phase.
-Eight tests cover identity/input/history preservation and timestamp boundaries.
-Same10steps, two-hour/600second/resource guards and readonly real history mounts.
-Reconcile CONFIG/STARTED/PROGRESS/RESULT/FAILURE and unit; never replay STARTED.
-Existing checkpoint-monitor-current-data-recovery1 owns next result/problem.
-No production mutation/deployment, provider calls or automatic-conversion release.
-After success finish guarded publisher/backward migration, compatible deployment
-and actual B recovery before retirement; full ordinary/net acceptance remains.
+Recovery1 failureceff03c2-cc86-470c-8f6c-3c03c55f88fc independently reconciled.
+CURRENT_DATA_RECOVERY1_FAILURE_RECONCILED proves original source/pack/snapshot
+pins and live owners intact, unit terminal/empty. Real API difference: one history
+109versus103entries/different replies; both baseline and candidate log broadcast
+input drops. Actual compiled full-EOF hash/length are identical (1,814,677bytes).
+Fix replay; never weaken comparison or deploy the old packed main/fallback builds.
+
+Proven protected-source-v1 differs from main base in only container.rs/msg_store.rs.
+Its bounded Codex replay/failure handling and tests are applied to the branch and
+new main/fallback overlays; scoped writer/private/native inputs remain intact.
+One script:vk-dedup-packed-replay-repair-build-v1.service,PID3051193,
+invocationf9501ac898304b1d8610f5fb986f365f, same operation6cfd3d05308b431aa7e3a9a51d60b131.
+Ten steps: replay input/output/archive tests, sealed server/probe and full EOF for
+main/fallback. Same shared target/lease and resources; two-hour/600second guards.
+Existing checkpoint-monitor-replay-repair1 owns next result/problem. Read exact
+CONFIG/STARTED/PROGRESS/RESULT/FAILURE and unit; never replay uncertain dispatch.
+No serving deployment or current-data acceptance in this build.
+
+Next use bounded protected replay as a lossless reference on the same raw/loose
+fixture data, compare repaired main loose/packed/fallback/return and protected
+histories, require exact replies/pagination/table/settings/queue preservation and
+corruption rejection. Old main's lossy page is diagnostic, not canonical history.
+Guarded forward/backward migration, compatible live deployment, real B restore,
+ordinary qualification and net staging accounting still remain. Daily hold stays.
 
 Original operation6d4d022ab2f84d1ea72f39d6a6382d1c, catch-up
  e3787e2e49124284a1f023d061f967f7 and automatic8d866da98492464f9867137092623b20

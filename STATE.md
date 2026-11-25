@@ -19,9 +19,12 @@ The main packed-reader artifact is accepted after exact success reconciliation.
 Its hash is4a14b76bc3f0ce85c702f099e901b89fe6cc962df3221ab476845a80d3d87957.
 Both compatible builds are now independently accepted: protected reader and
 V2-aware fallback retain their separate source overlays and pass10reader tests
-each. One current-data-v1 script checks fresh main/protected database copies,
-actual packed-history APIs, fallback/return, all tables and later writes. Existing
-WakeWatch owns its next result. Nothing has been deployed.
+each. The first copied-data baseline stopped because its equality assertion
+incorrectly rejected expected orphan bookkeeping by the existing reader. Only
+two copied running records changed status/completion; all other fields/tables
+matched. One current-data-recovery1 script now permits only that exact initial
+behavior and retains strict equality afterward. It takes fresh DB copies and
+reuses verified packed fixtures. Existing WakeWatch owns its result; no deployment.
 
 Previously measured net reduction73,893,642,640bytes(68.82GiB) includes prior
 local/remote-file staging and concurrent growth. New qualification/build staging

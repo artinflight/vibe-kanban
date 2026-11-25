@@ -13,18 +13,25 @@ Main candidate SHA4a14b76bc3f0ce85c702f099e901b89fe6cc962df3221ab476845a80d3d879
 Compatibility success5b9ac81d-60f8-4344-a815-2a1825472aeb accepted once.
 COMPATIBILITY_BUILD_ACCEPTED verifies both2959-file base seals/overlays,10tests
 per variant, exact binaries/probes/build info and unchanged live identities.
-One current script:vk-dedup-packed-current-data-v1.service,PID2856561,
-invocation7f1bae65bdeb46e082e33d570c3c32a1,attemptcurrent-data-v1 under the same
-operation6cfd3d05308b431aa7e3a9a51d60b131. Fresh main/protected snapshots, actual
-packed history/settings/review/queue APIs, fallback/return, all-table preservation,
-later writes,6protected/18private retained replies and deliberate isolated pack
-corruption rejection. Both exact current source DBs have99migrations. Ten steps,
-two-hour cap/600-second progress guard, original resource limits, no provider calls.
-Reconcile CONFIG/STARTED/PROGRESS/RESULT/FAILURE and live unit; never replay.
-Existing watcher checkpoint-monitor-current-data1 owns the next problem/result.
-No serving reader or source history changes. Keep automatic conversion held.
-After success, review evidence and finish guarded publisher/backward migration,
-compatible live deployment and actual B recovery before loose-object retirement.
+Failureb7079ae7-dd0d-4f17-a6f5-726b7bcfc5a0 independently reconciled once.
+CURRENT_DATA_V1_FAILURE_RECONCILED proves old unit terminal/empty, source pins,
+private snapshots and serving hashes unchanged. Existing-reader baseline changed
+only2copied running rows to failed/completed_at, as normal isolated orphan cleanup;
+all other rows/fields/tables and main3history/settings/review/queue/frontend passed.
+Packed-reader phases had not begun. Original failed evidence remains immutable.
+
+One current script:vk-dedup-packed-current-data-recovery1.service,PID2955698,
+invocation8d546a86a0dd446698e515d3d3f5439c, same operation6cfd3d05308b431aa7e3a9a51d60b131.
+Fresh main/protected copies reuse18verified fixture files. Strict tested audit
+allows exact expected orphan bookkeeping only on each existing reader's first
+startup; complete all-table equality on every candidate/fallback/later phase.
+Eight tests cover identity/input/history preservation and timestamp boundaries.
+Same10steps, two-hour/600second/resource guards and readonly real history mounts.
+Reconcile CONFIG/STARTED/PROGRESS/RESULT/FAILURE and unit; never replay STARTED.
+Existing checkpoint-monitor-current-data-recovery1 owns next result/problem.
+No production mutation/deployment, provider calls or automatic-conversion release.
+After success finish guarded publisher/backward migration, compatible deployment
+and actual B recovery before retirement; full ordinary/net acceptance remains.
 
 Original operation6d4d022ab2f84d1ea72f39d6a6382d1c, catch-up
  e3787e2e49124284a1f023d061f967f7 and automatic8d866da98492464f9867137092623b20

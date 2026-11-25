@@ -1,6 +1,7 @@
 # Deduplication file-count repair
 
-Status: isolated qualification passed; no packed manifests are installed live.
+Status: isolated format/build tests passed; current-data rehearsal remains open.
+No packed manifests are installed live.
 The speed/file-count objective remains unfinished. Original lossless conversion
 acceptance is retained; it does not establish performance acceptance.
 
@@ -156,3 +157,19 @@ pack. Six closed histories are prepared on SSD; live sessions stay read-only.
 Private network/PID/manager namespaces and disabled provider command prevent live
 execution. No production migration or Desktop-B restore is implied by this test.
 The same WakeWatch hook/ledger reports its next checkpoint; no model polling.
+
+
+The first current-data rehearsal stopped in the existing-reader baseline because
+its assertion disallowed normal startup cleanup of copied running executions.
+Two rows changed only status and completion time; all identities, inputs, other
+fields/tables and baseline main APIs were preserved. This was a test error before
+packed-reader exercise. The failed evidence and snapshots remain retained.
+
+The corrected audit, `scripts/deployment/check_rehearsal_orphans.py`, permits only
+running→failed with a completion time inside the first startup interval and no
+other field change. It requires identical schemas and execution identities and
+exact equality for every other table. Every subsequent phase still compares all
+tables exactly. Eight tests reject input/history changes, missing/extra rows,
+incomplete orphan cleanup and invalid/out-of-window timestamps. One recovery
+script takes fresh DB snapshots and reuses verified pack fixtures; the existing
+WakeWatch reports results. This does not claim live deployment or full recovery.

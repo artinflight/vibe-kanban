@@ -3247,3 +3247,15 @@ forward/backward migration and final net/performance acceptance remain open.
   Normal WakeWatch tick independently accepted current-data-v1 without new
   dispatch/error (15batches/15attempts). Ops/whitespace checks and Rust formatting
   pass; full formatter stops at the existing missing Prettier dependency.
+
+
+- Reconciled current-data-v1 failure once: existing-reader baseline performed
+  expected orphan bookkeeping on2copied running rows; all other tables/fields,
+  source pins, snapshots and serving identities preserved. Added a strict initial
+  orphan audit with8passing tests; candidate/later phases retain full equality.
+  One current-data-recovery1 now takes fresh copies and reuses verified packs
+  under the same WakeWatch/limits. Failed evidence unchanged; no live deployment,
+  Nightly activity or deferred cleanup.
+  Recovery passed its initial main baseline and reached the packed candidate
+  phase (2/10). Normal WakeWatch tick verified16batches/16attempts with no errors
+  or extra dispatch. Ops/diff/Rust format pass; web format lacks Prettier.

@@ -104,6 +104,50 @@ class CheckpointTests(unittest.TestCase):
         prompt = subject.checkpoint_prompt([], {}, 'fixture', '/handoff')
         self.assertIn('explicitly excluded Nightly commissioning', prompt)
 
+    def test_exact_accepted_checkpoint_does_not_request_another_turn(self):
+        self.finish()
+        self.status.update(ActiveState='inactive',MainPID='0',InvocationID='')
+        result=self.root/'RESULT.private.json'
+        acceptance=dict(complete=True,operation=self.job['operation'],attempt=self.job['attempt'],
+            result=dict(path=str(result),sha256=hashlib.sha256(result.read_bytes()).hexdigest()))
+        digest=self.write('ACCEPTED.json',acceptance)
+        self.job['accepted_checkpoint']=dict(path=str(self.root/'ACCEPTED.json'),sha256=digest)
+        self.assertFalse(self.snapshot()['needs_attention'])
+        self.assertEqual(self.snapshot()['phase'],'script_checkpoint_already_accepted')
+        self.write('RESULT.private.json',dict(at=108,**self.job['result_fields'],changed=True))
+        self.assertEqual(self.snapshot()['state'],'failure_recovery_pending')
+
+    def cutover(self):
+        self.job.update(receipt_format='dedup-cutover-v1', total=1,
+                        result_fields=dict(complete=True,cutover_only=True,
+                                           bulk_conversion_started=False))
+        self.write('PROGRESS.private.json',dict(at=105,sequence=1,phase='current_histories_verified'))
+
+    def test_cutover_waits_for_exit_and_binds_new_result_operation(self):
+        import os
+        self.cutover()
+        self.assertFalse(self.snapshot()['needs_attention'])
+        self.write('RESULT.private.json',dict(operation=self.job['operation'],**self.job['result_fields']))
+        os.utime(self.root/'RESULT.private.json',(108,108))
+        self.assertEqual(self.snapshot()['phase'],'waiting_for_script_exit')
+        self.status.update(ActiveState='inactive',MainPID='0',InvocationID='')
+        self.assertEqual(self.snapshot()['state'],'success')
+        self.assertEqual(self.snapshot()['completed'],1)
+        self.write('RESULT.private.json',dict(operation='foreign',**self.job['result_fields']))
+        os.utime(self.root/'RESULT.private.json',(108,108))
+        self.assertEqual(self.snapshot()['state'],'failure_recovery_pending')
+
+    def test_cutover_refuses_stale_result_or_supervisor_failure(self):
+        import os
+        self.cutover()
+        self.write('RESULT.private.json',dict(operation=self.job['operation'],**self.job['result_fields']))
+        os.utime(self.root/'RESULT.private.json',(99,99))
+        self.status.update(ActiveState='inactive',MainPID='0')
+        self.assertEqual(self.snapshot()['state'],'failure_recovery_pending')
+        os.utime(self.root/'RESULT.private.json',(108,108))
+        self.write('SUPERVISOR_FAILURE.private.json',dict(reason='reconcile'))
+        self.assertEqual(self.snapshot()['state'],'failure_recovery_pending')
+
     def composition(self):
         (self.root/'CONFIG.private.json').rename(self.root/'config.private.json')
         self.job.update(receipt_format='composition-v1', total=1,
@@ -179,6 +223,22 @@ class CheckpointTests(unittest.TestCase):
         self.assertEqual(store.db.execute("SELECT status FROM batches WHERE id='uncertain'").fetchone()[0], 'unknown')
         automatic_watch.observe_with_initial(config, dedup_alerts.observe, store, registry, current, 712, 0)
         self.assertEqual(store.db.execute('SELECT count(*) FROM incidents').fetchone()[0], 2)
+        # The normal observer also closes an accepted scripted success; existing
+        # uncertain deliveries and every failure incident remain untouched.
+        self.finish()
+        self.status.update(ActiveState='inactive',MainPID='0',InvocationID='')
+        dedup_alerts.observe(store,registry,self.snapshot(713),713)
+        result=self.root/'RESULT.private.json'
+        accepted_sha=self.write('checkpoint-accepted.json',dict(complete=True,
+            operation=self.job['operation'],attempt=self.job['attempt'],
+            result=dict(path=str(result),sha256=hashlib.sha256(result.read_bytes()).hexdigest())))
+        self.job['accepted_checkpoint']=dict(path=str(self.root/'checkpoint-accepted.json'),sha256=accepted_sha)
+        config['checkpoint_jobs']=[self.job]
+        automatic_watch.observe_with_initial(config,dedup_alerts.observe,store,registry,current,714,0)
+        dedup_alerts.observe(store,registry,self.snapshot(714),714)
+        self.assertEqual(len(store.pending(store.fresh(714))),0)
+        self.assertEqual(store.db.execute('SELECT count(*) FROM incidents WHERE recovered IS NOT NULL').fetchone()[0],2)
+        self.assertEqual(store.db.execute("SELECT status FROM batches WHERE id='uncertain'").fetchone()[0],'unknown')
         # A changed acceptance cannot silently suppress an alert.
         (self.root/'acceptance.json').write_text('{}')
         with self.assertRaises(ValueError):

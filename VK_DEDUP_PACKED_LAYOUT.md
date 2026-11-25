@@ -459,3 +459,15 @@ lease, bounded recovery controls, all311batch journals and final recovery seal.
 Five guards cover absent activation, changed owners/lock and uncertain replay.
 A bounded script verifies its new package; no publication or daily activation
 has started. Final acceptance still needs the actual live conversion and checks.
+
+
+The finite source package is independently accepted: all188pins, read-only live
+preflight,2normal-B triples,87files/759,101restored bytes and1,060,864encoded growth.
+All scripted units are empty. The exact current mapping was reopened without
+recapture. The prepared one-shot activation plan remains unapproved; its launcher
+refuses absent approval before dispatch. Fresh **cut over now** is required by
+VK_BACKEND_RESTART_PROTOCOL. Allow roughly1–2minutes of held access/new work;
+private timing is not a public-host guarantee. Packed conversion and final space/
+ordinary/recovery validation follow actual activation. Latest SQL stays preserved.
+The same normal watcher can retire exact already-accepted unsubmitted successes,
+while preserving queued/uncertain receipts. New cutover-format/ledger tests pass.

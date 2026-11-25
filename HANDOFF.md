@@ -13,12 +13,9 @@ rehearsals and paired latest-copy SQL/fallback. Reuse valid evidence.
 No live packed publication/retirement or daily activation yet; STATE has limits.
 
 Wake edb69534 is reconciled in PACKED_PAIR_PACKAGE_FAILURE_RECONCILED.private.json.
-The protected TEST reader failed with AddrInUse; the other socket owner is unknown.
-Both journals/180source pins, empty test units, no B capture and unchanged live
-readers/SQL bindings verified. A bounded diagnostic found two npm discovery
-children behind repeated69s waits. Test ports were in the host ephemeral range.
-private_reader_runtime now reserves ports outside that range and makes fixture
-npm discovery offline. Three real-socket tests pass. No production settings changed.
+A TEST port collision and two npm discovery children caused the failure/delay.
+Test ports now avoid the ephemeral range; fixture npm stays offline. Three socket
+tests pass. Both failed journals/units and unchanged live owners were verified.
 
 PACKED_PAIR_PACKAGE_ACCEPTED accepts corrected recovery1: all5stages,
 183source pins, both journals and empty units. Switch13.678s (5.537s activation),
@@ -38,32 +35,52 @@ afterward use the qualified packed fallback, with automatic conversion held.
 Post-activation generator binds actual PID/mount identities and prepares existing
 daily configuration without installing it or releasing the saved daily hold.
 
-packed_finite.py now wires the sealed311-batch production entrypoint: accepted
-actual paired activation/identities/protocols, exact B mapping, existing converter
-lease, bounded B controls, all batch journals and final seal. Five new activation/
-foreign-owner/lock/no-replay tests pass. Frozen read-only selection check confirms
-311transactions/3,639files. No publication dispatch exists.
+packed_finite.py wires all311batches using actual activated reader protocols,
+B mapping, existing lease, bounded controls and journal sealing. Five activation/
+owner/lock/no-replay tests pass; no publication dispatch exists.
 
-ONE current verification job: `packed-finite-package-v1`;
-unit `vk-dedup-packed-finite-package-v1.service`; PID1227320;
-invocation2f206de9c7d8484ca7d54c927730c687; operation6cfd3d05308b431aa7e3a9a51d60b131;
-CONFIG SHA2bef0d7bf2345c27c1ff4d78a09d9faa6011f4e92896b28f88e0f77003fd9233.
-Three stages: sealed entrypoint tests/unactivated refusal; actual read-only paired
-production preflight; reopen existing B mapping and restore ONLY new source/control
-package. No new private readers, SQL/history recapture or production activation.
-Read STARTED/PROGRESS/RESULT/FAILURE, VALIDATION, PACKAGE_RECOVERY,
-PRODUCTION_PREFLIGHT and every recovery/*INTENT/CAPTURE/VERIFIED before action.
-Parent4/5GiB,swap0/CPU100/Nice15/Tasks160,2h/600s supervision. Existing WakeWatch
-uses `checkpoint-monitor-finite-package1` with the same owner/session/ledger and
-activation. Do not manually tick it. Verify its ordinary observation independently.
+PACKED_FINITE_PACKAGE_ACCEPTED independently accepts all3stages of
+packed-finite-package-v1, all188source pins and the empty successful unit.
+Two actual B triples restore87files/759,101bytes; encoded growth1,060,864bytes.
+The existing9,676,076-byte mapping was reopened without recapture. Actual
+production preflight passed: only the current root execution was active,
+durable queue0, incoming pending38preserved. No publication output exists.
+The job’s frozen CONFIG remains
+2bef0d7bf2345c27c1ff4d78a09d9faa6011f4e92896b28f88e0f77003fd9233.
+A delayed wake must reuse accepted evidence, never rerun these jobs.
 
-Next: accept this exact package's receipts/unit/source/live identities. Reconcile
-remaining wrapper edges/current settings and prepare the concrete activation/
-fallback command with explicit drain policy. Follow VK_BACKEND_RESTART_PROTOCOL's
-fresh **cut over now** contract; never manufacture approval. Earlier full private
-switch54.423s included33.189s B SQL recovery; current13.678s excludes that backup.
-Neither is a public-host outage guarantee. Required capacity live-check follows
-actual activation. Source preparation/static review is not live failure recovery.
+NO job or model continuation is running. Next required input is fresh explicit
+**cut over now** approval under VK_BACKEND_RESTART_PROTOCOL. Preparation and
+full dedup authorization do not authorize this brief production interruption.
+Reviewable one-shot launch, same-watcher rebind, exact drain policy, fallback and
+post-start capacity-check commands are prepared in
+`packed-reader-activation-v1/PLAN.private.json`, SHA
+b3eab65adf71d21eed4289b30b5709dcd2a002412b792387dff8aa92f3920369.
+Its launch.py refuses missing approval BEFORE dispatch/STARTED creation (verified).
+Do not call launch.py or fabricate APPROVAL until the user explicitly authorizes.
+Only the exact approved current root execution may drain naturally; other/new
+active work refuses admission. Retain all incoming pending records. Fresh approval
+must bind the existing cutover CONFIG, exact pair-acceptance hash and actual user
+message, with <=900second admission window. At that turn, verify live source/
+settings/queue owners again, write the real approval, execute launch.py ONCE, then
+arm.py ONCE after STARTED exists; reconcile any uncertainty instead of retrying.
+Candidate unit:vk-dedup-packed-readers-cutover-v1.service (currently not found).
+No arbitrary total cutover cutoff; existing600s no-progress/300s recovery apply.
+Allow roughly1–2minutes interruption: private full rehearsal54.423s included33.189s
+B SQL recovery, and corrected reader-switch13.678s excludes that backup. These are
+not public-host guarantees. Public access/new work briefly pause during the switch.
+Before packing, automatic fallback uses original software with BOTH latest SQLs.
+After packing, only the qualified packed fallback is compatible; daily stays held.
+
+Existing WakeWatch now uses checkpoint-monitor-awaiting-approval1, same hook,
+owner/session/ledger/activation. Exact accepted-result hashes let its NORMAL
+observer retire only an unsubmitted success; existing queued/uncertain receipts
+and failure incidents stay intact. No manual tick or new watcher exists.
+New dedup-cutover-v1 support reads the sealed supervisor receipts directly and
+checks terminal owner/result operation/time. Sixteen observer tests pass, including
+real-ledger preservation of uncertain delivery and no repeat accepted wake.
+Its ordinary post-install observation still needs readback. The future arm.py
+binds the exact fresh STARTED PID/invocation and removes prior accepted-job fields.
 
 After actual activation, use its POST_ACTIVATION reader binding. The prepared
 run_publication.py publish command needs the frozen config SHA and refuses prior
@@ -75,6 +92,6 @@ growth accounting including ALL retained staging and Desktop B growth. Full dedu
 is unfinished. Existing original73,893,642,640B recovery predates new staging.
 
 Rust format passes; full format lacks Prettier. Ops/diff and commit details are in
-DELTA. [Design/evidence](VK_DEDUP_PACKED_LAYOUT.md).
+DELTA. Thirty focused tests pass across port, transition, entrypoint and observer suites. [Design/evidence](VK_DEDUP_PACKED_LAYOUT.md).
 [Expanded pickup](deployment-history/20261125-pair-package-accepted/HANDOFF.md).
 Full historical archive: [HANDOFF history](HANDOFF_HISTORY_20261017.md).

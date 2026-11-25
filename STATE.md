@@ -97,15 +97,18 @@ switch13.678s and fallback15.525s preserve later writes; both test units are emp
 Two B checkpoint triples restore93files/1,260,029bytes and add1,576,960encoded bytes.
 The source-sealed finite publication entrypoint now binds the accepted actual
 activation, existing lease and B mapping and refuses uncertain replay. Five new
-activation/custody tests pass. One finite packed-finite-package-v1 verifies the
-new source package, actual read-only production preflight and source/control B
-restore. No live packed conversion is admitted before actual paired activation.
+activation/custody tests pass. PACKED_FINITE_PACKAGE_ACCEPTED verifies all three source-package stages and
+188source pins. Actual read-only production preflight passes; two B triples
+restore87files/759,101bytes, adding1,060,864encoded bytes. The exact mapping was
+reopened without recapture. All scripted units are inactive/empty. A concrete
+activation/fallback plan is prepared and unapproved invocation is refused before
+dispatch. Fresh explicit cutover approval is now required by the restart protocol. No live packed conversion is admitted before actual paired activation.
 The failed test took151.979s for its successful first transition, so the earlier
 54.423s private result is not a current interruption promise.
 
 Daily conversion remains held with its saved enabled05Toronto calendar preserved.
-Still required: accept the new finite-entrypoint package recovery and finish
-production readiness review, bind the daily post-activation configuration, perform
+Still required: explicitly approved live reader activation, its actual capacity
+check and daily post-activation binding, followed by
 live publication/retirement and ordinary desktop/mobile/history/review/settings/
 queues/monitoring checks, and finish current recovery plus net space/count/
 performance/growth accounting including ALL staging and B growth.

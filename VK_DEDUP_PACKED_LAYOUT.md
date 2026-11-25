@@ -1,6 +1,8 @@
 # Deduplication file-count repair
 
-Status: isolated format/build and all11current-data stages accepted; live original restoration accepted; production packing independently accepted; normal-B recovery independently accepted; reader lifetime protection accepted; packed publication rehearsal accepted; production admission recovery running.
+Status: preparation, compatible readers, normal-B recovery, backward/forward and
+daily rehearsals are accepted. Private switch/SQL recovery is accepted. The exact
+paired transition helper and new unarmed deployment package are being qualified.
 No packed manifests are installed live.
 The speed/file-count objective remains unfinished. Original lossless conversion
 acceptance is retained; it does not establish performance acceptance.

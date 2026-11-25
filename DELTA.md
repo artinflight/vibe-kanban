@@ -3481,3 +3481,29 @@ event errors; exact running PID/invocation/resource bounds verified. The matched
 guard build and private backup-refusal recovery passed; actual B SQL restoration
 is running. Required Rust format passes; web formatting remains unavailable
 because Prettier is missing. Ops Playbook and whitespace checks pass.
+
+
+November25 wake733d53e9 accepted: private switch54.423s, actual BSQL33.189s,
+reader activation13.399s; backup refusal7.975s, rejected-candidate fallback13.014s.
+Eight SQL receipts prove306,405,376restored bytes and98,507,803new encoded B bytes.
+Matched514,688-byte guard passes five Rust tests. All private units empty;
+originalPID611948 gone; current production identities/source pins unchanged.
+Private loopback/empty-ledger limits remain explicit; full dedup is unfinished.
+
+Added paired_reader_services with intent-before-action, exact owner checks,
+bounded startup/freeze and no uncertain dispatch replay; six focused tests pass.
+Prepared the unarmed paired-reader cutover package on SSD: current main/protected
+SQL paths retained, obsolete-cache replacement omitted, final frozen SQL recovery,
+original-owner fallback before publication, same capacity settings, matched guard,
+and actual post-activation reader/daily config generation. Read-only preflight
+passes; unapproved worker is refused before activation. No live controls installed.
+One packed-pair-package-v1 qualifies that exact helper with private services and
+backs up/restores ONLY the new package/guard through the existing normal-B owner.
+Existing WakeWatch rearmed toPID909475/invocationc1f11a576e4b4d588ecd574846ef0214.
+No SQL/history recapture, schedule/Nightly commissioning or deferred cleanup.
+
+Normal pair-package1 WakeWatch tick accepted:29batches/29attempts, no source/event
+errors, exact PID/invocation and resource bounds. Initial private current-copy API
+checks passed. Rust formatting passes; web format lacks Prettier. Initial Ops
+pickup-budget failure was corrected by shortening HANDOFF and retaining detailed
+history in existing acceptance receipts/DELTA. Whitespace correction included.

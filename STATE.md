@@ -76,16 +76,24 @@ both reader EOF probes. Monitoring verification and the second idle run pass.
 All16fixture checkpoints/70restored files reconcile. Fixture restoration remains
 explicitly distinct from accepted actual normal-B recovery. Old unit empty/PIDgone.
 
-One packed-switch-rehearsal-v1 job now qualifies a matched capacity guard, paired
-private service activation, backup-refusal recovery and compatible fallback with
-latest private SQL. Its successful path restores both fresh detached SQL copies
-through actual normal B (384MiB total cap). It measures backup and activation
-separately, preserving production service/data/route/capacity ownership. Private
-loopback and empty capacity fixtures are not final production qualification.
+The paired private switch rehearsal is independently accepted. Both current-copy
+SQL images (306,405,376bytes) restore through actual normal B; eight receipts
+reconcile and all private units are empty. The complete private switch took54.423s,
+including33.189s recovery and13.399s activation. Backup refusal and latest-copy
+fallback also passed. This is private loopback/empty-ledger evidence, not a public
+host outage guarantee or final current SQL capture.
+
+A new unarmed paired-reader package passes read-only owner/configuration checks.
+It preserves both current SQL paths and refuses an unapproved worker invocation.
+The matched guard and existing settings are packaged; post-activation process/
+mount bindings will prepare the existing daily configuration without releasing
+its hold. Six transition ownership/uncertainty tests pass. One finite
+packed-pair-package-v1 now qualifies the exact shared transition helper against
+private services and restores only new package/guard controls through normal B.
 
 Daily conversion remains held with its saved enabled05Toronto calendar preserved.
-Still required: accept paired-switch qualification and finish the actual activation/
-fallback supervisor, bind the daily post-activation configuration, perform
+Still required: accept actual transition/package recovery qualification and finish
+production readiness review, bind the daily post-activation configuration, perform
 live publication/retirement and ordinary desktop/mobile/history/review/settings/
 queues/monitoring checks, and finish current recovery plus net space/count/
 performance/growth accounting including ALL staging and B growth.

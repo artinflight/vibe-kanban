@@ -151,6 +151,45 @@ class Catalog:
         return dict(row, manifest=json.loads(row['manifest']),
                     recovery_locator=json.loads(row['recovery_locator']))
 
+    def io(self, workspace):
+        state = self.state(workspace)
+        if state is None:
+            raise Conflict('No physical archive owner')
+        row = self.db.execute('SELECT * FROM workspace_archive_io WHERE operation_id=? AND workspace_id=?',
+                              (state['operation_id'], identity(workspace))).fetchone()
+        return dict(row, journal=json.loads(row['journal'])) if row else None
+
+    def save_io(self, workspace, operation, journal, revision=None):
+        with self.transaction():
+            state = self.state(workspace)
+            if state is None or state['operation_id'] != operation:
+                raise Conflict('Physical journal owner changed')
+            if revision is None:
+                self.db.execute('INSERT INTO workspace_archive_io(operation_id,workspace_id,journal) VALUES(?,?,?)',
+                                (operation, identity(workspace), canonical(journal)))
+            else:
+                changed = self.db.execute("""UPDATE workspace_archive_io SET journal=?,revision=revision+1
+                    WHERE operation_id=? AND workspace_id=? AND revision=?""",
+                    (canonical(journal), operation, identity(workspace), revision)).rowcount
+                if changed != 1:
+                    raise Conflict('Physical journal changed; reconcile before continuing')
+
+    def check_archive(self, workspace, version, operation, phases):
+        with self.transaction():
+            self._owned(workspace, version, operation, phases)
+            self._archive_current(workspace, version)
+
+    def cancel_preparation(self, workspace, operation):
+        # Caller proves all original roots intact under exclusive custody. An
+        # uncertain B capture remains recorded; no new operation is dispatched.
+        with self.transaction():
+            state = self.state(workspace)
+            if state is None or state['operation_id'] != operation or state['phase'] != 'preparing':
+                raise Conflict('Only intact preparation can be cancelled')
+            self._phase(workspace, 'active')
+            self.db.execute("UPDATE workspace_archive_inputs SET state='ready' WHERE workspace_id=? AND state='waiting_restore'",
+                            (identity(workspace),))
+
     def retain_input(self, workspace, session, request, payload):
         """Commit exact input and invalidate exclusion before any restoration."""
         encoded = canonical(payload)

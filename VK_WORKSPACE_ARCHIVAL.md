@@ -46,34 +46,47 @@ Do not modify its source pins or silently activate it as the combined release.
   active data is included. Do not enable a Nightly that silently skips
   unverified archived work or recaptures the undeduplicated backlog.
 
-## Source implemented in this change
+## Source implemented (not deployed)
 
-`20261125000000_workspace_archive_requests.sql` adds an archival-intent outbox.
-It seeds existing archived workspaces and records future archive/unarchive
-transitions in the same SQL transaction as the flag change. A no-op archive
-does not duplicate work. Revival/rearchive increments the request generation,
-so a mover can reject obsolete copy results. This is an intent queue only:
-it dispatches no job, moves no files and grants no backup exclusion.
+The intent outbox seeds existing archived workspaces and records subsequent
+archive/unarchive transitions in the same transaction. Current physical state,
+immutable recovery generations, exact revival inputs and operation journals are
+separate. A UI flag or incomplete physical transaction never grants exclusion.
 
-`scripts/workspace-archive/inventory.py` reads one coherent application SQL
-snapshot and a separate native-history metadata snapshot. It resolves workspace
-and session ownership without transcript reads or a recursive payload scan.
-It identifies pinned/running/input/lease holds and shared or unresolved native
-history/worktree ownership. The snapshots are not an atomic cross-database
-custody boundary; actual writers and sources must be checked at action time.
+`scripts/workspace-archive/` now contains:
 
-Read-only production inspection on November25 found 1,296 workspaces:
-1,052 archived and244 active. 1,016 passed the implemented metadata filters.
-These are candidates for further qualification, not movement clearance.
-No live SQL migration, archive dispatch, payload movement, Nightly change,
-backend restart or sealed-package modification was performed.
+- `inventory.py`: coherent application/native metadata inventory, including
+  transitive child ownership. Open, shared, conflicting, cyclic or unresolved
+  native child records remain protected. This is not process custody.
+- `catalog.py`: short transactional generation transitions, immutable recovery
+  epochs, exact input retention and single reserved ordinary execution identity.
+- `custody.py`: permanent per-workspace Linux flock inodes; readers share custody,
+  movement/restoration requires exclusive custody, unrelated workspaces proceed.
+- `payloads.py`: stable byte/metadata manifests, bounded independent restoration,
+  create-only publication and exact-member retirement with no generic tree delete.
+- `lifecycle.py`: copy intent, independent restore, journaled source retirement,
+  interrupted-operation reconciliation and same-path revival. Partial staging is
+  retained and counted by resource admission. New destinations are not overwritten.
+- `normal_b.py`: existing Nightly native B object capture, immutable selected
+  indexes, control checkpoints and normal decoder. Source pins, existing leases
+  and operator connection settings remain required. No new backup transport.
+
+The normal-B adapter uses the maintained Nightly source closure, currently tested
+against d419d85f4f5652a36f9372feaa889d59e4ee8079. Its source/configuration must be
+included and pinned in the combined release; a mutable external checkout is not
+release qualification. Connection/source/lease changes require reconciled owner
+bindings, not accepting executable settings from a backup record.
+
+There is no production movement CLI. The required production authority and
+ordinary backend/history integration are still absent. These libraries therefore
+cannot retire live workspaces merely because an archive flag was set.
 
 ## Remaining implementation and acceptance
 
-The mover, verified archive catalog, send-triggered restoration, cold-history
-read path and Nightly consumer are **not implemented by the outbox**. They must
-be connected before the feature is called ready or any live source is retired.
-The existing backend still only sets the archived flag/runs repository scripts.
+The production ownership/dependency authority, backend custody and send-triggered
+restoration, both cold-history readers and Nightly consumer still need integration.
+The existing backend only sets the archived flag/runs repository scripts. Native
+metadata snapshots alone do not establish process, Git or attachment custody.
 
 Use the maintained Desktop backup transport/catalog instead of another backup
 service. Keep bulk staging on mounted SSD. Hold only the exact workspace's
@@ -92,17 +105,29 @@ restart to the outside managing agent.
 
 ## Validation
 
-Eleven fixture tests cover SQL transaction rollback, initial backlog seeding,
-future archives, no-op idempotence, revival/rearchive generation changes, owner
-deletion, active/pinned/running protection, pending inputs/leases, shared or
-unresolved native/worktree ownership, and missing-schema failure. These tests
-do not certify transport, restoration, UI or production deployment.
+All52 tests pass with the actual maintained Nightly modules supplied. Coverage
+includes SQL intent/generation/input concurrency, native descendants, shared
+custody, exact bytes/Linux metadata/symlinks/empty files, interrupted copy and
+root renames, offline/corrupt recovery, messages during retirement, newer local
+destination protection and retained partial staging. Adapter contract tests use
+Nightly's real capture/index/decoder across128-member boundaries, Unicode paths,
+empty files and repeated body reuse. Their native connections and remote lease
+verification are local fixtures, explicitly not actual Desktop B evidence.
 
-Run: `PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s scripts/workspace-archive -v`.
-The inventory CLI is read-only. Its output explicitly denies movement and
-backup-exclusion authority; it is not a deletion allowlist.
+Run:
 
+```sh
+NIGHTLY_SOURCE_DIR=/path/to/qualified/nightly/scripts/deployment \
+  PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s scripts/workspace-archive -v
+```
 
-Ops and whitespace checks pass. Rust formatting passes. Full
-`pnpm run format` stops at the existing missing Prettier executable.
-No backend build or production migration was run for this source-only step.
+Without that dependency path, two transport-contract tests are explicitly skipped;
+that result is insufficient combined qualification. Source identity and the exact
+Nightly commit must accompany results. Actual B restore, production owner and
+both reader/API/UI tests remain outstanding.
+
+Ops and whitespace checks pass. Rust formatting passes; full `pnpm run format`
+stops at the existing missing Prettier executable. No live migration, retirement,
+backend restart or Nightly activation occurred. November27 SSD free space was
+2,910,162,944B, below the existing3GiB production qualification reserve; never
+weaken the reserve or remove required recovery evidence to pass admission.

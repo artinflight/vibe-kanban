@@ -33,7 +33,8 @@ class InventoryTests(unittest.TestCase):
         """)
         self.native = self.root / 'native.sqlite'
         with sqlite3.connect(self.native) as db:
-            db.execute('CREATE TABLE threads(id TEXT,rollout_path TEXT)')
+            db.execute('CREATE TABLE threads(id TEXT,rollout_path TEXT,source TEXT DEFAULT \'cli\',attached_thread_parent_id TEXT)')
+            db.execute('CREATE TABLE thread_spawn_edges(parent_thread_id TEXT,child_thread_id TEXT,status TEXT)')
         self.wid, self.sid, self.eid = self.workspace()
 
     def workspace(self, archived=1, pinned=0, status='completed'):
@@ -51,6 +52,40 @@ class InventoryTests(unittest.TestCase):
 
     def row(self, result, wid=None):
         return next(r for r in result['workspaces'] if r['workspace_id'] == str(wid or self.wid))
+
+    def test_native_descendants_are_included_and_open_children_are_protected(self):
+        self.conn.execute('INSERT INTO coding_agent_turns VALUES(?,?)', (self.eid.bytes, 'parent'))
+        with sqlite3.connect(self.native) as db:
+            db.executemany('INSERT INTO threads(id,rollout_path) VALUES(?,?)',
+                           [(n, str(self.root / (n + '.jsonl'))) for n in ('parent', 'child', 'grandchild')])
+            db.executemany('INSERT INTO thread_spawn_edges VALUES(?,?,?)',
+                           [('parent', 'child', 'closed'), ('child', 'grandchild', 'open')])
+        row = self.row(self.read())
+        self.assertEqual({r['thread_id'] for r in row['native_threads']}, {'parent', 'child', 'grandchild'})
+        self.assertIn('open_native_child', row['holds'])
+
+    def test_child_reused_by_another_workspace_protects_both_owners(self):
+        other, _, execution = self.workspace(archived=0)
+        self.conn.executemany('INSERT INTO coding_agent_turns VALUES(?,?)',
+                             [(self.eid.bytes, 'parent'), (execution.bytes, 'child')])
+        with sqlite3.connect(self.native) as db:
+            db.executemany('INSERT INTO threads(id,rollout_path) VALUES(?,?)',
+                           [(n, str(self.root / (n + '.jsonl'))) for n in ('parent', 'child')])
+            db.execute("INSERT INTO thread_spawn_edges VALUES('parent','child','closed')")
+        for workspace in (self.wid, other):
+            self.assertIn('shared_native_history', self.row(self.read(), workspace)['holds'])
+
+    def test_source_only_child_and_cyclic_ancestry_are_not_silently_ignored(self):
+        self.conn.execute('INSERT INTO coding_agent_turns VALUES(?,?)', (self.eid.bytes, 'parent'))
+        with sqlite3.connect(self.native) as db:
+            db.execute('INSERT INTO threads(id,rollout_path) VALUES(?,?)', ('parent', str(self.root / 'parent')))
+            db.execute('INSERT INTO threads(id,rollout_path,source) VALUES(?,?,?)',
+                       ('child', str(self.root / 'child'), json.dumps({'subagent': {'thread_spawn': {'parent_thread_id': 'parent'}}})))
+        self.assertIn('unresolved_native_child', self.row(self.read())['holds'])
+        with sqlite3.connect(self.native) as db:
+            db.executemany('INSERT INTO thread_spawn_edges VALUES(?,?,?)',
+                           [('parent', 'child', 'closed'), ('child', 'parent', 'closed')])
+        self.assertIn('cyclic_native_ownership', self.row(self.read())['holds'])
 
     def test_inventory_does_not_grant_retirement_or_backup_exclusion(self):
         result = self.read()
@@ -80,7 +115,7 @@ class InventoryTests(unittest.TestCase):
         for execution in (self.eid, e):
             self.conn.execute('INSERT INTO coding_agent_turns VALUES(?,?)', (execution.bytes, 'thread'))
         with sqlite3.connect(self.native) as db:
-            db.execute('INSERT INTO threads VALUES(?,?)', ('thread', str(self.root / 'rollout.jsonl')))
+            db.execute('INSERT INTO threads(id,rollout_path) VALUES(?,?)', ('thread', str(self.root / 'rollout.jsonl')))
         result = self.read()
         for wid in (self.wid, w):
             self.assertIn('shared_native_history', self.row(result, wid)['holds'])
@@ -90,7 +125,7 @@ class InventoryTests(unittest.TestCase):
         for execution, thread in ((self.eid, 'a'), (e, 'b')):
             self.conn.execute('INSERT INTO coding_agent_turns VALUES(?,?)', (execution.bytes, thread))
             with sqlite3.connect(self.native) as db:
-                db.execute('INSERT INTO threads VALUES(?,?)', (thread, str(self.root / 'same.jsonl')))
+                db.execute('INSERT INTO threads(id,rollout_path) VALUES(?,?)', (thread, str(self.root / 'same.jsonl')))
         self.assertIn('shared_native_history', self.row(self.read(), w)['holds'])
 
     def test_unresolved_native_and_shared_worktree_are_not_candidates(self):

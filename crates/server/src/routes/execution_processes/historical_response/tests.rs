@@ -332,15 +332,45 @@ fn append_only_subsequent_work_preserved_but_changed_prefix_and_capture_refused(
 fn idempotent_concurrent_publication_restart_and_conflicting_retry() {
     let f = Fixture::new();
     let r = f.recover().unwrap();
+    // A converter holding this log's mutation lock must prevent publication.
+    let held = utils::log_mutation::LogMutationGuard::try_acquire(&f.capture).unwrap();
+    assert_eq!(
+        save(&f.capture, &r).unwrap_err(),
+        "Capture mutation is busy; recovery record was not changed"
+    );
+    assert!(!record_path(&f.capture).exists());
+    drop(held);
+
+    let start = std::sync::Barrier::new(4);
     let results = std::thread::scope(|s| {
         let jobs = (0..4)
-            .map(|_| s.spawn(|| save(&f.capture, &r).unwrap()))
+            .map(|_| {
+                s.spawn(|| {
+                    start.wait();
+                    save(&f.capture, &r)
+                })
+            })
             .collect::<Vec<_>>();
         jobs.into_iter()
             .map(|j| j.join().unwrap())
             .collect::<Vec<_>>()
     });
-    assert_eq!(results.into_iter().filter(|created| *created).count(), 1);
+    // Contenders may be refused by the nonblocking lock or observe the
+    // identical published record. Exactly one caller creates it; after all
+    // contenders finish, every retry must resolve to that same record.
+    assert_eq!(
+        results.iter().filter(|result| **result == Ok(true)).count(),
+        1
+    );
+    for result in results {
+        if let Err(error) = result {
+            assert_eq!(
+                error,
+                "Capture mutation is busy; recovery record was not changed"
+            );
+        }
+        assert!(!save(&f.capture, &r).unwrap());
+    }
     assert_eq!(load_record(&record_path(&f.capture)).unwrap(), r);
     assert!(!save(&f.capture, &r).unwrap());
     let mut conflicting = r.clone();

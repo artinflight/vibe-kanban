@@ -3631,3 +3631,12 @@ coverage proving pause cannot be certified when ownership evidence is missing.
 All34 checkpoint tests pass locally. Production guards/controllers and sealed
 packages are unchanged. Rust format/whitespace pass; full format still lacks
 Prettier. Hosted revalidation is required on the resulting head.
+
+
+The compiled historical-recovery CI test still assumed all concurrent save
+callers succeed, predating this branch's nonblocking per-log mutation lock.
+Updated the test to prove held-lock refusal without publication, exactly one
+concurrent creator, refusal only for the specific busy result, and idempotent
+retries after contention ends. Conflicting payload/capture-preservation checks
+remain. No production locking or recovery code changed. Compiled execution is
+assigned to hosted CI because local shared-target capacity remains constrained.

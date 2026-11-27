@@ -194,10 +194,29 @@ class MonitorControlTests(unittest.TestCase):
         cc.atomic(self.root/'CONTROLLER_SEAL.private.json',dict(operation=OP,attempt='controlled1',backup_leases=[]))
         self.row=dict(operation=OP,attempt='controlled1',state='stalled',needs_attention=True,progress_at=10)
         self.service=dict(ActiveState='active',MainPID=str(os.getpid()))
+        # The pause evidence still binds the actual process and open descriptors,
+        # but its cgroup namespace is a fixture, not the host/CI runner's layout.
+        original_read_text=Path.read_text
+        def read_text(path,*args,**kwargs):
+            if path==Path('/proc',str(os.getpid()),'cgroup'):return '0::/pause-fixture\n'
+            if path==Path('/sys/fs/cgroup/pause-fixture/cgroup.procs'):return str(os.getpid())+'\n'
+            return original_read_text(path,*args,**kwargs)
+        cgroups=patch.object(Path,'read_text',read_text)
+        cgroups.start();self.addCleanup(cgroups.stop)
     def test_live_verified_pause_does_not_fake_progress(self):
         import control_observation as monitor
         result=monitor.supplement(self.row,{'checkpoint_controls':str(self.root)},self.service,time.time())
         self.assertEqual(result['state'],'paused');self.assertFalse(result['needs_attention']);self.assertEqual(result['progress_at'],10)
+    def test_unreadable_cgroup_cannot_certify_pause(self):
+        import control_observation as monitor
+        original_read_text=Path.read_text
+        def unreadable(path,*args,**kwargs):
+            if path==Path('/sys/fs/cgroup/pause-fixture/cgroup.procs'):
+                raise PermissionError('fixture cgroup unavailable')
+            return original_read_text(path,*args,**kwargs)
+        with patch.object(Path,'read_text',unreadable):
+            self.assertEqual(monitor.supplement(self.row,{'checkpoint_controls':str(self.root)},
+                self.service,time.time()),self.row)
     def test_failure_or_dead_stale_wrong_owner_still_alerts(self):
         import control_observation as monitor
         for row,service,at in [(dict(self.row,state='failure_recovery_pending'),self.service,time.time()),
@@ -307,7 +326,12 @@ class ControlledDriverTests(unittest.TestCase):
         original_exists=Path.exists
         def exists(path):
             return True if path==self.root.parents[1]/'production-owner.lock' else original_exists(path)
-        with patch.object(driver.time,'sleep',busy_sleep),patch.object(Path,'exists',exists),patch.object(driver,'load_legacy',return_value=base),patch.object(driver,'locked',side_effect=lambda *a,**k:real_locked(self.root/'owner.lock',**k)),\
+        real_statvfs=os.statvfs
+        def fixture_statvfs(path):
+            # Exercise accounting with real fixture filesystem statistics without
+            # requiring a production SSD mount on the ephemeral hosted runner.
+            return real_statvfs(self.root if Path(path)==Path('/mnt/vk-storage') else path)
+        with patch.object(driver.os,'statvfs',fixture_statvfs),patch.object(driver.time,'sleep',busy_sleep),patch.object(Path,'exists',exists),patch.object(driver,'load_legacy',return_value=base),patch.object(driver,'locked',side_effect=lambda *a,**k:real_locked(self.root/'owner.lock',**k)),\
              patch.object(driver,'context_pids',return_value=[os.getpid()]),patch.object(cc.Controls,'boundary',boundary):
             driver.run(self.root,control,seal)
         self.assertEqual(seen,[1,2]);self.assertEqual(pauses,[1,2])

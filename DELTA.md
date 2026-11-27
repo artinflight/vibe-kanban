@@ -3621,3 +3621,13 @@ The canonical staging worktree has another owner's uncommitted Antigravity/UI
 work. Preserve it; do not stash/reset or overwrite it to make a sync claim.
 The published remote staging result and existing task worktree are the takeover
 sources; canonical checkout update must preserve that owner's edits.
+
+
+Hosted log-archive CI exposed fixture assumptions about /mnt/vk-storage and the
+runner's cgroup namespace. Corrected only those fixture boundaries: accounting
+uses real fixture filesystem statistics, and pause observation uses an explicit
+fixture cgroup with the actual process/descriptors. Added unreadable-cgroup
+coverage proving pause cannot be certified when ownership evidence is missing.
+All34 checkpoint tests pass locally. Production guards/controllers and sealed
+packages are unchanged. Rust format/whitespace pass; full format still lacks
+Prettier. Hosted revalidation is required on the resulting head.

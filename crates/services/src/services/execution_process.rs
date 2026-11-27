@@ -796,6 +796,8 @@ async fn read_execution_logs_for_execution(
     pool: &SqlitePool,
     execution_id: Uuid,
 ) -> Result<Option<String>> {
+    let _archive_custody =
+        super::workspace_archive::runtime::execution_readable(pool, execution_id).await?;
     match execution_log_file_path_for_execution(pool, execution_id).await? {
         Some(path) => Ok(Some(read_execution_log_file(&path).await.with_context(
             || format!("read execution log file for execution {execution_id}"),
@@ -851,6 +853,18 @@ pub async fn stream_raw_log_messages(
     pool: &SqlitePool,
     execution_id: Uuid,
 ) -> Option<BoxStream<'static, std::io::Result<LogMsg>>> {
+    let archive_custody =
+        match super::workspace_archive::runtime::execution_readable(pool, execution_id).await {
+            Ok(guard) => guard,
+            Err(error) => {
+                return Some(
+                    futures::stream::once(
+                        async move { Err(std::io::Error::other(error.to_string())) },
+                    )
+                    .boxed(),
+                );
+            }
+        };
     if let Some(path) = execution_log_file_path_for_execution(pool, execution_id)
         .await
         .inspect_err(|e| {
@@ -889,7 +903,14 @@ pub async fn stream_raw_log_messages(
                     .filter_map(future::ready)
                     .boxed();
 
-                return Some(stream);
+                return Some(
+                    stream
+                        .map(move |item| {
+                            let _keep_custody = &archive_custody;
+                            item
+                        })
+                        .boxed(),
+                );
             }
             Err(e) => {
                 tracing::warn!(

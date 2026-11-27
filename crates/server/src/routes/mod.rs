@@ -1,3 +1,4 @@
+pub mod workspace_archive;
 use axum::{
     Router,
     routing::{IntoMakeService, get},

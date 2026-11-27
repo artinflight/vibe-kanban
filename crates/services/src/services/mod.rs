@@ -21,6 +21,7 @@ pub mod provider_admission;
 pub mod provider_failover;
 pub mod provider_receipts;
 pub mod storage_admission;
+pub mod workspace_archive;
 
 #[cfg(feature = "qa-mode")]
 pub mod qa_repos;

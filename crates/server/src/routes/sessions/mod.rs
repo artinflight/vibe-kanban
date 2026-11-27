@@ -129,10 +129,78 @@ pub struct ResetProcessRequest {
 }
 
 pub async fn follow_up(
+    headers: axum::http::HeaderMap,
     Extension(session): Extension<Session>,
     State(deployment): State<DeploymentImpl>,
     Json(payload): Json<CreateFollowUpAttempt>,
 ) -> Result<ResponseJson<ApiResponse<ExecutionProcess, QueueStatus>>, ApiError> {
+    use services::services::workspace_archive as archive;
+    let request = headers
+        .get("Idempotency-Key")
+        .map(|value| {
+            value
+                .to_str()
+                .ok()
+                .and_then(|v| Uuid::parse_str(v).ok())
+                .ok_or_else(|| ApiError::BadRequest("A UUID Idempotency-Key is required".into()))
+        })
+        .transpose()?;
+    let configured = archive::runtime::configured()
+        .map_err(|e| ApiError::Conflict(e.to_string()))?
+        .is_some();
+    let existing = if configured && let Some(request) = request {
+        sqlx::query_scalar::<_, bool>(
+            "SELECT EXISTS(SELECT 1 FROM workspace_archive_inputs WHERE request_id=?)",
+        )
+        .bind(request)
+        .fetch_one(&deployment.db().pool)
+        .await?
+    } else {
+        false
+    };
+    if existing
+        || archive::runtime::requires_revival(&deployment.db().pool, session.workspace_id)
+            .await
+            .map_err(|e| ApiError::Conflict(e.to_string()))?
+    {
+        let request = request.unwrap_or_else(Uuid::new_v4);
+        let exact =
+            serde_json::to_value(&payload).map_err(|e| ApiError::BadRequest(e.to_string()))?;
+        let revival = archive::retain(
+            &deployment.db().pool,
+            session.workspace_id,
+            session.id,
+            request,
+            &exact,
+        )
+        .await
+        .map_err(|e| ApiError::Conflict(e.to_string()))?;
+        if revival.state == "dispatched" {
+            let execution: Uuid = sqlx::query_scalar(
+                "SELECT execution_id FROM workspace_archive_inputs WHERE request_id=?",
+            )
+            .bind(request)
+            .fetch_one(&deployment.db().pool)
+            .await?;
+            let process = ExecutionProcess::find_by_id(&deployment.db().pool, execution)
+                .await?
+                .ok_or_else(|| {
+                    ApiError::Conflict("The retained execution receipt needs reconciliation".into())
+                })?;
+            return Ok(ResponseJson(ApiResponse::success(process)));
+        }
+        if revival.state == "cancelled" {
+            return Err(ApiError::Conflict(
+                "This saved message was cancelled".into(),
+            ));
+        }
+        return Ok(ResponseJson(ApiResponse::error_with_data(
+            QueueStatus::Restoring { revival },
+        )));
+    }
+    let _archive_custody = archive::runtime::readable(&deployment.db().pool, session.workspace_id)
+        .await
+        .map_err(|e| ApiError::Conflict(e.to_string()))?;
     services::services::provider_admission::before_start(
         deployment.container(),
         session.workspace_id,
@@ -311,7 +379,9 @@ pub(crate) async fn follow_up_admitted<D: Deployment>(
     {
         Ok(execution_process) => execution_process,
         Err(error) if error.is_execution_limit_reached() => {
-            if services::services::original_worker::in_dispatch() {
+            if services::services::workspace_archive::in_dispatch()
+                || services::services::original_worker::in_dispatch()
+            {
                 return Err(ApiError::Conflict(
                     "Bounded continuation cannot be queued after failed admission".into(),
                 ));

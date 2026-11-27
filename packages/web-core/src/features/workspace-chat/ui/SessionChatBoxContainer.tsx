@@ -538,6 +538,7 @@ export function SessionChatBoxContainer(props: SessionChatBoxContainerProps) {
 
   // Queue interaction
   const {
+    revival,
     isQueued,
     queuedMessage,
     queuedConfig,
@@ -1133,6 +1134,30 @@ export function SessionChatBoxContainer(props: SessionChatBoxContainerProps) {
 
   return (
     <SessionChatBox<BaseCodingAgent>
+      statusNotice={
+        revival ? (
+          <div role="status" className="px-base py-half text-sm text-normal">
+            {revival.state === 'held' || revival.error
+              ? 'Your message is saved. Workspace recovery needs attention.'
+              : 'Restoring archived workspace. Your message is saved.'}
+            {['waiting_restore', 'ready'].includes(revival.state) && (
+              <button
+                type="button"
+                className="ml-2 underline"
+                onClick={() =>
+                  void cancelQueue().catch(() =>
+                    setFollowUpError(
+                      'The saved message could not be cancelled. Its execution may already be starting.'
+                    )
+                  )
+                }
+              >
+                Cancel saved messages
+              </button>
+            )}
+          </div>
+        ) : null
+      }
       status={status}
       onViewCode={disableViewCode ? undefined : handleViewCode}
       onOpenWorkspace={

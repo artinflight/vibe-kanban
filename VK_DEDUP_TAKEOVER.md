@@ -10,8 +10,8 @@ integration, not deployment, restart authorization or a completion claim.
 | --- | --- | --- |
 | Original writer cutover and history conversion | Original conversion and catch-up accepted; supported Codex resume avoids historical replay duplication | Preserve native context and verify current growth after final deployment |
 | Packed storage/performance repair | Three compatible readers and finite/daily converters tested; Desktop B recovery and private paired switch accepted | Deploy qualified readers, publish packed storage, retire only verified old objects, finish current public/recovery/performance checks |
-| Archived workspace separation | Intent outbox and read-only ownership inventory implemented; 11 fixture tests | Implement verified B movement/catalog and current-generation source retirement |
-| Automatic revival on message | Required behavior documented | Restore the same workspace/history before ordinary dispatch; preserve input/settings and reconcile uncertain delivery |
+| Archived workspace separation | Intent/catalog, journaled movement and B adapter source; 53 Python fixture/contract tests | Finish production dependency authority/driver and actual B qualification |
+| Automatic revival on message | Ordinary admission/readers and visible recovery state connected in opt-in source; backend compiles | Qualify physical driver, exact dispatch, both readers and ordinary UI on combined candidate |
 | Nightly active-workspace backup | Existing Nightly preparation belongs to its existing owner | Integrate archive catalog/shared recovery closure; prove cold payloads aren't recopied; schedule remains off |
 
 **No dedup conversion job was running at the November27 readback.** The prepared
@@ -42,6 +42,13 @@ will not provide it. The sealed dedup-only activation package does not contain
 that feature or the new source-only outbox migration.
 
 ## Source and ownership
+
+Current feature work is `vk/0815-archive-release`, based on merged staging
+78e472543b950a15a260e2d6af249bd5bef671d2, in the separate SSD checkout named in
+HANDOFF. PR291 integrated earlier source only. The combined release is still
+IN PROGRESS: no exact qualified candidate/fallback pair or deployable combined
+manifest exists yet. The restart agent should not select a release from this
+intermediate document.
 
 - Integration PR: [#291](https://github.com/artinflight/vibe-kanban/pull/291),
   branch `vk/0815-vk-deduplicate-c`, target operator fork `staging`.

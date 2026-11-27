@@ -17,8 +17,9 @@ recovery dependencies, with cold payloads separately restorable.
 
 Existing archive flags need one migration through the same lifecycle. Preserve
 active/pinned/dirty/shared data, queued inputs, backup epochs and existing owners.
-The lifecycle libraries are source-only; ordinary backend/readers and Nightly
-selection are not connected. No production retirement or exclusion is enabled.
+The source connects ordinary backend admission and reader restoration to the
+lifecycle contract. Complete production authority/driver, Nightly selection and
+combined qualification remain open. No production retirement or exclusion is enabled.
 
 Nightly calendar activation remains excluded. Preserve its tracking and partial
 cursor; no uncertain replay or duplicate jobs/watchers/agents/model polling.

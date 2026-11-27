@@ -63,6 +63,7 @@ async fn main() -> Result<(), VibeKanbanError> {
                     "sourceCommit": option_env!("VK_BUILD_SOURCE_COMMIT"),
                     "runtimeIdentityVersion": 1,
                     "executionLogMutationLockProtocol": utils::log_mutation::PROTOCOL,
+                    "workspaceArchiveCustodyProtocol": utils::workspace_custody::PROTOCOL,
                     "executionLogArchiveReaderPinProtocol": utils::log_archive::READER_PIN_PROTOCOL,
                     "assetDirectory": utils::assets::asset_dir_path(),
                     "automaticWorkspaceDeletion": false,
@@ -230,6 +231,7 @@ async fn main() -> Result<(), VibeKanbanError> {
         }
     });
 
+    server::routes::workspace_archive::start(deployment.clone(), shutdown_token.clone())?;
     relay_registration::spawn_relay(&deployment).await;
 
     tokio::select! {

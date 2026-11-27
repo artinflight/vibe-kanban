@@ -202,6 +202,7 @@ interface SessionChatBoxProps<TExecutor extends string = string> {
   inProgressTodo?: TodoProgressItem | null;
   localAttachments?: LocalAttachmentMetadata[];
   footerLeftExtra?: ReactNode;
+  statusNotice?: ReactNode;
   onPrCommentClick?: () => void;
   onViewCode?: () => void;
   onOpenWorkspace?: () => void;
@@ -268,6 +269,7 @@ export function SessionChatBox<TExecutor extends string = string>({
   inProgressTodo,
   localAttachments,
   footerLeftExtra,
+  statusNotice,
   onPrCommentClick,
   onViewCode,
   onOpenWorkspace,
@@ -730,6 +732,7 @@ export function SessionChatBox<TExecutor extends string = string>({
       error={displayError}
       banner={
         <>
+          {statusNotice}
           {consentCards}
           {renderBanner()}
         </>

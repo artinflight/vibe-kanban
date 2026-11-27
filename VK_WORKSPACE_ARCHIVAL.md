@@ -77,16 +77,31 @@ included and pinned in the combined release; a mutable external checkout is not
 release qualification. Connection/source/lease changes require reconciled owner
 bindings, not accepting executable settings from a backup record.
 
-There is no production movement CLI. The required production authority and
-ordinary backend/history integration are still absent. These libraries therefore
-cannot retire live workspaces merely because an archive flag was set.
+The backend now retains exact inputs before recovery and binds ordinary dispatch
+to one reserved execution ID. Request UUIDs survive uncertain browser responses.
+Only the matching execution receipt resolves an interrupted dispatch. A saved
+message remains visible while restoring or held; unreserved messages can be cancelled.
+Normal follow-up and stale queue UI submissions share this admission contract.
+
+`utils::workspace_custody` shares the Python kernel lock protocol. Full raw and
+normalized history streams retain custody through lazy reads; launch/worktree and
+review paths acquire it before global admission. The writer's optional pinned
+runtime invokes a physical driver outside global admission. Protected readers
+consult its current catalog read-only and request restoration over the existing
+loopback writer route. Both roles recheck cold state under shared custody.
+`workspaceArchiveCustodyProtocol` in build-info supports qualification against
+actual binaries; its presence alone is not evidence of a deployed configuration.
+
+Ordinary worktree recovery also refuses populated or aliased destinations when
+Git registration/branch identity differs. It no longer treats that discrepancy
+as authorization to erase local source. New absent worktrees can still be created.
 
 ## Remaining implementation and acceptance
 
-The production ownership/dependency authority, backend custody and send-triggered
-restoration, both cold-history readers and Nightly consumer still need integration.
-The existing backend only sets the archived flag/runs repository scripts. Native
-metadata snapshots alone do not establish process, Git or attachment custody.
+The trusted physical driver, complete production ownership/Git/attachment closure
+and Nightly consumer remain unfinished. Runtime configuration stays absent in
+production until those dependencies and the combined release are qualified.
+Native metadata snapshots alone do not establish process or dependency custody.
 
 Use the maintained Desktop backup transport/catalog instead of another backup
 service. Keep bulk staging on mounted SSD. Hold only the exact workspace's
@@ -105,7 +120,7 @@ restart to the outside managing agent.
 
 ## Validation
 
-All52 tests pass with the actual maintained Nightly modules supplied. Coverage
+All53 Python tests pass with the actual maintained Nightly modules supplied. Coverage
 includes SQL intent/generation/input concurrency, native descendants, shared
 custody, exact bytes/Linux metadata/symlinks/empty files, interrupted copy and
 root renames, offline/corrupt recovery, messages during retirement, newer local
@@ -123,11 +138,16 @@ NIGHTLY_SOURCE_DIR=/path/to/qualified/nightly/scripts/deployment \
 
 Without that dependency path, two transport-contract tests are explicitly skipped;
 that result is insufficient combined qualification. Source identity and the exact
-Nightly commit must accompany results. Actual B restore, production owner and
-both reader/API/UI tests remain outstanding.
+Nightly commit must accompany results. Actual B restore, production ownership and the full ordinary paired-reader/API/UI
+rehearsal remain outstanding. Writer/protected-reader runtime tests use disposable
+SQLite and a local HTTP/driver fixture, not the deployed application or actual B.
 
-Ops and whitespace checks pass. Rust formatting passes; full `pnpm run format`
-stops at the existing missing Prettier executable. No live migration, retirement,
-backend restart or Nightly activation occurred. November27 SSD free space was
-2,910,162,944B, below the existing3GiB production qualification reserve; never
+Ops, whitespace, full `pnpm run format` and backend compilation pass. Additional
+Rust unit checks pass: 9 archive/revival, 2 kernel-custody and 3 worktree preservation,
+plus 3 existing workspace-owner regressions. Generated types/check, all four frontend
+type checks and changed frontend lint pass. TypeScript needed a 1536MiB heap; its
+default heap exhausted before checking completed. No live migration, retirement,
+backend restart or Nightly activation occurred. The early November27 SSD readback
+of 2,910,162,944B predates concurrent cleanup and this build; it is not current
+capacity. Recheck resource admission; never
 weaken the reserve or remove required recovery evidence to pass admission.

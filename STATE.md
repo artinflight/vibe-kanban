@@ -12,14 +12,17 @@ New operator scope (November25): prepare workspace archive separation, automatic
 movement on future archive actions, automatic message-triggered revival, and
 Nightly active-payload selection before the managed restart. Nightly scheduling
 remains off. Actual backend restarts belong to the external managing agent.
-[Archive integration status](VK_WORKSPACE_ARCHIVAL.md): the source now includes
-catalog/input admission, per-workspace custody, journaled movement/restoration,
-normal-B adapter and native child ownership. All52 fixture/contract tests pass
-with Nightly source d419d85f4. Backend admission/readers, production ownership,
-Nightly selection and actual B qualification remain unfinished. No live schema
-migration or workspace retirement occurred. The sealed dedup-only package does
-not contain this feature. SSD available2,910,162,944B is below the3GiB production
-qualification reserve (November27); preserve other owners and recovery evidence.
+[Archive integration status](VK_WORKSPACE_ARCHIVAL.md): source now connects
+retained input and ordinary admission, per-workspace reader/launch custody,
+writer-owned restore requests and visible revival status. Protected readers use
+the current catalog read-only.53 Python fixture/contract tests pass with Nightly
+source d419d85f4. 14 targeted Rust tests plus 3 existing owner regressions pass;
+backend compilation/type generation, frontend type checks/lint and formatting
+pass. The production movement driver and
+complete ownership/dependency authority, Nightly selection and actual B/combined
+qualification remain unfinished. No live schema migration, workspace retirement
+or schedule activation occurred. The sealed dedup-only package does not include
+this feature. Continue from the separate archive-release checkout in HANDOFF.
 
 All274 prepared session groups,3,639 histories and580 packs are independently
 verified. Selected files go from1,057,171 to4,219 in preparation, using

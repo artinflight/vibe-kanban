@@ -3693,3 +3693,31 @@ SSD2,910,162,944B free is below existing3GiB production reserve. The user asked
 whether Disk Space should clean SSD; answered yes for unused reproducible outputs,
 preserving active work, dedup staging/recovery and backups. No message dispatched
 and no cleanup performed here. Native goal remains active; no requirement closed.
+
+
+## 2026-11-27 — recovered ordinary archive/revival integration
+
+The managed0815 checkout was recreated on recorded branchd8bd57f5c at22:28:56Z,
+removing this turn's uncommitted edits. Actor/cause remain unproven. Previous
+commit154952af0 stayed safe. Replayed exact recorded source writes into separate
+`/mnt/vk-storage/vk-archive-release-20261127/source` on the existing feature branch.
+Do not reset the managed path or other owners to continue this task.
+
+Connected opt-in archive input retention, exact ordinary execution identity,
+writer restoration and current-catalog read-only protected readers. Normal raw/
+normalized readers, launch/worktree creation and review take workspace custody.
+Concurrent readers share restoration; all driver failures retain input/status.
+The browser retains request identity across uncertain responses and displays
+restoration/attention/cancellation. Existing populated/aliased worktrees are
+preserved on branch/registration mismatch instead of being cleared for recreation.
+
+53 Python tests,9 archive/revival Rust tests,2 custody tests,3 worktree protection
+tests and3 existing owner regressions pass. Initial runtime fixtures needed
+private permissions; protection was preserved. Parallel fork exposed a dropped
+flock lifetime race, repaired with explicit unlock and verified by both custody
+tests. Backend compilation and generated types/check pass; all four frontend
+type checks pass with1536MiB Node heap after default heap exhaustion. Changed
+frontend lint, full formatting, Ops and whitespace pass. Full workspace/CI, real B,
+physical production authority/driver, Nightly selection and combined candidate/
+fallback/API/UI qualification remain open. No production service or data action.
+Native goal stays active with its original five requirements; no false closure.

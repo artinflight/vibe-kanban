@@ -3640,3 +3640,39 @@ concurrent creator, refusal only for the specific busy result, and idempotent
 retries after contention ends. Conflicting payload/capture-preservation checks
 remain. No production locking or recovery code changed. Compiled execution is
 assigned to hosted CI because local shared-target capacity remains constrained.
+
+
+## 2026-11-27 — combined cutover readiness goal, implementation resumed
+
+The user explicitly requested a ready-for-cutover goal. Native goal control is
+active but still labels the objective `clear`; the later user instruction is
+authoritative. The initial durable checklist now covers archive lifecycle,
+revival/history, Nightly selection, combined qualification and the external
+cutover handoff. Production restart/cutover and Nightly schedule activation are
+outside this agent's actions. No readiness requirement is complete yet.
+
+New migration 20261127000000 and scripts/workspace-archive/catalog.py separate
+physical custody from desired archive flags. Accepted recovery generations are
+immutable and retained. Cold eligibility requires the exact current generation
+and no active/input/lease holds. Exact follow-up payloads retain settings and
+invalidate exclusion atomically before restoration. Concurrent identical request
+IDs collapse; changed input is refused. Dispatch reserves one execution UUID and
+requires its actual same-session record before acknowledgment; interruption never
+automatically retries a reserved input. Warm reads advance the archive generation.
+
+Eleven new disposable SQLite tests plus eleven existing inventory/outbox tests
+pass. They cover concurrent sends, input ordering, interruption/reopen, stale
+copy/retirement, epoch retention and pending/running/pinned protection. These are
+catalog/admission tests only: no B copy/restore, API hook, payload retirement,
+backend build, combined release acceptance or runtime action is claimed.
+
+Next: implement/qualify actual payload snapshot/transfer/restore and workspace
+custody, wire revival to both serving readers and normal dispatch with the exact
+reserved execution ID, integrate existing Nightly consumers and then qualify
+one combined candidate and compatible fallback. Nightly's existing owner worktree
+is 604d-vk-nightly-backu; its maintained scripts/deployment adapters and tracking
+must be preserved. Source staging alone is not a deployable release.
+
+Ops, whitespace and Rust formatting pass. Required full formatting was attempted
+and still stops at the unavailable Prettier executable; no bulky local install
+or shared-target build was started with the SSD near capacity.

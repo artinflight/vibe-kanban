@@ -12,6 +12,11 @@ Nightly schedule activation remains off. Actual backend restart belongs to an
 external managing agent; do not perform it from this Vibe workspace.
 [Required behavior/current implementation](VK_WORKSPACE_ARCHIVAL.md).
 
+November27 readiness implementation is on `vk/0815-archive-release` (base staging
+78e472543). Catalog/input admission now has 11 new SQLite failure/concurrency tests.
+Next integrate actual B movement, workspace custody, both readers and ordinary
+execution using the reserved execution ID; catalog transitions alone are not proof.
+
 Source changes in this turn:
 - New migration records archive/unarchive intent transactionally, seeds existing
   archived owners, and increments generations only on state changes.

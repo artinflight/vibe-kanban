@@ -13,8 +13,8 @@ movement on future archive actions, automatic message-triggered revival, and
 Nightly active-payload selection before the managed restart. Nightly scheduling
 remains off. Actual backend restarts belong to the external managing agent.
 [Archive integration status](VK_WORKSPACE_ARCHIVAL.md): source-only durable intent
-outbox and metadata inventory implemented; mover/revival/Nightly integration is
-unfinished. Eleven fixture tests pass. Read-only inventory:1,052 archived,
+outbox, metadata inventory and physical catalog/exact-input queue implemented;
+transport, backend revival and Nightly integration remain unfinished. Eleven fixture tests pass. Read-only inventory:1,052 archived,
 244 active;1,016 metadata candidates, with no movement or exclusion authority.
 No live schema migration or payload movement occurred. The sealed dedup-only
 activation package does not include this new feature.

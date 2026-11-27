@@ -12,12 +12,14 @@ New operator scope (November25): prepare workspace archive separation, automatic
 movement on future archive actions, automatic message-triggered revival, and
 Nightly active-payload selection before the managed restart. Nightly scheduling
 remains off. Actual backend restarts belong to the external managing agent.
-[Archive integration status](VK_WORKSPACE_ARCHIVAL.md): source-only durable intent
-outbox, metadata inventory and physical catalog/exact-input queue implemented;
-transport, backend revival and Nightly integration remain unfinished. Eleven fixture tests pass. Read-only inventory:1,052 archived,
-244 active;1,016 metadata candidates, with no movement or exclusion authority.
-No live schema migration or payload movement occurred. The sealed dedup-only
-activation package does not include this new feature.
+[Archive integration status](VK_WORKSPACE_ARCHIVAL.md): the source now includes
+catalog/input admission, per-workspace custody, journaled movement/restoration,
+normal-B adapter and native child ownership. All52 fixture/contract tests pass
+with Nightly source d419d85f4. Backend admission/readers, production ownership,
+Nightly selection and actual B qualification remain unfinished. No live schema
+migration or workspace retirement occurred. The sealed dedup-only package does
+not contain this feature. SSD available2,910,162,944B is below the3GiB production
+qualification reserve (November27); preserve other owners and recovery evidence.
 
 All274 prepared session groups,3,639 histories and580 packs are independently
 verified. Selected files go from1,057,171 to4,219 in preparation, using

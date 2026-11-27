@@ -12,31 +12,26 @@ Nightly schedule activation remains off. Actual backend restart belongs to an
 external managing agent; do not perform it from this Vibe workspace.
 [Required behavior/current implementation](VK_WORKSPACE_ARCHIVAL.md).
 
-November27 readiness implementation is on `vk/0815-archive-release` (base staging
-78e472543). Catalog/input admission now has 11 new SQLite failure/concurrency tests.
-Next integrate actual B movement, workspace custody, both readers and ordinary
-execution using the reserved execution ID; catalog transitions alone are not proof.
+November27 readiness implementation is on `vk/0815-archive-release` (staging
+base78e472543). All52 tests pass, including real filesystem/SQLite interruption
+and normal Nightly factory/index/decoder contracts from d419d85f4. Local transport
+fixtures are not Desktop B proof. `VK_WORKSPACE_ARCHIVAL.md` lists current modules.
 
-Source changes in this turn:
-- New migration records archive/unarchive intent transactionally, seeds existing
-  archived owners, and increments generations only on state changes.
-- Read-only inventory binds workspace/session/native history metadata and
-  protects pinned/running/shared/unresolved owners, drafts, queues and leases.
-- Eleven fixture tests pass. Current inspection:1,052 archived,244 active,
-  1,016 metadata candidates. No candidate is retirement/backup-exclusion proof.
+Next connect production ownership, kernel custody and restoration to ordinary
+admission plus both serving readers; use the retained input's reserved execution
+ID, preserve settings and avoid global locks during B I/O. Then integrate Nightly
+selection, qualify actual B/current-SQL/candidate/fallback/UI and publish staging.
+Do not mark the combined restart ready from helper tests. No live migration,
+payload retirement, Nightly activation or service action occurred. SSD currently
+2,910,162,944B free, below the3GiB qualification reserve; coding remains unblocked.
 
-Not done: mover, verified cold catalog, automatic revival/dispatch reconciliation,
-both cold-history readers, Nightly consumer and combined qualification. No live
-migration, transfer/retirement, Nightly change, restart or activation occurred.
-Do not use the intent queue as an accepted archive catalog. Keep private content
-out of Git; bulk staging requires mounted SSD, archive payloads canonical B.
-Next: implement the mover/restore integration with per-workspace custody and
-normal input admission, test failures/concurrent sends, qualify actual B restore
-and Nightly selection, then prepare the combined candidate for external restart.
+The active native goal is cutover readiness (controller label still stale `clear`).
+Its five durable requirements remain open. Do not create another goal, restart
+production, duplicate controllers or dispatch uncertain work. External managing
+agent owns the eventual spinup/cutover after qualification.
 
 Dedup continuity:
-Read dedicated WakeWatch CONTEXT.md and STATE. No active native goal or script
-continuation. Preserve existing monitoring/owners/receipts; no duplicate workers,
+Read dedicated WakeWatch CONTEXT.md and STATE. No script continuation. Preserve existing monitoring/owners/receipts; no duplicate workers,
 new watchers, uncertain replay or model polling. All original conversion/catch-up
 accepted. Packed311plans/3,639histories are prepared, not published live.
 Evidence root:

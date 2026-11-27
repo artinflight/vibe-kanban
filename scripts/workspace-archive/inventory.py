@@ -1,6 +1,6 @@
 """Read-only ownership inventory for workspace archival; never moves payloads."""
 import argparse
-from collections import defaultdict
+from collections import defaultdict, deque
 from contextlib import closing
 import json
 from pathlib import Path
@@ -18,6 +18,84 @@ def readonly(path):
     db.execute('PRAGMA query_only=ON')
     db.execute('BEGIN')
     return db
+
+
+def native_closure(database, native_owners):
+    """Resolve descendants from both durable edges and native source metadata.
+
+    This is still metadata, never proof that processes/readers have yielded.
+    Open, missing, conflicting or cyclic child ownership remains protected.
+    """
+    with closing(readonly(database)) as db:
+        # Missing native ownership schema fails closed, rather than assuming
+        # that unobserved child threads do not exist.
+        threads = {r['id']: dict(r) for r in db.execute("""SELECT id,rollout_path,source,
+            attached_thread_parent_id FROM threads""")}
+        edges = list(db.execute('SELECT parent_thread_id,child_thread_id,status FROM thread_spawn_edges'))
+    parents, children, status = defaultdict(set), defaultdict(set), {}
+    problems = defaultdict(set)
+    for parent, child, state in edges:
+        parents[child].add(parent)
+        children[parent].add(child)
+        status[(parent, child)] = state
+    for child, row in threads.items():
+        declared = []
+        raw = row['source']
+        if raw and raw.lstrip().startswith('{'):
+            try:
+                value = json.loads(raw)
+                subagent = value.get('subagent', {})
+                if not isinstance(subagent, dict):
+                    raise ValueError('invalid native subagent source')
+                spawned = subagent.get('thread_spawn')
+                if spawned is not None:
+                    if not isinstance(spawned, dict) or not isinstance(spawned.get('parent_thread_id'), str):
+                        raise ValueError('invalid native parent source')
+                    declared.append(spawned['parent_thread_id'])
+            except (ValueError, TypeError, AttributeError):
+                problems[child].add('unresolved_native_child')
+        if row['attached_thread_parent_id']:
+            declared.append(row['attached_thread_parent_id'])
+        for parent in declared:
+            parents[child].add(parent)
+            children[parent].add(child)
+            if (parent, child) not in status:
+                problems[child].add('unresolved_native_child')
+    owners = defaultdict(set, {k: set(v) for k, v in native_owners.items()})
+    pending = deque(owners)
+    while pending:
+        parent = pending.popleft()
+        for child in children[parent]:
+            added = owners[parent] - owners[child]
+            if added:
+                owners[child].update(added)
+                pending.append(child)
+    # Kahn elimination detects cycles without recursion on arbitrary ancestry.
+    reachable = set(owners)
+    incoming = {n: len(parents[n] & reachable) for n in reachable}
+    ready = deque(n for n, degree in incoming.items() if degree == 0)
+    removed = set()
+    while ready:
+        node = ready.popleft()
+        removed.add(node)
+        for child in children[node] & reachable:
+            incoming[child] -= 1
+            if incoming[child] == 0:
+                ready.append(child)
+    for node in reachable - removed:
+        problems[node].add('cyclic_native_ownership')
+    for child, parent_set in parents.items():
+        if len(parent_set) > 1:
+            problems[child].add('conflicting_native_parent')
+        for parent in parent_set:
+            if child not in threads or parent not in threads:
+                problems[child].add('unresolved_native_child')
+            state = status.get((parent, child))
+            if state == 'open':
+                problems[child].add('open_native_child')
+            elif state != 'closed':
+                problems[child].add('unresolved_native_child')
+    return {k: r['rollout_path'] for k, r in threads.items()}, owners, problems
 
 
 def inspect(database, sessions_root, native_state=None):
@@ -76,10 +154,9 @@ def inspect(database, sessions_root, native_state=None):
             if len(owners) > 1:
                 for wid in owners:
                     workspaces[wid]['holds'].append('shared_worktree')
-    native_paths = {}
+    native_paths, native_problems = {}, {}
     if native_state:
-        with closing(readonly(native_state)) as db:
-            native_paths = dict(db.execute('SELECT id,rollout_path FROM threads'))
+        native_paths, native_owners, native_problems = native_closure(native_state, native_owners)
     path_owners = defaultdict(set)
     for thread, owners in native_owners.items():
         if path := native_paths.get(thread):
@@ -89,6 +166,7 @@ def inspect(database, sessions_root, native_state=None):
         shared = len(owners) > 1 or (path is not None and
                     len(path_owners[str(Path(path).resolve())]) > 1)
         for wid in owners:
+            workspaces[wid]['holds'].extend(native_problems.get(thread, ()))
             workspaces[wid]['native_threads'].append(
                 dict(thread_id=thread, path=path, shared=shared))
             if shared:

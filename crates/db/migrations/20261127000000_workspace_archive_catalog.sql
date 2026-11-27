@@ -44,3 +44,13 @@ CREATE TABLE workspace_archive_inputs (
     CHECK (state != 'dispatched' OR execution_id IS NOT NULL)
 );
 CREATE INDEX workspace_archive_inputs_pending ON workspace_archive_inputs(workspace_id,state);
+
+-- Physical publication intent is durable before any rename/unlink. Recovery
+-- reconciles exact paths and versions under workspace custody; this mutable
+-- journal never replaces the immutable B generation or grants exclusion alone.
+CREATE TABLE workspace_archive_io (
+    operation_id TEXT PRIMARY KEY NOT NULL,
+    workspace_id BLOB NOT NULL REFERENCES workspaces(id),
+    revision INTEGER NOT NULL DEFAULT 1 CHECK (revision > 0),
+    journal TEXT NOT NULL CHECK (json_valid(journal))
+);

@@ -3676,3 +3676,20 @@ must be preserved. Source staging alone is not a deployable release.
 Ops, whitespace and Rust formatting pass. Required full formatting was attempted
 and still stops at the unavailable Prettier executable; no bulky local install
 or shared-target build was started with the SSD near capacity.
+
+
+## 2026-11-27 — recoverable workspace payload lifecycle (source only)
+
+Added per-workspace flock custody, exact Linux payload inventory/restoration,
+physical I/O journals, create-only retirement/revival and interrupted-operation
+reconciliation. The B adapter reuses the maintained Nightly object/index/control
+and normal decoder protocols; exact inputs retain a single reserved dispatch ID.
+Native ownership inventory now follows descendants and protects open/shared/
+unresolved/cyclic child ownership.52 tests passed with Nightly d419d85f4f5652a36f9372feaa889d59e4ee8079,
+including actual factory/decoder code with explicitly local transport fixtures.
+No actual B or backend readiness claim: production ownership, both readers,
+ordinary admission, Nightly selection and combined qualification still required.
+SSD2,910,162,944B free is below existing3GiB production reserve. The user asked
+whether Disk Space should clean SSD; answered yes for unused reproducible outputs,
+preserving active work, dedup staging/recovery and backups. No message dispatched
+and no cleanup performed here. Native goal remains active; no requirement closed.

@@ -110,6 +110,10 @@ impl WorktreeManager {
             return Ok(());
         }
 
+        // A changed branch or missing registration is not permission to erase
+        // existing source. Revival restores first; ambiguous local data stays put.
+        Self::require_empty_destination(worktree_path)?;
+
         if Self::move_existing_branch_checkout_async(repo_path, branch_name, worktree_path).await? {
             info!(
                 "Recovered workspace branch '{}' by moving its existing worktree to {}",
@@ -125,6 +129,18 @@ impl WorktreeManager {
         }
 
         Self::recreate_worktree_internal(repo_path, branch_name, worktree_path).await
+    }
+
+    fn require_empty_destination(path: &Path) -> Result<(), WorktreeError> {
+        match fs::symlink_metadata(path) {
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(()),
+            Err(error) => Err(error.into()),
+            Ok(metadata) if metadata.is_dir() && fs::read_dir(path)?.next().is_none() => Ok(()),
+            Ok(_) => Err(WorktreeError::Repository(format!(
+                "Existing workspace data at {} was preserved; reconcile its branch and Git registration before recreation",
+                path.display()
+            ))),
+        }
     }
 
     async fn move_existing_branch_worktree(
@@ -178,8 +194,10 @@ impl WorktreeManager {
             tokio::fs::create_dir_all(parent).await?;
         }
 
+        Self::require_empty_destination(&desired_path)?;
         if desired_path.exists() {
-            Self::simple_worktree_cleanup(&desired_path).await?;
+            // remove_dir refuses a concurrent new file; never clear a tree here.
+            tokio::fs::remove_dir(&desired_path).await?;
         }
 
         Self::move_worktree(repo_path, &existing_path, &desired_path).await?;
@@ -201,8 +219,13 @@ impl WorktreeManager {
             branch_name_owned, path_str
         );
 
-        // Step 1: Comprehensive cleanup of existing worktree and metadata (non-blocking)
-        Self::comprehensive_worktree_cleanup_async(repo_path, &worktree_path_owned).await?;
+        // Reconcile only an absent or empty destination. This path is launch
+        // recovery, not an explicit request to delete a populated worktree.
+        Self::require_empty_destination(&worktree_path_owned)?;
+        if worktree_path_owned.exists() {
+            tokio::fs::remove_dir(&worktree_path_owned).await?;
+        }
+        Self::force_cleanup_worktree_metadata(repo_path, &worktree_path_owned)?;
 
         // Step 2: Ensure parent directory exists (non-blocking)
         if let Some(parent) = worktree_path_owned.parent() {
@@ -324,8 +347,9 @@ impl WorktreeManager {
             )));
         }
 
+        Self::require_empty_destination(worktree_path)?;
         if worktree_path.exists() {
-            std::fs::remove_dir_all(worktree_path).map_err(WorktreeError::Io)?;
+            std::fs::remove_dir(worktree_path).map_err(WorktreeError::Io)?;
         }
 
         if let Some(parent) = worktree_path.parent() {
@@ -835,4 +859,114 @@ async fn batch_cleanup_reports_failures_instead_of_hiding_them() {
 
     assert!(result.is_err());
     assert!(invalid_worktree_path.exists());
+}
+
+#[cfg(test)]
+mod preservation_tests {
+    use std::process::Command;
+
+    use super::*;
+
+    fn git(path: &Path, args: &[&str]) -> String {
+        let output = Command::new("git")
+            .arg("-C")
+            .arg(path)
+            .args(args)
+            .output()
+            .unwrap();
+        assert!(
+            output.status.success(),
+            "{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        String::from_utf8(output.stdout).unwrap().trim().to_owned()
+    }
+
+    fn repository() -> tempfile::TempDir {
+        let root = tempfile::tempdir().unwrap();
+        git(root.path(), &["init", "--initial-branch=main"]);
+        git(
+            root.path(),
+            &[
+                "-c",
+                "user.name=Fixture",
+                "-c",
+                "user.email=fixture@example.invalid",
+                "commit",
+                "--allow-empty",
+                "-m",
+                "fixture",
+            ],
+        );
+        root
+    }
+
+    #[tokio::test]
+    async fn workspace_recreation_preserves_changed_branch_and_dirty_source() {
+        let repo = repository();
+        let folder = tempfile::tempdir().unwrap();
+        let path = folder.path().join("workspace");
+        git(
+            repo.path(),
+            &["worktree", "add", "-b", "expected", path.to_str().unwrap()],
+        );
+        git(&path, &["checkout", "-b", "actual-working-branch"]);
+        fs::write(path.join("uncommitted.txt"), "must survive").unwrap();
+        let before = git(&path, &["status", "--porcelain=v1"]);
+        let error = WorktreeManager::ensure_worktree_exists(repo.path(), "expected", &path)
+            .await
+            .unwrap_err();
+        assert!(error.to_string().contains("was preserved"));
+        assert_eq!(
+            git(&path, &["branch", "--show-current"]),
+            "actual-working-branch"
+        );
+        assert_eq!(git(&path, &["status", "--porcelain=v1"]), before);
+        assert_eq!(
+            fs::read_to_string(path.join("uncommitted.txt")).unwrap(),
+            "must survive"
+        );
+    }
+
+    #[tokio::test]
+    async fn workspace_recreation_preserves_unregistered_directory_and_populates_absent_path() {
+        let repo = repository();
+        let folder = tempfile::tempdir().unwrap();
+        let path = folder.path().join("workspace");
+        git(repo.path(), &["branch", "expected"]);
+        fs::create_dir(&path).unwrap();
+        fs::write(path.join("recovery-note"), "retained original").unwrap();
+        assert!(
+            WorktreeManager::ensure_worktree_exists(repo.path(), "expected", &path)
+                .await
+                .is_err()
+        );
+        assert_eq!(
+            fs::read_to_string(path.join("recovery-note")).unwrap(),
+            "retained original"
+        );
+        let absent = folder.path().join("fresh");
+        WorktreeManager::ensure_worktree_exists(repo.path(), "expected", &absent)
+            .await
+            .unwrap();
+        fs::write(absent.join("dirty"), "still active").unwrap();
+        WorktreeManager::ensure_worktree_exists(repo.path(), "expected", &absent)
+            .await
+            .unwrap();
+        assert_eq!(
+            fs::read_to_string(absent.join("dirty")).unwrap(),
+            "still active"
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn workspace_recreation_never_uses_a_symlink_as_empty_destination() {
+        let folder = tempfile::tempdir().unwrap();
+        let target = folder.path().join("missing");
+        let link = folder.path().join("alias");
+        std::os::unix::fs::symlink(&target, &link).unwrap();
+        assert!(WorktreeManager::require_empty_destination(&link).is_err());
+        assert_eq!(fs::read_link(link).unwrap(), target);
+    }
 }

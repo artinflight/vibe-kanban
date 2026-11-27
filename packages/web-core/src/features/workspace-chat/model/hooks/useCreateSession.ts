@@ -19,7 +19,8 @@ function isQueuedSendError(error: unknown): error is ApiError<QueueStatus> {
   return (
     error instanceof ApiError &&
     !!error.error_data &&
-    error.error_data.status === 'queued'
+    (error.error_data.status === 'queued' ||
+      error.error_data.status === 'restoring')
   );
 }
 

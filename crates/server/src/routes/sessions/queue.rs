@@ -28,10 +28,53 @@ pub(crate) struct QueueMessageRequest {
 
 /// Steer an active Codex turn, or queue the message for agents without steering.
 async fn queue_message(
+    headers: axum::http::HeaderMap,
     Extension(session): Extension<Session>,
     State(deployment): State<DeploymentImpl>,
     Json(payload): Json<QueueMessageRequest>,
 ) -> Result<ResponseJson<ApiResponse<QueueStatus>>, ApiError> {
+    let existing = if services::services::workspace_archive::runtime::configured()
+        .map_err(|e| ApiError::Conflict(e.to_string()))?
+        .is_some()
+        && let Some(key) = headers
+            .get("Idempotency-Key")
+            .and_then(|v| v.to_str().ok())
+            .and_then(|v| uuid::Uuid::parse_str(v).ok())
+    {
+        sqlx::query_scalar::<_, bool>(
+            "SELECT EXISTS(SELECT 1 FROM workspace_archive_inputs WHERE request_id=?)",
+        )
+        .bind(key)
+        .fetch_one(&deployment.db().pool)
+        .await?
+    } else {
+        false
+    };
+    if existing
+        || services::services::workspace_archive::runtime::requires_revival(
+            &deployment.db().pool,
+            session.workspace_id,
+        )
+        .await
+        .map_err(|e| ApiError::Conflict(e.to_string()))?
+    {
+        let response = super::follow_up(
+            headers,
+            Extension(session),
+            State(deployment),
+            Json(super::CreateFollowUpAttempt {
+                prompt: payload.message,
+                executor_config: payload.executor_config,
+                retry_process_id: None,
+                force_when_dirty: None,
+                perform_git_reset: None,
+            }),
+        )
+        .await?;
+        return Ok(ResponseJson(ApiResponse::success(
+            response.0.into_error_data().unwrap_or(QueueStatus::Empty),
+        )));
+    }
     let pool = deployment.db().pool.clone();
     let received = services::services::queued_message::QueuedMessageService::receive(
         &pool,
@@ -195,6 +238,14 @@ async fn cancel_queued_message_admitted(
     Extension(session): Extension<Session>,
     State(deployment): State<DeploymentImpl>,
 ) -> Result<ResponseJson<ApiResponse<QueueStatus>>, ApiError> {
+    if services::services::workspace_archive::runtime::configured()
+        .map_err(|e| ApiError::Conflict(e.to_string()))?
+        .is_some()
+    {
+        services::services::workspace_archive::cancel(&deployment.db().pool, session.id)
+            .await
+            .map_err(|e| ApiError::Conflict(e.to_string()))?;
+    }
     deployment
         .queued_message_service()
         .cancel_durable(&deployment.db().pool, session.id)
@@ -218,6 +269,16 @@ async fn get_queue_status(
     Extension(session): Extension<Session>,
     State(deployment): State<DeploymentImpl>,
 ) -> Result<ResponseJson<ApiResponse<QueueStatus>>, ApiError> {
+    if services::services::workspace_archive::runtime::configured()
+        .map_err(|e| ApiError::Conflict(e.to_string()))?
+        .is_some()
+        && let Some(revival) =
+            services::services::workspace_archive::status(&deployment.db().pool, session.id).await?
+    {
+        return Ok(ResponseJson(ApiResponse::success(QueueStatus::Restoring {
+            revival,
+        })));
+    }
     let status = deployment.queued_message_service().get_status(session.id);
 
     Ok(ResponseJson(ApiResponse::success(status)))

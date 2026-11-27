@@ -70,6 +70,10 @@ impl QueuedMessage {
 pub enum QueueStatus {
     /// No message queued
     Empty,
+    /// Exact input is retained while a cold workspace is revived.
+    Restoring {
+        revival: super::workspace_archive::RevivalStatus,
+    },
     /// Message is queued and waiting for execution to complete
     Queued { message: QueuedMessage },
 }

@@ -27,6 +27,7 @@ const PROMPT_JSON_BODY_LIMIT_BYTES: usize = 100 * 1024 * 1024;
 
 pub fn router(deployment: &DeploymentImpl) -> Router<DeploymentImpl> {
     let workspace_id_router = Router::new()
+        .merge(super::workspace_archive::workspace_routes())
         .route(
             "/",
             get(core::get_workspace)

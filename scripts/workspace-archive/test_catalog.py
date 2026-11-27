@@ -60,6 +60,15 @@ class CatalogTests(unittest.TestCase):
         c.finish_retirement(self.w, 1, self.op)
         self.assertEqual(len(c.cold_generations()), 1)
 
+    def test_history_restore_intent_blocks_retirement_until_shared_reader_custody(self):
+        self.archive(stop='verified')
+        self.catalog.db.execute('INSERT INTO workspace_archive_reads(workspace_id) VALUES(?)', (identity(self.w),))
+        with self.assertRaises(Conflict): self.catalog.begin_retirement(self.w, 1, self.op)
+        self.catalog.begin_restore(self.w)
+        self.catalog.finish_restore(self.w, self.op)
+        self.assertEqual(self.catalog.db.execute('SELECT count(*) FROM workspace_archive_reads').fetchone()[0], 1)
+        self.assertEqual(self.catalog.cold_generations(), [])
+
     def test_message_atomically_invalidates_exclusion_and_retains_all_settings(self):
         self.archive()
         request = str(uuid.uuid4())

@@ -35,6 +35,11 @@ pub fn automatic_git_sync() -> bool {
     std::env::var("VK_AUTOMATIC_GITHUB_SYNC").is_ok_and(|value| value == "1")
 }
 
+/// Slow workspace restoration must happen before taking this global lock.
+pub fn is_held() -> bool {
+    HELD.try_with(|value| *value).unwrap_or(false)
+}
+
 pub async fn locked<T>(work: impl Future<Output = T>) -> T {
     if HELD.try_with(|v| *v).unwrap_or(false) {
         return work.await;

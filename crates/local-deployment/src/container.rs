@@ -2375,6 +2375,10 @@ impl ContainerService for LocalContainerService {
         &self,
         workspace: &Workspace,
     ) -> Result<ContainerRef, ContainerError> {
+        let _archive_custody =
+            services::services::workspace_archive::runtime::readable(&self.db.pool, workspace.id)
+                .await
+                .map_err(|e| ContainerError::Other(anyhow!(e)))?;
         self.touch(workspace).await?;
         let (repositories, workspace_inputs) = self.workspace_repo_inputs(workspace.id).await?;
 

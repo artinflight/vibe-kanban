@@ -36,7 +36,7 @@ CREATE TABLE workspace_archive_inputs (
     workspace_id BLOB NOT NULL REFERENCES workspaces(id),
     session_id BLOB NOT NULL REFERENCES sessions(id),
     payload TEXT NOT NULL CHECK (json_valid(payload)),
-    state TEXT NOT NULL CHECK (state IN ('waiting_restore','ready','dispatching','dispatched','held')),
+    state TEXT NOT NULL CHECK (state IN ('waiting_restore','ready','dispatching','dispatched','held','cancelled')),
     execution_id BLOB,
     error TEXT,
     created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
@@ -54,3 +54,12 @@ CREATE TABLE workspace_archive_io (
     revision INTEGER NOT NULL DEFAULT 1 CHECK (revision > 0),
     journal TEXT NOT NULL CHECK (json_valid(journal))
 );
+
+-- Warm history reads are durable restore intent, also visible to the mover.
+CREATE TABLE workspace_archive_reads (
+    workspace_id BLOB PRIMARY KEY NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+    requested_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+);
+
+-- A protected/offline workspace must not starve later eligible owners.
+ALTER TABLE workspace_archive_requests ADD COLUMN last_attempted_at TEXT;

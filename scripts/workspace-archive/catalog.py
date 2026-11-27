@@ -60,10 +60,11 @@ class Catalog:
             raise Conflict('Archive generation is no longer eligible')
         wid = identity(workspace)
         checks = [
+            ('SELECT 1 FROM workspace_archive_reads WHERE workspace_id=?', 'pending history restore'),
             ('''SELECT 1 FROM execution_processes e JOIN sessions s ON s.id=e.session_id
                 WHERE s.workspace_id=? AND e.status='running' LIMIT 1''', 'running execution'),
             ('''SELECT 1 FROM workspace_archive_inputs WHERE workspace_id=?
-                AND state != 'dispatched' LIMIT 1''', 'retained revival input'),
+                AND state NOT IN ('dispatched','cancelled') LIMIT 1''', 'retained revival input'),
             ('''SELECT 1 FROM turn_github_sync_incoming WHERE workspace_id=?
                 AND state NOT IN ('handled','dismissed') LIMIT 1''', 'pending input'),
             ('SELECT 1 FROM turn_github_sync_user_queue WHERE workspace_id=? LIMIT 1', 'queued input'),
@@ -205,9 +206,7 @@ class Catalog:
             if row is None or row[0] != wid:
                 raise Conflict('Session does not belong to this workspace')
             state = self.state(workspace)
-            if state is None:
-                raise Conflict('Workspace is not managed by the archive lifecycle')
-            waiting = 'ready' if state['phase'] == 'active' else 'waiting_restore'
+            waiting = 'ready' if state is None or state['phase'] == 'active' else 'waiting_restore'
             self.db.execute('''INSERT INTO workspace_archive_inputs
                 (request_id,workspace_id,session_id,payload,state) VALUES (?,?,?,?,?)''',
                             (rid, wid, sid, encoded, waiting))
@@ -250,10 +249,10 @@ class Catalog:
             if row is None or row['state'] != 'ready':
                 raise Conflict('Input is not ready or dispatch is already reserved')
             state = self.state(str(uuid.UUID(bytes=row['workspace_id'])))
-            if not state or state['phase'] != 'active':
+            if state is not None and state['phase'] != 'active':
                 raise Conflict('Restored payloads are not ready')
             first = self.db.execute('''SELECT request_id FROM workspace_archive_inputs
-                WHERE session_id=? AND state != 'dispatched' ORDER BY rowid LIMIT 1''',
+                WHERE session_id=? AND state NOT IN ('dispatched','cancelled') ORDER BY rowid LIMIT 1''',
                                    (row['session_id'],)).fetchone()
             if first is None or first[0] != identity(request):
                 raise Conflict('Earlier input must be dispatched or reconciled first')

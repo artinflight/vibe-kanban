@@ -567,7 +567,9 @@ queued_at: string,
  */
 wait_for_capacity: boolean, };
 
-export type QueueStatus = { "status": "empty" } | { "status": "queued", message: QueuedMessage, };
+export type QueueStatus = { "status": "empty" } | { "status": "restoring", revival: RevivalStatus, } | { "status": "queued", message: QueuedMessage, };
+
+export type RevivalStatus = { request_id: string, session_id: string, state: string, error: string | null, };
 
 export type ConflictOp = "rebase" | "merge" | "cherry_pick" | "revert";
 

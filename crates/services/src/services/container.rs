@@ -1396,6 +1396,19 @@ pub trait ContainerService: Send + Sync {
         &self,
         id: &Uuid,
     ) -> Option<futures::stream::BoxStream<'static, Result<LogMsg, std::io::Error>>> {
+        let archive_custody =
+            match super::workspace_archive::runtime::execution_readable(&self.db().pool, *id).await
+            {
+                Ok(guard) => guard,
+                Err(error) => {
+                    return Some(
+                        futures::stream::once(async move {
+                            Err(std::io::Error::other(error.to_string()))
+                        })
+                        .boxed(),
+                    );
+                }
+            };
         let process_status = ExecutionProcess::find_by_id(&self.db().pool, *id)
             .await
             .ok()
@@ -1557,6 +1570,7 @@ pub trait ContainerService: Send + Sync {
 
         let normalizer_owner = temp_store.clone();
         tokio::spawn(async move {
+            let _archive_custody = archive_custody;
             for handle in handles {
                 if handle.await.is_err() {
                     normalizer_owner
@@ -1752,6 +1766,10 @@ pub trait ContainerService: Send + Sync {
         executor_action: &ExecutorAction,
         run_reason: &ExecutionProcessRunReason,
     ) -> Result<ExecutionProcess, ContainerError> {
+        let _archive_custody =
+            super::workspace_archive::runtime::readable(&self.db().pool, workspace.id)
+                .await
+                .map_err(|e| ContainerError::Other(anyhow!(e)))?;
         if *run_reason != ExecutionProcessRunReason::DevServer
             && super::storage_admission::candidate_execution_id().is_none()
             && super::storage_admission::owner_reserved(&self.db().pool, workspace.id).await?
@@ -1772,6 +1790,8 @@ pub trait ContainerService: Send + Sync {
 
         let reserved_execution = reconcile_execution_bindings(&[
             super::storage_admission::candidate_execution_id(),
+            super::workspace_archive::execution_id(workspace.id, session.id)
+                .map_err(|e| ContainerError::Other(anyhow!(e)))?,
             super::provider_admission::execution_id(workspace.id, session.id)?,
             super::provider_failover::reserved_execution(
                 workspace.id,

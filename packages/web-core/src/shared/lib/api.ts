@@ -322,6 +322,48 @@ export const handleApiResponse = async <T, E = T>(
 };
 
 // Sessions API
+
+async function withRevivalIdentity<T>(
+  sessionId: string,
+  body: string,
+  send: (requestId: string) => Promise<T>
+): Promise<T> {
+  const hash = await crypto.subtle.digest(
+    'SHA-256',
+    new TextEncoder().encode(body)
+  );
+  const key = `vk-revival-request:${sessionId}:${Array.from(new Uint8Array(hash), (b) => b.toString(16).padStart(2, '0')).join('')}`;
+  let request: string = crypto.randomUUID();
+  try {
+    request = sessionStorage.getItem(key) ?? request;
+    sessionStorage.setItem(key, request);
+  } catch {
+    // Storage-disabled browsers still retain one identity for this HTTP send.
+  }
+  try {
+    const result = await send(request);
+    try {
+      sessionStorage.removeItem(key);
+    } catch {
+      /* storage unavailable */
+    }
+    return result;
+  } catch (error) {
+    if (
+      error instanceof ApiError &&
+      error.error_data &&
+      ['queued', 'restoring'].includes((error.error_data as QueueStatus).status)
+    ) {
+      try {
+        sessionStorage.removeItem(key);
+      } catch {
+        /* storage unavailable */
+      }
+    }
+    throw error;
+  }
+}
+
 export const sessionsApi = {
   getByWorkspace: async (workspaceId: string): Promise<Session[]> => {
     const response = await makeRequest(
@@ -351,11 +393,18 @@ export const sessionsApi = {
     sessionId: string,
     data: CreateFollowUpAttempt
   ): Promise<ExecutionProcess> => {
-    const response = await makeRequest(`/api/sessions/${sessionId}/follow-up`, {
-      method: 'POST',
-      body: JSON.stringify(data),
+    const body = JSON.stringify(data);
+    return withRevivalIdentity(sessionId, body, async (request) => {
+      const response = await makeRequest(
+        `/api/sessions/${sessionId}/follow-up`,
+        {
+          method: 'POST',
+          headers: { 'Idempotency-Key': request },
+          body,
+        }
+      );
+      return handleApiResponse<ExecutionProcess, QueueStatus>(response);
     });
-    return handleApiResponse<ExecutionProcess, QueueStatus>(response);
   },
 
   startReview: async (
@@ -1793,11 +1842,15 @@ export const queueApi = {
     sessionId: string,
     data: DraftFollowUpData
   ): Promise<QueueStatus> => {
-    const response = await makeRequest(`/api/sessions/${sessionId}/queue`, {
-      method: 'POST',
-      body: JSON.stringify(data),
+    const body = JSON.stringify(data);
+    return withRevivalIdentity(sessionId, body, async (request) => {
+      const response = await makeRequest(`/api/sessions/${sessionId}/queue`, {
+        method: 'POST',
+        headers: { 'Idempotency-Key': request },
+        body,
+      });
+      return handleApiResponse<QueueStatus>(response);
     });
-    return handleApiResponse<QueueStatus>(response);
   },
 
   /**

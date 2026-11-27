@@ -27,7 +27,8 @@ request the writer's restoration. Concurrent readers share one restoration.
 The browser retains request identity and displays saved-message/recovery status.
 Ordinary recreation preserves populated/aliased worktrees on branch mismatch.
 
-53 Python tests pass with Nightly source d419d85f4. Nine archive/revival Rust tests,
+The full67-test Python suite and12 final focused selection tests pass with
+Nightly source d419d85f4. Nine archive/revival Rust tests,
 two kernel-custody tests, three worktree-preservation tests and three existing
 owner regressions pass. Backend compilation, generated types/check, all four
 frontend type checks, changed frontend lint and formatting pass. TypeScript used
@@ -35,11 +36,19 @@ a bounded1536MiB heap after default heap exhaustion; production settings stayed
 unchanged. Logs: adjacent `source-recovery/`. Local transport/HTTP/driver fixtures
 are not actual Desktop B or ordinary application acceptance.
 
+The new `nightly_selection.py` contract holds scoped cold custody, captures a
+matching current SQL image, filters active paths and validates independent
+SQL/cold-reference recovery. Message/read intent invalidates exclusions. B
+metadata work does not pin a live SQL transaction. Physical preparation now
+commits its path journal atomically. Normal B restores old generations using
+current qualified reader inputs while preserving immutable provider/index identity.
+New logs: `archive-nightly-tests.log`, `selection-final-tests.log`, `format-nightly.log`.
+
 ## Remaining outcomes
 
 The immediate implementation gap is the source-pinned physical driver with actual
 serving-reader, native/process, Git and attachment dependency ownership. Reuse the
-checked lifecycle/custody/B adapter. Then finish Nightly active-payload selection,
+checked lifecycle/custody/B adapter. Then wire the tested Nightly selection contract into the actual recorded namespace/current-map cycle,
 actual B/current-SQL/software/frontend recovery, combined candidate/fallback and
 ordinary paired-reader/API/desktop/mobile validation, and qualified staging handoff.
 [Full takeover scope](VK_DEDUP_TAKEOVER.md) remains IN PROGRESS; no deployable
@@ -51,6 +60,11 @@ retirement, Nightly schedule activation or service action occurred. Actual
 spinup/cutover belongs to the external managing agent. Preserve current data,
 inputs/settings/owners, backup epochs and the existing Nightly tracking/cursor.
 Recheck mounted SSD resources; earlier low-capacity readings are historical.
+
+Read-only current inventory found1,296 workspaces/1,051 archived;1,011 have no
+metadata hold, of which634 have no local worktree and377 have one. This is not
+eligibility or movement proof: current process/Git/dependency and existing-history
+ownership remain required. Do not recapture/move the population from these counts.
 
 ## Accepted dedup evidence to retain
 

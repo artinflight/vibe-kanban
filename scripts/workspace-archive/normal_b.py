@@ -257,11 +257,17 @@ class NormalB:
             finally:
                 db.close()
 
-    @contextmanager
-    def recall(self, locator, expected):
-        # Metadata recall releases its owner context before selected body recall
-        # acquires the same normal lease. Never nest competing B controllers.
+    def describe(self, locator, expected):
+        """Reopen immutable normal-B metadata without recapturing cold bodies."""
         bundle = self._bundle(locator, expected)
+        paths, _ = self._selected_configs(bundle)
+        for path in paths:
+            self.check()
+            with self.selected.open_recovery(str(path), bundle['manifest']) as selected:
+                selected.check()
+        return bundle['manifest']
+
+    def _selected_configs(self, bundle):
         manifest = bundle['manifest']
         folder = self.folder(manifest['operation_id'])
         wanted = list(requests(manifest, folder / 'manifest.json'))
@@ -270,22 +276,46 @@ class NormalB:
         paths, names = [], {}
         for i, batch in enumerate(bundle['batches']):
             request_path = folder / ('request-' + str(i) + '.json')
-            config_path = folder / ('reader-' + str(i) + '.json')
-            config = batch['configuration']
-            # Connection/source/placement/lease settings are operator-owned;
-            # a backup record cannot choose a new command or provider.
+            saved = batch['configuration']
+            # Old recovery metadata never chooses executable/connection inputs.
+            # Use today's qualified owner/reader closure while preserving the
+            # immutable logical provider and selected-index identities. Otherwise
+            # an ordinary software upgrade would make every old archive unreadable.
             dynamic = {'request_file', 'request_file_sha256', 'canonical_plan_sha256', 'index', 'index_reference'}
-            if any(config.get(k) != v for k, v in self.template.items() if k not in dynamic):
-                raise ValueError('Recovered reader changed current qualified owner settings')
-            if set(config) - set(self.template) - dynamic:
-                raise ValueError('Unexpected recovered reader settings')
-            if config['request_file'] != str(request_path):
-                raise ValueError('Recovered request path differs')
+            if (set(saved) - set(self.template) - dynamic
+                    or saved.get('format') != self.template['format']
+                    or saved.get('dependencies') != self.template['dependencies']
+                    or saved.get('B_controls', {}).get('B_root') != self.template['B_controls']['B_root']):
+                raise ValueError('Recovered reader changed logical provider identity or schema')
             immutable(request_path, nightly_json(batch['request']))
+            expected = dict(request_file=str(request_path),
+                request_file_sha256=hashlib.sha256(request_path.read_bytes()).hexdigest(),
+                canonical_plan_sha256=nightly_digest(manifest))
+            if any(saved.get(k) != v for k, v in expected.items()):
+                raise ValueError('Recovered request binding differs')
+            index = saved['index']
+            reference = saved['index_reference']
+            key = 'workspace-archive-' + uuid.UUID(manifest['operation_id']).hex + '-' + str(i) + '-reader'
+            if (set(index) != {'index_name', 'checkpoint_sha256'} or index['index_name'] != key
+                    or reference.get('sha256') != index['checkpoint_sha256']):
+                raise ValueError('Recovered selected-index identity differs')
+            config = dict(self.template, **expected, index=index, index_reference=reference)
+            # Keep previously qualified reader configurations intact. New source
+            # or resource settings get their own immutable, content-named input.
+            config_path = folder / ('reader-' + str(i) + '-' + nightly_digest(config) + '.json')
             immutable(config_path, nightly_json(config))
             paths.append(config_path)
             for file in batch['request']['files']:
                 names[file['normal_namespace_name']] = i
+        return paths, names
+
+    @contextmanager
+    def recall(self, locator, expected):
+        # Metadata recall releases its owner context before selected body recall
+        # acquires the same normal lease. Never nest competing B controllers.
+        bundle = self._bundle(locator, expected)
+        manifest = bundle['manifest']
+        paths, names = self._selected_configs(bundle)
         provider = self
         with ExitStack() as stack:
             class Reader:

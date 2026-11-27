@@ -101,14 +101,13 @@ class Lifecycle:
         manifest = dict(format='vk-workspace-archive-v1', workspace_id=self.workspace,
                         request_version=version, operation_id=operation,
                         ownership=ownership, payloads=tree)
-        self.catalog.begin_archive(self.workspace, version, operation)
         stage = self.staging / operation
         journal = dict(manifest=manifest, verification_stage=str(stage),
                        retired_roots=[str(Path(p).with_name('.vk-cold-' + operation + '-' + str(i)))
                                       for i, p in enumerate(tree['roots'])],
                        recovery=None, restore_attempts=[], publication=None,
                        abandoned_verification=[], verification_relocation=None)
-        self.catalog.save_io(self.workspace, operation, journal)
+        self.catalog.begin_archive(self.workspace, version, operation, journal=journal)
         self.event('copy_intent', manifest)
         return self.resume_preparation()
 

@@ -140,6 +140,24 @@ class LifecycleTests(unittest.TestCase):
         self.assertEqual(self.b.captures, 1)
         self.assertEqual(self.c.db.execute('SELECT count(*) FROM workspace_archive_generations').fetchone()[0], 1)
 
+    def test_copy_state_and_original_path_journal_are_atomic(self):
+        self.c.db.execute("""CREATE TRIGGER fail_fixture_intent BEFORE INSERT ON workspace_archive_io
+            BEGIN SELECT RAISE(ABORT, 'fixture intent write failed'); END""")
+        import sqlite3
+        with self.assertRaises(sqlite3.IntegrityError): self.prepare()
+        self.assertIsNone(self.c.state(self.w))
+        self.assertEqual(self.b.captures, 0)
+        self.assertTrue(all(Path(p).exists() for p in self.roots))
+        self.c.db.execute('DROP TRIGGER fail_fixture_intent')
+        self.interrupt('copy_intent')
+        with self.assertRaises(InterruptedError): self.prepare()
+        self.assertEqual(self.c.state(self.w)['phase'], 'preparing')
+        self.assertEqual(self.c.io(self.w)['journal']['manifest']['payloads']['roots'], self.roots)
+        self.hook = None
+        self.life.resume_preparation()
+        self.assertEqual(self.c.state(self.w)['phase'], 'verified')
+        self.assertEqual(self.b.captures, 1)
+
     def test_uncertain_capture_reconciles_same_operation_without_recapture(self):
         self.b.uncertain_once = True
         with self.assertRaises(ConnectionError): self.prepare()

@@ -70,6 +70,12 @@ separate. A UI flag or incomplete physical transaction never grants exclusion.
 - `normal_b.py`: existing Nightly native B object capture, immutable selected
   indexes, control checkpoints and normal decoder. Source pins, existing leases
   and operator connection settings remain required. No new backup transport.
+- `nightly_selection.py`: scoped cold-generation custody, coherent SQLite API
+  image, active-path filtering and independent SQL/cold-reference recovery
+  validation. Exclusions invalidate on retained messages, history-read intent,
+  generation changes or reappearing local paths. The external owner contract
+  supplies required SQL/catalog/shared sources; a backup cannot choose its own
+  minimum scope. This contract is not yet wired into the installed Nightly cycle.
 
 The normal-B adapter uses the maintained Nightly source closure, currently tested
 against d419d85f4f5652a36f9372feaa889d59e4ee8079. Its source/configuration must be
@@ -102,6 +108,11 @@ The trusted physical driver, complete production ownership/Git/attachment closur
 and Nightly consumer remain unfinished. Runtime configuration stays absent in
 production until those dependencies and the combined release are qualified.
 Native metadata snapshots alone do not establish process or dependency custody.
+The selection contract must be connected to Nightly's recorded namespace/current
+map and normal current-set acceptance; importing the helper alone is insufficient.
+The existing Nightly source owner, cursor, retained STOP/STARTED and schedule stay
+unchanged. Metadata reopening currently uses bounded serial normal contexts;
+whole-population performance still needs qualification with the final owner.
 
 Use the maintained Desktop backup transport/catalog instead of another backup
 service. Keep bulk staging on mounted SSD. Hold only the exact workspace's
@@ -118,9 +129,32 @@ payload selection with complete SQL/catalog/shared closure and cold restore.
 Qualify the combined candidate and compatible fallback before handing the
 restart to the outside managing agent.
 
+## Recovery and selection refinements
+
+Physical preparation state and its original-path journal now commit in one SQL
+transaction. Failure of the journal write leaves no orphaned `preparing` state.
+A crash after intent can resume the same operation without another capture.
+
+Normal B recovery reopens the immutable bundle and every selected index. An
+archive retains its original provider/selected-index identity while using the
+current qualified executable, connection and resource inputs. Old backup metadata
+cannot select commands. New reader settings create new immutable control files,
+preserving earlier files and epochs; ordinary software upgrades do not require
+recapturing old bodies. Changing the logical provider remains refused.
+
+Nightly selection performs remote metadata checks outside live SQL transactions.
+Its SQL API image is bounded by explicit capacity/reserve admission and verified
+against the exact cold references. Shared workspace locks prevent physical moves;
+new user input still commits and invalidates the selection immediately. The normal
+recovery validator requires the externally specified active/shared scope and
+checks the independently restored SQL against each referenced cold generation.
+These are source contracts, not an activated Nightly or actual-B acceptance.
+
 ## Validation
 
-All53 Python tests pass with the actual maintained Nightly modules supplied. Coverage
+The full67-test Python suite passes with the actual maintained Nightly modules supplied.
+After moving remote checks outside live SQL transactions, all12 focused Nightly
+selection tests pass, including a concurrent SQL commit during B metadata reopen. Coverage
 includes SQL intent/generation/input concurrency, native descendants, shared
 custody, exact bytes/Linux metadata/symlinks/empty files, interrupted copy and
 root renames, offline/corrupt recovery, messages during retirement, newer local

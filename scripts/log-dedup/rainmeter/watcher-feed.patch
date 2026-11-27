@@ -1,0 +1,10 @@
+--- conversion_source_v3.py
++++ conversion_source_v3.py
+@@ -12,2 +12,3 @@
+ import retirement_progress
++import rainmeter_feed
+ import control_observation
+@@ -86,2 +87,3 @@
+         raw=raw.replace('<dt>Current stage</dt>',detail+'<dt>Current stage</dt>')
++    raw=rainmeter_feed.embed(raw,config,result)
+     p=Path(config['public_status']);temp=p.with_name('.status-'+uuid.uuid4().hex);temp.write_text(raw);temp.chmod(0o644);os.replace(temp,p)

@@ -1,0 +1,20 @@
+-- Executed in the real Rainmeter Lua runtime; pure presentation tests only.
+local output=[[B:\vk-staging\dedup-hud-20261121\lua-tests.txt]]
+local ok,err=pcall(function()
+  local raw='version=1\nobserved=1000\nprogress=990\nstate=running\nphase=batch_packed\ncompleted_files=3\nresolved_files=4\ntotal_files=10\ncompleted_batches=1\ntotal_batches=3\ncompleted_raw_bytes=1000\nreclaimed_bytes=200\n'
+  local data=assert(Parse(raw))
+  local v=View(data,1010,false)
+  assert(v.state=='RUNNING' and v.percent==40 and v.count=='4 / 10 logs')
+  assert(Parse(raw..'state=success\n')==nil)
+  assert(Parse(raw:gsub('total_files=10','total_files=2'))==nil)
+  assert(Parse(raw:gsub('batch_packed','[!Execute bad]'))==nil)
+  v=View(data,1010,true);assert(v.state=='OFFLINE' and v.count=='4 / 10 logs')
+  assert(View(data,1200,false).state=='STALE')
+  assert(View(data,900,false).state=='CLOCK ERROR')
+  data.observed=1700;assert(View(data,1700,false).state=='STALLED')
+  data.state='paused';assert(View(data,1700,false).state=='PAUSED')
+  data.state='waiting_for_backup';assert(View(data,1700,false).state=='BACKUP WAIT')
+  data.state='success';v=View(data,1700,false);assert(v.state=='CHECKS PENDING' and v.phase:find('final validation pending',1,true))
+  assert(View(nil,1700,false).state=='NO LIVE DATA')
+end)
+local f=assert(io.open(output,'w'));f:write(ok and 'PASS: 12 real-runtime parser and presentation checks\n' or 'FAIL: '..tostring(err)..'\n');f:close()

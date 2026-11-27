@@ -1,0 +1,3567 @@
+# DELTA.md
+
+## September 28 — two concurrent selected capacity goals
+
+Added bounded two-agent admission and per-session stop, retaining shared allocation,
+independent native/OS deadlines, same-workspace exclusion and interactive priority.
+See [VK_CAPACITY_CONCURRENCY.md](VK_CAPACITY_CONCURRENCY.md) for API semantics,
+real two-native-goal acceptance and deployment requirements. Companion CU changes
+are required; old clients keep one slot. Production deployment remains operator-owned.
+
+## 2026-08-20T00:00:00Z | vk/13c6-vk-multi-line-pa | multiline paste line-ending hardening
+
+- Intent: fix the remaining multiline paste failure in VK prompt fields after
+  text already exists in the editor.
+- Finding: the previous source fix correctly handled `text/html` priority, but
+  VK's multiline detector accepted newline forms that Lexical's
+  `selection.insertRawText` did not reliably split, including lone carriage
+  returns and Unicode line separators.
+- Changed `packages/ui/src/components/PasteMarkdownPlugin.tsx` to normalize
+  pasted plain text to LF before raw insertion in browser paste, raw paste, and
+  Tauri Cmd+Shift+V fallback paths.
+- Deployment plan: land through PR to `staging`, then publish frontend assets
+  without restarting `vibe-kanban.service`.
+
+## 2026-06-11T12:45:00Z | vk/land-live-fixes-20260422 | restart candidate and targeted backup
+
+- Prepared a clean restart candidate from the current VK fix set without restarting live VK.
+- Candidate worktree: `/home/mcp/vk-restart-candidate-20260611T112143Z`; branch `deploy/restart-candidate-20260611T112143Z`; commit `2a32636534c6365452777f6d67f3b64583180160`.
+- Built backend from the candidate with `CARGO_TARGET_DIR=/home/mcp/_vibe_kanban_repo/target cargo build --release --bin server`.
+- Installed next-restart binaries to `/home/mcp/.local/bin/vibe-kanban-serve` and `/home/mcp/.local/bin/vibe-kanban-serve-prod`; sha256 `fcf8832cf5a53bf67042661bd314774cfcfeaa687e458c237aeef1648004d582`.
+- Running VK PID remained `3435842`; no restart was performed.
+- Built and staged frontend release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260611Trestart-candidate`; asset `/assets/index-Bm8ag4JP.js`; sha256 `b2a3ab5030a8a15904b2742be2ebd9252cdcdd6cfd704a198e2d18e079264715`.
+- Did not switch live frontend pointer; it still targets `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260608Tmode-persistence`.
+- Stock lean backup was attempted but aborted after current sessions/Codex state made it grow to about `40G` staged; incomplete temp data was removed.
+- Completed targeted restart-restore backup and mirrored it to Desktop:
+  - local: `/home/mcp/backups/vk-targeted-restart-restore-20260611T123534Z.tar.gz`
+  - Desktop: `desktop:B:/vk-backups/vk-targeted-restart-restore-20260611T123534Z.tar.gz`
+  - sha256: `af5f3380ae4648a19cef910985944dc2cf8d7964d81b2947a781deb16c9d195d`
+- Cleanup touched only rebuildable caches/build outputs/temp artifacts; VK DB, live sessions, VK Codex state, registered worktrees, and completed backups were preserved.
+
+## 2026-06-03T16:05:00Z | vk/land-live-fixes-20260422 | duplicate project cleanup
+
+- User reported duplicated projects in VK.
+- Root cause: `/api/projects` merged real project rows with `PROJECT_REPO_DEFAULTS` synthetic projects; dedupe only trimmed/lowercased names, so `foxtrot-lima` did not match `FoxtrotLima` and `intake-shield` did not match `intakeShield`.
+- Took live SQLite backup at `/home/mcp/backups/vk-project-duplicate-scratch-cleanup-20260603T160156Z/db.v2.sqlite` and saved deleted payloads in `deleted-scratch-records.json`.
+- Deleted only the two stale visible duplicate scratch rows: `7e139609-715c-4724-971a-ab986ce9ba79` and `59b947c5-7bb3-442e-bb7f-f752da7efcc4`.
+- Live `/api/projects` now shows active count `14`; `FoxtrotLima` and `intakeShield` are gone; `foxtrot-lima` and `intake-shield` remain once each.
+- Staged source fix in `crates/server/src/routes/projects.rs`: stronger name canonicalization plus repo-ownership filtering for synthetic scratch projects, while retaining legitimate synthetic-only projects.
+- Updated `scripts/vk_live_regression_smoke.py` to expect the duplicate-free active project list.
+- Validation passed: `cargo test -p server routes::projects::tests`.
+- No VK restart was performed; source fix waits for the next backend build/restart.
+
+## 2026-06-03T00:25:00Z | vk/land-live-fixes-20260422 | restart safety and queue recovery plan
+
+- User approved cleanup/build/restart only with an efficient restore-grade backup mirrored off MCP to Desktop.
+- Preflight active-agent check showed no running `vk-exec-*` units and `0` non-dropped DB execution rows with `status='running'`.
+- Disk was critically low at about `5.6G` free / `98%` used.
+- Rebuildable cleanup removed stale worktree `node_modules`, VK `target/debug`, and npm cache; free space rose to about `42G`.
+- Aborted the stock lean backup after it copied too much historical Codex state (`29G` temp set) and removed its temp directory.
+- Created custom efficient restore archive `/home/mcp/backups/vk-efficient-restore-20260603T004715Z.tar.gz` and mirrored it to `desktop:B:/vk-backups/vk-efficient-restore-20260603T004715Z.tar.gz` plus `desktop:B:/vk-backups/vk-efficient-restore-latest.tar.gz`.
+- Mirrored source-state snapshot to `desktop:B:/vk-backups/vk-pre-restart-source-state-20260603T002809Z.tar.gz`.
+- Backup scope: 226 non-archived workspaces, 233 thread IDs, 252 rollout files, DB snapshot, selected latest process logs, isolated Codex auth/config/state, systemd config, live binaries, current frontend release, source diff/untracked snapshot, and workspace git metadata.
+- Backup integrity: restore archive size `405,891,419` bytes, `4923` entries, sha256 `92c9e5e0a557397a90c175cd33dcffee6092a105ed7c36d529443f7ad91a495c`; source-state archive sha256 `74df1f9dc0bf6ba4f4cf0687eb4d3fe8ec1c377778ffff16b7b0cf6a9722b401`.
+- Queue regression remains in scope: deployed package must include backend queued-follow-up consumption and frontend stale-running/queued-status reconciliation.
+- Docs now record that backup must be lean but sufficient to restore VK DB, sessions, isolated Codex continuity state, systemd config, binaries, frontend pointer, and workspace git metadata.
+- Built restart package from the canonical VK checkout:
+  - backend `target/release/server` sha256 `c083178e5a75a5fefeb01f862dd668929be03fecaf08bb3749f77ca379ffec7f`
+  - frontend release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260603Tqueue-resume-max-active`
+  - frontend asset `/assets/index-BLreFcjw.js` sha256 `8bb6029a2d1fd0e09c208afc1f558feae5646d66ce62ac790ce615c192ffb935`
+  - release manifest records included backend/frontend fixes and backup pointer.
+- Updated `scripts/vk_live_regression_smoke.py` to expect the staged release asset and the current live project active/archive order captured immediately before restart.
+- Restarted VK after confirming `0` active executions; live backend/frontend came up healthy with `VK_CODEX_MAX_ACTIVE_EXECUTIONS=8`.
+- Initial smoke caught nondeterministic active project ordering for synthetic projects. Root cause was `HashMap::values()` iteration in `crates/server/src/routes/projects.rs`.
+- Added deterministic synthetic-project sorting plus regression test `synthetic_projects_have_stable_display_order`, rebuilt release, confirmed `0` active executions again, and restarted a second time.
+- Final live backend sha256 is `722a5b0d14ca2350661cdcd0a271ac2cfea980dae4f2dcafc55b8ffe9470ed75`; live PID `3435842`; frontend remains `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260603Tqueue-resume-max-active` with `/assets/index-BLreFcjw.js`.
+- Final smoke passed; eight repeated `/api/projects` reads returned stable active project order; fake unread/queue routes returned `404` rather than `405`; active executions remained `0`.
+- Removed rebuilt `target/debug` after validation; `/home/mcp` returned to about `39G` free / `83%` used.
+
+## 2026-06-02T00:05:00Z | vk/land-live-fixes-20260422 | Codex active-agent limit repair
+
+- User reported VK was again blocking new agents with `Codex execution limit reached: 1 active, limit 1`.
+- Live service env lacked `VK_CODEX_MAX_ACTIVE_EXECUTIONS`, so the executor fell back to hardcoded limit `1`.
+- Changed source fallback to `DEFAULT_CODEX_MAX_ACTIVE_EXECUTIONS = 8` and added parser/default unit coverage.
+- Updated `ops:check` to guard the source fallback and runtime docs.
+- Persisted `VK_CODEX_MAX_ACTIVE_EXECUTIONS=8` in the live systemd runtime guardrails and ran `systemctl --user daemon-reload`.
+- Later investigation showed `IS::UI Usability Pass` was not actually running; it had been killed after live VK panicked on `ClientRequest::ThreadResume`.
+- Changed Codex client request ID extraction to use `ClientRequest::id()` and added regression coverage for `ThreadResume`.
+- Did not restart VK; the running process needs an approved build/restart to pick up the env and resume-panic fix.
+
+## 2026-05-30T11:25:00Z | vk/land-live-fixes-20260422 | unread regression correction staged
+
+- Intent: repair the `Mark unread` 405 regression introduced by deploying the ntfy-only binary.
+- Root cause:
+  - live frontend release calls `PUT /api/workspaces/:id/unread`
+  - previous ntfy restart deployed a binary from `/tmp/vk-ntfy-turn-completion-20260528`
+  - that binary had bounded ntfy but did not include the canonical unread backend route
+- Completed:
+  - ported bounded ntfy worker into canonical `/home/mcp/_vibe_kanban_repo`
+  - kept canonical manual unread backend route and DB helper
+  - added latest coding-agent turn/profile lookup for ntfy final summaries
+  - fixed existing dirty `projects.rs` move/borrow compile error by computing `target_branch` before moving `repo`
+  - built corrected release binary and installed it to both live binary paths
+- Validation:
+  - `cargo fmt --check`
+  - `cargo test -p services services::notification`
+  - `cargo test -p db latest_workspace_turn_can_be_marked_unseen`
+  - `cargo test -p db completed_coding_agent_turns_are_marked_unseen_by_uuid_blob`
+  - `cargo build --release --bin server`
+  - `git diff --check`
+- Deployment state:
+  - staged binary sha256: `1ca98fdffa8d2f172ab7d94cb513e3c79e26c6a179365963d1d581ac0e45ef1a`
+  - running process sha256 remains `be377483fccfe825fe93b10c6cba848871018e0f01d892e85c43ee072d7d19ee`
+  - no restart performed because active agents appeared during build; last check showed `3` running units/rows
+- Ntfy:
+  - server `https://opntfy.fly.dev`
+  - topic `vk-workspace-turns`
+  - bearer-token subscribe tested `200`; anonymous subscribe tested `403`
+  - token must stay out of docs/chat
+
+## 2026-05-28T18:30:00Z | vk/land-live-fixes-20260422 | VK agent deploy runbook
+
+- Intent: make future VK agents able to work on and deploy the VK repo from inside VK without repeating dirty-checkout deploys, frontend rollback, active-agent interruption, or unverified regressions.
+- Completed:
+  - added `VK_AGENT_DEPLOYMENT_RUNBOOK.md`
+  - added the runbook to `AGENTS.md` required read order
+  - recorded current live truth in `STATE.md` and `STREAM.md`
+  - prepended `HANDOFF.md` with pickup notes
+- Live facts verified:
+  - `vibe-kanban.service` active/running on PID `4182076`
+  - live binary sha `7c63eb8fa7b2b46f6567ef7f8606df1d7a794bb6685d14cd7bf951c531f00e46`
+  - frontend pointer `frontend-dist/current -> releases/20260514Tworkspace-unpin`
+  - live asset `/assets/index-BLn8oOcK.js`
+  - one `vk-exec-codex-*` unit was running, so no restart was attempted
+- Not done:
+  - no build, deploy, frontend asset swap, DB edit, or restart
+  - canonical checkout remains dirty with unrelated source edits
+
+## 2026-04-18T00:00:00Z | staging | local-only recovery baseline
+
+- Intent: recover the usable VK board state, remove active cloud coupling, and make the local install restorable.
+- Completed:
+  - imported the VK cloud export into the local SQLite DB
+  - switched the live runtime to local-only behavior (`shared_api_base: null`)
+  - restored project settings, local columns, issue creation, workspace linking, and workspace history scroll
+  - added lean backup + one-click restore scripts
+  - installed hourly backup cron with Desktop archive mirroring
+- Verified:
+  - local API reports `shared_api_base: null`
+  - project boards and issues load locally
+  - backups are created locally and mirrored to Desktop
+- Not complete / known gaps:
+  - some historic metadata can only be reconstructed if present in export or DB snapshots
+  - project-scoped PR fallback is still broader than it should be
+
+## 2026-04-18T22:00:00Z | staging | hyrox issue/workspace/PR repair
+
+- Intent: repair missing workspace links and merged PR indicators in the `hyroxready-app` kanban after local recovery.
+- Completed:
+  - re-linked `ART-57` to `FR::Cardio Timer Font Size`
+  - restored merged PR metadata for:
+    - `ART-60` -> `#799`
+    - `ART-61` -> `#800`
+    - `T42` -> `#801`
+  - updated issue workspace cards so PR badges are visible on small/narrow layouts
+- Files changed:
+  - `packages/ui/src/components/IssueWorkspaceCard.tsx`
+- Backups:
+  - `/home/mcp/backups/vk-hyrox-pr-workspace-fix-20260418T223433Z`
+  - `/home/mcp/backups/vk-hyrox-ui-rollout-20260418T224435Z`
+  - `/home/mcp/backups/vk-t42-pr-fix-20260418T233203Z`
+- Verified:
+  - local fallback API shows the repaired issue/workspace/PR links
+  - live bundle rolled to `index-tPwgyQmd.js`
+  - fix committed to `staging` as `1ad3ed085`
+
+## 2026-04-18T23:00:00Z | staging | vibe-kanban project smoke test
+
+- Intent: prove the `vibe-kanban` project can resume normal issue/workspace work locally.
+- Completed:
+  - created a temporary issue in the `vibe-kanban` project
+  - created a linked workspace against `_vibe_kanban_repo`
+  - verified the workspace appeared under the issue immediately
+  - stopped and deleted the temporary workspace
+  - deleted the temporary issue
+- Verified:
+  - local issue creation works
+  - local workspace creation works
+  - workspace linking/refresh works
+- Not complete / known gaps:
+  - none blocking normal project work in the `vibe-kanban` board
+
+## 2026-04-19T00:00:00Z | vk/53b2-vk-needs-review | app bar needs-review project bubbles
+
+- Intent: show a project-level visual indicator when a project has linked workspaces with agents that have finished or are waiting for review.
+- Completed:
+  - added project icon bubbles in the left app bar for projects with review-needed workspaces
+  - aggregated review-needed state from existing workspace summary signals
+  - added local helper APIs for workspace summaries and local project workspace lookup
+  - committed the feature as `5c5f83855`
+- Files changed:
+  - `packages/ui/src/components/AppBar.tsx`
+  - `packages/web-core/src/shared/components/ui-new/containers/SharedAppLayout.tsx`
+  - `packages/web-core/src/shared/lib/api.ts`
+  - `STREAM.md`
+  - `HANDOFF.md`
+- Verified:
+  - `git diff --check` passed for the touched frontend files
+- Not complete / known gaps:
+  - `pnpm run format` could not complete because `prettier` was missing
+  - `pnpm run check` could not complete because `tsc` was missing
+  - original branch push/PR preview state has since changed; see current branch history and PR state instead of this older branch-note wording
+
+## 2026-04-24T00:00:00Z | vk/7b9a-vk-worktree-clea | immediate post-merge worktree cleanup
+
+- Intent: remove workspace worktree folders as soon as a tracked PR lands in `staging` instead of waiting for the archived-workspace retention window.
+- Completed:
+  - added a shared container helper that deletes archived worktrees for workspaces with merged tracked PRs targeting `staging`
+  - called that helper from both the background PR monitor and the attach-existing-PR route
+  - added a retry after archive-script completion so archive scripts can finish before the worktree is removed
+  - archived linked local workspaces and cleaned up their worktrees when their issues move into `In Staging`, including bulk issue updates
+  - documented the new behavior in `VK_WORKFLOW.md`
+- Files changed:
+  - `crates/services/src/services/container.rs`
+  - `crates/services/src/services/pr_monitor.rs`
+  - `crates/local-deployment/src/container.rs`
+  - `crates/server/src/routes/local_compat.rs`
+  - `crates/server/src/routes/workspaces/pr.rs`
+  - `VK_WORKFLOW.md`
+  - `STREAM.md`
+  - `HANDOFF.md`
+- Verified:
+  - added unit coverage for the merged-to-`staging` PR detection helper
+  - `cargo fmt --all` completed
+- Not complete / known gaps:
+  - PR `#6` still needs merge
+  - backup retention validation was not rerun during the sync cleanup step
+  - full test validation was not rerun after the final cleanup behavior adjustments
+  - pinned workspaces still keep the existing auto-archive exception
+
+# 2026-04-19 Workspace Polling Hotfix
+
+- A second frontend churn path was identified after the earlier kanban/sidebar fix.
+- Root cause: mounted workspace views were still polling branch status and issue-linked workspaces every 5 seconds.
+- Primary files:
+  - `packages/web-core/src/shared/hooks/useBranchStatus.ts`
+  - `packages/web-core/src/shared/hooks/useTaskWorkspaces.ts`
+- Fix:
+  - disable default 5s polling for both hooks
+  - add `staleTime`
+  - disable `refetchOnWindowFocus`
+  - disable `refetchOnMount`
+- Why this mattered:
+  - the first stress test only exercised raw HTTP endpoints and missed the browser-mounted polling path
+  - real workspace UI usage could still drive repeated `/api/workspaces/:id/git/status` and `/api/workspaces?task_id=...` calls
+  - under sustained live use, that recreated the same multi-GB server bloat / timeout pattern
+- Post-fix validation:
+  - repeated workspace-open emulation for `OpsPB::Linking in reports`, `VK:: Wire Ntfy`, and `Vk::Ops`
+  - combined polling plus summaries POST load
+  - no endpoint failures
+  - RSS stayed roughly in the `32–51 MB` range instead of climbing into GB territory
+
+## 2026-04-20T00:00:00Z | vk/ea3c-vk-auto-archive | continuity refresh for staging-equivalent worktree
+
+- Intent: resume from the real checked-out workspace state and correct stale branch-local continuity notes.
+- Completed:
+  - confirmed the checked-out branch is `vk/ea3c-vk-auto-archive`
+  - confirmed the worktree is clean and matches `staging` at `88c0ebd59`
+  - replaced stale backup-retention stream notes in `STREAM.md` and `HANDOFF.md`
+- Verified:
+  - `git status --short --branch`
+  - `git diff --stat`
+  - `git diff --name-only staging...HEAD`
+  - `git log --oneline staging..HEAD`
+  - `curl -s http://127.0.0.1:4311/api/info` confirmed `shared_api_base: null`
+- Not complete / known gaps:
+  - `pnpm run format` did not complete because `packages/web-core` could not resolve `prettier`
+
+## 2026-04-26T12:35:00Z | vk/ea3c-vk-auto-archive | Codex rollout continuity repair
+
+- Intent: stop empty or failed Codex rollout launches from poisoning follow-up turns in the local Vibe Kanban install.
+- Completed:
+  - identified `019dc72a-9fba-7961-9c36-a3f8f8a63036` as a true zero-byte rollout file
+  - confirmed `019dc9bd-ef72-76f2-b08e-4c83659f0369` was non-empty despite the late `thread not found` log
+  - changed resume lookup to only use completed exit-0 coding-agent turns with a non-empty summary
+  - backed up the live DB to `/home/mcp/backups/vk-rollout-repair-20260426T122842Z`
+  - cleared four live DB `agent_session_id` pointers whose rollout files were empty or missing
+- Verified:
+  - `cargo fmt --all`
+  - `env DATABASE_URL=sqlite:///home/mcp/.local/share/vibe-kanban/db.v2.sqlite cargo check -p db`
+  - post-repair live DB scan returned `bad_rollout_agent_session_rows_after 0`
+- Not complete / known gaps:
+  - the zero-byte rollout cannot be reconstructed because no persisted session content exists
+  - the upstream Codex late-finalization `thread not found` log may still appear, but it no longer points at an empty rollout anchor in the live DB
+
+## 2026-04-26T14:55:00Z | vk/ea3c-vk-auto-archive | execution status and vibe.local hotfix
+
+- Intent: stop mounted workspace pages from showing completed agents as still running until manual refresh, and restore `vibe.local` after the local deploy.
+- Completed:
+  - changed execution-process WebSocket consumers to reconnect after clean closes and reload a fresh process snapshot
+  - stopped the execution-process server stream from forwarding unrelated non-patch messages such as `finished`
+  - rebuilt `packages/local-web/dist` so the frontend fix is embedded in the local server binary
+  - rebuilt and redeployed `/home/mcp/.local/bin/vibe-kanban-serve`
+  - restored LAN proxy reachability by setting `HOST=0.0.0.0`, `BACKEND_PORT=4311`, and `PREVIEW_PROXY_PORT=4312` in the user service drop-in
+- Verified:
+  - `pnpm install`
+  - `pnpm run format`
+  - `pnpm --filter @vibe/local-web run build`
+  - `env DATABASE_URL=sqlite:///home/mcp/.local/share/vibe-kanban/db.v2.sqlite cargo check -p services -p db`
+  - `env DATABASE_URL=sqlite:///home/mcp/.local/share/vibe-kanban/db.v2.sqlite cargo build --release -p server --bin server`
+  - `https://vibe.local` returned `200`
+  - execution-process WebSocket returned initial snapshot plus `Ready`
+- Not complete / known gaps:
+  - no browser-driven long-running agent test was performed; the smoke test covered the stream path and deployed service health
+
+## 2026-04-26T16:05:00Z | vk/ea3c-vk-auto-archive | local-only auth gate hotfix
+
+- Intent: stop local-only Vibe Kanban from showing a remote sign-in prompt in the left nav after service restarts or deploys.
+- Completed:
+  - traced the regression to `/api/info` returning `login_status: loggedout` while `shared_api_base` was intentionally `null`
+  - added the live user-service drop-in `/home/mcp/.config/systemd/user/vibe-kanban.service.d/local-auth.conf` with `VK_DISABLE_AUTH=1`
+  - changed local deployment login status so an install with no shared API base reports `LoggedIn { profile: None }`
+- Verified:
+  - live `/api/info` returned `login_status: loggedin` and `shared_api_base: null` after the service drop-in
+  - `https://vibe.local` returned `200` after restart
+  - `pnpm run format`
+  - `env DATABASE_URL=sqlite:///home/mcp/.local/share/vibe-kanban/db.v2.sqlite cargo check -p local-deployment -p server`
+  - `pnpm --filter @vibe/local-web run build`
+  - `env DATABASE_URL=sqlite:///home/mcp/.local/share/vibe-kanban/db.v2.sqlite cargo build --release -p server --bin server`
+  - active workspace summaries showed no `running` execution-process statuses before restart
+  - deployed binary hash matched `target/release/server`: `8d348fb20f36bb25d0dc0737aa5ae3df6e8e8c2243003bff6ffc27f2985f6525`
+  - post-restart service state was `active/running`
+  - post-restart `/api/info` returned `login_status: loggedin` and `shared_api_base: null`
+  - post-restart `https://vibe.local` returned `200`
+- Not complete / known gaps:
+  - local-auth source hardening still needs commit/push/staging promotion
+
+- Backup retention hardened again after MCP local backups bloated past `40G`:
+  - Desktop mirror target is now `B:\vk-backups`
+  - MCP keeps only the current local lean restore set:
+    - newest unpacked restore directory
+    - newest restore archive
+    - `latest` symlinks
+  - older local hourly lean restore directories and archives are deleted
+  - Desktop is now the retention system of record for older hourly history
+- `scripts/vk_lean_backup.py` now stages each new backup into a temporary directory and only promotes it into a timestamped restore directory after the archive is written successfully.
+  - this prevents interrupted backup runs from leaving behind huge partial timestamped restore directories on MCP
+- VK isolated auth broke again because `/home/mcp/.local/share/vibe-kanban/codex-home/auth.json` was stale relative to `/home/mcp/.codex/auth.json`.
+  - immediate prod repair was to resync the isolated VK auth file from the fresh main auth file
+  - verified by a successful real VK follow-up on `VC::ops Playbook` with summary `auth-path-ok`
+  - this is an operational repair, not a full architectural fix for concurrent token refresh races
+- Cleared stale visible auth/bubblewrap noise from workspace transcripts:
+  - deleted stale empty failed/killed codingagent rows from `db.v2.sqlite`
+  - restored session process logs after an over-broad orphan cleanup attempt
+  - sanitized `513` stored process log files under `~/.local/share/vibe-kanban/sessions/.../processes/*.jsonl`
+  - removed `8698` stale lines matching auth/bubblewrap noise such as:
+    - `bubblewrap`
+    - `user namespaces`
+    - `Failed to refresh token`
+    - `refresh_token_reused`
+    - `token_expired`
+- Workspace visibility repair:
+  - patched `packages/web-core/src/shared/hooks/useCreateWorkspace.ts`
+  - intended effect is that newly created issue-linked workspaces appear in Issues without leaving and reopening the issue
+- Chat/live-update mitigation rolled out:
+  - websocket close/reconnect fix in `packages/web-core/src/shared/hooks/useJsonPatchWsStream.ts`
+  - send-triggered session refresh/remount mitigation in:
+    - `packages/web-core/src/features/workspace-chat/model/hooks/useSessionSend.ts`
+    - `packages/web-core/src/pages/workspaces/WorkspacesMainContainer.tsx`
+    - `packages/web-core/src/pages/kanban/ProjectRightSidebarContainer.tsx`
+    - `packages/web-core/src/shared/lib/sessionStreamRefresh.ts`
+  - important: this is not considered the final proper fix
+  - remaining root-cause work is to restore the intended end-to-end live-update path without remount hacks
+- Re-linked `VC::ops Playbook` workspace to its issue:
+  - workspace id `0b00ce25-fb2b-4742-b310-4bf6aaa1e7e7`
+  - task id `69a9dbf6-2cb9-48f2-8d9f-d160fe7a5107`
+- Chat live-update root fix:
+  - removed the forced session refresh/remount workaround
+  - deleted `packages/web-core/src/shared/lib/sessionStreamRefresh.ts`
+  - removed the event-driven remount logic from:
+    - `packages/web-core/src/features/workspace-chat/model/hooks/useSessionSend.ts`
+    - `packages/web-core/src/pages/workspaces/WorkspacesMainContainer.tsx`
+    - `packages/web-core/src/pages/kanban/ProjectRightSidebarContainer.tsx`
+  - real fix moved to the backend:
+    - `crates/server/src/routes/sessions/mod.rs`
+    - after successful follow-up spawn, VK now immediately pushes:
+      - `execution_process_patch::add(&execution_process)`
+      - `workspace_patch::replace(&workspace_with_status)`
+  - purpose:
+    - make the open workspace chat see the new execution immediately through the normal live stream instead of waiting for a later refresh
+  - backup before rollout:
+    - `/home/mcp/backups/vk-chat-root-fix-20260421T104346Z`
+- Re-linked `FR:: Garmin Sync Down` workspace to its issue:
+  - workspace id `25e19656-bc9f-4315-9712-a1d5468bdc00`
+  - task id `7d046622-1dd5-4025-bf04-fe2bfebd10a3`
+  - backup:
+    - `/home/mcp/backups/vk-fr-garmin-relink-20260421T110337Z`
+- Residual red chat-error cleanup and root fix:
+  - fresh process logs still showed the bubblewrap/userns warning on `2026-04-21`, so the remaining red rows were not only stale history
+  - root cause:
+    1. legacy follow-up forks still carried old `workspaceWrite` sandbox state into Codex app-server on resumed threads
+    2. Codex warning/configWarning notifications were normalized as red `error_message` rows
+  - product fix now deployed:
+    - `crates/executors/src/executors/codex.rs`
+      - explicitly override forked thread config with the current computed sandbox/approval/config params so stale legacy sandbox settings are not inherited
+      - continue forcing `danger-full-access` when host AppArmor blocks unprivileged user namespaces
+    - `crates/executors/src/executors/codex/normalize_logs.rs`
+      - treat warning/configWarning as `SystemMessage`
+      - suppress duplicate bubblewrap stderr line
+  - rollout:
+    - rebuilt `target/release/server`
+    - deployed `/home/mcp/.local/bin/vibe-kanban-server-cleanfix`
+    - live sha256 now `47c15955156cddb47252823c110859c8450eb0767a9d19933322dded5c99bf6b`
+    - restarted `vibe-kanban.service`
+  - transcript cleanup after rollout:
+    - rewrote `13` process log files
+    - removed `26` stored lines containing the exact bubblewrap warning string
+    - post-cleanup `rg` found `0` remaining matches for that exact warning in `~/.local/share/vibe-kanban/sessions/.../processes/*.jsonl`
+- Chat behavior fix, 2026-04-21:
+  - removed the client-side pending follow-up acknowledgment state in `packages/web-core/src/features/workspace-chat/ui/SessionChatBoxContainer.tsx`
+  - follow-up sends now clear the composer immediately after a successful POST instead of waiting for later process-count heuristics
+  - `packages/web-core/src/features/workspace-chat/model/hooks/useConversationHistory.ts` now loads newly added already-completed processes into the conversation, fixing the fast-finish case where a real turn could be accepted server-side but fail to materialize in chat
+  - `packages/web-core/src/features/workspace-chat/model/useConversationVirtualizer.ts` now refreshes bottom-lock correction on every conversation content update, including streaming growth inside the unvirtualized tail, so bottom follow can keep up with a live final row
+  - targeted validation passed:
+    - `pnpm --filter @vibe/local-web run check`
+    - `pnpm --filter @vibe/web-core run check`
+    - `pnpm --filter @vibe/ui run check`
+    - `pnpm run format`
+  - repo-wide `pnpm run check` / `pnpm run lint` are still blocked in this environment because backend Rust compilation cannot find `glib-2.0` via `pkg-config`
+- Chat stream root fix and rollout, 2026-04-21:
+  - confirmed the live production root cause in `journalctl --user -u vibe-kanban.service`:
+    - repeated `MsgStore broadcast lagged ... messages dropped for this subscriber`
+  - `crates/utils/src/msg_store.rs`
+    - added strict history/live streaming for patch-based consumers so lag becomes a hard error instead of a silent skip
+  - `crates/services/src/services/container.rs`
+    - running raw/normalized process log websocket streams now use the strict mode
+  - `packages/web-core/src/shared/lib/streamJsonPatchEntries.ts`
+    - process log websockets now reconnect and rebuild after unexpected close/error
+  - rollout:
+    - rebuilt `packages/local-web/dist`
+    - rebuilt `target/release/server`
+    - deployed `/home/mcp/.local/bin/vibe-kanban-server-cleanfix`
+    - restarted `vibe-kanban.service`
+    - live sha256 now `946a4211438d532614a7055672c2fa25c710312b9b38923abf812fbb602bc964`
+- Frontend 404 repair, 2026-04-21:
+  - symptom:
+    - live service healthy on `/api/info`
+    - root route `/` returned `404 Not Found`
+  - verified routing code was already correct in:
+    - `crates/server/src/routes/mod.rs`
+    - `crates/server/src/routes/frontend.rs`
+  - actual cause:
+    - `crates/server/build.rs` did not mark `packages/local-web/dist` as a Cargo build dependency
+    - after rebuilding the frontend, Cargo could still reuse a stale server compile without the current embedded frontend assets
+  - fix:
+    - `crates/server/build.rs`
+      - added recursive `cargo:rerun-if-changed` tracking for `packages/local-web/dist`
+  - validation:
+    - `cargo clean -p server`
+    - `cargo build --release --bin server`
+    - deployed `/home/mcp/.local/bin/vibe-kanban-server-cleanfix`
+    - restarted `vibe-kanban.service`
+    - `curl -i http://127.0.0.1:4311/`
+    - `curl -i http://127.0.0.1:4311/assets/index-DWkKdBPw.js`
+    - `curl -s http://127.0.0.1:4311/api/info`
+  - result:
+    - `/` now returns `200`
+    - frontend assets now return `200`
+    - live sha256 now `a6d17ed54f8ceba064928404ab2af055ae00d855e5bd889e193df265ef6b45b3`
+- Chat history load repair, 2026-04-21:
+  - symptom:
+    - workspace page loaded
+    - chats could remain blank/loading
+  - verified live narrowing:
+    - `/api/sessions?workspace_id=...` returned valid session data
+    - `/api/execution-processes/stream/session/ws?...` returned initial execution-process snapshot + `Ready`
+    - `/api/execution-processes/ac4680a0-2573-4a78-b71d-8a879caf56b8/raw-logs/ws` replayed raw logs
+    - `/api/execution-processes/ac4680a0-2573-4a78-b71d-8a879caf56b8/normalized-logs/ws` opened but emitted nothing before timeout
+  - actual cause:
+    - `crates/services/src/services/container.rs`
+    - the finished-process normalized replay path used a temp `MsgStore` history/live subscription pattern
+    - normalized `JsonPatch` / `Ready` messages could be published during the snapshot/subscribe gap and get lost
+    - that left the normalized websocket open with no replayed chat entries
+  - fix:
+    - `crates/services/src/services/container.rs`
+      - finished-process normalized replay now awaits normalization completion
+      - deduplicates normalized patch history in-memory
+      - returns a finite replay stream instead of relying on live `Ready` signaling
+  - validation:
+    - `cargo check -p services -p server`
+    - `cargo build --release --bin server`
+    - `pnpm run format`
+    - deployed `/home/mcp/.local/bin/vibe-kanban-server-cleanfix`
+    - forced recovery from stuck `systemctl --user restart vibe-kanban.service` by killing only main PID `2225915`
+    - `curl -s http://127.0.0.1:4311/api/info`
+    - direct normalized replay websocket probe for `ac4680a0-2573-4a78-b71d-8a879caf56b8`
+  - result:
+    - normalized replay now emits entries immediately instead of hanging
+    - live sha256 now `e0b3704dcce3f4cf70031141b85c5e2fea0169a6f0d6e0daf458f0fc3656f461`
+- Garmin historic replay repair, 2026-04-21:
+  - symptom:
+    - `FR:: Garmin Sync Down` still opened with blank/loading chat after the earlier replay-race fix
+    - the newest completed process replay path stayed effectively silent long enough to make the UI look dead
+  - verified live narrowing:
+    - workspace id `25e19656-bc9f-4315-9712-a1d5468bdc00`
+    - session id `3a014c6c-4d98-409f-87d9-1a7f111644c0`
+    - process id `123302ac-b1d5-4587-90b6-5d3bba2d712e`
+    - persisted process log file was valid JSONL with `31,667` lines and `83,902,430` bytes
+    - file contained only raw `Stdout` / `Stderr` rows, so opening the workspace forced historical normalization from scratch every time
+  - actual cause:
+    - historical replay still did whole-file loading before sending the first websocket event
+    - `useConversationHistory` still waited for full replay completion before painting historic entries
+  - fix:
+    - `crates/utils/src/execution_logs.rs`
+      - added streaming reads for persisted execution log files
+    - `crates/services/src/services/execution_process.rs`
+      - added streamed raw-log replay from disk
+    - `crates/services/src/services/container.rs`
+      - finished normalized replay now streams persisted raw transcript lines into the executor normalizer and emits patches as they are produced
+      - removed `ensure_container_exists()` from this historical replay path
+    - `packages/web-core/src/features/workspace-chat/model/hooks/useConversationHistory.ts`
+      - initial/newly-completed/reloaded history now paints partial replay state while a historic process is still loading
+  - validation:
+    - `cargo check -p services -p server`
+    - `pnpm --filter @vibe/web-core run check`
+    - `pnpm --filter @vibe/local-web run build`
+    - `cargo build --release --bin server`
+    - `pnpm run format`
+    - direct websocket probes of `/api/execution-processes/123302ac-b1d5-4587-90b6-5d3bba2d712e/raw-logs/ws` and `/api/execution-processes/123302ac-b1d5-4587-90b6-5d3bba2d712e/normalized-logs/ws`
+    - `curl -I http://127.0.0.1:4311/`
+    - `curl -s http://127.0.0.1:4311/api/info`
+  - result:
+    - first raw replay patch now arrives in about `67 ms`
+    - first normalized replay patch now arrives in about `61 ms`
+    - live sha256 now `2288ec455166a1057c7567763555e3545bd71f87892942aec46ea149f6f961e4`
+- 2026-04-21 attachment/workspace-create slowdown follow-up:
+  - symptom:
+    - VK felt extremely slow
+    - attachment insertion errored from the UI
+    - creating a new workspace surfaced `failed to fetch`
+  - verified narrowing before fix:
+    - direct `POST /api/workspaces` already returned `200`, so workspace creation was not fundamentally broken
+    - direct `POST /api/attachments/upload` failed with backend `500`
+    - journal showed `UNIQUE constraint failed: attachments.hash`
+    - journal also showed repeated slow workspace-summary traffic and slow pool acquires
+  - fix:
+    - `crates/services/src/services/file.rs`
+      - duplicate attachment hash collisions now fall back to `find_by_hash` and return the existing attachment row instead of returning `500`
+    - `crates/server/src/routes/workspaces/workspace_summary.rs`
+      - added a short `2s` cache keyed by `archived` so repeated identical summary requests stop hammering SQLite
+  - validation:
+    - `cargo check -p services -p server`
+    - `cargo build --release --bin server`
+    - `pnpm run format`
+    - `curl http://127.0.0.1:4311/api/info`
+    - live `POST /api/workspaces`
+    - live duplicate-content `POST /api/attachments/upload` twice
+  - result:
+    - `/api/info` returned `200` in about `9 ms`
+    - workspace creation returned `200` in about `8 ms`
+    - first duplicate-file upload returned `200` in about `5 ms`
+    - second identical upload returned `200` in about `2 ms` and reused attachment id `2c54f409-7091-492f-9e07-4b4aa6092bf2`
+    - live sha256 now `719712f0cc78503eb9d04908f4d9480d9cb11fb820294995138ed62e66a6083b`
+- 2026-04-21 chat reset / first-screen attachment follow-up:
+  - symptom:
+    - completed agent turns could leave the composer blocked and the chat later reset to:
+      - `Your workspace conversation will appear here once a new turn starts.`
+    - attachment insertion still failed from the initial workspace screen even though it worked from the second screen
+  - fix:
+    - `packages/web-core/src/shared/hooks/useWorkspaceSessions.ts`
+      - preserve the current existing-session selection when the same workspace still contains that session
+      - only clear selection on empty-session results when the workspace itself changed
+    - `packages/web-core/src/features/workspace-chat/model/hooks/useSessionSend.ts`
+      - removed follow-up-triggered workspace-session invalidation
+    - `packages/ui/src/components/WorkspaceContext.tsx`
+      - added `HostIdContext` and `scopeLocalApiPath(...)`
+    - `packages/web-core/src/shared/components/WYSIWYGEditor.tsx`
+      - now passes host id into the editor-node context
+    - `packages/ui/src/components/attachment-node.tsx`
+    - `packages/ui/src/components/image-node.tsx`
+      - scope local attachment metadata/proxy/file URLs through the current host path
+  - validation:
+    - `pnpm --filter @vibe/web-core run check`
+    - `pnpm --filter @vibe/ui run check`
+    - `pnpm --filter @vibe/local-web run build`
+    - `cargo build --release --bin server`
+    - `pnpm run format`
+    - `curl -s http://127.0.0.1:4311/api/info`
+    - `curl -sI http://127.0.0.1:4311/`
+    - `sha256sum /proc/$(systemctl --user show -p MainPID --value vibe-kanban.service)/exe /home/mcp/.local/bin/vibe-kanban-server-cleanfix`
+  - result:
+    - live service is active
+    - running process and deployed binary both match sha `8b3b3f9e72dc37f99df018e88fa8f321cfd65b7df7b72b1136426f62832e15af`
+    - UI confirmation of the exact affected flows is still pending a real user pass
+- 2026-04-22 chat live-update follow-up:
+  - symptom:
+    - `FR:: Coaches Feature Stream` stopped showing new agent lines while the blinking thinking indicator remained
+    - DB state showed the process completed, so the UI was stale rather than the agent still truly running
+  - verified live evidence:
+    - workspace `fcd0ec67-a0fe-42a8-9337-ef3228ceee80`
+    - session `a97647d3-6d95-4470-a320-fe6bf415edd8`
+    - process `b20d10a2-bf5b-43c2-97ef-ac1186664201`
+    - repeated `MsgStore broadcast lagged ... messages dropped for this subscriber` in the live journal during that run
+  - fix:
+    - `crates/services/src/services/events/streams.rs`
+      - session/workspace/scratch event websockets now turn `BroadcastStreamRecvError::Lagged(n)` into `io::Error` instead of swallowing it
+      - this forces the client stream to reconnect and replay a fresh snapshot instead of staying stale
+  - validation:
+    - `cargo check -p services -p server`
+    - `cargo build --release --bin server`
+    - redeployed `/home/mcp/.local/bin/vibe-kanban-server-cleanfix`
+    - restarted `vibe-kanban.service`
+    - verified `/api/info` healthy
+    - verified running PID executable path and sha match deployed binary
+  - result:
+    - live running binary sha now `9ad30eadb01eb7a357493a6232ffdddc3c212d32d8ae2dd050ff35ec742acad2`
+    - direct UI confirmation still pending one real workspace retest
+- 2026-04-22 issue/workspace relink follow-up:
+  - symptom:
+    - three newly created issue-scoped workspaces were live with `task_id = null` instead of linking back to their originating issues
+  - verified broken live pairs before repair:
+    - workspace `fcd0ec67-a0fe-42a8-9337-ef3228ceee80` (`FR:: Coaches Feature Stream`) missing link to task `af85bbe0-7c78-46ea-b0ec-91476596850c`
+    - workspace `ff6bfbf1-8f71-4787-9e92-df7910c0928f` (`FR::Investigate today's active burn calories`) missing link to task `6bc54000-384e-4164-8995-b1c5a7d2469b`
+    - workspace `e9c522ad-a455-42c7-9a4d-74ed6bf8ee98` (`FR::Investigate today's active burn calories`) missing link to task `f0933141-23fd-4a0e-89d3-5d2202325cea`
+  - fix:
+    - `packages/web-core/src/shared/components/CreateChatBoxContainer.tsx`
+      - added `forcedLinkedIssue` so submits from the issue route use explicit issue/project context instead of relying only on draft state
+    - `packages/web-core/src/pages/kanban/ProjectRightSidebarContainer.tsx`
+      - issue-route workspace-create panel now passes the current route issue/project directly into `CreateChatBoxContainer`
+    - `crates/server/src/routes/workspaces/create.rs`
+      - added bounded retry for linked local task resolution during create-and-start when `linked_issue` is present but the first lookup misses
+  - live repairs already applied:
+    - linked workspace `fcd0ec67-a0fe-42a8-9337-ef3228ceee80` -> task `af85bbe0-7c78-46ea-b0ec-91476596850c`
+    - linked workspace `ff6bfbf1-8f71-4787-9e92-df7910c0928f` -> task `6bc54000-384e-4164-8995-b1c5a7d2469b`
+    - linked workspace `e9c522ad-a455-42c7-9a4d-74ed6bf8ee98` -> task `f0933141-23fd-4a0e-89d3-5d2202325cea`
+  - validation:
+    - `cargo check -p server -p services`
+    - `pnpm --filter @vibe/web-core run check`
+    - `pnpm --filter @vibe/local-web run build`
+    - `cargo build --release --bin server`
+    - redeployed `/home/mcp/.local/bin/vibe-kanban-server-cleanfix`
+    - restarted `vibe-kanban.service`
+    - verified `/api/info` healthy and `/` returns `200`
+    - verified running PID executable sha matches deployed binary sha `ebbdb9041fd2b6f517606005b53bca8ff1980f68553c1fa9135169b5dc6395cc`
+  - result:
+    - underlying issue-route workspace linking path is fixed in both the frontend submit path and the backend create-and-start resolution path
+    - the three known broken workspaces are relinked live
+- 2026-04-22 chat streaming follow-up:
+  - symptom:
+    - the orchestration workspace under `FR:: Coaches Feature Stream` streamed a few lines and then appeared stuck/busy
+  - verified live chain:
+    - workspace `679c24ec-7368-4a08-8f82-931f8d0ea896`
+    - session `65c4bde9-df70-4e12-91fd-210c41e7aa3a`
+    - latest process `d928142b-d587-4a16-9e23-013d1a6df622`
+    - DB showed that process had already completed at `2026-04-22T12:39:44Z`
+  - root cause:
+    - normalized chat replay was flooding the client with repeated `replace` patches for the same `/entries/<n>` path while the response text grew
+    - direct probe before fix saw about `3872` patch messages and `~5.07 GB` of websocket JSON over `20s`
+  - fix:
+    - `crates/server/src/routes/execution_processes.rs`
+      - normalized-log websocket delivery now batches patches in `50ms` windows
+      - repeated ops on the same path are coalesced before serialization/send
+      - added unit tests covering last-write-wins coalescing
+    - `crates/server/Cargo.toml`
+      - added direct `json-patch` dependency for the new route logic
+  - validation:
+    - `cargo test -p server coalesce_patch_ops -- --nocapture`
+    - `cargo check -p server -p services`
+    - `cargo build --release --bin server`
+    - `pnpm run format`
+    - redeployed `/home/mcp/.local/bin/vibe-kanban-server-cleanfix`
+    - restarted `vibe-kanban.service`
+    - verified running PID executable sha matches deployed binary sha `4a5e3356b9c7dc4dff3b5e82d5e451ce58d789d8db48420bbe207517d2e70ba4`
+    - repeated the same websocket probe after deploy and saw about `60` patch messages, `128` patch ops, and `~109.6 MB` total JSON, with `finished` in about `16.1s`
+
+- 2026-04-22 orchestration replay follow-up:
+  - investigated workspace `679c24ec-7368-4a08-8f82-931f8d0ea896`, session `65c4bde9-df70-4e12-91fd-210c41e7aa3a`, process `d928142b-d587-4a16-9e23-013d1a6df622`
+  - determined the process itself completed successfully and the full raw transcript was present on disk
+  - narrowed the remaining visible freeze to direct app-server command-output delta normalization in `crates/executors/src/executors/codex/normalize_logs.rs`
+  - fixed that path to use truncated-tail buffering and reduced chat command-output preview budgets to `8 KiB` streaming / `16 KiB` final
+  - validation:
+    - `cargo check -p executors -p server`
+    - `cargo build --release --bin server`
+    - `pnpm run format`
+    - redeployed `/home/mcp/.local/bin/vibe-kanban-server-cleanfix`
+    - restarted `vibe-kanban.service`
+    - exact normalized replay for `d928142b-d587-4a16-9e23-013d1a6df622` now completes in about `367 ms` across `8` websocket messages
+
+- 2026-04-22 websocket reconnect follow-up:
+  - rechecked workspace `679c24ec-7368-4a08-8f82-931f8d0ea896`, session `65c4bde9-df70-4e12-91fd-210c41e7aa3a`
+  - confirmed newer orchestration processes `e9217d86-70b9-40f1-99d3-eea14c70975e` and `58ef1157-6d7f-4a45-9c74-36722839475f` both completed successfully with final answers present in raw `.jsonl` logs
+  - confirmed post-restart normalized replay for `e9217d86-70b9-40f1-99d3-eea14c70975e` completes in about `71 ms` with `2` websocket messages and the session execution-process stream still emits snapshot plus `Ready`
+  - traced the remaining blank/stale chat behavior to `packages/web-core/src/shared/hooks/useJsonPatchWsStream.ts`
+  - fixed reconnect handling so retry cleanup no longer clears stream state for the same endpoint; full reset now happens only when `enabled` or `endpoint` changes
+  - validation:
+    - `pnpm --filter @vibe/web-core run check`
+    - `pnpm --filter @vibe/local-web run build`
+    - `cargo build --release --bin server`
+    - `pnpm run format`
+    - redeployed `/home/mcp/.local/bin/vibe-kanban-server-cleanfix`
+    - restarted `vibe-kanban.service`
+    - verified `/` returns `200`
+    - verified `/api/info` healthy
+
+- 2026-04-22 staging deploy:
+  - fetched `fork/staging` and confirmed local `staging` checkout was behind the remote branch
+  - avoided merging into the dirty canonical checkout because it overlaps unrelated local edits
+  - created detached clean worktree at `/tmp/vk-staging-deploy-20260422` on `fork/staging` commit `6c0ce663a4548277f1ad774654b2bf82841cc126`
+  - validated in the clean staging worktree:
+    - `pnpm install --frozen-lockfile`
+    - `pnpm --filter @vibe/web-core run check`
+    - `pnpm --filter @vibe/ui run check`
+    - `cargo check -p db -p server`
+    - `pnpm --filter @vibe/local-web run build`
+    - `cargo build --release --bin server`
+    - `pnpm run format`
+  - deployed `/tmp/vk-staging-deploy-20260422/target/release/server` to `/home/mcp/.local/bin/vibe-kanban-server-cleanfix`
+  - restarted `vibe-kanban.service`
+  - verified service `active`, `/` returns `200`, `/api/info` healthy
+  - live binary sha after deploy: `36671ede4bd0971a00b6256c1bb252d537b369da7d9de5a39e6003689226ce43`
+  - fast-forwarded the checked-out local `staging` worktree at `/home/mcp/code/worktrees/3714-vk-codeblock-onl/_vibe_kanban_repo` to the same commit so rebases can target the deployed head
+
+- 2026-04-22 local issue/workspace linking repair:
+  - confirmed fresh broken local pair:
+    - issue/task `36de33b5-5fe7-4996-831a-c966c89d7bb5`
+    - workspace `6fdd2862-9fcf-4624-8b45-0b9dd1b109dc`
+    - both titled `VK::Fix collapsed mobile columns tk2`
+    - task created `2026-04-22 20:23:15.643`
+    - workspace created `2026-04-22 20:23:23.803`
+    - workspace had `task_id = null`
+  - fixed `crates/server/src/routes/workspaces/links.rs` so local link requests retry local task resolution and no longer fall through toward remote-link behavior for local projects
+  - validation:
+    - `cargo check -p server`
+    - `cargo build --release --bin server`
+    - redeployed `/home/mcp/.local/bin/vibe-kanban-server-cleanfix`
+    - restarted `vibe-kanban.service`
+    - verified `/api/info` healthy
+  - repaired the live orphan through `POST /api/workspaces/:id/links`
+    - workspace `6fdd2862-9fcf-4624-8b45-0b9dd1b109dc`
+    - task `36de33b5-5fe7-4996-831a-c966c89d7bb5`
+  - end-to-end disposable live verification:
+    - created issue `VK LINK TEST 20260422T203516Z`
+    - created linked workspace `7dee992f-ce10-4326-84e2-fbdd1da3d40c`
+    - verified row stored `task_id = d3e32d0a-c67e-417b-a7af-30072d71a1d4` immediately
+    - deleted the disposable issue and workspace after the check
+
+- 2026-04-22 orphan link cleanup:
+  - audited all remaining `workspaces.task_id is null` rows in the live DB
+  - safely relinked:
+    - workspace `69108907-ee4c-4c2d-8d96-fe496bb2b6bd` -> task `4c7065b5-b43a-41f9-b524-e6f3068d39a2`
+    - workspace `5db38b19-2e12-4e77-a746-c7ae2b515ab7` -> task `77762500-bfcb-4636-b8e4-f268f6da1b95`
+  - intentionally skipped:
+    - `probe-ws`
+    - `probe-ws-postfix`
+    - no issue matches
+  - intentionally skipped duplicates:
+    - `FR::Investigate today's active burn calories`
+    - `VK::Auto archive when 'Done'`
+    - matching issues already had linked workspaces
+  - intentionally skipped ambiguous historic rows with no confident issue match:
+    - `OVA::Dashboard Init Build`
+    - `FR::Refactor - Merge Rules`
+    - `The Dashboard nutrition card is WAY too verbose. It's breaking the layout and overloading the user`
+
+- 2026-04-23 staging production deploy:
+  - fetched and deployed `fork/staging` commit `4337e20e1638495b5f8b8aa6124678a18357d09b` from clean detached worktree `/tmp/vk-staging-deploy-20260423T082907Z`
+  - avoided deploying from the dirty canonical checkout at `/home/mcp/_vibe_kanban_repo`
+  - validation in the clean worktree:
+    - `pnpm install --frozen-lockfile`
+    - `pnpm --filter @vibe/web-core run check`
+    - `pnpm --filter @vibe/ui run check`
+    - `cargo check -p server`
+    - `pnpm --filter @vibe/local-web run build`
+    - `pnpm run format`
+    - `cargo build --release --bin server`
+  - `pnpm run format` passed but would rewrap two already-committed TypeScript expressions on staging; reverted those temp formatting-only changes before the release build to deploy the exact staging commit
+  - frontend build succeeded; Sentry emitted missing-auth-token noise but did not fail the build
+  - installed release binary to `/home/mcp/.local/bin/vibe-kanban-server-cleanfix`
+  - restarted `vibe-kanban.service`
+  - verified service active, `/api/info` healthy, `/` `200`, `/assets/index-48sjVvVl.js` `200`
+  - live binary sha after deploy: `9b73d5f94dec505bc5dbd0384802c80c4b014ac55c4fc35abbde5298a84d76bf`
+
+- 2026-04-23 post-deploy staging/branch audit:
+  - checked local and remote git state after the T18/PR `#9` merge
+  - found the checked-out local `staging` worktree at `/home/mcp/code/worktrees/3714-vk-codeblock-onl/_vibe_kanban_repo` was clean but still behind `fork/staging` by one commit
+  - fast-forwarded that local `staging` worktree from `6c0ce663a4548277f1ad774654b2bf82841cc126` to `4337e20e1638495b5f8b8aa6124678a18357d09b`
+  - confirmed PR `#9` / T18 was a squash commit on top of `6c0ce663a4548277f1ad774654b2bf82841cc126`
+  - confirmed T18 did not overwrite T12 because T12 was not in staging and there was no changed-file overlap between T12 and the T18 squash diff
+  - confirmed deployment visibility state:
+    - ART-50 `vk/recover-kanban-columns-20260415` is not an ancestor of `fork/staging`; do not bulk-merge it because it is divergent and conflicts
+    - ART-52 `codex/fix-workspace-chat-scroll-jumps` is not in `fork/staging` and direct merge conflicts
+    - ART-53 `vk/401e-vk-fix-mobile-co` is not in `fork/staging`; T18/PR `#9` is the current deployed replacement for mobile collapsed labels
+    - T6 `vk/3714-vk-codeblock-onl`, T7 `vk/cc95-vk-archive-proje`, and T8 `vk/9fea-vk-cleanup-left` are ancestors of `fork/staging`
+    - T12 `vk/508a-vk-renaming-work` is local-only/no GitHub PR and merge-tree tests cleanly into current `fork/staging`
+  - confirmed the live frontend asset `/assets/index-48sjVvVl.js` contains markers for T6/T7/T8 such as `Copy code`, `Archive project`, and `Show left column links`
+
+- 2026-04-26 hotfix/stuck-running-reconcile-20260426:
+  - investigated the open-workspace symptom where an agent completes and replies, but the VK UI remains stuck in the in-progress state until the page is refreshed
+  - root cause direction:
+    - the backend can already have the terminal execution-process state while the open page still holds stale streamed `running` state
+    - refresh fixes the UI because the fresh snapshot no longer has the stale running process
+  - hotfix prepared from clean `fork/main` worktree `/tmp/vk-hotfix-stuck-running-reconcile`
+  - code change:
+    - `packages/web-core/src/shared/hooks/useExecutionProcesses.ts`
+    - while streamed blocking processes are `running`, poll the process detail endpoint every `3s`
+    - merge the detail result over the stream for that process so terminal status clears the composer without refresh
+  - commit:
+    - `cce261c79 fix: reconcile stale running process status`
+  - PR:
+    - `https://github.com/artinflight/vibe-kanban/pull/41`
+  - validation:
+    - `pnpm install --frozen-lockfile`
+    - `pnpm --filter @vibe/web-core run check`
+    - `pnpm --filter @vibe/local-web run build`
+    - `pnpm run format`
+    - `git diff --check`
+  - live service was not restarted; deploy/restart still requires explicit user approval
+
+- 2026-04-27 Hyrox Ready Codex repetition investigation:
+  - audited recent Hyrox Ready VK sessions and raw process JSONL logs
+  - found VK-launched Codex app-server processes were using `/home/mcp/.codex` because the live service lacked `CODEX_HOME`
+  - restored `/home/mcp/.config/systemd/user/vibe-kanban.service.d/codex-home.conf` with the isolated VK Codex home and ran `systemctl --user daemon-reload`
+  - waited for Hyrox process `d128a1215d024e8887bf3eb27c7b3468` to finish, restarted VK, and verified the live process has the isolated `CODEX_HOME`
+  - sampled logs showed full-thread history payloads and rebase conflict repetition, but no broad automatic prompt replay loop
+
+- 2026-04-29 isolated Codex rollout migration:
+  - repaired `thread/fork request failed: no rollout found for thread id 019dce56-2737-7d13-9965-e8996caca9dd`
+  - confirmed VK still had `CODEX_HOME=/home/mcp/.local/share/vibe-kanban/codex-home`
+  - copied all DB-referenced rollout files and matching shell snapshots that existed in `/home/mcp/.codex` but were missing from the isolated VK Codex home
+  - copied `121` rollouts and `121` shell snapshots
+  - verified no DB `agent_session_id` remains missing from the isolated Codex home
+
+- 2026-04-28 stale running execution-process hotfix:
+  - prepared hotfix from clean `fork/main` worktree `/tmp/vk-hotfix-stuck-running-reconcile`
+  - changed `packages/web-core/src/shared/hooks/useExecutionProcesses.ts` so streamed blocking `running` processes poll process details every `3s` and reconcile terminal status without requiring page refresh
+  - main PR `#41` merged at `de679dfba4d00fb4e7227c0474e1f783861d908a`
+  - staging backfill PR `#43` merged after passing GitHub checks at `1e208123694b420c5688c5098bdbe5b7ec1aa158`
+  - deployed from clean worktree `/tmp/vk-deploy-stuck-running-reconcile`
+  - pre-restart live audit found `0` running non-devserver executions
+  - restarted `vibe-kanban.service` after user permission
+  - live binary `/home/mcp/.local/bin/vibe-kanban-serve` sha256 `a6862b6a9439ab4fd114a3a9204aeba65da533f9a05acf7c6888bea8d70cea8f`
+  - post-deploy verification passed: service active, running process sha matches installed binary, `/api/info` healthy, `/` `200`, `/assets/index-D4KCtbF2.js` `200`
+
+- 2026-04-28 permanent local issue-link hotfix:
+  - repaired the live OSTP data path by adding project `/home/mcp/code/OSTP` and linking workspace `c40cbc4a-4939-4b66-be36-05be0d30784f` to issue `83b227d8-f91c-4cf8-bcef-1ef5dc795720`
+  - root cause direction: draft workspace metadata can lose `linked_issue`, so the backend must not depend only on the frontend carrying that field forward
+  - main hotfix PR `#44` merged at `21815da2b9bbdd57f5711cfe9e6c481fa0aeb2ae`
+  - staging backfill PR `#45` merged at `24a2dbe3ad5b7457beea772c4cbe6ea0a070944f`
+  - fix behavior: if a local workspace starts with no `task_id`, infer the local issue from selected repo(s) plus exact workspace title, and link only when exactly one matching local issue exists
+  - ambiguity is intentionally left unlinked to avoid attaching workspaces to the wrong issue
+  - validation: PR `#44` and PR `#45` GitHub checks passed; local backfill validation covered generated types, format, temp SQLite migrations, clippy, `cargo check -p server`, targeted local issue-link tests, and `git diff --check`
+  - live VK was not restarted or redeployed; deployment still requires explicit user approval
+
+- 2026-04-28 permanent local issue-link deploy:
+  - took lean backup before restart:
+    - `/home/mcp/backups/vk-lean-restore-20260428T135054Z`
+    - `/home/mcp/backups/vk-lean-restore-20260428T135054Z.tar.gz`
+  - deployed from clean detached worktree `/tmp/vk-deploy-permanent-issue-links-20260428T1358Z` at `fork/main` merge commit `21815da2b9bbdd57f5711cfe9e6c481fa0aeb2ae`
+  - validation/build before restart:
+    - `pnpm install --frozen-lockfile`
+    - `pnpm --filter @vibe/local-web run build`
+    - temp SQLite `cargo sqlx migrate run`
+    - `DATABASE_URL=sqlite:/tmp/vk-deploy-permanent-issue-links.sqlite cargo build --release --bin server`
+  - release binary sha256: `20c614ea3547f1564eb1a3523f84a74b3b369e3c10988957f2957684e69a479c`
+  - backed up previous live binary to `/home/mcp/backups/vibe-kanban-serve-before-permanent-issue-links-20260428T1416Z`
+  - pre-restart audit found `0` running non-devserver executions and `0` active `vk-exec-*` units
+  - restarted `vibe-kanban.service` after explicit user approval
+  - post-deploy verification passed:
+    - service active
+    - running process sha matches installed binary sha
+    - `/api/info` healthy
+    - `/` returned `200`
+    - `/assets/index-BbxAzB0F.js` returned `200`
+    - post-restart running execution processes: `0`
+
+- 2026-05-03 staging-to-main promotion and runtime guardrail restore:
+  - took pre-op backup `/home/mcp/backups/vk-pre-restore-guardrails-main-merge-20260503T115553Z`
+  - restored persistent live service env in `/home/mcp/.config/systemd/user/vibe-kanban.service.d/runtime-guardrails.conf`
+  - required live env now includes `CODEX_HOME`, `DISABLE_WORKTREE_CLEANUP=1`, `VK_DISABLE_PR_MONITOR=1`, `VK_USE_SYSTEMD_RUN=1`, `VK_TRANSIENT_MEMORY_HIGH=1500M`, `VK_TRANSIENT_MEMORY_MAX=3000M`, `VK_CODEX_BASE_COMMAND=/home/mcp/.local/bin/codex`, and `VK_ALLOWED_ORIGINS=https://vibe.local`
+  - merged `fork/staging` into `fork/main` from clean worktree `/tmp/vk-main-merge-staging-20260503T1155`
+  - resolved merge fallout in status sort order by keeping `sort_order` as `i64`
+  - added repo-tracked live guardrail material on `main`:
+    - `docs/self-hosting/systemd/runtime-guardrails.conf`
+    - `scripts/check-live-vk-runtime-guardrails.sh`
+    - `pnpm run ops:live-runtime-guardrails`
+  - pushed `fork/main` to `5ddde0b6460393e7d34301d676b1dd86c8b99bc5`
+  - validation passed:
+    - `pnpm run format`
+    - `pnpm run ops:check`
+    - `pnpm run ops:live-runtime-guardrails`
+    - `pnpm --filter @vibe/local-web run build`
+    - `DATABASE_URL=sqlite:/tmp/vk-main-merge-build.sqlite cargo build --release --bin server`
+  - deployed release artifact sha256 `e2f86f5ccc880cfeeba4684cf1a0ecdd05bc27e63d2b39a0a9d4a6ce47256d5c` to both `/home/mcp/.local/bin/vibe-kanban-serve` and `/home/mcp/.local/bin/vibe-kanban-serve-prod`
+  - restarted `vibe-kanban.service` after explicit user approval; restart required killing only the old VK main PID after the service stuck in `deactivating`
+  - post-restart checks passed: service active, running process sha matches installed binaries, `/api/info` healthy, `/` `200`, `https://vibe.local/` `200`, running executions in DB `0`
+  - the old active executions were interrupted by the restart and marked failed on startup
+  - observed VK memory after restart around `200 MB` with `0` VK swap, down from roughly `20 GB` before restart
+
+- 2026-05-05 recurring VK git/worktree stall hotfix and deploy:
+  - took manual pre-restart backup `/home/mcp/backups/vk-pre-restart-manual-20260505T161804Z`
+  - the earlier lean-backup archive attempt `/home/mcp/backups/vk-lean-restore-20260505T160819Z` failed because a Codex rollout file disappeared mid-copy and is not the valid backup
+  - activated refreshable frontend assets through `/home/mcp/.config/systemd/user/vibe-kanban.service.d/frontend-dist.conf`
+  - published frontend release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260505T1648Z` and pointed `/home/mcp/.local/share/vibe-kanban/frontend-dist/current` at it
+  - built hotfix from clean worktree `/tmp/vk-hotfix-recurring-stall-20260505` at `b6575aed90e4ecf7ddb5279528292f68a0545212`
+  - main PR `#55` merged at `3cfe96ab8f8c6a83652f4c84a9d4244ca4e37a9f`
+  - staging backfill PR `#56` merged at `91e2f9d1a30842fd0d770cdfda39c27932bfa084`
+  - deployed binary sha256 `c903c345859a1838fbe27b3de47f8bcf178849d3e62f9b0e8f808d2cc161c570` to `/home/mcp/.local/bin/vibe-kanban-serve` and `/home/mcp/.local/bin/vibe-kanban-serve-prod`
+  - fix behavior: `LocalContainerService::stream_diff` keeps skipped repo-diff streams idle/ready instead of closing the workspace websocket, and `GitCli` commands default to a bounded `120s` timeout through `VK_GIT_CLI_TIMEOUT_SECS`
+  - validation passed: `pnpm --filter @vibe/local-web run build`, `cargo build --release --bin server`, prior hotfix `cargo check -p git -p local-deployment`, and `pnpm run format` in the clean hotfix worktree
+  - pre-restart audit found `0` running execution rows and no active `vk-exec-*` units
+  - restart required killing only old VK main PID `3441151` after systemd stuck in `deactivating`; service came back on PID `3962645`
+  - post-restart checks passed for `/api/info`, `/`, `https://vibe.local/`, `/api/projects`, `/assets/index-CErwigwv.js`, no running execution rows, no active `vk-exec-*` units, and VK memory around `260-280 MB`
+
+- 2026-05-06 dysfunctional feature audit and needs-attention fix prep:
+  - investigated codeblock copy, workspace rename actions, issue PR details, merged PR state, and left-column needs-attention markers
+  - found latest codeblock-copy reliability fixes are not safely landed in production/integration; port the minimal latest fix instead of bulk-merging stale `vk/codeblock-copy-20260429`
+  - found local rename actions are hidden by remote-owner gating when fallback local workspace rows have `owner_user_id = ""`
+  - found issue PR details/merged-state display lacks durable `pull_requests` rows for some affected issues, and live PR monitoring remains intentionally disabled
+  - found needs-attention markers persist because already-open workspaces did not re-mark unseen turns as seen and `mark_seen` did not invalidate the workspace-summary cache
+  - prepared code changes in the canonical checkout to auto-clear unseen state for the mounted workspace and invalidate summary cache on `PUT /api/workspaces/:id/seen`
+  - updated `HANDOFF.md`, `STATE.md`, `STREAM.md`, and `VK_WORKFLOW.md` with findings and repair plan
+
+- 2026-05-06 attachment and disk-space follow-up:
+  - reviewed tmux session `opSpace` because the user could not paste the report
+  - disk report: root filesystem `233G` total, `192G` used, `31G` free, `87%` full
+  - largest reported areas: `/home/mcp/backups` `52G`, `/home/mcp/code` `47G`, `/home/mcp/.local` `29G`, `/home/mcp/_vibe_kanban_repo` `15G`, Android SDK/AVD about `9.8G`, journals `3.1G`
+  - recommended cleanup order before executing repairs: rebuildable outputs first, then inactive dependency trees, then journals; treat backups, VK `codex-home`, VK sessions, and registered worktrees as continuity-sensitive
+  - attachment findings: existing-workspace new-session attachment controls can silently no-op without `sessionId`; upload errors are swallowed in UI; live logs show attachment upload `500`s; running backend is missing `/home/mcp/.cache/utils/attachments`
+  - documented restart split: recreating the cache dir and frontend-only error display can avoid restart; backend cache-dir self-healing, cleaner missing-file errors, and true new-session attachment support require backend deploy/restart
+
+- 2026-05-06 approved stale-worktree `node_modules` cleanup:
+  - user approved removing `node_modules` from worktrees untouched for more than 4 days
+  - excluded active VK workspaces before deletion:
+    - `/home/mcp/code/worktrees/c961-fr-orc-android-p`
+    - `/home/mcp/code/worktrees/2fa0-fr-fix-heartrate`
+    - `/home/mcp/code/worktrees/6e87-fr-enhance-dashb`
+    - `/home/mcp/code/worktrees/2482-pg-logging`
+  - removed qualifying `node_modules` from five stale worktrees:
+    - `/home/mcp/code/worktrees/3714-vk-codeblock-onl/_vibe_kanban_repo`
+    - `/home/mcp/code/worktrees/679c-fr-orc-coaches-f/hyroxready-app`
+    - `/home/mcp/code/worktrees/fcd0-fr-coaches-featu/hyroxready-app`
+    - `/home/mcp/code/worktrees/hyroxready-app/codex-android-member-parity`
+    - `/home/mcp/code/worktrees/hyroxready-app/program-generation-v4-real-example-coach`
+  - freed about `2G`; `df -h /home/mcp` moved from `31G` free / `87%` used to `33G` free / `86%` used
+  - no source files, backups, VK sessions, `codex-home`, active workspaces, or service state were touched
+
+- 2026-05-06 follow-up safe space cleanup:
+  - removed all remaining archive `node_modules` under `/home/mcp/code/archive`; follow-up count is `0`
+  - removed rebuildable Rust `target` trees from `/home/mcp/_vibe_kanban_repo`, `/home/mcp/code/worktrees/6685-vk-pr-details-hi/_vibe_kanban_repo`, and `/home/mcp/code/worktrees/ea3c-vk-auto-archive/_vibe_kanban_repo`
+  - removed stale worktree install `/home/mcp/code/worktrees/c961-fr-orc-android-p/hyroxready-app/node_modules` after rechecking active VK execution services and process roots
+  - removed repo-local `/home/mcp/_vibe_kanban_repo/scripts/__pycache__`
+  - current `df -h /home/mcp` is `59G` free / `74%` used
+  - corrected scan groups `node_modules` by actual Git root; remaining worktree installs are either active or under the approved `>4 days untouched` threshold, with several near the threshold
+  - attempted journal vacuum did not reduce reported journal usage; do not claim journal cleanup succeeded
+  - no backups, VK DB, VK `codex-home`, VK sessions, source files, or running services were changed
+
+- 2026-05-06 no-restart VK frontend repair:
+  - recreated live attachment cache directory `/home/mcp/.cache/utils/attachments`
+  - added/published read-only chat codeblock copy controls using a per-code-block overlay and clipboard fallback
+  - changed local fallback workspace ownership checks so rows with `owner_user_id = ""` and a matching local workspace can show rename/delete actions
+  - changed workspace-chat attachment handling so missing workspace/session and upload failures surface in the composer instead of silently no-oping
+  - true existing-workspace new-session attachment support still needs backend work; the no-restart fix now reports that limitation instead of pretending the paste worked
+  - published refreshable frontend release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260506T1531Z-no-restart-ui-fixes`
+  - verified live `/` references `/assets/index-DkFp1Jd5.js` and `/assets/index-DvZydbR5.css` through `https://vibe.local` and `http://127.0.0.1:4311`
+  - generic attachment upload/delete smoke test passed after recreating the cache directory; smoke-test DB rows and cache files were deleted
+  - validation passed: targeted prettier, `pnpm --filter @vibe/web-core run check`, `pnpm --filter @vibe/ui run check`, `pnpm --filter @vibe/local-web run build`, and targeted `git diff --check`
+  - no backend binary was replaced and `vibe-kanban.service` was not restarted
+  - documented user QA checklist in `HANDOFF.md`: hard refresh, codeblock copy, local workspace rename/delete, attachment upload/error behavior, and known needs-review backend-cache limitation
+
+- 2026-05-06 mobile attachment picker follow-up:
+  - user reported mobile attachment selection did nothing
+  - fixed `packages/ui/src/components/SessionChatBox.tsx` so the paperclip uses a native label/input activation path instead of JS-clicking a hidden input, which mobile browsers can ignore
+  - published refreshable frontend release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260506T1548Z-mobile-attachment-fix`
+  - verified live `/` references `/assets/index-DXD0AdX9.js` and `/assets/index-DvZydbR5.css`; `vibe-kanban.service` stayed active/running on PID `3962645`
+
+- 2026-05-06 attachment visible-error follow-up:
+  - user clarified mobile picker opened, but selecting a file still produced no visible app-side result
+  - found create-mode attachments had a separate hidden-input path and `useCreateAttachments` only logged upload failures
+  - changed create-mode attachments to use native label/input activation, show uploading/error feedback, and reject files over the backend `20 MB` cap before upload
+  - added the same client-side oversized-file guard to session attachments
+  - published refreshable frontend release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260506T1625Z-attachment-visible-errors`
+  - verified live `/` references `/assets/index-D-47mEIl.js` and `/assets/index-DvZydbR5.css`; `vibe-kanban.service` stayed active/running on PID `3962645`
+  - small-file `POST /api/attachments/upload` smoke passed and the smoke attachment was deleted
+
+- 2026-05-06 frontend rollback after project-list regression:
+  - user reported old projects returned and project order was lost after the no-restart frontend bundles
+  - determined the repair bundles were built from a dirty checkout that contained unrelated project/nav UI changes
+  - rolled live frontend assets back to `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260505T1648Z` without restarting VK
+  - verified live `/` references `/assets/index-CErwigwv.js` and `/assets/index-xIIrANvd.css`; `vibe-kanban.service` stayed active/running on PID `3962645`
+  - no-restart attachment/codeblock frontend fixes are not live after this rollback; rebuild from a clean worktree only
+  - prepared local `100 MB` attachment cap change across backend route limits, `FileService`, and frontend preflight; backend deploy/restart is required before large mobile images can upload
+
+- 2026-05-06 clean codeblock-copy frontend rebuild:
+  - built from clean `fork/main` worktree `/tmp/vk-codeblock-copy-clean-20260506T165520Z` at `3cfe96ab8`
+  - added only clipboard fallback improvement in `packages/web-core/src/shared/lib/clipboard.ts`
+  - published `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260506T1701Z-clean-codeblock-copy` without restarting VK
+  - validation passed: clean install, targeted prettier, `pnpm --filter @vibe/web-core run check`, and `pnpm --filter @vibe/local-web run build`
+  - HTTP verification timed out because the running VK process was saturated around `19 GB` RSS and `/api/info` did not answer within `20s`
+
+## 2026-05-09T22:00:00Z | vk/land-live-fixes-20260422 | sub-agent indicator source fix
+
+- Intent: make VK show workspace/sidebar sub-agent activity from durable state instead of only inside the open chat composer.
+- Finding: VK `subagent_jobs` was empty, but isolated Codex state had real `thread_spawn_edges`; earlier UI work was incomplete because workspace summaries never read Codex child-thread state.
+- Prepared:
+  - merged `subagent_jobs` with Codex `thread_spawn_edges` via `coding_agent_turns.agent_session_id`
+  - added `active_subagent_count` and `unresolved_subagent_count` to workspace summaries and generated shared TS types
+  - rendered a stack/count marker on workspace cards and kept active-subagent workspaces in the Running section
+  - broadened live log capture for namespaced `spawn_agent` / `wait_agent` tool names and singular `target`
+- Verified: `pnpm run generate-types`, `pnpm run format`, `pnpm --filter @vibe/ui run check`, `pnpm --filter @vibe/web-core run check`, `cargo check -p server`, targeted `git diff --check`.
+- Deployment: not deployed; requires approved backend restart/deploy before live `vibe.local` can show the marker.
+
+## 2026-06-01T08:50:00Z | vk/land-live-fixes-20260422 | FR::ORC::Generative Programming auth repair
+
+- Investigated workspace `5a8066b0-c3ff-46d2-8953-f39a90ce3f0c`.
+- Latest process log showed repeated Codex ChatGPT `refresh_token_reused` / `token_expired` errors and a failed empty turn.
+- Root cause was stale isolated VK Codex auth from `2026-05-21` at `/home/mcp/.local/share/vibe-kanban/codex-home/auth.json`.
+- Backed it up to `/home/mcp/backups/vk-auth/codex-home-auth-before-refresh-20260601T085017Z.json`.
+- Copied fresh `/home/mcp/.codex/auth.json` into VK isolated Codex home with mode `600`.
+- Verified isolated `codex login status` and `codex debug models` succeed.
+- No VK restart, no agent kill, and no token output.
+
+## 2026-06-03T22:48:00Z | vk/land-live-fixes-20260422 | mobile archived-projects nav hotfix
+
+- Intent: restore the expected mobile project nav so archived projects are accessible and the stale `Export data` entry is gone from the mobile drawer.
+- Finding: desktop `AppBar` already had `onOpenArchivedProjects` and export hidden, but `SharedAppLayout.tsx` has a separate hardcoded mobile drawer that still rendered the old export row and never opened `ArchivedProjectsDialog`.
+- Changed `packages/web-core/src/shared/components/ui-new/containers/SharedAppLayout.tsx` to remove the mobile export row and add a footer `Archived projects` button with marker `mobile-archived-projects`.
+- Deployed no-restart frontend release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260603Tmobile-archive-nav`; live asset `/assets/index-CPHsMjmW.js`; backend PID stayed `3435842`.
+- Verified: `pnpm --filter @vibe/local-web run build`, staged/live asset marker checks, `python3 scripts/vk_live_regression_smoke.py`.
+
+## 2026-06-04T08:15:31Z | vk/land-live-fixes-20260422 | multi-line paste hotfix
+
+- Intent: repair VK chat paste so multi-line prompts preserve all lines instead of stopping at the first line break.
+- Finding: `PasteMarkdownPlugin.tsx` converted all plain-text paste through Lexical markdown import and then inserted children from a temporary paragraph; multi-line chat prompts can collapse/truncate through that path.
+- Changed `packages/ui/src/components/PasteMarkdownPlugin.tsx` so multi-line plain text uses `selection.insertRawText(plainText)` while single-line paste keeps the existing markdown conversion behavior.
+- Deployed no-restart frontend release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260604Tmultiline-paste`; live asset `/assets/index-BOrQKfSR.js`; backend PID stayed `3435842`.
+- Verified: `pnpm --filter @vibe/ui run check`, `pnpm --filter @vibe/local-web run build`, staged/live asset marker checks, `python3 scripts/vk_live_regression_smoke.py`.
+
+## 2026-06-08T17:06:05Z | vk/land-live-fixes-20260422 | Plan-to-Auto mode persistence hotfix
+
+- Intent: stop Plan-started VK sessions from snapping back to Plan after the user switches them to Auto.
+- Finding: backend/Codex Auto overrides already force `plan=false`, but frontend explicit selections were only in React state/draft scratch and could be lost on remount, draft clear, or process-list refresh.
+- Changed `useExecutorConfig` to persist explicit executor/model/mode override selections in browser localStorage under `vk-executor-config-selection:*`, keyed by session ID for existing sessions and workspace ID for new-session mode.
+- Added executor regression coverage proving `PermissionPolicy::Auto` exits Codex plan mode.
+- Deployed no-restart frontend release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260608Tmode-persistence`; live asset `/assets/index-CTVtS8yb.js`; backend PID stayed `3435842`.
+- Verified: `pnpm --filter @vibe/web-core run check`, `cargo test -p executors codex_auto_permission_override_exits_plan_mode`, `pnpm run format`, clean worktree install/check/build, `python3 -m py_compile scripts/vk_live_regression_smoke.py`, `git diff --check`, and live `python3 scripts/vk_live_regression_smoke.py`.
+
+## 2026-06-11T00:00:00Z | vk/land-live-fixes-20260422 | Codex capacity queue prepared
+
+- Intent: when global Codex capacity is full, chat sends should queue instead of failing with the red `Codex execution limit reached: 8 active, limit 8` error.
+- Finding: the cap was surfaced as an executor start failure; existing queue behavior only covered sessions with a running per-session consumer, not idle sessions waiting for a global slot.
+- Changed executor/container/server paths to use typed `ExecutionLimitReached`, queue follow-up prompts with `wait_for_capacity`, avoid visible failed placeholder execution rows, and drain the oldest capacity-waiting queued prompt when any process completes.
+- Changed frontend follow-up send paths to treat the typed queued response as a successful queued send and refresh queue/workspace summary state.
+- Added queue service regression coverage for oldest-first capacity queue consumption without consuming normal queued messages.
+- Verified: `pnpm run generate-types`, `cargo test -p services takes_oldest_capacity_queue_without_consuming_normal_queue`, `cargo check -p services -p local-deployment -p server`, and `pnpm --filter @vibe/web-core run check`.
+- Deployment: not deployed; requires backend build/restart before live VK gets this behavior.
+
+## 2026-06-11T00:00:00Z | vk/land-live-fixes-20260422 | Kanban card reorder prepared
+
+- Intent: stop Kanban cards from bouncing back after reordering within a column.
+- Finding: `KanbanContainer` discarded within-column drags unless the active view already sorted by `sort_order`, and local fallback issue routes dropped `sort_order` entirely before persisting task-backed issues.
+- Changed frontend card drag handling to switch the active project view to manual `sort_order asc` before applying a drag.
+- Changed local fallback create/update/bulk issue request structs to accept `sort_order`, store it in task description metadata as `Local Sort Order`, and read it back into fallback issue responses.
+- Verified: `pnpm --filter @vibe/web-core run check`, `cargo test -p server local_sort_order_metadata_round_trips`, and `cargo check -p server`.
+- Deployment: not deployed; backend build/restart is needed for local fallback persistence.
+
+## 2026-06-12T00:00:00Z | vk/land-live-fixes-20260422 | Issue needs-review flag prepared
+
+- Intent: let the operator quickly flag issues for review from the project Kanban card itself.
+- Changed Kanban cards to render a flag button beside the priority marker.
+- Changed `KanbanContainer` to persist the flag as `Issue.extension_metadata.vk_flags.needs_review`.
+- Changed local fallback issue handling to round-trip enabled flags through task description metadata as `Local Issue Flags`.
+- Verified: `cargo fmt`, targeted `git diff --check`, and `cargo test -p server local_issue_flags_metadata_round_trips` after a cold dependency rebuild.
+- Deployment: not deployed; live VK needs a frontend release for the button and a backend build/restart for local fallback persistence.
+
+## 2026-06-12T00:00:00Z | deploy/restart-candidate-20260611T112143Z | restart candidate refreshed
+
+- Refreshed the clean restart candidate with the issue needs-review flag.
+- Candidate commit: `a055ce585b7b682dba53b5c99860f023f32e3ed3`.
+- Staged package: `/home/mcp/vk-restart-staging-20260612TissueReviewFlag`.
+- Staged backend sha256: `32cebd5835faeae2007905e5b15593097699d735e8b7d0ea93020a4375238ed9`.
+- Staged frontend release: `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260612TissueReviewFlag`, asset `/assets/index-DA7R5Mdm.js`.
+- Validation: candidate install/checks, targeted server flag test, backend release build, frontend production build, and staged marker checks passed.
+- Deployment: not restarted and live frontend pointer not switched; current restart blocker is active workspace `FR::ORC::Generative Programming`.
+
+## 2026-06-18T00:00:00Z | vk/land-live-fixes-20260422 | branch base search hotfix
+
+- Intent: workspace creation base-branch typing should filter forgivingly instead of requiring exact slash-heavy branch text.
+- Changed `CommandBar` and `BranchSelector` branch matching to normalize separators and require all query tokens, while preserving exact substring matching.
+- Deployed no-restart frontend release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260618Tbranch-search`; live asset `/assets/index-CCBiSGB0.js`; backend PID stayed `3435842`.
+- Verified: `pnpm run format`, UI/web-core checks, `git diff --check`, local-web build, bundle marker check, and live `python3 scripts/vk_live_regression_smoke.py`.
+- Guard: future restart/frontend packages must carry forward this release or newer; a candidate that missed live hotfix markers was rolled back before smoke passed.
+
+## 2026-06-21T00:00:00Z | vk/land-live-fixes-20260422 | project sidebar customization prepared
+
+- Intent: let the compact project rail reveal full names on demand and support project rename, short abbreviations, and pastel project colors.
+- Changed `AppBar` to add a triangle flyout, full-name project list, and project edit dialog with name/abbreviation/color controls.
+- Added UI preference scratch persistence for per-project `local_project_customizations` and wired those overrides through `SharedAppLayout`.
+- Added local project rename support to the existing project update route while preserving archive updates; regenerated shared types.
+- Verified: `pnpm install --offline --frozen-lockfile`, `pnpm run generate-types`, `pnpm run format`, UI/web-core checks, `cargo check -p server`, focused project route tests, and targeted diff check.
+- Deployment: not deployed; frontend release plus backend build/restart are needed, and the next package must rebuild forward from live `20260618Tbranch-search` or newer.
+
+## 2026-06-26T00:00:00Z | vk/land-live-fixes-20260422 | multi-line rich clipboard paste hotfix
+
+- Intent: fix chat paste where multiline text from mobile/rich clipboard sources stopped after the first line.
+- Finding: the plugin preserved multiline `text/plain` only after returning early for any clipboard `text/html`; rich clipboard sources include both representations.
+- Changed `PasteMarkdownPlugin.tsx` so multiline `text/plain` wins before HTML opt-out and uses `selection.insertRawText`.
+- Deployed no-restart frontend release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260626Tmultiline-rich-paste`; live asset `/assets/index-DXMultilinePaste.js`; backend PID stayed running and no service restart was performed.
+- Verified: UI typecheck, targeted diff check, live curl marker checks, and live `python3 scripts/vk_live_regression_smoke.py`.
+- Guard: future frontend/restart packages must carry forward this source fix and not roll back below `20260626Tmultiline-rich-paste`.
+
+## 2026-09-11 — Native autonomous goals
+
+- Prepared instance-wide Codex goal lifecycle support, durable requirement evidence,
+  bounded stagnation/run guards, explicit pause/resume and Stop persistence.
+- Reused native Codex scheduling instead of synthesizing continue messages.
+- Real seven-turn implementation and offline refinement/input/tool scenarios passed;
+  the green backend still needs the separate approved deployment workflow.
+
+- Follow-up: Stop/resume native fixtures and goal-state restore validation passed.
+  Matching release artifacts are built on the task SSD; draft PR #103 targets
+  staging. No live activation occurred; release gates remain explicit.
+
+2026-09-11: Built-candidate isolated HTTP smoke passed: one VK execution, eight native goal turns, eight completed requirements, final completed status. No production deployment.
+
+2026-09-11 recovery-first clarification: six stagnant turns now initiate automatic goal-wide redirection, with persisted recovery plans and three recovery windows before failed-recovery handoff. Removed the fifty-turn stop for productive runs. The older release candidate is superseded; no deployment or restart occurred.
+
+2026-09-11: User authorized PR #103 integration into staging for the staging management agent to deploy at the next restart. Fresh fetch and rebase found the branch current with staging; recovery revision CI is green. Deployment handoff explicitly rejects the superseded binary and preserves goal backup requirements.
+
+## 2026-09-12 — Long-thread pagination prepared
+
+- `vk/ab54-vk-long-threads`: latest-40 completed log pages, 50-entry upward
+  loading, stable indices, scoped cancellation/retry and reading-position restore.
+- Bounded revision-keyed finite-replay cache; existing running streams preserved.
+- See `VK_LONG_THREADS.md` and latest handoff for tests and limitations. No live
+  runtime change; matching-backend browser validation and latency measurement remain.
+
+## 2026-09-13 — Long-thread staging integration requested
+
+- PR111 targets staging by explicit operator request, retaining the combined
+  frontend/backend implementation; this does not authorize deployment.
+- Completed six locale translations for the history controls. React regression
+  tests passed again; full local Cargo validation hits missing GLib desktop
+  development files. PR111 records CI and remaining runtime limitations.
+
+## 2026-09-14 — Unused capacity execution fences
+
+Isolated branch `feature/unused-capacity` adds the capacity-guard crate, systemd
+lease/deadline enforcement and native active-turn suspension. Real user-systemd
+failure scenarios and offline native same-goal resume checks pass. Controller,
+managed restart/queue gates and CU scheduler/UI integration remain. No deployment.
+See `VK_UNUSED_CAPACITY.md`.
+
+## 2026-09-14 — Durable managed goal controller
+
+Added private bearer-authenticated scheduling endpoints, fsynced controller state,
+exclusive ownership, shared grants, restart/revision/late-renewal fencing and
+lease-creation revalidation. Ordinary entry points revoke background authority;
+managed native resume verifies objective identity. Six authority tests and actual
+managed native expiry/resume acceptance pass. CU bridge added with four tests.
+Scheduler/UI and full integrated release validation remain. No live rollout.
+
+## September 14 CU scheduler and HTTP acceptance checkpoint
+
+CU now implements durable shared scheduling and private owner controls. Real
+isolated VK HTTP/SQLite/systemd/native Codex tests passed long-turn stale-quota
+interruption, same-goal/evidence resume, independent expiry after CU supervision
+loss, restart reconciliation, shared quota-floor stop and zero reset calls.
+Artifacts: `/mnt/vk-storage/codexusage-capacity/vk-continuation-http-9uy_k779`.
+CU drivers: `ops/test-capacity-integration.mjs` and `ops/test-capacity-controls.mjs`.
+Browser selection/window/owner checks passed at desktop and mobile sizes.
+
+VK source changes after controller commit: status reports running IDs and process
+states; start reloads workspace after ensure_container_exists (real HTTP exposed
+the stale container_ref bug). Candidates and actual native admission preserve
+needs-input/budget pauses. Native regression passed for those final changes, including needs-input and
+budget-limit rejection: vk-continuation-acceptance-06p90z_e/results.json.
+
+Remaining: prevent/enforce remote or external worker escapes; define honest
+interactive priority for clients outside VK; broader cross-system reset/restart
+acceptance and final prepared deployment. Keep production disabled. This feature
+worktree's debug dev_assets holds only isolated fixture data, never live data.
+The isolated 127.0.0.1:49173 backend is stopped; no running DB executions or
+outstanding grants remain. Preserve SSD evidence.
+No production VK service, database, frontend pointer or account allowance changed.
+
+## September 14 enforcement and reset acceptance
+
+Scheduled admission now verifies the effective native permission profile before
+activating the goal: only its workspace is writable, shell networking is disabled,
+and external MCP/browser/app/plugin tools and delegated agents are disabled.
+Resolved inherited MCP servers must each be disabled; an empty override table
+merges with inherited entries and is insufficient. Runtime MCP inventory is checked.
+Canonical path checks reject a writable workspace containing the lease, guard or
+Codex home, including symlink aliases. Account-home overrides and unverifiable
+alternate native profiles/hooks are rejected. Ordinary resume restores normal
+permissions; the temporary restriction is not a permanent goal setting.
+
+Real installed-Codex acceptance passed at
+`/mnt/vk-storage/codexusage-capacity/vk-continuation-acceptance-9tbq06x9/results.json`:
+local edits work, TCP/systemd sockets are denied, outside writes fail, a detached
+TERM-ignoring child stops, inherited MCP never starts, delegated launch is rejected,
+and the same goal/evidence resumes. Tool advertisement alone is not admission:
+the native response still advertises a multi-agent namespace, while the attempted
+launch is rejected. Two policy tests cover broadened/ignored settings and symlinks.
+The earlier 62 executor tests passed; the new scope test raises this to 63.
+
+Actual CU/VK crash and restart acceptance is recorded in
+`/mnt/vk-storage/codexusage-capacity/vk-continuation-http-9uy_k779/restart-results.json`.
+SIGKILL of the isolated VK backend left OS enforcement effective (583ms measured
+stop), restart did not replay old permission, and fresh authority resumed the same
+goal. The final server build passed. The real HTTP reset-boundary driver also
+passed: renewed work stops at weekly-reset shutdown headroom, and synthetic fresh
+weekly quota cannot reopen the preceding overnight period. Evidence is
+`reset-boundary-results.json` in that same HTTP fixture directory. No reset credit
+was consumed. The isolated backend on 49173 is stopped and its grant was revoked.
+
+Enforcement is sufficiently validated; delivery remains open. Remaining delivery
+work includes a clean source/release bundle, representative development-workflow
+validation, current-runtime compatibility, deployment rehearsal and final handoff.
+The current local-only profile cannot write external shared build caches, including
+VK's required shared Cargo target. Do not claim arbitrary existing development
+goals can run unchanged: decide and validate narrowly scoped build-cache support
+before release. Network/external-tool work requires ordinary execution. VK
+foreground launches preempt background work; outside-client usage reduces the
+same quota floor, but instant outside-client activity detection is not implemented.
+Physical phone/live Rainmeter rendering remains unverified.
+
+Read-only service inventory confirms live Blue 4711/4712 and retained Green
+4511/4512. No production service, route, state or reset was changed. Final cutover
+requires the explicit approval in VK_BACKEND_RESTART_PROTOCOL.md after a concrete
+candidate and rehearsal; preparation is not cutover authorization.
+
+## Scheduled build directories — September 14
+
+`VK_CAPACITY_BUILD_ROOTS` is an optional JSON array of at most eight existing
+absolute directories, configured on the VK service by the administrator. They are
+canonicalized, deduplicated, and checked against the permission directory, guard
+and Codex home before launch. Roots inside or containing those protected paths
+are rejected. The effective native writable-root list must match exactly before
+goal activation; a goal/profile cannot add its own writable roots. The first
+configured directory supplies TMPDIR only for scheduled processes, so compilers
+can create temporary files without opening unrestricted /tmp access.
+
+Use narrowly scoped output/cache directories on mounted SSD. In particular, place
+the deployed guard outside the writable Cargo target. Registry/dependency caches
+must be prepared during ordinary work; scheduled shell networking remains off.
+Existing project build commands still need their cache environment to agree with
+the configured roots. This is not permission to make all of /home or /mnt writable.
+
+Real native acceptance now compiles a Rust program into an approved external
+cache and executes it successfully during both managed resumes. TCP and systemd
+socket creation remain denied, outside writes fail, and a detached child stops.
+The full seven-row native suite passes at
+`/mnt/vk-storage/codexusage-capacity/vk-continuation-acceptance-y5tknu8y/results.json`.
+All 64 executor unit tests passed after adding build-root admission coverage.
+Formatting and ops governance passed. The feature remains undeployed.
+
+## Approved launcher/provider binding — September 14
+
+A scheduled profile cannot replace VK_CODEX_BASE_COMMAND with a different
+per-goal launch command. The service administrator must use an actual local Codex
+launcher. Native resume must also report the supervised provider before activation:
+VK_CAPACITY_MODEL_PROVIDER defaults to openai. Other providers require explicit
+service configuration tied to the quota supervisor; selecting a goal alone does
+not approve them. Ordinary profile behavior is unchanged. Read-only preflight
+confirms the live DEFAULT profile matches the default launcher/provider policy.
+
+All 65 executor unit tests and the full real native suite pass, including two
+managed builds, external-access denial, independent interruption, and ordinary
+resume. Latest evidence:
+/mnt/vk-storage/codexusage-capacity/vk-continuation-acceptance-imdb07uj/results.json.
+The offline fixture explicitly configures its local fixture launcher/provider.
+Frontend local/remote/web-core/UI type checks and frontend/UI lint passed. Broad
+Rust check/lint reach the existing Tauri dependency and fail because glib-2.0.pc
+is unavailable. The first optimized backend/guard build passed with an existing
+unused_mut warning in services/remote_client.rs. Frontend production build passed
+with existing chunk/Tailwind warnings; Sentry authentication is absent and no
+successful Sentry upload is claimed. Final backend packaging must include this
+admission change and the completed frontend, then undergo release acceptance.
+
+## September 14 — PR112 review repair
+
+Preserved full scheduled executor choices/newer saved selection; integrated the
+live checkpoint renderer. Four native/offline cases and desktop/mobile acceptance
+pass with same goal/progress and effective model/reasoning verified. Exact
+artifacts, local checks and teardown limitation: PR112_REVIEW_FIXES.md and
+`/mnt/vk-storage/codexusage-capacity/pr112-repair/manifest.json`. No deployment.
+
+## 2026-09-14 — VK Errors 2
+
+Restored VK::Error's clean relocated worktree with a compatibility symlink;
+verified live follow-up preflight clears the workspace gate without starting an
+execution. PR #115 adds scoped Codex error-category compatibility, preserving real
+error text/status. Captured154-turn decode, 323 server tests and offline HTTP
+same-thread resume pass. Candidate binary and isolated handover/recovery are
+prepared on SSD; production is still the incumbent 5031 backend. See VK_ERRORS_2.md.
+
+- 2026-09-15: Version capacity deployment settings and candidate-bound installation/verification in VK; preserve separate Errors 2 stream and production runtime.
+
+## 2026-09-30 — Model AutoSwitch feasibility investigation
+
+- Added VK_MODEL_AUTOSWITCH.md with selection/RPC/usage architecture findings,
+  native four-model catalog, settings limitations, quality gates and pilot plan.
+- Read-only Codex 0.153.4 model/list completed; no inference or live changes.
+- Routing safety and relative allowance savings remain experimental, not proven.
+
+## 2026-09-30 — Opt-in Codex model routing V1
+
+- Continued the AutoSwitch investigation into source implementation on
+  `vk/5a81-vk-model-autoswi`. Replaced the planning-only catalog with separate
+  representable/released/discovered/executable states and all seven requested IDs.
+- Added configurable model/effort policy, fresh launcher/account-bound evidence,
+  manual/shadow/auto controls, explicit floors and exclusions, consent-gated
+  failed-execution escalation, pinned native resumes, and protection against
+  automatic retry/reset. Resolution uses existing execution admission and stores
+  concrete settings/decision without a new scheduler or profile mutation.
+- Added native model/effort/provider/tier verification, reroute failure handling,
+  standard-tier protocol compatibility and versioned routing events. Documented
+  CU joins through execution, predecessor, session, native thread and turn IDs in
+  `VK_CODEX_ROUTING_CONTRACT.md`; no CodexUsage repository files were changed.
+- Isolated CLI 0.159.2 discovered and executed all seven models using the same
+  account/home; six at medium, Astra at high. Old CLI 0.153.4 still discovered only
+  four after cache refresh. Direct native Luna-to-Sol 6.1 continuation preserved
+  conversation, checkpoint and dirty file. These are access/continuity checks,
+  not model-quality equivalence or measured savings.
+- The opt-in real VK executor test was blocked before inference by the existing
+  20-active/8-limit capacity gate. The limit was preserved. Combined candidate
+  UI/API acceptance, newer-launcher deployment QA and a reviewed real-task pilot
+  remain enablement gates; full workspace/Tauri suites were not run.
+- Automated validation and exact reproduction steps are in the current HANDOFF.
+  No production deployment/restart, preview, PR or push; version stays 0.1.42.
+
+## 2026-09-30 AutoSwitch CU integration and recovery
+
+Recovered producer source after external deletion of the active managed worktree.
+Added CU-compatible immutable lifecycle JSONL alongside raw routing logs; native
+failure reporting and manual collaboration effort corrected. All seven exact
+candidate model probes, native executor boundary test and four real private HTTP
+executions passed; escalation preserved dirty state. 94 executor tests and focused
+Clippy passed. CU consumer import/replay and completed-turn native counter
+comparison passed; interrupted-turn usage is unavailable and CU owner review
+remains pending. Production untouched. See
+VK_AUTOSWITCH_ROLLOUT.md and CU_ACCEPTANCE_HANDOFF.json on mounted SSD.
+
+## AutoSwitch V1 staging integration
+
+Isolated validated commits df3e973a5/162770f73/9b334d1a3 from preserved V2 and
+rebased onto staging56792a72c. Retained both sides of continuity-document conflicts;
+no source conflicts or V1 execution-path redesign. See VK_AUTOSWITCH_V1_STAGING.md.
+Task scope ends at the staging merge; operator owns deployment.
+
+## Automatic assessment and pair qualification
+
+Extended accepted V1 with assessed minimum, explicit configurable model/effort/
+envelope qualification and pair preference ranks. Added cheap prompt risk/scope
+assessment, consented operator-reported validation/risk escalation, preserved
+manual constraints and policyVersion2 telemetry. Exact low-effort probes passed
+for 5.6 Luna and Sol6; no repeated V1 native trials or production changes.
+See VK_AUTOSWITCH_FULL_ROUTER.md for rollout gates and qualification limitations.
+
+## 2026-09-30 — V2 follow-up qualification and offline recommendations
+
+Resumed preserved V2 without rebasing or touching V1 PR127/deployment. Persisted
+optional assessed envelope, retained stricter follow-up qualification, preserved
+cheap exact continuations, and repaired lexical low-risk evidence. Added a
+read-only JSONL recommendation example using actual policy/availability admission.
+Seventeen routing tests, type generation, web-core checking and focused Clippy
+passed. See VK_AUTOSWITCH_FULL_ROUTER.md for remaining live Shadow/release gates.
+
+## 2026-09-30 — Natural-language outcome/context triage
+
+Added compact outcome triage with explicit uncertainty and bounded repository
+corroboration at the existing boundary. Ordinary presentation requests no longer
+require technical scope/test phrases to qualify downward when matching code,
+patterns and a check command are found. Missing context retains Workhorse;
+protected consequences/context retain Frontier. No classifier model call, registry
+or CU wire changes. Twenty-two routing tests, services check, focused Clippy,
+generated types, web-core checking, format/ops and five offline recommendation
+cases pass. V1 deployment untouched; live V2 Shadow acceptance remains pending.
+
+## 2026-10-01 — bounded semantic fallback for uncertain V2 requests
+
+Added a single structured native classifier turn after the free deterministic
+path, preserving existing policy/manual controls, protected risks and prior session
+qualification. Native usage and UUID/thread/turn identity are observable in the
+routing decision and a separate classifier audit feed. Shadow explains the path,
+classification, uncertainty/risk and model/effort recommendation. Five final native
+samples plus two zero-inference controls demonstrate bounded downward routing and
+conservative ambiguous/private-data behavior; six native calls total including the
+initial transport check. No V1 acceptance repeat, staging, deployment, CU consumer
+change or external-agent coordination. Details: VK_AUTOSWITCH_FULL_ROUTER.md.
+
+## 2026-10-01 — AutoSwitch delegated-work development
+
+Added controlled leaf admission using the existing Codex dynamic-tool/RPC lifecycle;
+reused V2 delta triage, qualification, hard floors and exclusions. Added bounded
+briefs, duplicate/scope and capacity controls, native interrupt, boundary escalation,
+private continuation journal and compatible child turn bindings with hierarchy
+telemetry sidecar. See VK_AUTOSWITCH_DELEGATION.md. Native paid acceptance was
+capacity-blocked before inference; source-only, no deployment or staging work.
+Validation: 119 executor tests pass; executor/services Clippy, format/ops and CU
+contract byte comparison pass. Native child acceptance remains capacity-blocked.
+
+## 2026-10-01 08:33 UTC — Requested native child test retry
+
+Reran only native_delegation_boundaries. The unchanged capacity guard rejected
+admission (14 active, limit 8) before native/model startup. Proof was still fresh.
+No bypass, model inference, source-code change, staging or deployment. See
+`v2-delegation/retry-20261001-0833/test.log` in the SSD task evidence directory.
+
+## 2026-10-01 — Capacity false positive corrected; native child test passed
+
+The previous pgrep readings counted wrapper processes/text mentions, not active
+agents. Linux fallback now counts app-server engines/chains without changing limits.
+The admitted native trial revealed resume retaining old settings; added confirmed
+next-turn settings updates before escalation. Native two-turn acceptance now passes:
+Luna5.6/low -> Sol6.1/medium, same thread, exact native/CU binding, dirty state intact.
+Three actual child turns total including the diagnostic trial; escalation triggers
+are injected fixtures. Preserve full native tokenUsage scopes instead of mistaking
+latest-request tokens for a turn total. 122 regressions, separate native acceptance,
+executor Clippy, format/ops and canonical CU comparison pass. No deployment/staging
+or agent coordination. First full live V2 Shadow remains pending. See
+VK_AUTOSWITCH_DELEGATION.md for evidence, token observations and runtime boundary.
+
+## 2026-10-01 — AutoSwitch V2 staging integration authorized
+
+Rebased seven V2 commits onto staging198d55a20, excluding already-landed V1.
+Retained both sides of three continuity-document conflicts; source patches are
+unchanged. Original branch preserved at ec94e7f49. See VK_AUTOSWITCH_V2_STAGING.md
+for commit mapping and integration evidence. No deployment or agent coordination;
+complete live Shadow and measured savings remain outside this merge task.
+
+## 2026-10-01 TF::Build Shadow continuity repair
+
+Added bounded metadata-only catalog renewal with runtime/account binding and
+retained historical exact execution proof; restored same-session routing after
+draft clear/remount without inheriting another chat’s consent. Native refresh
+passed in 0.90s on a private proof copy, seven selector regressions and 127 executor
+tests passed. Production remains untouched; live Shadow acceptance is pending
+normal release adoption. See VK_AUTOSWITCH_SHADOW_FIX.md and HANDOFF.md.
+
+## 2026-10-01 AutoSwitch temporary no-restart activation
+
+Operator authorized browser-only activation and genuine model-proof renewal.
+Frontend8d4b9ead2 is served; backend PID1504649 remains unchanged. Nine short
+checks passed once, all seven models retained, proof valid through October2
+16:10:26 UTC. TF::Build Shadow selection survives reload with Sol6.1/xhigh
+unchanged; no task or phone action was started. No automated paid refresh.
+Permanent backend renewal awaits a later worthwhile restart. See HANDOFF.md.
+
+## 2026-10-01 AutoSwitch scope-sensitive downward routing
+
+Removed permanent inheritance of an earlier inferred Frontier requirement when
+positive evidence establishes a separate request. Explicit floors and current
+protected risk remain authoritative; ambiguous continuations retain protection.
+Classifier scope evidence distinguishes configuration facts from security changes.
+131 executor tests passed; native recommendations selected Luna for independent
+UI/documentation and retained Astra for actual security changes. Five native
+classifier calls, no retries; backend unchanged. See VK_AUTOSWITCH_SCOPE_FIX.md.
+
+## 2026-10-01 — AutoSwitch rollback compatibility
+
+PR134/135 merge the scope/savings repair into staging/main. Release preparation
+identified the incumbent's strict nested classification decoder; persist new scope
+evidence on the extensible trace instead. Runtime behavior is unchanged. No
+production activation yet; release/backup evidence is on mounted SSD in
+`vk-autoswitch-scope-release-20261001`.
+
+## October 3: AutoSwitch staging integration
+
+Clean branch `fix/autoswitch-followup-staging` starts at staging `b0f4c10a9`.
+It carries the exact AutoSwitch source from `dd41b5de1`, including the October 2
+Recommended default/selector behavior, Sol6.1 High default, terminal-independent
+runtime identity, and completed-context follow-up repair. Original development
+branch `fix/autoswitch-recommended-default` remains preserved. No source conflicts
+or routing changes were introduced when extracting this release scope.
+
+The unrelated attention/sidebar changes from open PR138 are deliberately excluded.
+They are already in the live frontend; VK::Staging must account for PR138 before
+replacing that frontend to avoid losing the live attention fixes. This integration
+does not merge or modify that separate PR. It also does not restart services,
+change main, or contact/trigger staging or deployment agents.
+
+Existing focused/native evidence is in VK_AUTOSWITCH_FOLLOWUP_CONTEXT.md and
+`/mnt/vk-storage/vk-autoswitch-context-20261002`; no inference acceptance is repeated
+because the source is byte-identical. Fresh integration checks and PR metadata
+are recorded under `/mnt/vk-storage/vk-autoswitch-staging-20261003` and in the PR.
+The host lacks Tauri GTK development packages and has under 1 GiB free SSD space;
+full workspace/desktop checks therefore rely on the repository CI runners rather
+than risking the live host. Local checks cover the changed executor, services and
+frontend sources, formatting/governance, and byte-identical CU wire compatibility.
+
+## October 4: AutoSwitch negated-risk and diagnostic-phase correction
+
+New branch `fix/autoswitch-negated-risk` starts at staging `86d1c083a`.
+The deterministic classifier no longer treats standalone non-destructive
+constraints as destructive intent. Positive destructive operations, disabled
+safeguards, protected identifiers and other protected risks remain protected.
+The existing semantic call can identify a localized diagnostic phase after a
+reported completed protected operation; that phase stays at least Workhorse,
+with the surrounding assignment retained for later resumption. Explicit floors,
+unknown/ambiguous scope and failure constraints are unchanged.
+
+Two classification-only historical replays used the accepted CLI/account/home,
+with copied availability and unchanged capacity controls. USB diagnosis moves
+from Astra/high to Sol6.1/medium. Media verification loses the false deterministic
+match but remains Astra/high on a fresh semantic data-risk assessment involving
+conditional drive-protection limits and a safely stopped job. Production hotfix
+control remains Astra/high without inference. These are recommendations, not
+accepted-task savings or live changes. See VK_AUTOSWITCH_RISK_PHASE.md.
+
+## 2026-10-05: AutoSwitch separately reloadable classification module
+
+Added a versioned sandboxed pure worker at existing parent/controlled-child
+routing boundaries, snapshot-pinned prompts/qualification/model-effort policy,
+last-good/built-in visible fallback and an SSD-only prepare/publish/check tool.
+Native inference/execution, safety constraints and CU wire contract remain in VK.
+Recommend is required; no deployment/restart/cutover or Auto activation. Deadline
+for full useful router readiness is before October 30, 2026 (20x becomes 10x).
+See VK_AUTOSWITCH_RELOAD.md for mandatory next-candidate packaging and remaining
+acceptance/ownership dependencies; CU credit budgeting is a separate issue.
+
+2026-10-08 phone frontend interaction pass:
+
+- Prepared labeled bottom navigation, accessible Back-aware sheets, larger touch
+  targets, task/board state retention, readable cards and keyboard-aware composer.
+- Initial 360/390/412/1440px browser flows passed with all application writes
+  intercepted. Evidence/limits: VK_MOBILE_UX.md; no production change.
+
+## 2026-10-08 — Phone UI design revision
+
+Replaced the enlarged desktop mobile pass with dedicated task/feed and workspace
+list hierarchy, activity/status chips, a thumb-reachable New task action,
+title-first details and compact prompt composition with secondary controls in
+Options. Retained history/focus/state/viewport behavior and desktop layouts.
+See VK_MOBILE_UX.md for revised evidence and GTK/device QA limits. PR #224 stays
+a draft into staging; no merge, deployment or model-routing change.
+
+## 2026-10-08 — Phone style refinement
+
+Reduced search and chip visible surfaces while preserving 48px interactive
+targets. Added phone search icons and clear labels, aligned headings, softened
+card borders and tightened row/action proportions. Extended the existing browser
+acceptance with search sizing/clear-control checks; see VK_MOBILE_UX.md and the
+style SSD evidence directory. Desktop/model/routing and production are unchanged.
+
+## 2026-10-08 — Phone frontend release
+
+The operator reviewed the redesigned/style-refined phone UI and authorized deploy,
+push/PR and rebase merge. PR224 merged into staging; PR226 promoted main 22f09e245.
+A clean build with an identical complete source tree was activated at 17:41 UTC
+through an atomic directory/symlink exchange at the fixed frontend runtime path.
+Backend PID 3027197/binary/configuration and current application data were preserved.
+Candidate/live phone, desktop and dark-mode browser acceptance, HTTPS hashes,
+project counts/order and saved-message visibility passed. The previous frontend
+is preserved and its rollback archive is SHA256-verified on Desktop B:.
+VK_MOBILE_RELEASE_20261008.md records evidence and unverified regression cases.
+The test harness now also intercepts /v1 writes and matches exact visible project
+titles when an accessible needs-review indicator extends the button name.
+
+## October 6, 2026 — scheduled first native goal run (development)
+
+Separate workspace at staging 8b562265d implements identity-bound pending intent,
+explicit firstRun admission, native-root checklist receipts, and fail-closed
+restart/hold behavior. No production, Android, paid inference or live-settings
+operation. See VK_SCHEDULED_FIRST_RUN.md and HANDOFF for validation and the
+CU-first combined acceptance/rollback gate.
+
+## PR147 staging acceptance blockers
+
+CI identified a cold/deadline-sensitive routing-triage assertion. Repair keeps
+the production budget and separately verifies semantic discovery and unknown
+fallback. Added source-fenced hosted HTTP/guard/test artifact builds and a
+compile-time disabled, v2-compatible rollback variant. Own old test binary was
+verified on Desktop B: before exact local removal; all evidence and shared data
+retained. Combined runtime acceptance and final CI are mandatory. No production
+operation or paid inference.
+
+2026-10-06 PR147 stalled graceful stop: added cfg(test) native revocation/expiry regression with actual client mutex held, outstanding private offline request and independent worker/cgroup observations. Local provider TERM/worker exit were +46/+480 ms after revocation and +7/+567 ms after last expiry; one request in each, graceful future still blocked, first-run holds/identity/receipts retained. No production enforcement change; non-test client source is unchanged from 86f62b2. Current immutable CI/build/runtime receipts and staging lcp7ys3k comparison are in /mnt/vk-storage/vk-scheduled-first-run-20261006/stalled-stop-handoff.md. Recommend/default-off/CU-first and no production/Android/paid/live-service boundaries retained.
+
+## 2026-10-06 — PR147 stop-response reliability
+
+Bound the complete graceful attempt, make HTTP one/two-worker OS stop/verification
+concurrent, and reconcile only verified matching grants. Preserve native active
+status and uncertain first-run holds/receipts. Focused offline runner regressions
+plus final source-fenced candidate/disabled-v2 rollback validation receipts belong
+to stop-response-handoff.md on the mounted SSD. No production action or cleanup.
+2026-10-05 AutoSwitch reference-step correction: classify known link collections as presentation using completed context; preserve surrounding protection and explicit floors. Repair oversized native config metadata for restricted classifiers only. See VK_AUTOSWITCH_REFERENCE_STEPS.md and retained private receipts. No backend restart or Auto activation.
+
+2026-10-05 Hot publication receipt: reference-steps-aac5bd457-20261005 active, PID3027197 unchanged, validator unchanged. Native classifier repaired (one real replay:4,711 input/259 output,9,823ms); unknown troubleshooting remains protected. Known-link replay admits Luna6/medium with no inference; Recommend experimental candidate Sol6/low. See private LIVE_PUBLICATION.json.
+
+## 2026-10-07 — AutoSwitch current-step protection
+
+Developed on `fix/autoswitch-current-step-risk` from preserved `bb5fe5f40`.
+Resolved bounded follow-ups can release inferred protection with native scope
+evidence; surrounding protected work still controls generic resumes. Narrow
+operational prohibitions no longer create deployment intent. Fifteen completed
+real assessments replayed without inference: three inappropriate Astra choices
+become Sol6/low recommendations (qualified Auto option Luna6/medium); twelve
+unchanged. No observed savings claimed. Recommend/live deployment unchanged;
+backend guard adoption belongs to VK::Staging before October30 readiness.
+See VK_AUTOSWITCH_CURRENT_STEP_RISK.md and SSD validation receipts.
+
+## 2026-10-07: repair incomplete AutoSwitch no-restart boundary
+
+The earlier module failed the requested scope: backend prompt guesses and
+mirrored history classification could veto a corrected policy. Protocol2 separates
+bounded immutable repo/native/budget/lifecycle facts from worker-owned prompt,
+semantic eligibility and inferred-history interpretation. One-time owner adoption
+removes old vetoes; later ordinary policy changes truly reload. No live action or
+Auto enablement. Implementation 09dcd2cb2 is pushed on the existing PR148 branch.
+
+Same-process sandbox proof kept PID3305974: code updates change negative-wording
+and bounded-followup decisions; 15 saved native assessments replay with three
+cheaper recommendations and 12 unchanged. Safe/manual/child/escalation/rollback/dirty
+state checks pass, including unsafe/old-protocol rejection. Zero paid calls.
+Final unit suite: 156 passed / 7 opt-in ignored; all-target Clippy and formatting/ops/CU
+bytes pass. Full local desktop/workspace checks encounter missing GLib metadata;
+use exact-head CI. A whole-suite timing assumption initially failed and was
+replaced with the directly relevant stalled-helper termination assertion.
+
+Fresh private protocol2 package/validator and receipts are under
+`/mnt/vk-storage/vk-autoswitch-module-boundary-20261007`; prepared stripped dev
+helper is not a deployed server. Old package665d836db is superseded, not deleted.
+Live PID3027197/module protocol1 remain unchanged. VK::Staging owns adoption;
+October30 readiness and separate Auto permission remain requirements.
+
+## October 7 Combined Release Preparation
+
+Reconciled both development histories without dropping their source changes.
+Application files merged automatically; the shared routing-triage test repair
+still requires combined validation. Connector patch, exact combined artifacts,
+fresh backup/full appropriate rehearsal and actual idle checks remain gates.
+No production operation or archive retirement occurred.
+
+2026-10-08: Isolated startup/recovery safety branch from staging8b562265d.
+Strict invocations, explicit identity gate and non-destructive automatic lifecycle;
+content/metadata audit retains journal gaps and post-backup uncertainty. No deploy.
+See VK_STARTUP_RECOVERY_SAFETY.md; independent review/real isolated CI pending.
+
+2026-10-08: PR153 sourcea81d46e92 passes10 checks,405 Cargo tests/7 skipped,
+16 real-binary isolation cases and14 audit regressions. Intrinsic dataset tokens
+close in-place replacement ambiguity; pure debug paths work without source mounts.
+Independent review pending. No production mutation or recovery zero-loss claim.
+
+## 2026-10-08 post-backup content reconciliation
+
+Independently replayed retained owner patches without executing historical code;
+all 11 final contents match. All 15 prior reconstruction files match current Git
+contents. Accounted for 710 mutation candidates and 47 original content differences;
+later shared-work changes remain separately reported. Added exact-context replay
+and evidence-result regressions; 27 focused Python checks pass. No shared writes,
+placement replay, production operation, new loss claim or erased journal gap.
+See VK_POST_BACKUP_RECONCILIATION_20261008.md for receipts and scope.
+
+2026-10-08 bounded recovery-evidence correction: supersedes the earlier blanket
+710-accounted/all-676-retired claim. 34 present content comparisons; 228 baseline
+Hyrox names verified at 08:53 with retained copies; 448 lack baseline contents.
+Strict full-program per-result patch binding proves 14 accepted/1 rejected pairs
+and 11 named file matches but overall fails on retained transcript line 415.
+All 15 recovery files match current maintenance commit; 145 original-history
+rows remain unresolved. Desktop packet hashes/internal manifests checked.
+Separate independent reviewer blocked by AutoSwitch qualification policy; no
+independent sign-off claimed. PR223 remote head/11 CI checks verified; c31a
+absence around 12:40 operator-reported, cause unknown. No production/shared
+writes, restore, workspace recreation, cleanup, restart or cutover. Cleanup
+requires Seamus human QA. See VK_POST_BACKUP_RECONCILIATION_20261008.md.
+
+2026-10-08 tracking-only independent-review receipt: separately authorized Astra
+High review (workspace802f378d, session27d79e0c, executiondd57bdb6) completed
+13:59:52 UTC. Independently supports corrected bounded findings at 984f5ee79 /
+d000ce732; recovery-complete and universal zero loss remain withheld. Consumed
+redacted REVIEW.txt, unresolved-448.csv and source manifest; hashes verified,
+448 unique rows. Copied only these safe tracking artifacts; old receipts remain
+historical. No duplicate reviewer or routing change. Targeted read-only source
+plan in VK_INDEPENDENT_RECOVERY_REVIEW_20261008.md; no investigation/restore/live
+repair/recreation/deletion/restart/cutover performed. No code or test changes.
+
+## 2026-10-08 targeted isolated recovery executed
+
+Executed the published retained-source investigation under the later isolated
+recovery authorization. Recovered 132 exact original commit objects; verified 129
+reachable graphs in declared scope, including the authenticated original VK
+shallow boundary. 26 rows meet original identity plus remote witness; 119 still
+lack a verified witness and 13 original objects remain unfound. All 448 names
+remain unknown, with 59 candidate copies covering 13 basenames. Recovered 14,382
+original metadata headers, authenticated the three source mode bits and initial
+journal, and found the same malformed line in eight archived transcripts.
+Native Desktop Git fetch failed wincredman/disabled prompts; no bypass. Two VK
+bundle imports failed prerequisites; preserved unchanged. Parent verification
+only, completed independent review unchanged. See VK_TARGETED_RECOVERY_FINDINGS_20261008.md.
+Production/shared files, original evidence and stable runtime untouched; no
+workspace recreation/restart/cutover/merge/cleanup/permission changes.
+
+## 2026-10-08 — Turn Git preservation development
+
+Added opt-in completion preservation with reviewed file/privacy/automation policy,
+exact original-history remote witnesses, persistent pending/blocked states and an
+isolated fail-closed controller check. VK Dev T48 is linked to the current feature
+workspace. Tests and limits are in HANDOFF.md / VK_TURN_GIT_PRESERVATION.md. No
+Staging/runtime/controller activation, restart, deployment or routing change.
+
+## 2026-10-08 — PR223 preservation P1 review correction
+
+Reproduced the unsafe `3cb3632897` scanner/retry baseline in isolated fixtures.
+Corrected scans read original raw blobs/commit messages with the approved real
+Gitleaks binary under the publication environment, bypassing refs/replace,
+attributes/drivers and grafts. Schema 2 retains original obligations across retries
+and failed admission, records generated originals before branch CAS, freshly
+rescans receipts, and invalidates any full-record change during a batch check.
+Raw worktree blob IDs/modes must match the original preserved tree; clean status
+alone cannot certify protection. Legacy receipts remain unsupported blockers.
+
+73 distinct isolated tests (72 full-suite cases plus positive real-scanner
+publication/check acceptance) and four focused Rust tests passed. Approved real
+scanner cases were exercised without skips; focused Clippy, format and ops checks
+passed. Frontend types/local-web/UI lint passed. Broad check/lint/workspace tests
+stop at missing host GLib/GObject/GIO libraries; trailing remote/I18n checks and
+full executor/UI acceptance remain open. Review logs and final remote SHA receipt:
+`/mnt/vk-storage/turn-git-preservation-review-20261008/`.
+
+Same isolated `feat/turn-git-preservation` branch, VK Dev T48 and draft PR223.
+No live activation or Staging operations. Recommend-only remains required.
+Seamus owns schema-2 controller/package integration, explicit reconciliation of
+old original-history evidence, copied-data acceptance and separately authorized
+Staging/live adoption. This correction does not authorize rollout.
+
+## 2026-10-08 — MCP approval bridge development
+
+Added isolated typed MCP consent bridge and offline UI/service/protocol regressions.
+See VK_MCP_APPROVAL_BRIDGE.md and HANDOFF.md. No activation or permission changes.
+
+## 2026-10-08 — PR225 P1 consent correction
+
+Bound MCP composer controls to individual requests/executions; gated reconnect
+consent on fresh snapshots/Ready. Added complete bounded redacted invocation
+context and fail-closed diagnostics. Mounted composer/card and real patch-hook
+fixtures replace the initial hook-only UI evidence. Configured Codex 0.159.2
+schema verified offline. See HANDOFF.md; source remains isolated and undeployed.
+
+## 2026-10-08 — PR225 nested redaction-only context P2
+
+Independent re-review closed both P1 findings at da07a5c3b. Added a recursive
+post-sanitization meaningful-value gate for the remaining P2, with compiled
+nested-object/array negative cases using matching display metadata, a positive
+mixed-target case, and offline typed-cancel/no-dispatch service coverage.
+See HANDOFF.md and PR225's P2 receipt. Isolated and undeployed; no broader redesign.
+
+## 2026-10-08 authorized safe restart preparation
+
+Four exact requested PR inputs combined with current accepted phone baseline.
+Historical exceptions remain explicit. SSD ENOSPC and proven8GiB floor block
+host backup/rehearsal/cutover; no deletion or bypass. Local incomplete source is
+Desktop-hash-preserved. Hosted combined checks/artifacts are being prepared;
+no production effect or readiness claim. See VK_SAFE_RESTART_PREPARATION_20261008.md.
+
+- 2026-10-09: Incorporated current staging e8c450fb in the scoped combined release
+  after owner-authorized final66 frontend inclusion. Preserved all twelve final
+  frontend changes and six newer consent/chat repairs; no pinned backend, guard,
+  module, schema or dependency input changed. Retained newer combined continuity
+  documents; staging originals remain preserved by its immutable commit.
+
+## 2026-10-10 — bounded same-UID original-final recovery continuation
+
+Codeae263d47 adds exact-two-target verify-only/default CLI and authoritative
+server capture status while preserving signed HTTP auth and PR241 validators.
+Hosted38057745525 passes8 new tests/build/Clippy/format; source tree equals
+hosted63d76b91. Prior51 Rust/20 conversation/type/lint/native checks retained.
+Compiled same-UID live verify-only probes refuse absent JSON status protocol;
+no apply, sidecar, prompt, restart, badge/database rewrite or policy change.
+Sealed minimal c3-backend/cdad-frontend patches are in LOCAL_REPAIR_DELIVERY.safe.json.
+Matching Staging-owned publication and both genuine normal API/UI restorations
+remain required. This is source delivery, not conversation restoration.
+
+## 2026-10-13 — automatic GitHub sync source preparation
+
+Verified/reused the existing same-name local issue/workspace linkage. Extended
+corrected PR223 preservation, completion/admission and user queues; direct durable
+checkpoints avoid extra agent turns.76 real-scanner helper fixtures passed. Compiled
+integration, independent review and exact-head combined PR245 build remain pending.
+Operating/rollback guidance is VK_AUTOMATIC_GITHUB_SYNC.md. No live activation,
+Staging message/start, restart/cutover, forced stop, media operation or cleanup.
+## 2026-10-13 — large native-history verification repair
+
+Prepared streaming native-input verification and synthetic large-history/integrity
+regressions from staging d786124a1. Hosted compiled and private read-only acceptance
+remain pending. No production, grant, target-history or continuation changes.
+
+## 2026-10-13 — large-history compiled and private-data acceptance
+
+PR #245 code/test head df717cf8e passed 548 hosted Rust tests (13 skipped), normal
+schema/lint/frontend/Tauri checks and 8 optimized focused tests. Both private
+original histories and stable snapshots passed read-only native-index/prefix
+verification in under 3 seconds and 24 MiB peak RSS each. Private operational
+receipts stay outside Git. Capability remains default-off; review/adoption/live
+acceptance are separate. No live grant/history/continuation/restart action.
+
+## 2026-10-13 — recovered automatic-sync validation and integration
+
+Recovered draft PR246 and verified exact native issue/workspace association.
+Combined e26f5945 includes exact PR245 c37f3623 and automatic-sync7e83dbfe;
+Test38396831309 passes552 Rust tests (13 skipped), four enabled-mode fixtures,
+applicable lint/schema/frontend/desktop checks and the source-bound backend build.
+Downloaded artifact SHA matches its manifest;18 local masked-namespace startup
+cases pass. Reconciled current Staging ancestry while retaining executable source.
+Final head-bound evidence is tracked in the private release handoff. Independent
+review permission, release-owner acceptance and live enforcement remain open.
+No restart, Staging prompt, live setting, media operation or cleanup occurred.
+
+## 2026-10-13 — durable queue cancellation during rollback
+
+Explicit cancellation now deletes its durable batch before retiring the visible
+queue, regardless of scheduling mode. A failed database deletion preserves the
+visible batch and recovery hold. The restored-batch regression exercises failure
+and another restart in both enabled and disabled configurations. Fresh exact-head
+checks and source-bound paired build supersede the prior candidate for nomination;
+private handoff records their result. No production operation occurred.
+
+## 2026-10-13 — session reset checkpoint admission
+
+The session reset endpoint now uses the existing shared admission boundary,
+matching follow-up retries and workspace Git routes. Explicit user resets retain
+their existing behavior and cannot race checkpoint verification. Final exact-head
+compiled validation and paired artifact are recorded in the private handoff.
+
+## Combined release-owner preparation
+
+Prepared exact PR245/PR246 baseline plus selected reviewed PR247 native paths and
+the disposable-runner bwrap profile correction. Independent review and private
+actual-authority/runtime-overlay acceptance remain gates; no activation claimed.
+
+- Combined release preparation refreshed with independently reviewed PR24664c3e25d and passing exact-head CI, retaining PR245/247 and the approved runner profile. Combined/private acceptance and authority/storage/idle remain held; no live activation.
+
+## 2026-10-14 — PR249 system-wide native review preparation
+
+Code/test9afe687c9 passes Full Test38640253559 (572 tests/13 skips plus12 scheduling tests), native38640253455 (14 typed/history plus12 policy tests), and source-fenced artifacts38640258375. Actual DEFAULT start, genuine legacy-user resume/MCP and corrected stdin with stale CLI flags pass;17 root turns cover seven native review variants, denial and mandatory-human preservation. All779 artifacts/2527 source hashes independently verified. Private source retains three live reader files; exact fenced build exception is pending. No live settings, credentials, merge/restart/deploy or other-agent operation. Read VK_SYSTEM_NATIVE_REVIEW.md and PR249; Recommend/PR245/246 remain intact.
+
+## 2026-10-15 — Dot steering and queue diagnosis
+
+Traced exact running-session refusal to external Dot `adapter.py:session_configs`;
+mocked `local_followup` reproduced it with zero POSTs. Nine configuration-policy
+tests passed. VK already supports native Codex steering, but explicit deferred
+Codex prompts need a public queue-only mode. Recorded connector override, API,
+selection policy, receipt/race/recovery requirements in VK_DOT_SESSION_STEERING.md.
+Documentation only; no prompt, executable change, restart or deployment.
+
+## 2026-10-15 — explicit Dot steering development
+
+Added isolated connector overlay and backend steering path with exact target
+identity, durable request receipts and no launch/stop/queue fallback. Preserves
+ca3fe817 capacity correction.13 new and14 existing connector tests pass against
+current source; compiled Rust and isolated HTTP/native acceptance are pending.
+No live connector installation, service restart or access-policy change.
+
+Initial implementation99e5778db passed579 Rust tests/13 skips and 12 enabled
+checkpoint tests in Test38812713572, including real HTTP/SQLite/synthetic-native
+steering and replay. Two lint findings are corrected; final safety refinements
+and an ignored single-turn account-backed acceptance test are prepared.14 new
+connector tests and14 unchanged capacity/Recommend regressions pass locally.
+
+d8906243f passed full Test38815715507 (580 Rust/14 skips,14 connector and 12
+enabled persistence cases) and native artifacts38815715510. A real isolated
+attempt exposed the harness's immediate readiness assumption before any steering
+call. Added bounded notification readiness waiting and focused executor artifact
+export; no native correction was blindly retried and the private auth copy was
+removed. Account-backed final-answer acceptance remains pending.
+
+9f5825ce3 passes full Test run 38819080520 and focused artifact run 38819080321. All 2538
+source hashes and its executor binary were verified. A real isolated native
+session completed its sole turn with one correction and the exact final marker;
+original history verifies read-only/on-request policy. The harness's later
+thread/read hung because ordinary completion closes the peer reader. Retained
+history independently reconciled the result without another model request or
+correction; original timeout evidence is preserved. Both private auth copies were
+removed. A test-only completion-notification collector and offline open-stream/
+identity regression replace that terminal RPC. Runtime source is unchanged;
+the paid harness was not rerun. No live connector edit, restart or deployment.
+
+## 2026-10-16 — Automatic child-turn activity correction
+
+- Ported the focused status fix from `2315ff268` onto current staging. Latest
+  durable child turns replace the open-edge/parent-time heuristic for both
+  session listings and workspace counts; new turns remain visible.
+- Bounded cached reads preserve history; uncertain evidence remains unresolved.
+- Regression coverage includes AutoSwitch's resumed-parent failure and child
+  reuse. This source merge is for the next backend restart, not live activation.
+
+
+## 2026-10-16 — Preserve existing Dot sidechat integration
+
+Reconciled eight API and three UI commits in the dedicated preservation workspace;
+original worktrees remain intact. Public copies sanitize historical operational
+details and retain Original-Commit provenance. DOT_INTEGRATION_HANDOFF.md records
+live source, unfinished mobile/actual-Dot acceptance and ownership. No deployment.
+
+Publication receipt: [draft PR #254](https://github.com/artinflight/vibe-kanban/pull/254) targets staging;
+Vibe T61 links the preserved source and mobile owner. Original worktrees remain clean.
+
+
+## 2026-10-16 — Correct desktop Dot acceptance boundary for PR254
+
+Recorded Seamus's confirmation of the first successful desktop message/webhook/
+persisted-reply exchange and screenshot. The integration task's paired connector
+provided the reply route; direct root connector access remains unresolved. Real
+phone acceptance remains separately owned. No private conversation, screenshot,
+pairing data or receipt identifiers are published, and no live test is replayed.
+
+
+## 2026-10-16 — Dot context recovery and explicit all-project planning
+
+Investigated the accepted phone event without exposing private content or IDs;
+stored/signed context is complete. Added read-only unanswered-context recovery,
+non-replay cursor compatibility, explicit project authorization and a stale-plan-
+fenced browser-scope planner with CI regressions. Prepared 43-current/17-active
+snapshots for both existing indefinite sessions; access/subscriptions are unchanged.
+The desktop result was a manual relay. Root catalog/context is a platform boundary;
+a natural real phone reply is not yet verified. Mobile owner files/browser retained.
+
+Staging receipt: source d8ceceb8f and verified Desktop B mirror are prepared.
+Automatic approval review denied the exact live install/restarts for missing
+specific authorization and disruption risk; no live change or workaround occurred.
+
+
+## 2026-10-16 — Approved connector activation and automatic complete project scope
+
+Exact owner approval resolved the earlier review block. The single authorized
+retry succeeded, then validated source d2c79543e activated the complete policy:
+both existing sessions now cover all 43 current projects, including 26 archived;
+future projects are reconciled automatically every five seconds. Private current
+SQLite backup and Desktop B mirror were verified before application. Only the
+connector and publisher restarted. Original subscription metadata and accepted
+attempts, browser PID, frontend and mobile owner work were preserved.
+
+49 sidechat tests and 28 existing connector regressions pass. New broad event
+arguments exclude the already subscribed project to avoid duplicate delivery.
+That actual platform subscription and root metadata/tool-context verification
+remain blocked on capabilities unavailable to this coding execution. One real
+phone message remains unanswered; no manual relay is claimed as phone acceptance.
+Owner approval and scope decisions are settled; no pairing/UI debugging remains.
+
+
+## 2026-10-16 — Trace refreshed Dot discovery discrepancy
+
+The updated service received server/discover, tools/list and events/list at
+17:53:53 UTC in the reported refresh window. Its configured facade advertises
+four sidechat tools and current/all/future event filters. A registered pending
+recovery call succeeded at 18:00:50–51 on the same adapter child; this coding
+execution now exposes the new recovery tool. Root and earlier worker metadata
+still differ. No duplicate local tunnel, wrong release or binary mismatch found.
+
+DOT_DISCOVERY_TRACE.md contains exact public schema fingerprints, timestamped
+comparisons, measurement limits and a supported platform escalation packet.
+Method-only logs cannot reconstruct historical response bodies or independently
+verify the root's stored connection/catalog record. No exact cache component or
+review hold is claimed. No repeated refresh, permissions/credential/subscription
+change, service restart, reply relay or mobile work occurred. Root phone reply
+and complete notification registration remain acceptance gaps.
+
+
+## 2026-10-16 — Root reply and complete notification registration verified
+
+Root's owner reports its view caught up at 18:07 UTC without another refresh.
+Root directly read the retained phone message, checked no reply existed, wrote
+one and verified reply_persisted=true. The enabled Reply to Vibe chats automation
+was updated through the supported platform flow with original VK Dev plus
+all-projects-excluding-VK-Dev triggers. The earlier root reply/broad-registration
+blockers are superseded.
+
+Independent read-only server inspection at 18:23 UTC confirms exactly two active,
+unexpired, non-overlapping subscriptions for the owner; original identity/filter
+preserved; all 43 current projects including 26 archived match one destination;
+future policy enabled; existing message-thread bindings valid. Exactly one phone
+reply is persisted in the original thread/workspace, without accepted-event replay.
+Root pending discovery remains absent. A fresh automatic roundtrip without a
+workspace hint and user-visible receipt remain unverified; Seamus was already
+asked for the new message. No new refresh/pairing/activation/runtime changes or
+mobile work occurred during reconciliation. Private IDs/content remain excluded.
+
+
+## 2026-10-16 — independent Dot unread and Needs Attention
+
+Added owner/issue-scoped persistent Dot read/attention state and separate violet
+indicators on desktop/mobile workspace and issue surfaces. Visible focused replies
+acknowledge explicit IDs; resolution is independent and explicit. Synthetic Python,
+DOM and Chromium cases cover persistence, shared issues, read races and coding-agent
+isolation. Release coordinated with Sent Steering; notification backend/frontend
+remain undeployed. See DOT_NOTIFICATION_HANDOFF.md for source, validation and the
+backend-first combined Mobile+Steering release procedure.
+
+
+## 2026-10-16 — Sent steering draft correction
+
+- Created and linked local issue `e662a94d-0fff-428b-9f43-9d771ebcc8e1`.
+- Queue hook returns delivery status; composer deletes only immediately delivered drafts.
+- Final source browser regression passes at 390/412/1440 pixels; queued and failed recovery remain intact.
+- Type checks, frontend/shared lint, formatting and ops pass. Production bundling remains unverified; no deployment occurred.
+- Evidence and commands: `VK_SENT_STEERING_DRAFT.md`.
+
+## 2026-10-16 — Steering fix published as PR257
+
+- Pushed source `ca9911225` and opened https://github.com/artinflight/vibe-kanban/pull/257 into staging.
+- Fresh format/ops/frontend type checks and lint pass. Full check/lint/workspace Rust commands were attempted but blocked by missing GLib/GObject desktop dependencies.
+- Applicable CI, review, staging acceptance, package/QA and authorized rollout remain; production is unchanged.
+
+
+## 2026-10-16 — approved Dot notification deployment
+
+Activated Python Dot source7222b127c and combined frontend aebe6a442 at22:37/22:38UTC.
+App0.1.42 serves index-CrPmgoRY.js. Desktop/mobile-viewport live API/UI acceptance
+and nine served Steering cases pass; owner access, two subscriptions,43 projects
+(26 archived), future policy and prior messages are preserved. Dot-only readiness
+interruption1.38s; no Vibe/agent restart. Desktop backups restored/read back.
+Physical phone DevTools was rejected by automatic approval review for its shared
+authenticated-tab boundary; no retry/alternate route. Seamus's fresh paired-phone
+question/reply/notification confirmation remains. PR254 merged into staging28fdcfddf.
+See DOT_NOTIFICATION_ROLLOUT.md and the bounded live QA scripts for receipts.
+
+## 2026-10-17 — Project sidebar preparation
+
+Implemented private project Dot Chat/shared planning with canonical task links,
+revision/idempotency protection, separate project attention and responsive UI.
+Coordinated Preserve Dot/CU1.6 and Staging. No production adoption.
+See VK_PROJECT_COLLABORATION.md for validation and release requirements.
+
+## 2026-10-18 — source-only storage admission
+
+Prepared the narrow durable storage response admission contract and native
+implementation from staging5b43524ea, following Operations PR21582805b7.
+Exact batch/intent/owner receipts, queue-preserving owner serialization,
+execution insertion binding and cancellation tombstones keep uncertain sends
+from becoming unsafe retries. No live dispatch, release or activation.
+Validation/compatibility remains explicitly source-bound; shared capacity
+coordination holds additional compiler jobs while the original service test
+reaches its natural terminal checkpoint. See VK_STORAGE_ALERT_ADMISSION.md.
+
+
+## Storage admission continuity correction (2026-10-18)
+
+Resume source/tests from af7b35d with sanitized publication authorized; host
+Cargo/build growth remains held. Correct the queued-user race assertion to
+require normal recovery context; apply the same native recovery to alert turns
+and test ordered failed/killed instructions, partial text, persisted action and
+immutable-intent replay. Hosted nextest uses no-fail-fast for complete evidence.
+See STORAGE_ADMISSION_VALIDATION.md for exact prior CI failure and new results.
+No activation or live dispatch is included.
+
+
+## Coordinated storage v2 adapter seam (2026-10-18)
+
+T90 reviewed unchanged native v2 at45cffa379 for source integration and published
+Operations42bc9ce. Add a cfg(test)-only real loopback router/control fixture and
+exact six-file client/Store/driver snapshot with byte-hash provenance. Normal
+hosted CI explicitly runs initial/client-reopen and native-WAL-reopen phases;
+missing driver cannot silently pass. Host Cargo/build growth stays held.
+See the native contract/checkpoint for evidence and synthetic I/O boundaries.
+
+
+## Actual paired driver failure and coordinated correction (2026-10-18)
+
+Native18456f017 passed633main tests; its explicit paired case failed before
+HTTP due a driver/module name collision. T90 published corrected driver source
+a345ca8dc1c5f50eab3afdc7db214ff3b923e7fd (75client fixtures reported). Repin
+all six exact files; preserve assertions and first/reopen evidence. Hosted
+ignored selection now reuses the main workspace feature graph; scheduling
+subset executes even after failure. New paired hosted success remains required.
+
+
+## Final client exact-pair closure (2026-10-18)
+
+Preserve the existing717c337 repin, add exact published5c2ee7f Python regression
+modules/status helper with twelve-file provenance and hosted76-test invocation.
+Previous native59/clienta345 result stays historical; final native/client CI
+is required. Against nominated PR276/366cfd243, native crate and additive test
+workflow patches pass isolated index checks; shared paths are workflow/continuity
+only. Combined runtime and forward/latest-data rollback remain unaccepted and
+Staging-owned. No host Cargo/build or live service/binding/activation.
+
+## 2026-10-18 Prepared disabled storage transport
+
+Repinned fourteen exact Operations PR215 files at7a02102d6ccf55f2c91223c5128599cefa6492fc,
+including production Bridge/bounded HTTP wiring and87regressions. Hosted paired
+validation is required; predecessor6c658d1/5c2ee7f remains source-bound history.
+Corrected direct-request authentication/gateway exposure claims. Native ABI and
+admission/migration source unchanged; Staging owns its existing combined release/
+copied-data/receipt-safe rollback preparation. All production gates disabled;
+no host compiler, endpoint probe, security change or activation.
+
+## 2026-10-18 Frozen physical-policy pairing
+
+Reviewed/repinned Operations81887d38d238ce3b0665092bf38a482284441062: fifteen
+Python files plus the exact disabled example config required by new regressions.
+Hosted evidence pending for103tests/mixed OS+physical SSD Bridge/HTTP/native WAL
+scenarios. No native/migration change. Physical rollout needs no allocation
+producer; normal Disk allocation protection remains. Staging20copied-data SQL
+checks acknowledged, private runtime/receipt-safe rollback remains separate.
+Corrected predecessor b249/7a Python87run to86pass/1optional connector skip.
+No activation/host build/shared-target growth or live changes.
+
+## 2026-10-30 — recovered deployment source custody
+
+Reconciled the October29 deployed build and ordinary-send repair with current staging, recovered deployment/recovery and connector source/tests, and replaced stale live-runtime records with verified identities. Antigravity initializes but requires authentication; gate remains disabled. See BACKEND_DEPLOYMENT_HANDOFF.md and DEPLOYMENT_CHECKLIST_20261030.md. No production change during reconciliation.
+
+## 2026-10-30 — Antigravity activation and integration handoff
+
+The later activation supersedes the initial authentication-blocked entry above.
+The authenticated native Vibe adapter passed approval, denial, native resume and
+cancellation within four model turns. Release 9a4179e8b / 137d6cd7b647… was accepted
+03:18:14 UTC; read-only public verification passed again at 09:20:33 UTC. Current
+history and latest-data cutback were preserved; actual pre-switch failure recovery
+and the strict empty-reader-WAL correction are documented. All eight hosted
+workflows passed at a421381321. PR #284 records requested rebase integration into
+staging; original build IDs/branch remain retained and main promotion is separate.
+See BACKEND_DEPLOYMENT_HANDOFF.md for exact runs, recovery mirrors and remaining limits.
+
+
+## 2026-10-31 — Direct mobile workspace project filters
+
+Branch `vk/311d-vk-mobile-filter` exposes a project selector and sort/filter buttons
+above the phone workspace list, removing the Options gate. The selector shares
+existing project options, filter state and scratch persistence; supports multiple
+projects, No project and All projects reset; and displays current selection with
+48 px touch targets. Desktop controls retain their existing layout. New labels
+cover all seven locales. No backend, schema or production deployment change.
+
+All four frontend type checks, focused UI lint, formatting, ops/path guards and
+nine workspace regressions passed. Read-only browser acceptance passed at
+360/412/767/768/1440 px, including actual row filtering, locally emulated reload
+persistence, clearing, archive/search and focus return. See HANDOFF.md for evidence
+and the inherited nested-dialog Escape limitation. Temporary preview stopped;
+no physical-device UI QA, commit, push or PR is claimed.
+
+
+## 2026-10-31 — Mobile filter commit requested
+
+The operator requested a local commit of the validated mobile filter stream.
+Source, browser acceptance and continuity notes are committed together.
+Push, PR, promotion and deployment remain separate.
+
+
+## 2026-10-31 — Desktop project filter bubble toggles
+
+The operator approved the mobile dropdown and requested equivalent desktop access,
+then specified bubble toggles in a row. `WorkspaceProjectFilterChips` now appears
+below Search on desktop. Chips support multi-select, No project, All projects
+reset, selected checkmarks/pressed states, full-name titles and keyboard access.
+One horizontal row scrolls when needed within the workspace sidebar. Mobile keeps
+its accepted dropdown; both layouts share existing filter state and persistence.
+
+All four frontend type checks, focused UI lint, formatting, ops/path guards and
+diff checks passed. Browser acceptance passed at 360/412/767/768/1440 px, including
+desktop filtering, persistence, resizing, keyboard toggles and a constrained 300 px
+column. Public HTTPS desktop review showed the row without page overflow, and
+frontend/API probes returned HTTP 200. Validation writes stayed local. The review
+preview remains running; the desktop extension is committed locally. No push, PR,
+production deployment, backend or schema change is included.
+
+
+## 2026-10-31 — Compact project abbreviations and menu colors
+
+The operator requested smaller desktop bubbles using the left menu's abbreviations
+and colors. Chips are now 28 px tall, show the same up-to-three-character labels,
+and use the same pastel colors and active-state styling. Full names remain in
+hover titles and accessible labels; All is compact and No project uses a folder
+icon. Existing selection, reset, persistence and phone dropdown behavior remain.
+
+Project appearance helpers were moved unchanged into the shared UI library and
+reused by AppBar, SharedAppLayout and workspace filter metadata, including saved
+abbreviations/colors. Browser acceptance passed all five widths and checked exact
+menu/chip appearance parity, saved customizations, sizing and previous behavior.
+The public preview shows the compact row without overflow; it remains running.
+Formatting, focused lint and path/whitespace checks passed. Source and validation
+notes are committed locally; push, PR and production deployment remain pending.
+
+All four frontend TypeScript checks also passed with a bounded 2 GiB heap.
+
+
+## 2026-10-31 — Workspace project filters production publication
+
+- Operator approved mobile and compact desktop filters, then requested PR, sync,
+  rebase merge and deployment. PR #286 targets staging; its merge event records
+  integration/rebased IDs. Main promotion remains separate.
+- Built combined frontend `02a9a993d` from live `b990b5939` plus exact filter
+  package files from `d83e7587a`. Preserved all 11 live unread/review/reselect files
+  and pushed the deployment composition branch. No backend/API/schema change.
+- Production candidate passed browser acceptance at 360/412/767/768/1440 px and
+  existing review-flag acceptance at 393/1440 px, with application writes local
+  to fixtures. Stabilized test target/animation/preference hydration waits.
+- Verified Desktop B source and paired frontend recovery independently, then
+  published atomically at 13:07:50 UTC. Public JS `index-Bgdr6hzC.js`; public
+  mobile/desktop readback passed, with 54 workspace cards and no page errors.
+  Existing old assets retain identical public hashes; five services, executable,
+  database identity and 99 migrations unchanged. Version remains 0.1.42.
+- Four frontend TypeScript checks, frontend lint, format, explicit UI/test
+  Prettier, ops and unused-i18n checks passed. Hosted application-head frontend
+  checks/artifact build passed; final-head PR checks remain GitHub authority.
+  Local Rust baseline stops at missing serde in the offline Cargo registry.
+  Physical-phone UI QA and paid-provider execution were not performed.
+- Evidence and immediate paired frontend fallback:
+  `/mnt/vk-storage/vk-mobile-filters-20261031-311d`; see
+  `VK_WORKSPACE_FILTER_DEPLOYMENT.md` and `LIVE_DEPLOYMENT.json`.
+
+
+## 2026-10-31 — Project workspace unread clearing
+
+On `vk/c097-vk-can-t-clear-u` from freshly confirmed fork/staging `7b64a69bc`,
+fixed the missing project workspace conversation read effect. Both project and
+Workspaces views now call `useMarkWorkspaceSeen`, retaining loaded destination,
+visibility, summary invalidation and listener cleanup behavior. Summary/session
+rerenders never auto-clear newly arriving completions. Create/issue views do not
+mark workspaces read. No backend or generated type changes.
+
+Eight mounted React regressions pass. Removing the project hook call reproduces
+five failures, restoring it passes all eight. Shared/local frontend TypeScript,
+focused source ESLint, full required formatting, ops check, legacy frontend path
+guard and diff whitespace check pass. Type checks needed bounded 3 GiB Node heaps;
+third-party dependencies reuse existing SSD packages with workspace links pointing
+at this checkout. Full Rust/PR baseline, hosted CI and live browser/API readback
+remain unrun; no production deploy or restart was performed. Scope and pickup are
+in STREAM.md and HANDOFF.md.
+
+
+## 2026-10-31 — Unread fix frontend deployed
+
+Operator-authorized live update completed at 10:38:31 UTC from `f95bab83836d467f972e904710220eee09406d5b`.
+Public JS is `index-hKvj8yI6.js`; CSS/version 0.1.42 unchanged. Exact-source local
+production build, eight regressions, format/ops, candidate/live desktop and mobile
+browser checks, public HTTPS hashes, old asset retrieval and stable service/DB
+identities passed. Browser seen/config writes were intercepted; no live unread
+repair or provider execution was used. The pointer changed in about 6 ms; no
+service restart or database restore occurred. Both new roots retain 455 assets;
+Desktop B independently restored the paired frontend and fix bundle. Hosted build
+and source push were rejected by automatic approval review; neither occurred.
+Live provenance, rollback and validation limits are recorded in LIVE_DEPLOYMENT.json,
+STATE.md, HANDOFF.md and VK_PROJECT_UNREAD_DEPLOYMENT.md. Full PR baseline/CI and Git
+integration remain separate. Temporary task previews/browsers are closed.
+
+
+## 2026-10-31 — Operator reports unread still unresolved; integration held
+
+The operator stopped the requested push/PR/rebase merge before any of those
+mutations occurred, reporting that the defect is not resolved. The earlier
+candidate/live browser checks intercepted seen requests and cannot prove persisted
+clearing. Read-only investigation confirmed unchanged live identities, shared
+summary-backed unread indicators, independent explicit issue Needs review flags,
+and possible sibling unread aggregation. No root cause or new fix is claimed.
+An operator clarification is pending; no live flags or services were modified.
+STATE/STREAM/HANDOFF and live manifest now record the unresolved acceptance.
+
+
+## 2026-10-31 — Real read-state proof and mobile manual-flag correction
+
+A bounded real project-card test on this task's own workspace confirmed HTTP 200,
+unread true→false on opening and after reselect, and cleanup through Workspaces.
+No unrelated workspace flags were touched. The actual old mobile project UI
+reproduces a separate defect: manual issue review flags show "Needs review" when
+native replies are already read, and have no mobile clear control. Separate
+workspace attention aggregation from explicit flags and share an accessible clear
+control across desktop/mobile. Mounted UI and seen regressions pass; persistent
+browser acceptance and frontend rollout are in progress. Push/PR/merge remain held.
+
+
+## 2026-10-31 — Nested desktop actions also opened the issue
+
+Production-browser flag acceptance caught the parent Kanban card opening its issue
+on mouse-up before the nested control click. A real IssueWorkspaceCard/KanbanCard
+mouse sequence reproduces the unwanted parent open on the old code; the new guard
+passes on desktop and phone, while card-background navigation stays functional.
+Skip parent activation for nested interactive targets and stop review-flag mouse-up
+propagation. Seven mounted UI tests pass. The original native unread endpoint also
+passes bounded real project-board opening/reopening on this task's own workspace.
+No push, PR or merge occurred; candidate persistence acceptance is continuing.
+
+
+## 2026-10-31 — Corrected live release with real persistence verification
+
+Published source `3366b015155bfa1857b898e263a6d966aabbe452` at 11:15:55 UTC;
+public JS `index-9ssuLQsW.js`, CSS/version unchanged. Real old mobile UI reproduces
+false Needs review/missing-clear controls; old desktop mouse-up fails nested-card
+regression. Correction separates explicit flags, adds mobile clearing, and avoids
+parent issue navigation from nested controls. Fifteen regressions and targeted
+static/production-build checks pass. Candidate/live 393/1440 px fixture persistence,
+reload, unrelated flag preservation and no navigation all pass. Actual live mobile
+writes were bounded to this task's own issue/workspace: flag clearing persists,
+native unread survives that clear and clears on conversation opening. Original
+flags and task body restored; backend-managed metadata formatting was separated.
+Public HTTPS hashes and old assets pass; all live services/DB identities unchanged.
+Both roots retain 507 assets and the 37,762,844-byte software package is independently
+Desktop-B verified. No backend restart or push/PR/merge occurred. Updated live
+manifest and pickup docs identify exact evidence and remaining Git validation gaps.
+
+## 2026-10-31 — operator rejects second publication; reproduce actual reselect bug
+
+Operator reports "no change". Reproduced actual nested workspace same-route click:
+initial real 200 clears unread, reseed becomes true, repeat nested click sends zero
+seen requests and leaves true. Prior reselect test clicked parent issue card and
+changed routes. Claims of full resolution withdrawn; scoped older proofs retained.
+Shared explicit project workspace selection/read correction and exact browser
+regression prepared. No push/PR/merge; candidate publication pending validation.
+
+## 2026-10-31 — publish same-workspace reselection correction at 12:04:09 UTC
+
+Source b990b5939642b1ac7e744a9290840a731fa3f550, JS index-Cy2e9ltd.js,
+version 0.1.42. Explicit selected-workspace click now reads without route change.
+Exact nested-click browser regression fails before and passes candidate/live;
+desktop same-route and mobile close/reopen persist after reload, polling preserves
+new unread. Thirteen mounted tests, types/lint/format/ops/build pass. Existing
+candidate gates retained and pass; owned flags/body restored. All service/data
+identities unchanged, atomic frontend switch 5.6 ms; 559 assets retained and
+43,244,856-byte software recovery independently verified on Desktop B. Operator's
+exact URL/workspace flow remains unconfirmed; no push/PR/merge/full PR baseline.
+
+## 2026-10-31 — operator accepts live fix and authorizes integration
+
+Operator: "Good, open PR, sync, rebase merge". Prior integration hold lifted.
+Fresh fork/staging remains 7b64a69bc34d418b31c1f902c7714122a20783a3 and is already
+an ancestor of this stream. Canonical main/staging references are clean. Full
+required PR baseline is running using the dedicated shared SSD Cargo target with
+incremental compilation disabled. Live frontend/backend remain unchanged.
+
+## 2026-10-31 — prepare hosted baseline before PR
+
+Local frontend type checks, local/UI lint, UI/workflow formatting, ops and 20
+mounted regressions pass. Stopped only the owned full-check process group during
+fresh Cargo dependency compilation to avoid additional registry downloads on the
+system disk; full pnpm check/lint and cargo workspace tests are not claimed local
+passes. Use the existing Test workflow's validation-only dispatch on this exact
+pushed head for full backend/remote/tauri coverage before PR creation. Wire the
+13 seen and 7 nested-card regressions into that workflow. Live release unchanged.
+
+## 2026-10-31 — PR #287 and passing full hosted baseline
+
+Full hosted Test validation passed on be20b829502e1d24c72a944d3a7a06409cf75fb4:
+https://github.com/artinflight/vibe-kanban/actions/runs/41204050237. Frontend/20 mounted regressions, workspace tests, Rust lint, schema/SQLx,
+Tauri and native storage/watcher/steering/scheduling integrations pass. Fresh
+fork/staging is still an ancestor. Published https://github.com/artinflight/vibe-kanban/pull/287 into staging with requested
+rebase method. The PR merge event records final integration status/rebased IDs;
+keep original deployed b990b5939642b1ac7e744a9290840a731fa3f550 immutable. Main
+promotion is separate. Canonical references will be synchronized after merge;
+preserve the dirty original checkout and the active feature worktree. No runtime
+change is part of Git integration. Local full Rust rebuild was stopped, not passed.
+
+## 2026-10-31 — sync PR #287 onto PR #286 staging without changing deployed code
+
+All final PR checks passed on 054199ec6057a57e22ab0c47d221341de6ca61bb, including
+workspace tests and native integration gates. During CI, PR #286 advanced staging
+to d3d9fa89d45087d1d113f2851d7b2c994c76aec5. Rebased this stream, retained the
+new combined production manifest, all project-filter package files and the entire
+staging ledger. Original validated history is retained in a backup ref/bundle.
+The rebased package tree matches deployed combined source
+02a9a993d8d9118ca703a22baa15efcf0c7cc4c9 exactly; all original unread package bytes
+from b990b5939642b1ac7e744a9290840a731fa3f550 remain preserved. Public assets now
+index-Bgdr6hzC.js / index-DL7rKLPs.css, version 0.1.42. Latest PR checks and merge
+event remain authoritative. No runtime switch or service restart during Git sync.
+
+
+## 2026-11-02 — disappearing unread investigation and proposal
+
+Branch `vk/3ad7-vk-disappearing`, documentation-only scope. Confirmed automatic
+workspace-wide reads on mount/tab return/reselection without reply visibility;
+server clears sibling sessions, replies arriving before the request transaction,
+and manual unread hold. Existing mounted suite passes 13/13; evidence-only
+extension 17/17 confirms four unwanted call paths. Actual SQL/migration in memory
+reproduces three backend defects plus changed-summary/unrelated-workspace controls.
+Fresh gateway bytes are `index-BvmbFTPN.js`, SHA256 fc683d01d272989dffb7ad107f185faaf26d434731b754e48485a7a6786e4e6b,
+from current retained source 800011bd573e2869d6ea4c0e5bfba4d9046d9cbe. Five
+investigated files match; backend PID/hash unchanged. October 31 branch manifest
+is historical for frontend selection. No live seen/unread writes, device access,
+restart or deployment. Report and proposed exact-reply/intent-safe fix are in
+`VK_DISAPPEARING_UNREAD_INVESTIGATION.md`; evidence is retained under
+`/mnt/vk-storage/vk-disappearing-unread-20261102-3ad7/`. Specific historical
+incidents remain unattributed; full browser/Rust HTTP/candidate acceptance not run.
+
+
+## 2026-11-02 — frontend-only explicit-read fix published
+
+Operator requested completion with no backend changes. Feature commit
+70d7f5b0516a784ca6f27ba9fc6245b441666663 removes automatic chat/visibility/reselect
+reads; adds explicit “Mark all replies read” controls on both chat surfaces and
+in workspace actions, with pending deduplication and explicit failure retry.
+Applied to current frontend base 800011bd573e2869d6ea4c0e5bfba4d9046d9cbe,
+preserving newer git-preservation notices. Published JS index-CfDh4WtO.js / CSS
+index-C-pTuj_j.css, version 0.1.42. 24 mounted tests, all four frontend type
+checks, focused lint, format, import guards, ops and production build pass.
+Four candidate and four served browser cases pass at 1440/393 px; all application
+writes intercepted and no page errors. Old live UI reproduces an automatic read.
+TLS/public assets/health and five service/DB identities verify; no backend restart
+or code/schema/config change. 717 assets retained per paired root. Desktop B
+independently verifies the 78,181,682-byte software recovery archive; local restore
+verifies 3,293 files and permissions. No live unread repair or physical phone test.
+Reload every existing VK tab/device to remove old loaded code. Exact-reply API
+proposal is historical and intentionally not part of this frontend-only fix.
+No push/PR or main promotion. See VK_DISAPPEARING_UNREAD_FIX.md and the manifest.
+Evidence: /mnt/vk-storage/vk-disappearing-unread-20261102-3ad7/fix-release-1.
+
+
+## 2026-11-02 — operator requested rebase integration of explicit-read fix
+
+Fresh fork/staging remains aceb355e965c27c93e0a83d719bcdbccf84f4bcc and is already
+contained by the branch; rebase is a no-op. Preserve deployed feature source
+70d7f5b0516a784ca6f27ba9fc6245b441666663 and serving JS index-CfDh4WtO.js.
+Source integration targets staging via a PR and the rebase method. Full hosted
+validation-only baseline precedes PR creation; final PR checks/merge event are
+the integration authority. No frontend publication or backend restart is needed.
+
+## 2026-11-02 — restore deliberate reads after manual-only regression
+
+The operator reports nothing clears. Hold staging merge and restore guarded
+read-on-view with latest rendered reply visibility, foreground focus and dwell;
+wire deliberate reselection/jump-to-latest while retaining bulk fallback. Passive
+return/polling/new output do not arm reads. Backend/API remain unchanged. The
+manual-only release is reproduced as a negative control. Mounted regressions pass;
+real-layout testing exposed saved Workspaces scroll position, which correctly
+preserves unread until the reader deliberately reaches the latest reply. An
+optional live-state test was rejected by automatic approval review; all browser
+application writes remain intercepted. Exact server scope/race limitations remain.
+
+## 2026-11-02 — guarded read-on-view publication
+
+Corrective source b8bad21792f863bce31c42742f7439cc8539503a is published at 2026-11-02T17:45:07.515775+00:00.
+JS index-C2FVxMt6.js, CSS index-C-pTuj_j.css, version 0.1.42; live git-preservation
+notices are byte-preserved and both paired roots retain 822 assets. Four candidate
+layout cases, 38 mounted regressions, types/focused lint/format/ops and production
+build pass. Backend hash, five services, DB identity and 99 migrations are unchanged.
+95,264,657-byte software recovery passed local restore and independent Desktop B
+readback. Browser writes are intercepted. Reload old tabs. Exact server scope/race
+limitations remain; no live unread mutation or backend restart is claimed.
+
+## 2026-11-02 — full source integration baseline passed
+
+Hosted Test run 41493120165 passes on b8bad21792f863bce31c42742f7439cc8539503a,
+including frontend/regressions, governance, Rust lint, generated types/SQLx,
+workspace tests, Tauri checks, storage/watchers and scheduled persistence. Private
+remote checks skip without a deploy key. The final package source is byte-identical
+to this baseline and the deployed correction; final PR checks/merge event govern
+staging integration. No runtime switch is performed by Git integration.
+
+## 2026-11-02 — staging rebase integration record
+
+[PR #288](https://github.com/artinflight/vibe-kanban/pull/288) targets staging using
+the operator-requested rebase method. Its final checks and merge event are the
+authority for integration and rebased IDs. The full baseline 41493120165 passed
+on corrective source b8bad21792f863bce31c42742f7439cc8539503a; package bytes
+remain unchanged. Runtime publication is independent and main promotion separate.
+
+## 2026-11-02 — final settled-turn frontend publication
+
+Source 9a45a3abf2d99eb44c14ef7a744d6f7bf0fbb73e published at 2026-11-02T18:28:43.114247+00:00;
+JS index-DqfYW9pf.js, CSS index-C-pTuj_j.css, version 0.1.42; 874 retained assets.
+Running/approval state is derived before render filtering. 39 mounted regressions,
+types/lint/format/ops/build, four candidate/four served layouts and candidate/served
+running guards pass with intercepted writes. Prior premature running reads are
+reproduced; rejected candidate-3 failed completed-view QA and was never served.
+Backend hash/five services/DB identity/99 migrations remain unchanged. Software
+restore and independent Desktop B recovery pass. No live unread mutation, backend
+restart or historical flag restoration. PR #288 final checks/merge event govern
+staging rebase integration; main promotion is separate.
+
+## 2026-11-03 — prevent full-history capture on Codex resume
+
+Branch vk/95c6-vk-duplicate-con recognizes the observed
+vibe-codex-executor/0.159.2 identity alongside codex_cli_rs/0.159.2 so the existing
+excludeTurns path activates. Exact-version scope and empty-turn verification are
+retained. The fixture reproduces full historical payloads without the flag and
+checks persisted-byte bounds. Seven client and 26 adjacent Rust tests pass; one
+private captured-response case is ignored. Two extracted old/new predicate checks,
+full formatter, ops and diff checks pass. No backend deployment, provider turn,
+restart or history deletion. Full workspace/CI and production acceptance remain
+pending. VK_DUPLICATE_HISTORY_FIX.md records evidence and rollout requirements.
+
+## 2026-11-03 — duplicate-log staging integration record
+
+PR #290 targets staging with the requested rebase method. Rebase onto freshly
+fetched d90e34746 completed without conflicts or source changes; original feature
+commit 83b96bc3b remains provenance. Final PR checks and merge event govern
+rebased integration IDs. Local format/ops, frontend types and frontend lint pass;
+full check/lint lack host GLib development metadata, and the workspace-test
+attempt was stopped on that confirmed prerequisite. Hosted PR checks provide
+broad validation. No backend restart/deployment, provider turn or data deletion.
+
+## 2026-11-02 — independently scrolling projects menu
+
+Bound the desktop shell content row and AppBar to the viewport so a long project
+list cannot stretch the page. Hide rail/flyout/mobile list scrollbars with the
+existing Tailwind utility and contain overscroll. Keep footer and creation
+controls outside the scrolling region. The mobile projects drawer opts into a
+flex content layout; other MobileDrawer consumers retain their default scrolling.
+
+Isolated Chromium fixtures use the actual AppBar/MobileDrawer and extracted
+SharedAppLayout markup with 60 synthetic projects. Old desktop layout grows to
+3015 px; old mobile list expands to 3132 px. Candidate passes at 1440×900,
+1024×600, 393×852, 393×600 and 740×393: internal wheel/touch scrolling, hidden
+standard/WebKit scrollbars, fixed document/control positions, final project
+selection, flyout scrolling and desktop keyboard reordering; no page errors.
+Receipts: `.vk-preview/scroll-check/results.json` (ignored worktree evidence).
+Formatting, UI lint/types, shared layout lint, shared/frontend app types and ops check
+passed. Shared type checking required a bounded 3 GiB Node heap after default-heap
+exhaustion. Full Rust/PR baseline and physical-phone testing were not run. No
+backend/device changes, runtime publication, restart, commit, push or PR.
+
+The operator requested a local commit of all six changed files. The scrolling
+implementation and continuity notes are committed together; see Git history for
+the commit identity. No push or deployment was requested.
+
+## 2026-11-02 — publish independently scrolling projects menu
+
+Operator authorized deployment of d0496eb1d. Fresh discovery found newer live
+chat-notice and explicit-unread fixes; built the actual live source snapshot plus
+the exact three scrolling files, preserving every other input. Production build,
+27 preserved-source regressions and five candidate/public desktop-touch browser
+cases pass. Normal public smoke shows all 19 real projects and no errors.
+74,848,460-byte software/source recovery archive independently restored locally
+and read back from Desktop B after respecting another owner's shared backup lock.
+Atomic frontend pointer switch at 17:28:06 UTC took 0.0143 s; 770 old/new assets
+retained with paired fallback. Public JS index-CRD24Nkw.js, CSS index-BDlsFLgm.css.
+Trusted public hashes/capabilities, five service identities, backend hash, DB inode
+and 99 migrations pass unchanged. No backend restart, data restore, provider call
+or device action. See VK_SCROLLING_PROJECTS_DEPLOYMENT.md and LIVE_DEPLOYMENT.json.
+
+## 2026-11-03 — restore scrolling omitted by later unread publication
+
+Operator reported no change. Live discovery found unread fix-release-4 served
+pre-scrolling versions of all three layout files. Public negative control confirmed
+2850 px document height with 60 projects; the actual 19-project menu grew a 600 px
+window to 1134 px. Restored d0496eb1d's three files on latest live source 9a45a3ab,
+preserving all other 1314 pinned inputs. Five candidate/public browser sizes and
+real-data desktop/mobile boundary scrolling pass; actual desktop document now
+remains 600 px while the menu scrolls. 27 preserved-feature tests plus five new
+source-preservation gate tests pass. The gate rejects the exact overwritten release
+and is now required by VK_WORKFLOW/VK_AGENT_DEPLOYMENT_RUNBOOK.
+
+Published 09:59:20 UTC: JS index-BRto7v9M.js, CSS index-BDlsFLgm.css. 926 assets
+retained with paired fallback; 88,674,581-byte recovery archive fully restored and
+independently read back from Desktop B. Public assets/capabilities and five service
+identities/backend/DB identity/99 migrations pass unchanged. No backend restart,
+data restore, provider call or device action. Operator acceptance pending. See
+VK_SCROLLING_PROJECTS_DEPLOYMENT.md and LIVE_DEPLOYMENT.json for current evidence.
+
+## 2026-11-03 — accepted scrolling, prepare staging rebase integration
+
+Operator accepted the restoration ("Good") and authorized PR/rebase merge. Rebased
+onto fork/staging c3c1dc9d6, retaining all staging ledger/continuity and the exact
+three accepted package files. The newer live workspace-visibility release preserves
+those files exactly; manifest now retains its current provenance. No deployment
+or service restart accompanies Git integration. Added preservation regressions to
+the hosted recovery workflow. Local Rust baseline cannot resolve offline serde;
+SSD free space under 2 GiB precludes an unbounded rebuild/download. Full hosted
+validation and final PR checks must pass before merge. Main promotion is separate.
+
+Hosted recovery validation exposed eight inherited historical-catalog mismatches
+from legitimate staging changes. All 134 catalog entries match immutable public
+revision 17678647aeeb467868d2152da25676fd682f2b85 exactly. The recovery workflow
+now checks that recorded snapshot rather than mutable staging; every original
+public/deployed hash is unchanged. Current frontend preservation is checked by
+the separate new gate. No source validation is skipped or hash weakened.
+
+## 2026-11-03 — scrolling staging PR #292
+
+PR #292 targets staging with the requested rebase method. Exact accepted scrolling
+files remain preserved through rebase onto c3c1dc9d6. Full hosted baseline is run
+41740959926 on f75c2af9d; subsequent source-code bytes are unchanged. Corrected
+historical-custody recovery run 41741243530 passes on a452d74ca. Final PR checks
+and merge event govern integration status and rebased IDs. Original deployed
+source/receipts and the later preserving live frontend remain unchanged. Main
+promotion is separate. Local Rust baseline remains blocked by offline serde.
+
+## 2026-11-03 — lossless completed conversation log deduplication
+
+Implemented session-local content-addressed compressed log manifests, transparent
+backend reconstruction and append refusal; exact-byte offline plan/pack/verify/
+restore tooling preserves sources and sidecars. OP::Disk Space procedure and
+production/rollback requirements: `VK_LOG_DEDUPLICATION.md`. Prevention inherits the
+qualified narrow-resume correction. No live conversion, deletion or deployment.
+
+Validation: 36 utility tests (one pre-existing private probe ignored), ten migration
+tests, server library check, utility clippy, full format and ops pass. Seven
+unchanged prevention tests pass again in their qualified cached binary. Six real
+logs reconstruct/restore byte-exactly: 1,089,056,768 original allocated bytes versus
+237,555,712 archived bytes including metadata; 851,501,056 bytes (812.1 MiB)
+measured recovery potential. No population extrapolation or production reclamation.
+Only generated verified restore copies were retired; originals/archive remain.
+
+## 2026-11-03 — guarded reclamation and growth preparation
+
+Added source-pinned controller admission, retained physical WriterFence integration,
+exact log-root/terminal-session checks, current-B full-body checks, durable object
+publication before manifests, crash recovery and raw rollback with metadata and
+staging ownership. Added physical backup graph/closure checks and bounded metadata
+inventory/growth comparison. No production adapter, B proof or serving artifacts
+fabricated; no live conversion/retirement, restart or new timer.
+
+Owner coordination found a shared old protected reader on5650; main-only deployment
+is insufficient. Nightly is commissioning existing tracking/delivery; current-log
+B proof remains pending. SSD ~1.9GiB<3GiB blocks builds; OS-log recovery cannot
+clear that floor. See VK_LOG_RECLAMATION_READINESS.md and current HANDOFF for exact
+readiness gates, tested command contract and private evidence. Production NOT READY.
+
+Guarded source is pushed as52c5ea5bd; draft PR291 targets staging. Local45 focused
+and8retained fence tests pass, including inode-bound interruption/rollback,
+publication headroom, actual xattr preservation, closed graph verification and
+unique-inode growth accounting. Hosted final-head checks remain authoritative.
+Disk's resumed source verification stopped at PSI0.14>0.10; no clearance. A
+separate exact compiler-metadata inventory is under Vibe-owner read-only review;
+no cleanup inferred from its suffix or size. Nightly's current-version B/adaptor
+question remains pending while it commissions its existing producer.
+
+
+## 2026-11-04 — reclamation owner handoff and capacity proposal
+
+Vibe's read-only shared-target assessment conditionally classified2,104 exact
+compiler-metadata files /1,811,595,264 allocated bytes as regenerable;378 files
+remain excluded. Existing build/Cargo locks, fresh resource/consumer/non-use
+proof and exact action authorization remain required. Global proc visibility was
+incomplete; passwordless sudo was unavailable. No compiler metadata was removed,
+no build floor cleared and no privilege/network/service setting changed.
+
+Corrected the unresolved shared Nightly question to the four-file candidate /
+30,339-member graph. Its existing commissioning remains active; no owner B
+acceptance is inferred. Current source is draft PR291; hosted checks are pending.
+Production remains blocked on compatible all-reader deployment/rollback,
+current-version independent B recall, the real owner adapter, capacity and
+current-data/drained-boundary acceptance. Originals and archive remain intact.
+
+
+## 2026-11-04 — resume through production recovery
+
+User explicitly requests complete production deduplication/reclamation, resolving
+backup, both-reader compatibility and deployment rather than stopping at gates.
+Rebased source onto latest stagingee2efee4d; dedup code bytes are unchanged and all
+upstream ledger entries preserved. Prior head087319cc4 passed both hosted workflows.
+Latest SSD7.5GiB observation supersedes the earlier capacity blocker.
+
+Existing Vibe owner now prepares actual all-reader artifacts/rollback/admission;
+Nightly retains its active composed-restore qualification and sole producer role.
+Fresh bounded inventory finds3,221 closed/inactive logs /84,557,012,508 logical
+bytes; finite66-batch metadata plan starts with four unchanged measured sources.
+Plans are not custody or saving estimates. No source retirement, service switch
+or new backup pipeline has occurred; production accounting remains zero.
+
+
+## 2026-11-04 — bounded normal-recovery stream bridge
+
+Added NormalRecovery over the existing held Nightly normal reader to connect its
+accepted namespace/body API to original/graph verification without whole-log RAM
+materialization or another transport/capture. Eight regressions pass: exact EOF,
+wrong versions, truncated/extended/corrupt content, partial consumption, lost
+leases, path isolation, bounded reads and full original/sidecar verifier integration.
+Actual provider/index ownership and native B admission remain with the backup
+owner; this is not a production acceptance receipt. Online preparation stopped
+at actual memory/PSI admission, preserving all sources; no retry threshold relaxed.
+
+## 2026-11-04 — verified finite preparation; production still unactivated
+
+- Source e70732c92 passed both hosted workflows; 53 focused bridge/controller tests
+  pass. Additional static review found archive-aware readers in seven affected
+  history/review/recovery paths.
+- Measured the exact four-file selected graph: 222,183,424 allocated bytes versus
+  1,053,085,696 original log allocation, before directory/store effects. This is
+  792.4 MiB preparation margin, never a production recovery claim.
+- Sealed a subsequent 33-file/2,020,462,248-byte lossless archive with unchanged
+  originals under the retained resource guards. Separate Rust verification was
+  refused before startup on shared pressure; all evidence/copies retained.
+- Existing Vibe/Nightly owners continue actual protected-reader and normal-restore
+  qualification. No production log converted, source retired, alternate producer
+  started or deployment accepted. Finite execution/ownership receipts remain in
+  the existing private evidence case.
+- At15:11UTC, corrected protected v8 build and eight exact production replay tests
+  pass; independent full-artifact hash verification also passes. Actual current-data
+  rehearsal/admission and production conversion remain unaccepted.
+
+## 2026-11-04 — separate create-only object preparation from manifest retirement
+
+- Added bounded additive preparation for immutable session-local objects while raw
+  logs remain untouched. No fake writer fence or standalone manifest switch;
+  original B/reader/custody controller remains mandatory for any log replacement.
+- Checks include source/sidecar/session identity, complete packed body integrity,
+  original reconstruction reserve, real CLI memory/PSI/deadline admission and
+  create-only publication. Interrupted/foreign/corrupt inputs stay preserved.
+- Documented pre-addition allocation baseline and existing Nightly coordination.
+  No production invocation, manifest replacement or recovered-space claim.
+- Additive preparation is bounded by its file/byte set and real resource guards.
+  An optional operator-specified elapsed budget replaces an arbitrary default
+  whole-preparation cutoff; this does not change existing backup job deadlines.
+- Actual additive attempts stopped at shared pressure after959then8310total
+  objects; originals remained raw. Own cgroup high events stayed224, no OOM.
+  Additive I/O now waits for the SAME memory/swap/PSI admission rather than
+  repeatedly restarting full packed verification; hard failures still stop.
+
+## 2026-11-04 — actual B restore and durable primary object preparation
+
+- Actual normal B restore accepted8versions/1,053,055,572B with full hashes and
+  Linux metadata;287.094s, independently accepted immutable source/index leases.
+- Durably prepublished30,331primary objects:218,107,904B plus3,411,968Bdirectories.
+  Four raw logs/sidecars unchanged; zero manifest replacements/actual recovery.
+- Resource-safe additive preparation paused at the same real admission floor;
+  no lowered threshold or memory/OOM event.65focused checks and both hosted
+  workflows pass sourceb9049b82d. Final release recovery/custody/window remain.
+
+- Added same-process owner/Batch integration with exact module identity, shared
+  actual fence/B context, guarded partial-publication raw recovery, and refusal
+  to select old software after lost custody.70focused tests pass; format/ops pass.
+  Existing Nightly component actually restored1316files/377679320B including
+  both readers, current frontend and online review snapshot. Final quiet review,
+  operation journal, real host boundary, deployment and conversion remain pending;
+  zero log space recovery is claimed by this source change.
+
+
+## 2026-11-17 — current owner handoffs and full-scope safe continuation
+
+- Reconciled consumed Nov4 lease failure, current92.63GB allocated payload and
+  separately verified Nov14 31.57GB retirement; no unexplained missing sources.
+- Paused all five WakeWatch dispatch paths while preserving ordinary monitoring,
+  ledgers/configuration and uncertain prompts; restoration is root-owned.
+- Both existing owners completed fresh qualification. Nightly68versions/3.073GB
+  actual fullEOF/metadata/separate-inode restore; Vibe current99data/latest assets.
+- Added exact0.166.0 guard based on actual no-inference narrow-resume proof and
+  guarded subsequent batches retaining aware readers;74 focused Python checks.
+- Main release build/tests running; no new production activation/conversion yet.
+
+- Single full-scope native chain actually armed as
+  vk-log-dedup-full-20261117-3197505a.service /PID1545066 /
+  invocationedad5c8ca48a4dfc88c8c5c652c84095. Source/class preflight passed;
+  8actual executor tests pass, server build still running. It waits for real
+  build qualification and natural root completion, then performs all batches,
+  closure/recovery/accounting and exact WakeWatch restoration; one existing-root
+  continuation preserves saved settings/pending work. No activation claimed yet.
+
+
+2026-11-17: Actual native build4766246c and8 executor tests passed. The first
+production launcher failed read-only preflight because the plan was group-writable;
+no production conversion happened, original service stayed intact, and WakeWatch
+was restored exactly with5 ordinary ticks. A fresh finite operation reuses the
+retained immutable byte-identical PLAN without weakening guards. Exact fresh
+source/class/callback/artifact preflight and4 controller regressions pass; the
+corrected native unit d6ed2cee is running and waits for this root to finish.
+Fresh global WakeWatch dispatch pause retains all monitoring/configs,5 ordinary
+ticks and unchanged attempts, zero queued/unsettled deliveries;32 uncertain
+inputs are preserved. Full B/closure/all-batch/recovery objective is unchanged.
+Measured actual predeployment fragmented wire baseline:0.159.2,8turns/10,746,496B;
+isolated0.166 proof is not deployed evidence. Current SEALED_OPERATION and
+STREAM/HANDOFF identify exact operation/receipts. No reclaimed-space claim yet.
+
+
+2026-11-17: d6ed2cee completed normal B software/frontend/root-control closure,
+then refused existing resource admission before maintenance during independent
+RAM-original verification. Zero manifests/reclaimed bytes; Vibe unchanged, exact
+WakeWatch restoration/5 ordinary ticks/status/check passed. Fresh9f616dc0 runs
+actual B preparation ONLINE before waiting for root quiet. Same admission floors
+and600s data-progress watchdog/300s recovery retained; safe waits receive no
+progress credit, unrelated refusals fail.7 controller/admission tests pass and
+actual B preparation is advancing. Current continued capture still0.159.2,
+9turns/11,155,606B initial response. Exact new operation and receipts are in
+STREAM/HANDOFF/shared revision55; all earlier epochs and32 uncertainties preserved.
+
+
+2026-11-17 16:48:52UTC:9f616dc0 ONLINE_PREPARATION_VERIFIED passed. Actual
+same-context normal B restore8versions/1,053,055,572B independently passed full
+EOF/hash/Linux metadata/separate inode checks. Both compatible binaries, all1,309
+current frontend members and110 root controls have normal B closure. No pressure
+refusal occurred in this attempt. Actual B/RAM context remains held; the same
+controller waits only for natural root completion before maintenance and full
+production conversion/recovery. Zero reclamation at this checkpoint.
+
+
+2026-11-17:9f616dc0 completed quiet current SQL API/independent B restore
+187,142,144B, then activation separately refused resource admission before any
+log conversion. Exact original-software/current-DB/route recovery325.89s and
+WakeWatch restoration/5ticks/status/check passed;32 uncertainties/zero queue
+preserved. Fresh source-pinned activation and adapter now safely wait at SAME
+4GiB/.10 floors with no work/progress credit, actual per-wait custody rechecks
+and unchanged600s/300s supervision.7 focused guard/rollback tests pass. New
+a0885d2b operation/current recovered identities are pinned and actual preflight
+passes; its online B preparation is running. Current real continuation remains
+0.159.2,10turns/11,391,874B; no deployed growth or space-reclamation claim.
+
+
+2026-11-17 17:19:45UTC:a0885d2b ONLINE_PREPARATION_VERIFIED passed actual
+normal B8versions/1,053,055,572B with full EOF/hash/Linuxmetadata/separate-inode
+proof. Software/frontend/updated guarded-source controls closed; live context
+held, waiting only natural root completion before all-scope maintenance. All5
+ordinary monitor ticks/unchanged attempt counts/no unsettled wakes verified.
+Detailed external handoff rejected by automatic review; sanitized owner decision
+posted successfully, full receipts private. No production reclamation yet.
+
+2026-11-17 — Prepared partial continuation after the actually installeda088 first
+batch; no new maintenance/build/agent/goal/B pipeline launched. Four manifests,
+sidecars, complete decoded originals and retained independent normal-B proof
+reverified. First-batch net827,506,688 allocatedB includes ALL canary objects and
+object-directory blocks;174 known reader/proxy FDs contain no original inode.
+Current aware main4766246c/protected40a91f69, latest frontend/current99SQL, public
+TLS/assets and five serving/ingress units verified. Exact WakeWatch source/five
+configurations restored; five ordinary monitors advanced, timer remains active.
+
+Added source-root-bound completed-journal verification/exclusion, no-restart real
+fence/B/reader adoption, exact context-qualified raw/CAS/live history expectation
+checks, independent compatible recovery and stable-version production EOF seals.
+Recovery does not rerun the same failed strict history checker or decode the
+whole growing union repeatedly; corruption/custody loss retains maintenance.
+Existing/future object/sidecar/all-store normal-B closure contract remains intact.
+
+Final unarmed package-v5 PREPARED/NEXT_INPUTS in production-20261117/resume-after-
+first-20261117 pins the finite no-replay controller and sources; no ATTEMPT exists
+and automatic continuation is disabled. Source fixtures and exact-package tests
+prove next-batch-only conversion/current-batch rollback/old-journal preservation.
+97focused tests and8sealed-package tests pass; required full format, ops/diff
+checks pass. Extra full live-history diagnostic reached request14 (all8canary and
+at least5T18 comparisons completed) then hit its300s diagnostic limit; it is NOT
+fresh full-history acceptance. Earlier complete same-owner context/history proof
+is preserved. Production600s no-progress/300s recovery remains unchanged.
+
+Current candidates3,433/90,992,755,255logicalB include82tiny preserved;12active-
+session/8pending/1invalid/4archived excluded. Latest recorded SSD sample is about
+6MB below unchanged3GiBfloor; no arbitrary cleanup or weakened admission. Fresh
+pause/queue/owner checks, currentSQL/B/realfence, all positive-benefit conversions,
+complete object closure, actual new-run recovery and ordinary rendered desktop/
+mobile/full-service/WakeWatch acceptance remain production work. Shared owner
+decision updated with sanitized status; sole Nightly ownership/contracts unchanged.
+
+THIS actual production native0.159.2 resume measured0historical turns/5,126B versus
+8turns/10,746,496B baseline,99.9523% initial-response reduction with zero new
+provider requests. Isolated0.166 fixture is not a deployed-runtime claim. Updated
+LIVE_DEPLOYMENT/STATE to verified aware identities and prohibited old fallbacks;
+prior manifests/state and every recovery epoch retained. PR291 remains draft.
+
+2026-11-17 21:59UTC — Completed the bounded explicitly approved two-build-archive
+move; NO production conversion. Exact98,946,694B/c9d301ad... and204,247,492B/
+2432381f... .rlibs were unchanged and inactive under build locks, FD/maps checks
+and exclusive kernel leases. Both Desktop B copies independently reopened to full
+hash/length before ONLY those two SSD originals were unlinked; source FDs closed.
+303,202,304 original allocatedB released; immediate measured free-space increase
+303,190,016B. Postcheck SSD3,492,601,856B,271,376,384B above unchanged3GiBfloor.
+Restore metadata retained on B/local with adjacent MOVED-TO-DESKTOP location note.
+All histories, backups, old epochs, pending inputs/settings and failures preserved.
+
+Initial owned .NET receiver stalled; exact script SHA/birth/command proof identified
+and stopped ONLY that receiver. Native copy reached full first file but Python3.10
+lacked file_digest; independent exclusive reopen verified it, then it was reused
+with streaming-hash compatible receiver for second file. No blind recopy/replay.
+Both failed attempt receipts and complete successful continuation remain private.
+
+Full unchanged history acceptance PASSED22responses,14main/protected canary/T18
+checks and exact7page/49entry sparse pagination in334.782s. Existing600s completed-
+data watchdog retains unchanged resource floors; requests/waits earn no progress
+credit. Earlier300s total diagnostic failure remains historical. Public TLS/assets
+and original aware serving identities unchanged. Fresh POST_OFFLOAD_READINESS
+supersedes capacity/full-history gaps; package-v5 remains UNARMED/no ATTEMPT.
+No model/route/permission/WakeWatch/service/SQL-backup/pipeline change. Full future
+conversion/B object closure/rendered UI acceptance remain outside this instruction.
+Required format/ops/diff checks; current follow-up changes operational docs only.
+
+
+## 2026-11-17 — final production go/no-go plan, no maintenance
+
+Read-only fresh actual aware owners/frontend/public TLS, five exact WakeWatch
+configs/normal ticks and zero unsettled deliveries. Only own planning execution
+active;0durable/all1,338volatile queues empty,32uncertain inputs unchanged.
+SSD3,497,500,672B/RAM8,194,068,480B/PSI0.00; B healthy85,496,852,480B with
+actual B-excluded MM scope/no pause and local writer/controller locks unheld.
+Fresh metadata3,433candidates/90,992,755,255B/306envelopes; explicit82tiny/
+8pending/1invalid/4CAS/14active-session preservation. Real public history UI
+passed4desktop/mobile-viewport cases/160entries/0pageerrors/0operator writes.
+Settings/review/queue rendered acceptance remains unproved; navigation probe
+did not establish settings dialog. No captures/producer/agent/build/live change.
+
+VK_LOG_PRODUCTION_GO_NO_GO.md records NO-GO pending peak SSD allocation, actual
+remaining B demand, broader UI and fresh arming/boundary. Logical90.99GB vs85.50GB
+free proves neither fit nor failure because retained chunks may reuse. Twice-
+called334.782s history and76.019s UI do not bound full306envelope downtime.
+Exact future launch ABI/source pins/unused attempt, normalB/currentSQL/realFD
+sequence, current-batch-only aware recovery and exact WakeWatch restoration
+retained. Package-v5 remains unarmed/noATTEMPT; no consumed attempt replay.
+First827,506,688B log recovery and303,202,304B build offload not recredited.
+Private FINAL_GO_NO_GO and planning receipts preserve evidence. Required
+format/ops/diff checks; operational documentation changes only.
+
+Final source review added a concrete launch blocker: exact pinned host
+Boundary.freeze_boundary offline lost-release-reply fixture raises TypeError
+on valid owned=false/state=null status; its release receipt remains unset.
+CAPACITY_RELEASE_EDGE records exact sourceSHA and status/release/status calls;
+no live RPC/service action. Final plan now requires NEW corrected/tested host
+source with locked durable-intent/persisted-v2 reconciliation and authentic
+capacity recovery before ingress release. Launch sequence ordering clarified:
+owned maintenance/ingress quiet -> actual SQL B checkpoint -> capacity release/
+freeze/realFD. Deployed source and all existing epochs remain unchanged.
+
+
+## 2026-11-17 — outcome-focused new-agent handoff
+
+User requested sufficient documentation for transfer, then explicitly asked for
+objective/context/success criteria rather than a prescribed solution. Added
+VK_LOG_AGENT_HANDOFF.md with verified progress, actual unresolved outcomes, known
+recovery defect, evidence/source/test coverage map and genuine preservation/owner
+requirements. Prepared implementation and previous go/no-go are context; approach
+selection belongs to the receiving agent. HANDOFF/STATE/STREAM point to it.
+
+Saved and ran CAPACITY_RELEASE_EDGE_REPRO.private.py beside retained finding.
+Exact pinned method AST plus fixtures reproduces TypeError/unset release receipt
+with zero live operations. Reproduction success does not certify a fix. Referenced
+core evidence exists; package-v5 input hash unchanged/unarmed/no ATTEMPT when read.
+No new agent, maintenance, conversion, build, capture, dispatch/settings change or
+live inventory in this docs turn. Histories/backups/recovery records/pending inputs
+preserved; earlier capacity/queue observations explicitly historical. Required
+format/ops/diff checks and intended handoff publication apply.
+
+
+## 2026-11-17 — Active reclamation takeover: capacity recovery fixed
+
+- Added durable release-intent reconciliation under the genuine kernel lock,
+  preserving epoch/revision/goals/issued history and refusing unknown ownership.
+  New inert host source fixes both freeze and journal-recovery paths; old packages
+  remain immutable and unarmed. Production has not been changed by this fix.
+- 111 focused tests passed, including 11 release and3 exact-host integration
+  cases; format passed with pinned Prettier3.6.1 on SSD, ops and diff passed.
+- Fresh reader/public/watcher checks pass. Current actual native0.159.2 resume:
+  zero historical turns/1,826responseB, no extra provider request.
+- Existing leased normal-B metadata lookup completed6,732names/5,676entries.
+  Read-only compression/hash sizing runs under unchanged resource safeguards;
+  partial plans and two transient-PSI refusal receipts are preserved. Full
+  reclamation/backup closure/service acceptance remain unfinished; no new physical
+  recovery is credited. Exact current process and next actions are in HANDOFF.
+
+
+## 2026-11-18 — backward deduplication completion qualification
+
+Completed stable sizing of3,366logs/91.105GB and exact normal-B metadata matching
+of6,732versions (9.118GBmissing upper bound). Fixed inherited closure omissions
+with complete raw/adjacent/nested/unreferenced coverage and bounded whole-file
+fragment verification. Added adaptive SSD admission, full allocated accounting,
+finite B input budgets and final benefit rechecks. New unarmed v9 package passes
+126focused and8exact-package tests. Four actual public desktop/mobile viewport
+cases pass history/settings/review/empty queues without writes. Fresh owner and
+capacity evidence supports bounded continuation; ordinary measured deployed
+native0.159.2 growth is documented with explicit limits. No new maintenance,
+conversion, payload backup or reclamation occurred. Awaiting explicit production
+window approval required by the existing restart protocol; full goal remains open.
+
+2026-11-19: Operator explicitly authorized morning cutover. Fresh current-SQL188,227,584B independent normal-B restore and real private-systemd forward/fallback/failure tests passed. Main-only controller vk-scoped-writer-cutover-20261119-now-v1 is armed, waiting for exact owning execution to finish naturally. Latest GPT6.2 frontend/protected reader/five watcher configs preserved; no log conversion or cleanup. RESULT, not arming, determines live success. Full format attempted: Rust passed, missing Prettier blocked web step; ops/diff checks passed.
+
+2026-11-19 12:10UTC status: morning cutover aborted at10:06UTC after final backup because main cgroup was not quiet. No binary switch/freeze/capacity release occurred. Exact failed helper identity was not recorded. Original main/protected/proxy retained; both ingress services restarted, all holds/maintenance cleared, public TLS/index/assets/API pass. Controller failed exit1; no retry running. Full dedup remains incomplete.
+
+2026-11-19: Prepared fresh authorized v2 cutover after v1 pre-switch helper abort. Added bounded natural helper drain and same-owner freeze-race recovery, real disposable-service tests, tailnet-only exact-file live status and existing-timer WakeWatch issue/success source. Current normal timer accepted source with zero dispatches while owner busy. No production switch or new log recovery claimed before actual RESULT. Full dedup objective remains.
+
+2026-11-19 12:33UTC: v2 recovered before switching: strict capacity guard rejected0664 lock. Verified unchanged live original backend/public route, one actual WakeWatch issue delivery. Repaired only exact privately owned empty lock to0600, retaininginode/kernel owner. v3 moves both capacity file checks to preflight;11 recovery tests pass and source AST comparison retains prior real-systemd switch/fallback qualification. Existing timer hook/ledger is reused with operation-scoped event state; no old event replay or model setting change.
+
+
+## 2026-11-19 14:12:17 UTC — recovery only; dedup stopped
+
+Recovered original frozen production processes and ownership without data restore or candidate activation. Disabled the dedicated dedup wake, preserved 35 unresolved inputs and four completed archive manifests. Current handoff and private receipt are in /mnt/vk-storage/vk-production-recovery-20261119. No source implementation was changed, formatted, committed or pushed.
+
+## 2026-11-19 — renewed dedup instruction / v4 repair
+
+Prepared fresh operation904ccb9583b845d9a6644d02013b8780 under renewed user instruction. Exact staged-file validation moved before maintenance/freeze; pre-candidate recovery restores the original process without restart. Real systemd transition/recovery and staged-control/data-corruption tests passed. Existing WakeWatch ledger/timer reused for success/issues; unrelated settings preserved. Production remains original, full reclamation and recovery closure unfinished. Current pickup in HANDOFF; previous recovery archived before-v4-cutover.
+
+## 2026-11-19 — scoped writer cutover accepted
+
+Operation904ccb9583b845d9a6644d02013b8780 completed. Actual PID70372/hash01495f7f… verified;60tables and selected histories/review/settings/queues preserved. Maintenance221.01s; controller exited0; protected reader/frontend unchanged. WakeWatch success batch038e0872… delivered once. Online conversion now proceeds; no new reclamation credited by cutover.
+
+## 2026-11-19 — production canary and finite online conversion
+
+Real canary converted one15,543,547B closed log; normalB original+675-member graph recovery, Rust/Python EOF and unchanged ordinary history passed. Live allocated reduction10,596,352B includes objects/directories. Packed carrier reduces15 tiny-file checkpoints to1. Four rendered desktop/mobile UI cases passed without writes. Finite online job6d4d022ab2f84d1ea72f39d6a6382d1c is running on3,361 further logs/395batches, with existing WakeWatch/progress. Full archive closure and final accounting/service validation remain.
+
+## 2026-11-19 — first bulk issue reconciled and same operation resumed
+
+Attempt0 stopped at resource admission before publication. Both raw files/sidecars retained exact inode/full hash; no journal. Four normalB graph checkpoints preserved. Tested unchanged-floor resource waiting and bounded read-only remote checks (170tests,165passed,5optional skips). Same finite operation/unit resumed at18:46UTC with pinned RESUME1 sources and attempt-aware existing WakeWatch. No Vibe restart, dispatch replay, rollback or completed/archived cleanup. Full objective remains unfinished.
+
+## 2026-11-19 — retirement progress gap reconciled without restart
+
+Wake3f9635a7… arrived during verified duplicate staging retirement. Same controller continued; third bulk batch completed naturally. Seven newly converted logs have current installed-identity/hash and recovery receipts; live allocation reduction1,078,501,376B before final task accounting. Added tested read-only retirement progress to the existing WakeWatch hook, preserving accepted delivery and later terminal-failure/success reporting. No controller/service restart, conversion replay or deferred cleanup.
+
+
+2026-11-20 — Wake7f4b8876 reconciliation:54 completed log manifests/inodes/sidecars and all per-batch outcomes verified; batch19 originals unchanged/no journal. Native Windows fixture reproduced the legacy sharing-related errno13. Added current shared-delete control reads, retaining immediate real-denial/STOP refusal;34 Python tests and real B guard admission passed. Resume3 reuses the exact two immutable archive checkpoints and appends only missing carriers under the same finite unit, PID4119270/invocation3b0f92bbd65a47afb1a599b7d3015003. No Vibe restart, ACL/STOP/settings/epoch change. Full objective remains unfinished; sealed evidence in online-20261119-v1/RESUME3_* and RESUME2_FAILURE_RECONCILIATION.
+
+## 2026-11-20 — Separate WakeWatch chat
+
+Operator requested dedup alerts outside the main conversation. Created session036f0739-6fcc-4e30-911a-e4c6e7e1f388 in the same workspace with exact saved executor settings. Explicit locked handoff updated only destination bindings and event continuity pointer, retaining all7 independently settled deliveries and immutable history. No synthetic wake, new converter, native goal or restart. Evidence: online-20261119-v1/wakewatch/chat-handoff-20261120. Normal timer acceptance is recorded there separately.
+
+## 2026-11-20 — Checkpoint control preparation
+
+Prepared durable pause/resume/status, a finite controlled driver around the unchanged qualified batch worker, normal-admission legacy handoff and truthful WakeWatch hold reporting. No production stop, signal, lock release, source replacement or activation. See VK_DEDUP_CHECKPOINT_CONTROLS.md and the operation checkpoint-controls-20261120 package. Explicit decision remains for the one-time transition because the preceding instruction was assessment only.
+
+
+## 2026-11-20 — checkpoint controls and failed activation reconciled
+
+Added durable pause/resume/status, verified boundary handoff, guarded admission
+waits and truthful monitor integration.59 focused tests pass. Before activation,
+resume3 failed naturally while prefetching batch37 on a systemd status-query
+transport error.118 files committed plus4 installed tail files reconcile; both
+backup locks are free. One paused activation attempt failed at an inaccessible
+same-user systemd consumer reference before recovery/data/watcher/service changes.
+Automatic approval review rejected two proposed inspection changes; neither edit
+executed. Controls remain inactive and the converter stopped. Exact failure,
+source-pin/serving-identity/lock checks and retained attempt evidence are in
+online-20261119-v1/checkpoint-controls-20261120. No backend restart, job stop,
+forced unlock, conversion replay or frontend publication occurred. Privileged
+inspection or explicit approval for an alternative remains necessary. Nightly
+and deferred cleanup scope are unchanged.
+
+## 2026-11-20 — Dedicated failure wake 8ae7dc66 reconciled
+
+Read-only reconciliation verified all38 journals/122 installed manifests and
+sidecars, retained recovery proofs,23 source pins and unchanged live reader
+hashes/mounts/protocol/settings.118 logs remain committed;4 tail installs await
+carrier retirement/commitment. The converter remains failed/MainPID0 after the
+11:36UTC systemd transport error. Exact wake delivery is one attempt into the
+dedicated chat. Both backup lease inodes were unlocked at inspection.
+
+The existing consumer scan still cannot inspect /proc/1119/cwd. No failed
+activation replay, scan change, controller/service mutation, forced unlock or
+auto-resume occurred. Privileged consumer inspection and reconciled paused
+activation remain required. No bytes reclaimed in this response; final finite
+conversion, archive/currentSQL recovery, UI/monitoring and net accounting remain
+open. Private immutable evidence is in the operation's wakewatch/chat-handoff-20261120
+FAILURE_WAKE_8ae7dc66_RECONCILED.private.json (SHA256
+c3edf1c885eac87442df6a52bfd2870dee9fdff6e3032cbd45f6641053681008).
+
+Validation for this wake: ops:check and git diff --check passed; pnpm run
+format completed both Rust formatters then failed because Prettier is absent.
+The existing HTTPS progress page returned200 and displayed the failure with
+118/3362 counts. No conversion, restore or final UI acceptance was performed.
+
+
+## 2026-11-21 — recover without touching blocked staging; controls live
+
+Verified that WakeWatch did deliver the November20 failure once to the separate
+chat; the response was blocked, not a missed wake. Added a fresh isolated staging
+mapping for the next batch, leaving the original directory and active consumers
+untouched. Existing scan/legacy conversion/custody checks remain.63 focused tests
+plus isolated-retirement observer regression pass. Finalized already-installed
+tail batch36 to122 committed files, activated the same finite unit paused, proved
+backup descriptors released, then resumed once after frontend publication proof.
+Actual byte progress advanced to441,903,688 packed bytes in batch37. Normal timer
+observed pause/running with8 historical deliveries/8 attempts; no synthetic wake.
+Main/protected identities and existing watcher settings are unchanged. Updated
+failure wording to distinguish completed alert responses from repaired conversion.
+Current controller PID1316160/invocation3594484094cb4790885a9b4b7570da3f;
+sealed evidence in online-20261119-v1/checkpoint-controls-20261121. Full objective
+remains unfinished. Deferred cleanup and native-goal pause remain unchanged.
+
+
+## 2026-11-21 — Desktop live dedup HUD
+
+Installed matching420×218 Rainmeter card8px below Archive Queue. Existing status
+publisher supplies sanitized committed counters; no new watcher, model worker or
+converter. Five Python and twelve real-Rainmeter presentation checks pass; live
+consumption advanced126→130 logs. Other HUDs and saved settings are preserved.
+See VK_DEDUP_RAINMETER.md and private installation/acceptance receipts.
+
+## 2026-11-22 — qualified finite-converter acceleration
+
+Installed faster fresh systemd/mount/SQL checks, bounded staging-directory flushes
+and copied-log preparation on Desktop/Laptop.66 batches/270 logs committed at the
+final clean converter-only handoff; current accelerated2 PID3918687, invocation
+0afe61e507a94b1195f3b8dd55e36951, package checkpoint-controls-20261122-fast-v4.
+First accelerated batch passed full B/native-reader/retirement acceptance in
+1154.66s versus1907.60s for the prior similar batch;461.0MB allocated release.
+A large Desktop pre-dispatch timeout was reconciled; compressed515MB transfer
+passed in160.3s. Adopted exact completed Laptop batch68 without redispatch. Cache
+advice on only completed copied payloads preserves bytes and selected limits.
+83 tests ran/81 passed/2 optional probes skipped; real host and systemd fixtures,
+actual batch checks, Rust formatting and Ops Playbook passed. Web formatting was
+attempted but Prettier is absent. Earlier STATE detail moved to dated history to
+keep pickup documents within16KiB. No Vibe restart, backup-epoch deletion, extra
+model worker, new goal, Nightly enablement or deferred cleanup. Full deduplication
+and final closure remain unfinished; see VK_DEDUP_ACCELERATION.md and HANDOFF.md.
+
+## 2026-11-23 — recovery1 memory-pressure stall reconciled
+
+Wake81f74763 reached the dedicated chat once. Same controllerPID2054584 and
+invocation221dd13e67f04147a3113740f9267240 remain active.140 batches/1,093 logs
+are committed;7 current logs are installed with retained original/graph/dynamic
+recovery proofs, awaiting staging retirement and final commitment. All142 journals,
+1,100 installed manifests/sidecars,77 sealed sources and live reader identity/
+settings checks passed; isolated batch37 mapping was respected. No corruption
+or terminal failure receipt was found. Full memory PSI was0.44 against the
+unchanged0.10 admission limit; the worker is waiting through its existing guard.
+
+Remote141/142 returned receipts were inspected without dispatch or replay. No
+controller, service, source, settings, resource threshold, backup epoch or cleanup
+action occurred. Operator-control docs now name the actual recovery1 package.
+Private evidence: operation wakewatch/chat-handoff-20261120/
+STALL_81f74763_20261123_RECONCILIATION.private.json, SHA256
+183672700c1e2ae49fd242adffd8a1445a921b1ffc476d3a29ae0e6c297286fb.
+Finite conversion and full final recovery/service/accounting acceptance remain open.
+
+At05:41:41UTC the same worker completed batch140 staging retirement naturally.
+Independent05:42 readback verified all21,263 planned staging paths absent and all
+primary paths present, with matching complete retirement receipt. Host full PSI
+was0.00; no intervention or threshold change occurred. Counts still140 batches/
+1,093 files committed, so tail commitment and full acceptance are not claimed.
+Supplemental private proof: STALL_81f74763_RETIREMENT_RESUMED.private.json in the
+same dedicated-chat evidence directory. Ops/diff checks passed after compacting
+the pickup note; Rust formatting passed, web formatting failed on missing Prettier.
+
+
+## 2026-11-23 | recover installed tail with alternate gzip staging
+
+- Wake64e99dc4 exposed a real post-publication failure at batch161: all5,358
+  staging/primary objects decode correctly, but2,962 gzip encodings differ.
+  All163 journals/1,332 manifests/capture sidecars and qualified live readers
+  verified before action. Original failure and all backup epochs are retained.
+- Added strict one-shot installed-tail recovery: normal-B graph/original/control
+  reopen, production EOF, original before-accounting and no conversion/dispatch
+  replay. Retained alternate copies are recorded and charged; only identical
+  staging copies retire. Corruption, ownership, consumer and custody guards stay.
+- Finalized batch161 and resumed the same finite unit as recovery2, PID3798264,
+  invocation7de4161820194cb68dacb2976e760e9c, from162 batches/1,332 committed logs.
+  Preserved batch37 mapping, disabled Desktop preparation, and adopted the exact
+  returned Laptop162 job. No backend restart or resource/settings change.
+- Normal watcher and Desktop HUD report RUNNING; actual new carrier checkpoint
+  verified. Ordinary history/status reads pass. Nightly cron remains off and its
+  preexisting observer/delivery failures remain with that owner. No synthetic wake.
+-110 regression tests ran:108 pass,2 unchanged optional Rust-probe cases skipped.
+  Rust formatting/Ops/diff pass; required web format stops at missing Prettier.
+  See VK_DEDUP_INSTALLED_RECOVERY.md and checkpoint-controls-20261123-recovery.
+  Full finite conversion and final archive/SQL/UI/net-space/growth acceptance
+  remain open. Deferred workspace/archive cleanup remains excluded.
+
+
+## 2026-11-24 | finite conversion and recovery closure; strict audit pending
+
+All395 batches/3,356 converted logs and six preserved exclusions reconciled against
+396 journals,1,134 graph receipts and actual live writer identity. The converter
+is stopped. Sealed complete affected-store normal-B recovery catalog,24 additional
+body carriers/eight catalog parts/root index, current SQL, both serving binaries,
+frontend and recovery sources passed independent restoration. Prior complete
+per-batch B/Python/Rust EOF evidence was reused; no backlog replay or new controller.
+
+Public desktop/mobile viewport history/review/settings/queues/monitoring passed.
+Restored the omitted accepted named-download wrapper additively after B backup;
+all other files/metadata and selected alias unchanged. Shared source and meaningful
+filename/byte/invalid-link browser checks now retain it. Seven HTTP tests and
+both fixture widths pass; real public download checks pass. Chromium OS sandbox
+is unavailable on this host; test-only host mode preserved repository defaults.
+Required formatting passes Rust but stops at missing Prettier for web formatting.
+
+Final measured tree reduction after local/remote retained file staging is
+73,271,337,360bytes (68.24GiB), distinct from concurrent filesystem availability.
+Passive growth added1,261,568 allocated bytes to one raw file in37minutes.
+Protected-process open-original audit remains unavailable to the unprivileged
+account. Automatic approval review rejected publishing the private administrative
+audit; explicit publication approval and administrator evidence remain pending.
+Full acceptance is not claimed. Nightly stays OFF; deferred cleanup, new closed
+logs, selected settings, pending data, backup epochs and other owners preserved.
+See VK_DEDUP_FINITE_ACCEPTANCE.md and final-acceptance-20261124 private receipts.
+
+## 2026-11-24 — authorized completion work and bounded closed-log catch-up
+
+Preserved original finite success and started one independently B-sealed pinned
+catch-up for374 newly eligible closed files/110 batches. Retained the first
+pre-selection Python/dbus startup failure, then corrected system package discovery
+without replaying any backup/conversion. The r2 unit holds original production
+custody; current receipts remain authoritative. Added tested runner/owner/sensor
+source and adopted the sensor on the existing WakeWatch hook/ledger/chat.
+Fourteen focused tests pass; normal observation has no source/event errors.
+Retired24 exact independently restored temporary carriers under exclusive kernel
+leases, releasing440,885,248 allocated bytes with restore-location notes.
+Nightly predecessor is idle;125-root successor and1,134 checkpoint imports are
+prepared. Required2,270,077 watches exceed1,048,576 host limit; administrator action
+and real resource/restore/incremental/schedule qualification remain pending.
+No new goal, worker, watcher, model loop, backend restart or settings change.
+Forward recurring activation, catch-up completion, final net/descriptor acceptance
+and whole Nightly commissioning remain open. See VK_DEDUP_COMPLETION.md.
+Expanded the bounded administrator audit to3,730 original identity records;
+publication/execution remain pending. Ops/diff and Rust formatting pass; required
+frontend formatting remains unavailable because Prettier is absent.
+
+
+## 2026-11-24 — automatic conversion and watch admission preparation
+
+Verified operator's live3,145,728watch limit. Prepared pinned daily conversion
+and existing-WakeWatch successor observation;15focused tests plus14retained
+incremental tests pass. No recurring activation yet. Current110-batch catch-up
+continues under its original operation/owner. Prepared read-only terminal audit
+and exact normal-B automatic-package seal; neither replays conversion.
+Nightly compact tracking passes29inode/23tracking/one-outbox tests. Full real
+memory admission uses the unchanged1536MiB/2GiB limits; no production successor
+or backup calendar started. Old epochs and failures remain. Reboot persistence
+and privileged open-original inspection still need evidence.
+
+
+November24 follow-up: full watch enrollment passed125roots/2,287,396watches,
+peak1,610,854,400bytes, zero OOM/errors. Existing Nightly observer replaced only
+after original terminal proof; actual new epoch is enrolling. Automatic-v3
+preserves the pending catch-up success across sensor replacement, keeps public
+and HUD totals identical, and normalizes tokens for the installed Rainmeter
+parser.34 focused automatic/incremental tests and real RAM-only codec pass;
+no synthetic dispatch. Initial catch-up remains active.
+
+## 2026-11-24 — caught up and daily conversion enabled
+
+Accepted110catch-up batches/374files plus one real automatic conversion, with
+all journals/fullEOF/normal-B recovery proofs. Sealed automatic-v3 and enabled
+05Toronto timer; existing WakeWatch and unchanged Rainmeter show cumulative
+3731resolved. Full Nightly tracker coverage and actual B journal delivery passed;
+one finite gap reconciliation runs. Calendar/full restore/strict net acceptance
+remain open. No backend restart, epoch deletion, extra worker or Git push.
+
+- 2026-11-24: Nightly gap-v22 independently accepted2,449,223paths/150,028directories with zero pending/replay errors. One1194-checkpoint import now runs; proven pre-dispatch journal contention retained/reconciled, no uncertain replay. Current full restore/ordinary commissioning remain open.
+
+- 2026-11-24: Reconciled the import4GiB catalog stop:222exact commits, next absent, native quick_check passed and77.2GB Bfree. One v2 recovery revalidated the prefix, with16GiB ceiling/40GiB free check and original20:07:44UTC deadline; all old evidence/other guards retained. Unstarted successors updated with preserved preimages.
+
+- 2026-11-24: Replaced model polling with exact Nightly-import checkpoint/problem observations in the existing WakeWatch hook. Same ledger/owner/settings; normal tick passed, no new dispatch, all old batch receipts retained. Settled the manually accepted catch-up success using pinned proof.21 focused tests passed. Import and full Nightly objective remain unfinished; current monitor does not start successors.
+
+- 2026-11-24: WakeWatch delivered the actual import checkpoint once. Reconciled1194references/10B journals,972new/222reused, preserved123746accepted file points and zero body recopy. Started one preflighted current-namespace composition with exclusive STARTED guard; existing watcher now handles its STATUS/STOP/RESULT.27 focused tests pass; full restore/commissioning remain open.
+
+- 2026-11-24 user scope correction: dedup only; prior inferred Nightly commissioning authority was wrong. Disabled Nightly checkpoint wakes in the existing monitor; interrupted exact composition main, verified both owned processes stopped, and independently reopened retained B state read-only (123746accepted file points/1194imports intact). No successor/calendar or cleanup. Fresh net68.82GiB includes staging/growth; disclosed39k→1.07mfile fanout and pending privileged open-original audit.
+
+
+## 2026-11-24 — file-count regression and isolated packed qualification
+
+User clarified speed and file count are required, not bytes alone. Paused daily
+conversion with an owned condition preserving its enabled calendar after host
+recovery undid a plain stop. Prepared V2 packed readers and recovery compatibility;
+old live publication refuses V2 until guarded migration is qualified. 100 Python
+archive/recovery tests,10 Rust archive tests and24 watcher tests passed. Real
+sample7,229→8files and exact hashes; debug Rust warm reads show little change,
+so optimized/live speed remains unverified. No live history migration, Nightly
+commissioning or cleanup. See VK_DEDUP_PACKED_LAYOUT.md; matched build checkpoint
+is the next scripted step through existing WakeWatch.
+
+
+## 2026-11-24 — recover known build deadline with completed artifacts
+
+Reconciled WakeWatch failure b87e8bd4 once. Original build ended on its45-minute
+cap while progressing;10 optimized archive tests passed and689 server dependency
+artifacts completed without a compiler error. Old unit/processes terminal, source
+and live identities unchanged. Started one receipt-bound recovery using original
+immutable overlays/test proof and shared-target artifacts; optimized probe first,
+then server.60-minute cap and600-second no-progress guard; memory/SSD/ownership
+limits preserved. Same existing watcher/owner/settings; no deployment or Nightly.
+
+
+## 2026-11-24 — main packed-reader build accepted; compatibility pair scripted
+
+Reconciled success cf383e6c once: exact4/4 result/artifact/probe/source hashes,
+terminal process/unit and unchanged live readers. Main candidate4a14b76b remains
+undeployed. Verified both sealed base trees and prepared protected/fallback reader
+builds preserving their distinct history/native behavior. One serial bounded job
+uses existing shared target/lease and WakeWatch. Current-data/actual B restore,
+forward/backward migration and final net/performance acceptance remain open.
+
+
+- Accepted exact compatibility-build-v1 success once: both source seals/overlays,
+  binary/probe/build-info hashes,10tests each and live serving identities verified.
+  Started one isolated current-data-v1 rehearsal under existing WakeWatch; fresh
+  main/protected99-migration DB copies, real packed-history/read APIs, later writes
+  and corruption rejection. No live deployment/history mutation, Nightly work or
+  deferred cleanup. Full dedup acceptance remains open.
+  Normal WakeWatch tick independently accepted current-data-v1 without new
+  dispatch/error (15batches/15attempts). Ops/whitespace checks and Rust formatting
+  pass; full formatter stops at the existing missing Prettier dependency.
+
+
+- Reconciled current-data-v1 failure once: existing-reader baseline performed
+  expected orphan bookkeeping on2copied running rows; all other tables/fields,
+  source pins, snapshots and serving identities preserved. Added a strict initial
+  orphan audit with8passing tests; candidate/later phases retain full equality.
+  One current-data-recovery1 now takes fresh copies and reuses verified packs
+  under the same WakeWatch/limits. Failed evidence unchanged; no live deployment,
+  Nightly activity or deferred cleanup.
+  Recovery passed its initial main baseline and reached the packed candidate
+  phase (2/10). Normal WakeWatch tick verified16batches/16attempts with no errors
+  or extra dispatch. Ops/diff/Rust format pass; web format lacks Prettier.
+
+
+- Reconciled recovery1 failureceff03c2 once. Actual API lost/differed entries in
+  one history; both old/new main readers logged raw broadcast drops. Compiled
+  full-EOF loose/packed bytes match exactly. Applied the preserved protected
+  finite-replay mechanism to main/fallback without changing writer/native inputs.
+  One replay-repair-build-v1 runs10focused build/test/EOF steps under existing
+  WakeWatch/shared target/resource guards. No live deployment, Nightly or cleanup.
+  Current-data canonical reference must be bounded/lossless; no relaxed hashes.
+  The actual optimized main replay-input suite passed10/10; historical-output
+  tests/build are still running. Normal WakeWatch tick confirms17batches/17attempts
+  without errors/extra dispatch. Rust format/Ops/diff pass; web format lacks
+  Prettier. Full current-data/live acceptance remains open.
+
+
+- Accepted replay-repair-build-v1 success5248d22b once:28focused tests per reader,
+  full-EOF samples, both source/artifact seals and live identities verified.
+  Started one current-data-repaired-v1 rehearsal with fresh DB copies, bounded
+  protected-reader reference, exact loose/packed/fallback/return pages/pagination,
+  all tables/later writes and corruption/loss rejection. Existing WakeWatch owns
+  next checkpoint; no live deployment, Nightly activity or deferred cleanup.
+  The lossless reference phase passed and the main candidate comparison started
+  (2/11). Normal WakeWatch tick verified18batches/18attempts without errors or
+  extra dispatch. Ops/diff/Rust format pass; web format still lacks Prettier.
+
+
+- Reconciled a42d06f2 once: repaired readers have identical content/replies with
+  no loss; four isolated starts prove only the exact leading diagnostic pair swaps.
+  Both original failed hashes explained; all tables/later writes/inputs preserved.
+  Added8tested narrowly pinned comparison checks retaining raw hashes and strict
+  other contents/order/pagination. One current-data-repaired-v2 runs same11steps
+  under existing WakeWatch; no new build, live changes, Nightly or cleanup.
+
+Validation:8comparison regressions passed; all4actual diagnostic captures match
+under the exact pinned pair rule. Rust formatting, Ops Playbook and diff check
+pass. Full format stops at the existing missing Prettier dependency. Normal
+WakeWatch tick verified the exact running v2 job with no source/event errors,
+19batches/19attempts and no duplicate dispatch; acceptance receipt retained.
+Six of11script stages passed at final handoff; full dedup remains unfinished.
+
+
+November25 — wakebd227f38 reconciled: main five phases passed, protected retained
+history failed because18original capture files are missing live. All18saved copies
+match both reference and recovery-record hashes;16,713,100bytes, cause unproven.
+Serving API reproduces refusal. Inputs/owners/tables/sentinels preserved. No skipped
+history or relaxed validation. Added safe read-only process overlays;7tests pass.
+One current-data-originals-v1 job runs all11phases with private recovery mounts;
+existing watcher rearmed, daily conversion still held. No live restoration yet.
+
+Validation:7overlay regressions passed; actual loose/packed mount plans preserve
+1,566/2,885read-only bindings. Rust formatting, Ops and diff check pass; complete
+format remains blocked by missing Prettier. Normal WakeWatch tick accepted for
+the exact running recovery rehearsal,20batches/20attempts and no source/event
+errors. Script reached2/11stages; no live recovery publication or full acceptance.
+
+
+November25 — successa6495901 accepted: all11current-data stages, exact main/protected
+history,6native+18retained targets, all tables/later writes and3corruption failures
+verified. Main60/protected59original tables and8/4sentinels preserved. Live owners
+unchanged. Create-only recovery helper added with8regressions. First restoration
+stopped before payload publication on0664source permissions; one intent/no restores,
+all18destinations absent, failed job reconciled.18private0600copies preserve hashes
+and old backups (16,752,640Bstaging). One live-original-restore-recovery1 script
+restores18exact originals and verifies36normal API replies. Same WakeWatch rearmed;
+no SQL/settings/service/V2/Nightly changes. Full dedup remains unfinished.
+
+
+Same-turn recovery closure: all18originals restored and36normal replies passed.
+Recovery1 stopped only at final memory PSI .18>.10; unit terminal/PIDgone. Fresh
+read-only acceptance verified every inode/hash/source/sidecar/SQL target/API receipt
+and current owners/resources(.01). No restore replay. Added16,752,640Bpayload,
+4,096Bobserved directory growth and16,752,640Bprivate SSD staging. All backups kept.
+One packed-production-preparation-v1 now handles closed V1selection/capacity,
+per-session packs, actual reader EOF and staging measurement; same watcher rearmed.
+No live packed publication or reader cutover. Final dedup remains open.
+
+Normal WakeWatch tick independently accepted for the exact packing job: same owner,
+hook/config/source pins,21batches/21attempts, no source/event errors or pending
+incidents. Actual verified chunk progress is fresh; no synthetic tick or dispatch.
+Capacity selection covers1,057,171referenced files/8,835,260,416allocated bytes;
+conservative packing staging ceiling7,966,554,493B fits14,751,617,024Bavailable
+with the existing3GiBreserve. These are preparation inputs, not realized savings.
+Eight restore regressions passed; Rust formatting passed; web formatting remains
+unavailable because Prettier is absent. Ops and diff checks pass.
+
+
+November25 — packing wake bdd7a069 accepted independently:274 groups,3,639 histories,
+580 pack hashes, source/sidecar/SQL bindings and actual production-reader receipts
+match; previous unit inactive and PID gone. Prepared files1,057,171->4,219,
+allocation6,768,685,056B incl directories. This is staging, not live/net savings.
+Added packed_recovery.py with6 meaningful scope/bounds/no-replay tests. One fresh
+packed-normal-recovery-v1 performs real normal-B file and current SQL/software/
+frontend restoration, keeping every intent/capture/proof. First checkpoint restored
+47files/49,865,526B. Existing WakeWatch rearmed, no duplicate owner/watcher or
+Nightly commissioning. Live migration/retirement and full acceptance remain open.
+Rust formatting/Ops/diff pass; web formatting unavailable (missing Prettier).
+
+Normal WakeWatch tick accepted for exact recovery PID1391859/invocationecb6a2a8:
+22batches/22attempts, no source/event errors. Four actual checkpoints restored
+71files/171,473,822B. New checkpoint tests live separately in test_packed_checkpoint.py;
+existing packed reconstruction tests are preserved unchanged.
+
+
+November25 — recovery wake734d8efa independently accepted:223 checkpoint triples,
+5,862normal file restorations/7,504,774,098B, two SQL points, five binaries and1,465
+frontend files plus root index verified; old unit empty/PIDgone. Existing packed
+files and live owners unchanged. Found lazy archive reader lifetime gap relevant
+to loose retirement. Both readers now keep the original manifest descriptor until
+drop and expose the pin protocol. Two real kernel-lease regressions and all12main
+archive tests pass. One nine-stage compatible build reader-pin-build-v1 runs under
+the shared build lease; existing WakeWatch rearmed. No live switch, packed manifest,
+retirement, Nightly commissioning or deferred cleanup. Full dedup remains open.
+Rust format/Ops/diff pass; web formatter unavailable because Prettier is absent.
+
+Normal WakeWatch tick accepted for the exact reader-pin build:23batches/23attempts,
+no source/event errors, same owner and hook/config pins. Main archive tests passed;
+server compilation is running. No model polling or additional dispatch.
+
+- 2026-11-25: Accepted reader-pin-build-v1 against all3 source/binary seals,
+  36Rust tests and18EOF checks. Added scoped packed publisher/retirement and
+  direct forward packing/reuse;14focused tests pass. Packed transaction rehearsal
+  v1 launched once (PID3150659, invocationbb29392a50dd42a8a80e335e5182787c),
+ 12stages with fresh SQL and actual isolated-server custody. Existing WakeWatch
+  rearmed with unchanged owner/ledger. No live publication, cutover, Nightly
+  commissioning or cleanup. Final controller/recovery/qualification/accounting open.
+
+- 2026-11-25: Accepted packed-transaction-rehearsal-v1(all12stages,60/59tables,
+  9/4later-write sentinels,7,854fixture objects retired). Added exact B-backed
+  production admission and plan integration;11tests pass. First planning run
+  safely refused oversize groups before B capture/mutation; reconciled terminal
+  evidence retained.311bounded transactions reuse274groups/580packs. One finite
+  packed-admission-recovery1 now covers only changed software/tools/metadata and
+  three actual B admission checks. Existing WakeWatch rearmed; no live changes.
+
+
+- 2026-11-25: Reconciled wake05642787 and stopped admission recovery1: all311
+  plans complete, shared lease busy before any B connection. Recovery2 reused
+  the map and restored it through actual B, then rejected a lowercase software
+  checkpoint name before its intent. Both failures retain all evidence; zero
+  uncertain captures. Added bounded lease availability and checkpoint-name
+  preflight;4lock+8checkpoint tests pass. One finite recovery3 reopens the
+  accepted map without recapture and continues only changed-artifact recovery.
+  Existing WakeWatch rearmed to PID3805715/invocation99685132202240d8b271d0678e505148.
+  No live history/readers/settings or Nightly/deferred cleanup changes.
+
+Recovery3 ordinary WakeWatch tick accepted:26batches/26attempts, no source/event
+errors, actual current job running. Map read plus four16MiB software-part restores
+verified76,784,940bytes across5files; no live history change. Required Rust format
+passes; web formatting remains unavailable because Prettier is missing.
+
+
+- 2026-11-25: Accepted wake0c3ea9f7/recovery3:25checkpoint triples,94restored
+  files/341,068,615B, all three new reader binaries, exact311plan mapping and
+  three actual B admission groups. Unit empty/PIDgone; current sources/owners
+  unchanged. Added finite no-replay packed controller, actual reader/writer/B
+  adapter and before-retirement reader-probe gate; added both-owner raw forward
+  selection/preparation with session pack reuse.11new+11admission tests pass;
+ 14existing publication/forward regressions also pass. One isolated four-stage
+  controller rehearsal runs as PID4125186/invocationdaeb785bd7904430981f4aaf151d89f2.
+  Existing WakeWatch rearmed; no live migration, schedule or Nightly action.
+
+
+November25 controller qualification is independently accepted: four stages, three
+API phases,60original tables/four later-write sentinels and latest-copy fallback.
+Two backward+one raw-forward transaction reduce copied histories7,826files to18;
+allocation71,741,440B to54,546,432B. Both exact reader probes pass before original
+retirement; all31fixture journals reconcile. This is isolated evidence, not live
+reclamation or normal-B recovery. Original owners and inputs remain unchanged.
+
+Forward recovery now restores the prepared graph and metadata mapping through
+actual B, preserving canonical backup selectors and capturing only new bodies.
+Four tests cover body reuse, new manifests, nonbeneficial refusal and damaged
+remote data with no local fallback. One finite packed-forward-normal-v1 qualifies
+one actual closed1,577,508-byte log and a second prepared namespace to prove zero
+new body captures on reuse. Cap64MiB control input; existing WakeWatch rearmed.
+No live mutation, daily activation, Nightly commissioning or deferred cleanup.
+Production invocation/cutover/current final recovery/ordinary checks/whole staging
+and filesystem accounting remain required before full dedup acceptance.
+
+
+November25 actual forward recovery accepted:6checkpoint triples,84files/5,948,994B;
+one1,577,508-byte raw original preserved;212,719-byte graph reused with zero new
+body captures. All intents/restores/identities reconciled; unit empty/PID180142 gone.
+Added packed_incremental.Adapter using existing daily runner/lock/automatic hold/
+monitor contract. One normal-B context/run, exact-session selection and preserved
+prior catalog selectors.3new integration tests plus7runner/9automatic regressions
+pass. One isolated packed-daily-rehearsal-v1 now qualifies actual daily execution,
+both reader EOF probes, ordinary APIs and latest-copy fallback against fresh SQL.
+Fixture restoration is clearly distinct from the accepted actual Desktop-B proof.
+No live/timer/Nightly changes. Required Rust format passes; web formatting cannot
+run because Prettier is absent. Ops and whitespace checks pass. Full dedup remains
+open pending deployment/configuration/live conversion/final checks/accounting.
+
+Daily rehearsal ordinary WakeWatch tick accepted for PID311927/invocation
+037e7a0964ed4ee7b767ae5d4676ad9c:27batches/27attempts, no source/event errors.
+Live resource bounds verified4G high/5G max/swap0/CPU100/Nice15/Tasks160. Fresh SQL
+and initial ordinary API checks passed; healthy isolated work continues.
+
+
+November25 daily rehearsal accepted against exact receipts and current live owners:
+four stages/three API phases,60original tables/four later writes, three converted
+raw histories, both EOF probes, monitoring verification and a second idle run.
+All16fixture checkpoints/70files/54,263,636bytes reconcile. Old unit empty/PIDgone;
+no actual B claim for these fixtures and no live file-count/net-saving claim.
+
+Prepared one finite paired-switch rehearsal with release-matched tiny guard build,
+fresh private SQL, actual systemd/capacity handover, backup refusal, normal-B SQL
+restore and rejected-candidate latest-data fallback. Reviewed namespace path
+preflight caught a read-only mount-target error before dispatch; no job was replayed.
+Private ledger/loopback route are explicitly distinguished from production.
+Source seals, per-SQL durable receipts, bounded resources/termination cleanup and
+exact private owners apply. Existing WakeWatch rearmed to the single unit,
+PID611948/invocation33d81f5d0aed42e6b8de193d80805c61. Live owners, daily hold,
+Nightly commissioning and deferred cleanup remain unchanged. Full dedup remains
+open: actual activation/live conversion/current recovery/ordinary checks and final
+allocation/filesystem/count/performance accounting including staging/B growth.
+
+Paired-switch normal WakeWatch tick accepted:28batches/28attempts, no source or
+event errors; exact running PID/invocation/resource bounds verified. The matched
+guard build and private backup-refusal recovery passed; actual B SQL restoration
+is running. Required Rust format passes; web formatting remains unavailable
+because Prettier is missing. Ops Playbook and whitespace checks pass.
+
+
+November25 wake733d53e9 accepted: private switch54.423s, actual BSQL33.189s,
+reader activation13.399s; backup refusal7.975s, rejected-candidate fallback13.014s.
+Eight SQL receipts prove306,405,376restored bytes and98,507,803new encoded B bytes.
+Matched514,688-byte guard passes five Rust tests. All private units empty;
+originalPID611948 gone; current production identities/source pins unchanged.
+Private loopback/empty-ledger limits remain explicit; full dedup is unfinished.
+
+Added paired_reader_services with intent-before-action, exact owner checks,
+bounded startup/freeze and no uncertain dispatch replay; six focused tests pass.
+Prepared the unarmed paired-reader cutover package on SSD: current main/protected
+SQL paths retained, obsolete-cache replacement omitted, final frozen SQL recovery,
+original-owner fallback before publication, same capacity settings, matched guard,
+and actual post-activation reader/daily config generation. Read-only preflight
+passes; unapproved worker is refused before activation. No live controls installed.
+One packed-pair-package-v1 qualifies that exact helper with private services and
+backs up/restores ONLY the new package/guard through the existing normal-B owner.
+Existing WakeWatch rearmed toPID909475/invocationc1f11a576e4b4d588ecd574846ef0214.
+No SQL/history recapture, schedule/Nightly commissioning or deferred cleanup.
+
+Normal pair-package1 WakeWatch tick accepted:29batches/29attempts, no source/event
+errors, exact PID/invocation and resource bounds. Initial private current-copy API
+checks passed. Rust formatting passes; web format lacks Prettier. Initial Ops
+pickup-budget failure was corrected by shortening HANDOFF and retaining detailed
+history in existing acceptance receipts/DELTA. Whitespace correction included.
+
+
+## 2026-11-25 — reconcile private pair failure and correct fixture runtime
+
+Wake edb69534: retained both transition journals; verified180 source pins,
+stopped test units, no B capture and unchanged serving identities/SQL bindings.
+Protected test startup failed with AddrInUse. A bounded diagnostic isolated two
+npm discovery children behind repeated69s waits. Added tested private port
+reservation outside the ephemeral range and offline-only fixture discovery.
+Production package and transition helper are unchanged. One corrected finite
+attempt packed-pair-package-recovery1 uses the same WakeWatch owner/session/ledger;
+no replay, new watcher, production activation or Nightly commissioning. Three
+socket regressions and six ownership/uncertainty regressions pass. All test
+staging remains accounted for; full dedup acceptance is open.
+
+Corrected private qualification accepted in this turn:13.678s switch/15.525s
+fallback, later writes preserved, all units empty. Two B triples restore93files/
+1,260,029bytes; encoded growth1,576,960bytes. Added packed_finite production wiring
+and five activation/custody/no-replay tests. Read-only sealed selection confirms
+311transactions/3,639files. One new finite package verification is bound to the
+same WakeWatch; it performs no live activation/conversion or SQL/history capture.
+Rust formatting, Ops and whitespace checks pass; full format remains blocked by
+existing missing Prettier. No push, Nightly commissioning or deferred cleanup.
+
+Finite package independently accepted:3stages,188pins,2B triples,87files/
+759,101bytes and1,060,864encoded bytes. Exact mapping reopened without recapture;
+all units empty. Concrete activation/fallback/drain/capacity-check plan prepared;
+unapproved launcher refused before dispatch. No production approval was created.
+Existing observer supports cutover receipts and independently accepted unsubmitted
+checkpoints;16tests include real-ledger uncertain-delivery preservation. Same hook/
+owner/session/ledger, no manual tick/new watcher. Await explicit cutover decision.
+Thirty focused tests across four suites pass. Full formatter still lacks Prettier;
+Rust format passes. Production and saved settings/inputs remain unchanged.
+
+
+## 2026-11-25 — archive lifecycle scope and durable intent
+
+Operator added workspace separation before the managed restart, automatic
+movement on future archive actions, send-triggered revival and active-payload
+Nightly selection. Nightly scheduling remains off; actual backend restarts
+belong to the external managing agent. Sealed dedup packages remain unchanged
+and are not a combined archive/revival release.
+
+Added source-only workspace_archive_requests migration: initial archived
+population and future archive/unarchive transitions share one transactional
+outbox; repeated flags are idempotent and revival invalidates old generations.
+Added read-only ownership inventory with real uppercase/tagged draft handling.
+Current SQL/native metadata:1,052 archived,244 active,1,016 metadata candidates.
+Candidate status explicitly grants no movement or backup-exclusion authority.
+No live migration, data movement, Nightly setting change or restart occurred.
+
+Eleven fixture tests pass, including transaction rollback, transition generations,
+shared/unknown ownership and pending-input protection. Ops and diff checks pass.
+Rust formatting passes; full format reaches the existing missing-Prettier error.
+No backend build, real B archive/restore, UI revival or Nightly acceptance was
+performed. Mover/catalog/revival/readers/Nightly integration remains required.
+Archive requirements and remaining acceptance are in VK_WORKSPACE_ARCHIVAL.md;
+prior STATE/STREAM/HANDOFF preserved before compacting current continuity.

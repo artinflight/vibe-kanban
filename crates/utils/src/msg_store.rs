@@ -34,10 +34,19 @@ struct Inner {
     history_evicted: bool,
 }
 
+struct ReplayInput {
+    stdout_tx: mpsc::Sender<LogMsg>,
+    stderr_tx: mpsc::Sender<LogMsg>,
+    stdout_rx: Mutex<Option<mpsc::Receiver<LogMsg>>>,
+    stderr_rx: Mutex<Option<mpsc::Receiver<LogMsg>>>,
+}
+
 pub struct MsgStore {
     inner: RwLock<Inner>,
     sender: broadcast::Sender<LogMsg>,
     finished: AtomicBool,
+    replay_input: Option<ReplayInput>,
+    replay_failed: Arc<AtomicBool>,
     durable_sender: Option<mpsc::Sender<std::io::Result<LogMsg>>>,
     durable_receiver: Mutex<Option<mpsc::Receiver<std::io::Result<LogMsg>>>>,
 }
@@ -64,9 +73,91 @@ impl MsgStore {
             }),
             sender,
             finished: AtomicBool::new(false),
+            replay_input: None,
+            replay_failed: Arc::new(AtomicBool::new(false)),
             durable_sender: None,
             durable_receiver: Mutex::new(None),
         }
+    }
+
+    /// Finite replay inputs use bounded queues, not the lossy UI broadcast.
+    /// Slow normalization backpressures the file reader without retaining a
+    /// second complete copy of a large thread/resume response in history.
+    pub fn with_replay_input(history_bytes: usize, ui_capacity: usize, capacity: usize) -> Self {
+        let mut store = Self::with_limits(history_bytes, ui_capacity);
+        let (stdout_tx, stdout_rx) = mpsc::channel(capacity.max(1));
+        let (stderr_tx, stderr_rx) = mpsc::channel(capacity.max(1));
+        store.replay_input = Some(ReplayInput {
+            stdout_tx,
+            stderr_tx,
+            stdout_rx: Mutex::new(Some(stdout_rx)),
+            stderr_rx: Mutex::new(Some(stderr_rx)),
+        });
+        store
+    }
+
+    pub fn replay_failure_flag(&self) -> Arc<AtomicBool> {
+        self.replay_failed.clone()
+    }
+
+    pub async fn feed_replay(&self, message: LogMsg) -> std::io::Result<()> {
+        let input = self
+            .replay_input
+            .as_ref()
+            .ok_or_else(|| std::io::Error::other("Not a finite replay input store"))?;
+        let accepted = match message {
+            msg @ LogMsg::Stdout(_) => input.stdout_tx.send(msg).await.is_ok(),
+            msg @ LogMsg::Stderr(_) => input.stderr_tx.send(msg).await.is_ok(),
+            LogMsg::Finished => {
+                // Always close both streams, including when one normalizer
+                // exited early. Otherwise the other owner could remain alive.
+                let (stdout, stderr) = tokio::join!(
+                    input.stdout_tx.send(LogMsg::Finished),
+                    input.stderr_tx.send(LogMsg::Finished),
+                );
+                stdout.is_ok() && stderr.is_ok()
+            }
+            _ => false,
+        };
+        if accepted {
+            return Ok(());
+        }
+        self.replay_failed.store(true, Ordering::Release);
+        Err(std::io::Error::other(
+            "Finite replay input consumer stopped",
+        ))
+    }
+
+    fn replay_chunks(
+        &self,
+        stdout: bool,
+    ) -> Option<futures::stream::BoxStream<'static, Result<String, std::io::Error>>> {
+        let input = self.replay_input.as_ref()?;
+        let receiver = if stdout {
+            &input.stdout_rx
+        } else {
+            &input.stderr_rx
+        };
+        let Some(receiver) = receiver.lock().unwrap().take() else {
+            self.replay_failed.store(true, Ordering::Release);
+            return Some(
+                futures::stream::once(async {
+                    Err(std::io::Error::other("Finite replay input already claimed"))
+                })
+                .boxed(),
+            );
+        };
+        Some(
+            ReceiverStream::new(receiver)
+                .take_while(|message| future::ready(!matches!(message, LogMsg::Finished)))
+                .filter_map(|message| async move {
+                    match message {
+                        LogMsg::Stdout(text) | LogMsg::Stderr(text) => Some(Ok(text)),
+                        _ => None,
+                    }
+                })
+                .boxed(),
+        )
     }
 
     /// One bounded raw capture consumer, independent of the lossy UI broadcast.
@@ -241,6 +332,9 @@ impl MsgStore {
     pub fn stdout_chunked_stream(
         &self,
     ) -> futures::stream::BoxStream<'static, Result<String, std::io::Error>> {
+        if let Some(stream) = self.replay_chunks(true) {
+            return stream;
+        }
         self.history_plus_stream()
             .take_while(|res| future::ready(!matches!(res, Ok(LogMsg::Finished))))
             .filter_map(|res| async move {
@@ -261,6 +355,9 @@ impl MsgStore {
     pub fn stderr_chunked_stream(
         &self,
     ) -> futures::stream::BoxStream<'static, Result<String, std::io::Error>> {
+        if let Some(stream) = self.replay_chunks(false) {
+            return stream;
+        }
         self.history_plus_stream()
             .take_while(|res| future::ready(!matches!(res, Ok(LogMsg::Finished))))
             .filter_map(|res| async move {
@@ -469,5 +566,88 @@ mod durable_capture_tests {
                 .iter()
                 .any(|m| matches!(m, LogMsg::Finished))
         );
+    }
+}
+
+#[cfg(test)]
+mod replay_input_tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn slow_normalizer_backpressures_and_preserves_both_streams_and_eof() {
+        let store = Arc::new(MsgStore::with_replay_input(64, 2, 1));
+        let stdout = store.stdout_chunked_stream();
+        let stderr = store.stderr_chunked_stream();
+        let producer = store.clone();
+        let job = tokio::spawn(async move {
+            for n in 0..5000 {
+                producer
+                    .feed_replay(LogMsg::Stdout(format!("{n} — ✓\n")))
+                    .await
+                    .unwrap();
+                producer
+                    .feed_replay(LogMsg::Stderr(format!("diagnostic {n}\n")))
+                    .await
+                    .unwrap();
+            }
+            producer
+                .feed_replay(LogMsg::Stdout("exact terminal final\n".into()))
+                .await
+                .unwrap();
+            producer.feed_replay(LogMsg::Finished).await.unwrap();
+        });
+        tokio::task::yield_now().await;
+        assert!(
+            !job.is_finished(),
+            "one-item input queue must backpressure producer"
+        );
+        let out = tokio::spawn(stdout.collect::<Vec<_>>());
+        let err = tokio::spawn(stderr.collect::<Vec<_>>());
+        job.await.unwrap();
+        let out = out.await.unwrap();
+        let err = err.await.unwrap();
+        assert_eq!(out.len(), 5001);
+        assert_eq!(err.len(), 5000);
+        for n in 0..5000 {
+            assert_eq!(out[n].as_ref().unwrap(), &format!("{n} — ✓\n"));
+            assert_eq!(err[n].as_ref().unwrap(), &format!("diagnostic {n}\n"));
+        }
+        assert_eq!(out[5000].as_ref().unwrap(), "exact terminal final\n");
+        assert!(
+            store.get_history().is_empty(),
+            "raw replay never fills UI history"
+        );
+        assert!(!store.replay_failure_flag().load(Ordering::Acquire));
+    }
+
+    #[tokio::test]
+    async fn stopped_stdout_consumer_closes_stderr_and_marks_failure() {
+        let store = MsgStore::with_replay_input(64, 2, 1);
+        drop(store.stdout_chunked_stream());
+        let stderr = store.stderr_chunked_stream();
+        assert!(
+            store
+                .feed_replay(LogMsg::Stdout("must not disappear".into()))
+                .await
+                .is_err()
+        );
+        assert!(store.feed_replay(LogMsg::Finished).await.is_err());
+        assert!(stderr.collect::<Vec<_>>().await.is_empty());
+        assert!(store.replay_failure_flag().load(Ordering::Acquire));
+    }
+
+    #[tokio::test]
+    async fn repeated_input_claim_is_visible_and_normal_live_stores_stay_unchanged() {
+        let store = MsgStore::with_replay_input(64, 2, 1);
+        let _first = store.stdout_chunked_stream();
+        assert!(store.stdout_chunked_stream().next().await.unwrap().is_err());
+        assert!(store.replay_failure_flag().load(Ordering::Acquire));
+        let live = MsgStore::with_limits(1024, 4);
+        live.push_stdout("original live stream");
+        live.push_finished();
+        let chunks = live.stdout_chunked_stream().collect::<Vec<_>>().await;
+        assert_eq!(chunks.len(), 1);
+        assert_eq!(chunks[0].as_ref().unwrap(), "original live stream");
+        assert!(!live.replay_failure_flag().load(Ordering::Acquire));
     }
 }

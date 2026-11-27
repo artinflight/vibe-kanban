@@ -1,42 +1,62 @@
-# VK::Run Provenance — review corrections, 2026-11-13
+# Current pickup — archive separation added before managed restart
 
-Source-only change on `vk/a507-vk-run-provenanc`, current fork/staging base
-`bc3b89dee`. Existing production runtime and running work remain untouched.
-Draft [PR #297](https://github.com/artinflight/vibe-kanban/pull/297) targets
-staging. [Previous CI](https://github.com/artinflight/vibe-kanban/actions/runs/43321606696)
-failed backend test compilation (E0061); the review correction fixes the omitted
-context argument in `github_sync_tests.rs`. Check the corrected head's CI before
-integration.
+November27 source integration: start with [the restart-agent takeover scope](VK_DEDUP_TAKEOVER.md).
+Current staging's specialist-delegation and run-provenance changes are retained;
+their original notes are preserved in [staging history](deployment-history/20261127-staging-integration/staging-HANDOFF.md).
+Git integration does not deploy this unfinished combined scope.
 
-- `crates/local-deployment/src/run_context.rs` implements workspace-local private
-  records, bounded hashes/config labels, native file events and terminal capture.
-  The normal spawn path creates the guard; the existing exit monitor owns it.
-- [VK_RUN_PROVENANCE.md](VK_RUN_PROVENANCE.md) defines the extended Media
-  Management schema, CU::Audit exact-ID joins, unknown/mixed/inherited context,
-  storage/privacy limits, activation and rollback. A file hash never proves a
-  model read. Records appear only for future executions after separately
-  authorised managed backend activation, with no AutoSwitch requirement.
-- Eighteen focused tests pass against the actual module in a small mounted-SSD
-  harness, with direct dependency versions pinned to Cargo.lock. Governance and
-  Rust formatting pass. Whole-repo offline Cargo cannot resolve serde; required
-  frontend format/check/lint stop on missing Prettier/TypeScript/ESLint. Full CI
-  and actual post-activation ordinary-run evidence remain distinct validation.
-- CU exact-execution query succeeded during this normal implementation work;
-  the guide records its partial lower bound and lack of automatic start coverage.
-  No provider tests, workers, deployment, merge, restart or device action.
-- A confirmed-empty scope (every selected `fileState` is `missing`) now has
-  `instructionVersion: null` and no unversioned reason, while retaining hashes,
-  states and watches. Real unversioned instructions and unavailable files remain
-  unknown. Five regressions cover this distinction, start/resume and later
-  instruction appearance. No new scope fields; see the guide's pinned v1 contract.
-  The separate CU PR #56 owner is aligning consumption; this branch changes no CU
-  code, attribution or usage evidence, and starts no comparison agents.
+The operator now requests archive separation, automatic movement during normal
+archive actions, automatic revival on message, and active-workspace Nightly
+payloads. This supersedes the previous deferred-archive exclusion for this scope.
+Nightly schedule activation remains off. Actual backend restart belongs to an
+external managing agent; do not perform it from this Vibe workspace.
+[Required behavior/current implementation](VK_WORKSPACE_ARCHIVAL.md).
 
-Review the focused staging PR and its CI before integration. Do not activate
-from this task. Use the existing deployment runbook when separately authorised;
-observe future ordinary starts/resumptions for usage evidence.
+Source changes in this turn:
+- New migration records archive/unarchive intent transactionally, seeds existing
+  archived owners, and increments generations only on state changes.
+- Read-only inventory binds workspace/session/native history metadata and
+  protects pinned/running/shared/unresolved owners, drafts, queues and leases.
+- Eleven fixture tests pass. Current inspection:1,052 archived,244 active,
+  1,016 metadata candidates. No candidate is retirement/backup-exclusion proof.
 
-Previous handoff/source evidence: [specialist delegation](VK_GOAL_SPECIALIST_DELEGATION.md),
-[scrolling deployment](VK_SCROLLING_PROJECTS_DEPLOYMENT.md),
-[HANDOFF history](HANDOFF_HISTORY_20261017.md), and
-[previous record](deployment-history/20261030-before-reconciliation/HANDOFF.md).
+Not done: mover, verified cold catalog, automatic revival/dispatch reconciliation,
+both cold-history readers, Nightly consumer and combined qualification. No live
+migration, transfer/retirement, Nightly change, restart or activation occurred.
+Do not use the intent queue as an accepted archive catalog. Keep private content
+out of Git; bulk staging requires mounted SSD, archive payloads canonical B.
+Next: implement the mover/restore integration with per-workspace custody and
+normal input admission, test failures/concurrent sends, qualify actual B restore
+and Nightly selection, then prepare the combined candidate for external restart.
+
+Dedup continuity:
+Read dedicated WakeWatch CONTEXT.md and STATE. No active native goal or script
+continuation. Preserve existing monitoring/owners/receipts; no duplicate workers,
+new watchers, uncertain replay or model polling. All original conversion/catch-up
+accepted. Packed311plans/3,639histories are prepared, not published live.
+Evidence root:
+`/mnt/vk-storage/vk-log-dedup-20261103-0815/packed-object-qualification-20261124`.
+
+PACKED_PAIR_PACKAGE_ACCEPTED accepts the corrected five-stage private paired
+switch/fallback with latest-copy SQL preserved; actual B triples verified.
+PACKED_FINITE_PACKAGE_ACCEPTED accepts all three finite-package stages and188pins,
+with actual B recovery and no publication dispatch. Preserve this valid historical
+evidence; do not replay accepted jobs or mutate sealed packages.
+
+Existing packed-reader-cutover-v1 and packed-reader-activation-v1 remain UNARMED.
+Their exact hashes/launch details and full accepted evidence are preserved in
+[previous handoff](deployment-history/20261125-before-workspace-archival/HANDOFF.md).
+Those packages do not contain new archive/revival changes. Do not silently arm
+them as a combined release. Any actual restart needs the external managing agent
+and current authorization, current owner/input/settings checks and compatible
+fallback. Original software is fallback only before VKLOGCAS2 publication.
+
+After compatible reader deployment: bind actual POST_ACTIVATION readers, perform
+one exact finite publication under existing custody/recovery, qualify daily
+forward conversion before releasing its saved hold, and finish ordinary public
+desktop/mobile/history/review/settings/queues/monitoring checks. Measure current
+allocated space/file-count/performance/growth including all SSD staging and B.
+The historical73,893,642,640B recovered predates new staging; it is not current
+exclusive filesystem relief. Full deduplication remains unfinished.
+
+Full historical archive: [HANDOFF history](HANDOFF_HISTORY_20261017.md).

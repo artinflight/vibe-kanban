@@ -67,17 +67,13 @@ use uuid::Uuid;
 use worktree_manager::WorktreeError;
 
 use crate::services::{execution_process, notification::NotificationService};
-pub type ContainerRef = String;
-const IMMEDIATE_PR_MERGE_CLEANUP_TARGET_BRANCH: &str = "staging";
-const HISTORICAL_REPLAY_HISTORY_BYTES: usize = 4 * 1024 * 1024;
-const HISTORICAL_REPLAY_CHANNEL_CAPACITY: usize = 1024;
-
 // Raw EOF ends the normalizers, not the derived patch stream. The latter
 // closes only after the feeder and every normalizer release their store owner.
 // Never interpret an old EOF using a later global completion flag.
 fn historical_normalized_output(
     store: &Arc<MsgStore>,
 ) -> BoxStream<'static, Result<LogMsg, std::io::Error>> {
+    let failed = store.replay_failure_flag();
     store
         .history_plus_stream_recoverable()
         .scan(HashSet::<String>::new(), move |sent_paths, msg| {
@@ -95,11 +91,26 @@ fn historical_normalized_output(
             })
         })
         .filter_map(future::ready)
-        .chain(futures::stream::once(async {
-            Ok::<_, std::io::Error>(LogMsg::Finished)
+        .chain(futures::stream::once(async move {
+            if failed.load(std::sync::atomic::Ordering::Acquire) {
+                Err(std::io::Error::other(
+                    "Historical replay input was not fully consumed",
+                ))
+            } else {
+                Ok::<_, std::io::Error>(LogMsg::Finished)
+            }
         }))
         .boxed()
 }
+
+pub type ContainerRef = String;
+const IMMEDIATE_PR_MERGE_CLEANUP_TARGET_BRANCH: &str = "staging";
+const HISTORICAL_REPLAY_HISTORY_BYTES: usize = 4 * 1024 * 1024;
+const HISTORICAL_REPLAY_CHANNEL_CAPACITY: usize = 1024;
+
+// Raw EOF ends the normalizers, not the derived patch stream. The latter
+// closes only after the feeder and every normalizer release their store owner.
+// Never interpret an old EOF using a later global completion flag.
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ArchiveScriptStartOutcome {
@@ -1475,10 +1486,19 @@ pub trait ContainerService: Send + Sync {
         // they must stay bounded. Large finished transcripts can be opened from
         // several browser tabs, and an uncapped temporary store can retain
         // enough replay data to wedge the local server.
-        let temp_store = Arc::new(MsgStore::with_limits(
-            HISTORICAL_REPLAY_HISTORY_BYTES,
-            HISTORICAL_REPLAY_CHANNEL_CAPACITY,
-        ));
+        let replay_input = executor_action.base_executor() == Some(BaseCodingAgent::Codex);
+        let temp_store = Arc::new(if replay_input {
+            MsgStore::with_replay_input(
+                HISTORICAL_REPLAY_HISTORY_BYTES,
+                HISTORICAL_REPLAY_CHANNEL_CAPACITY,
+                32,
+            )
+        } else {
+            MsgStore::with_limits(
+                HISTORICAL_REPLAY_HISTORY_BYTES,
+                HISTORICAL_REPLAY_CHANNEL_CAPACITY,
+            )
+        });
         let (cancel_tx, mut cancel_rx) = oneshot::channel::<()>();
         // Subscribe before either producer can publish or evict a patch.
         let stream = historical_normalized_output(&temp_store);
@@ -1538,7 +1558,11 @@ pub trait ContainerService: Send + Sync {
         let normalizer_owner = temp_store.clone();
         tokio::spawn(async move {
             for handle in handles {
-                let _ = handle.await;
+                if handle.await.is_err() {
+                    normalizer_owner
+                        .replay_failure_flag()
+                        .store(true, std::sync::atomic::Ordering::Release);
+                }
             }
             // Keep the broadcast sender alive until all derived patches exist.
             // Receiver closure then drains queued patches before terminating.
@@ -1561,11 +1585,17 @@ pub trait ContainerService: Send + Sync {
 
                         match msg {
                             Ok(msg @ (LogMsg::Stdout(_) | LogMsg::Stderr(_) | LogMsg::JsonPatch(_))) => {
-                                temp_store_for_feed.push(msg);
+                                if replay_input {
+                                    if temp_store_for_feed.feed_replay(msg).await.is_err() { break; }
+                                } else { temp_store_for_feed.push(msg); }
                             }
                             Ok(LogMsg::Finished) => {}
                             Ok(_) => {}
                             Err(e) => {
+                                if replay_input {
+                                    temp_store_for_feed.replay_failure_flag().store(true, std::sync::atomic::Ordering::Release);
+                                    break;
+                                }
                                 temp_store_for_feed.push(LogMsg::Stderr(format!("stream error: {e}")));
                             }
                         }
@@ -1573,7 +1603,11 @@ pub trait ContainerService: Send + Sync {
                 }
             }
 
-            temp_store_for_feed.push_finished();
+            if replay_input {
+                let _ = temp_store_for_feed.feed_replay(LogMsg::Finished).await;
+            } else {
+                temp_store_for_feed.push_finished();
+            }
         });
 
         Some(Box::pin(CancelOnDropStream::new(stream, cancel_tx)))
@@ -2301,6 +2335,21 @@ mod historical_replay_output_tests {
             assert!(rows.iter().any(Result::is_err), "loss must remain explicit");
         })
     }
+    #[test]
+    fn rejected_raw_input_never_becomes_successful_eof() {
+        run(async {
+            let s = Arc::new(MsgStore::with_limits(1024 * 1024, 32));
+            s.push(patch(0));
+            s.replay_failure_flag()
+                .store(true, std::sync::atomic::Ordering::Release);
+            let out = historical_normalized_output(&s);
+            drop(s);
+            let rows = out.collect::<Vec<_>>().await;
+            assert!(rows.iter().any(Result::is_err));
+            assert!(!rows.iter().any(|row| matches!(row, Ok(LogMsg::Finished))));
+        })
+    }
+
     #[test]
     fn empty_replay_finishes_once_without_invented_final() {
         run(async {

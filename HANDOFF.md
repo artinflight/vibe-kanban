@@ -1,5 +1,10 @@
 # Current pickup — archive separation added before managed restart
 
+November27 source integration: start with [the restart-agent takeover scope](VK_DEDUP_TAKEOVER.md).
+Current staging's specialist-delegation and run-provenance changes are retained;
+their original notes are preserved in [staging history](deployment-history/20261127-staging-integration/staging-HANDOFF.md).
+Git integration does not deploy this unfinished combined scope.
+
 The operator now requests archive separation, automatic movement during normal
 archive actions, automatic revival on message, and active-workspace Nightly
 payloads. This supersedes the previous deferred-archive exclusion for this scope.

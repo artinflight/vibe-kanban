@@ -1,5 +1,14 @@
 # Reproducing and managing the recovered Vibe deployment
 
+## November27 deduplication and archival takeover
+
+Read [VK_DEDUP_TAKEOVER.md](VK_DEDUP_TAKEOVER.md) before treating this checkout
+as a restart candidate. It records the accepted dedup work, unarmed packed-reader
+package, unfinished archive/revival/Nightly scope and external restart ownership.
+Source integration is not permission to restart or proof of combined readiness.
+The dated deployment record below remains historical evidence, not a current
+process identity or instruction to restore an old release.
+
 The Antigravity-enabled release is live, accepted October 30 at 03:18:14 UTC.
 [LIVE_DEPLOYMENT.json](LIVE_DEPLOYMENT.json) records exact identity and limitations;
 [the checklist](DEPLOYMENT_CHECKLIST_20261030.md) records validation scope.

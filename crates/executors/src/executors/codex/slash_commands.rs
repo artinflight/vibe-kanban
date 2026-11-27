@@ -156,7 +156,15 @@ impl Codex {
         let command_parts = self.build_command_builder()?.build_initial()?;
         let session_id = session_id.map(|s| s.to_string());
         let (_, session_fast) = resolve_model(self.model.as_deref());
-        let thread_start_params = self.build_thread_start_params(current_dir);
+        let mut thread_start_params = self.build_thread_start_params(current_dir);
+        let routing = env
+            .get("VK_ROUTING_DECISION")
+            .map(|value| serde_json::from_str::<crate::routing::RoutingDecision>(value))
+            .transpose()?;
+        if matches!(command, CodexSlashCommand::Goal { .. }) {
+            Self::prepare_delegation(&mut thread_start_params, routing.as_ref(), env);
+        }
+        let child_params = thread_start_params.clone();
         let plan_mode = self.plan;
         let capacity = env.capacity.clone();
         let continuation_env = env.clone();
@@ -221,6 +229,8 @@ impl Codex {
                             };
                             crate::original_worker::native_started(&continuation_env, &thread_id, &model, &serde_json::to_value(effort)?).await?;
                             if let Some(effort) = effort { client.set_routed_effort(effort); }
+                            Self::configure_delegation(&client, routing.as_ref(), child_params,
+                                &continuation_env, thread_id.clone(), json!({"model":model,"reasoningEffort":effort})).await?;
                             client.set_resolved_model(model);
                             client.register_session(&thread_id).await?;
                             client.refresh_goal().await?;

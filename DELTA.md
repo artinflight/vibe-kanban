@@ -3565,3 +3565,59 @@ No backend build, real B archive/restore, UI revival or Nightly acceptance was
 performed. Mover/catalog/revival/readers/Nightly integration remains required.
 Archive requirements and remaining acceptance are in VK_WORKSPACE_ARCHIVAL.md;
 prior STATE/STREAM/HANDOFF preserved before compacting current continuity.
+
+
+2026-11-04: Investigated the exact NODEs active-goal delegation rejection. Prepared bounded specialist support with parent goal ownership retained, an explicit existing-session route for old threads lacking dynamic tools, and preserved budget/capacity/stop/admission fences. No production mutation or restart.
+
+## 2026-11-12 — VK::Run Provenance source preparation
+
+- Add automatic workspace-local context records to normal provider start/resume/
+  review and the existing exit monitor, independently of AutoSwitch. Reuse Media
+  Management staging `4b27836` field names in an extended lifecycle envelope.
+- Bounded hashes/version labels, exact run IDs, native event mixed detection,
+  terminal snapshots and explicit unknown/inherited context; no model-read claim,
+  prompt/history/credential capture, provider tests, polling service or migration.
+- Thirteen actual-module tests pass in a bounded SSD harness. Governance/Rust fmt
+  pass; full offline Cargo lacks serde and frontend tools are absent. Full backend
+  integration stays with normal PR CI. See VK_RUN_PROVENANCE.md for exact limits,
+  CU ordinary implementation usage evidence and future activation procedure.
+- No merge, deploy, asset swap, restart or running-job/permission changes.
+
+## 2026-11-13 — PR #297 review corrections
+
+- Fix the omitted fourth exit-monitor argument in the GitHub-sync test fixture,
+  the E0061 source in backend-test/backend-clippy on the previous PR head.
+- Only scopes with every selected file confirmed missing get a null version and
+  no unversioned reason. Preserve their maps/watches; real unversioned,
+  unavailable, malformed and gap cases remain unknown. No new scope fields.
+- Eighteen actual-module tests and focused warnings-denied Clippy pass, including
+  five new classification/change regressions. Full backend compilation is a
+  separate normal PR CI gate; local baseline dependency limits are documented.
+- Document exact v1 semantics for the separate CU PR #56 consumer, including
+  start/end union visibility without assigning later labels to earlier usage.
+  No CU edits, model experiments, merge, deployment or restart.
+
+
+## 2026-11-27 — staging integration and external takeover
+
+User requested publication/integration so the external restart agent can take
+over. Reconciled fork/staging dbcbfbe4e with the dedup branch; only continuity
+documents conflicted. Retained staging's run-provenance and specialist changes,
+preserved both original document sets and added VK_DEDUP_TAKEOVER.md as the
+canonical restart-handoff entry. The combined source needs the qualified archive
+mover/revival/Nightly implementation; no restart or runtime change is authorized
+by this Git integration. Existing packages stay sealed/unarmed.
+
+450 dedup tests completed:434 passed,16 skipped for explicit private-host,
+Rust-probe and owned-retirement-fixture prerequisites. Eleven archival and six
+paired-reader tests passed (451 passed/16 skipped overall). Ops, legacy-path
+guard, Rust formatting and staged whitespace pass. Full formatting/check/lint
+stop on missing Prettier/TypeScript/ESLint. Offline Cargo metadata cannot obtain
+android_system_properties; it correctly disambiguated the merged local-deployment
+sha2 dependency to0.10.9. Whole-workspace compilation was not run with only about
+2.8GiB SSD free. Hosted checks on the final PR head remain the integration gate.
+
+The canonical staging worktree has another owner's uncommitted Antigravity/UI
+work. Preserve it; do not stash/reset or overwrite it to make a sync claim.
+The published remote staging result and existing task worktree are the takeover
+sources; canonical checkout update must preserve that owner's edits.

@@ -1,5 +1,10 @@
 # Deduplication state — November25 packed-layout qualification
 
+November27 source integration: start with [the restart-agent takeover scope](VK_DEDUP_TAKEOVER.md).
+Current staging's specialist-delegation and run-provenance changes are retained;
+their original notes are preserved in [staging history](deployment-history/20261127-staging-integration/staging-HANDOFF.md).
+Git integration does not deploy this unfinished combined scope.
+
 The original finite log conversion and catch-up are accepted. Full deduplication
 acceptance remains open because the first layout reduced bytes while increasing
 file count from38,791 to1,065,426. The user requires storage AND performance repair.

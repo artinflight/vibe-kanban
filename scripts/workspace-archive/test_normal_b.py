@@ -191,6 +191,36 @@ class MaintainedNightlyContractTests(unittest.TestCase):
         payloads.verify(self.manifest['payloads'], roots)
         self.assertEqual(self.active_contexts, 0)
 
+    def test_metadata_reopen_reuses_bodies_and_requires_every_selected_index(self):
+        locator = self.provider.capture(self.manifest)
+        uploaded = self.client.uploads
+        self.assertEqual(self.provider.describe(locator, digest(self.manifest)), self.manifest)
+        self.assertEqual(self.client.uploads, uploaded)
+        bundle = self.provider._bundle(locator, digest(self.manifest))
+        last = bundle['batches'][-1]['configuration']['index']['checkpoint_sha256']
+        (self.root / 'fixture-B' / (last + '.sqlite')).unlink()
+        with self.assertRaises(sqlite3.OperationalError):
+            self.provider.describe(locator, digest(self.manifest))
+        self.assertEqual(self.client.uploads, uploaded)
+        self.assertEqual(self.active_contexts, 0)
+
+    def test_old_generation_uses_current_qualified_reader_settings_without_recapture(self):
+        locator = self.provider.capture(self.manifest)
+        initial = self.client.uploads
+        self.provider.describe(locator, digest(self.manifest))
+        old_configs = list((self.root / 'controls' / self.manifest['operation_id']).glob('reader-*.json'))
+        self.provider.template['host_admission'] = {'fixture_only': True, 'current_resource_bound': 17}
+        self.assertEqual(self.provider.describe(locator, digest(self.manifest)), self.manifest)
+        with self.provider.recall(locator, digest(self.manifest)) as recalled:
+            roots = payloads.restore(recalled.manifest['payloads'], self.root / 'new-reader-restore', recalled.open_body)
+        payloads.verify(self.manifest['payloads'], roots)
+        self.assertEqual(self.client.uploads, initial)
+        self.assertTrue(all(path.exists() for path in old_configs))
+        self.assertEqual(len(list(old_configs[0].parent.glob('reader-*.json'))), 2 * len(old_configs))
+        self.provider.template['B_controls']['B_root'] = 'B:/foreign-backup'
+        with self.assertRaisesRegex(ValueError, 'logical provider'):
+            self.provider.describe(locator, digest(self.manifest))
+
     def test_real_decoder_rejects_corrupt_objects_and_preserves_originals(self):
         locator = self.provider.capture(self.manifest)
         object_path = next((self.root / 'fixture-B').glob('*.zlib'))

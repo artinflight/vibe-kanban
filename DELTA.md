@@ -3721,3 +3721,16 @@ frontend lint, full formatting, Ops and whitespace pass. Full workspace/CI, real
 physical production authority/driver, Nightly selection and combined candidate/
 fallback/API/UI qualification remain open. No production service or data action.
 Native goal stays active with its original five requirements; no false closure.
+
+
+2026-11-27 — Added scoped Nightly cold selection, consistent SQL API snapshots,
+active-path filtering and independent current-SQL/cold-reference recovery scope.
+Exclusions invalidate on message/history/generation/path changes; B metadata
+reopening runs outside live SQL transactions. Normal B old generations retain
+logical provider/index identity while using current qualified reader inputs;
+no archived bodies are recaptured for that update. Physical prepare and its path
+journal now commit atomically. Full67 Python suite and12 final selector tests
+pass with maintained Nightly d419d85f4; fixture B is not actual B acceptance.
+Production driver/ownership closure, actual Nightly cycle wiring, combined
+candidate/fallback/actual-B/UI qualification and staging handoff remain open.
+No restart, archive retirement, Nightly activation or other-owner action occurred.

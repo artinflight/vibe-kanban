@@ -93,7 +93,7 @@ class Catalog:
             updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE workspace_id=?''',
                         (phase, identity(workspace)))
 
-    def begin_archive(self, workspace, version, operation):
+    def begin_archive(self, workspace, version, operation, *, journal=None):
         operation = str(uuid.UUID(operation))
         with self.transaction():
             self._archive_current(workspace, version)
@@ -106,6 +106,11 @@ class Catalog:
                 operation_id=excluded.operation_id,phase='preparing',last_error=NULL,
                 updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')''',
                             (identity(workspace), version, operation))
+            if journal is not None:
+                # Physical intent and its exact original locations commit
+                # together. A crash cannot leave an unresolvable preparing row.
+                self.db.execute('INSERT INTO workspace_archive_io(operation_id,workspace_id,journal) VALUES(?,?,?)',
+                                (operation, identity(workspace), canonical(journal)))
 
     def record_verified(self, workspace, version, operation, manifest, recovery_locator):
         """Record the owner's already-restored manifest; still no exclusion."""

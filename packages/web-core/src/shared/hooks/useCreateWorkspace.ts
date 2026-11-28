@@ -3,6 +3,8 @@ import { workspacesApi } from '@/shared/lib/api';
 import type { CreateAndStartWorkspaceRequest } from 'shared/types';
 import { workspaceSummaryKeys } from '@/shared/hooks/workspaceSummaryKeys';
 import { dispatchWorkspaceLinkRefresh } from '@/shared/lib/workspaceLinkRefresh';
+import { useLocalParticipants } from '@/shared/hooks/useLocalParticipants';
+import { createLinkedWorkspace } from '@/shared/lib/createLinkedWorkspace';
 interface CreateWorkspaceParams {
   data: CreateAndStartWorkspaceRequest;
   linkToIssue?: {
@@ -13,6 +15,7 @@ interface CreateWorkspaceParams {
 
 export function useCreateWorkspace() {
   const queryClient = useQueryClient();
+  const { isLocalOnlySession } = useLocalParticipants();
 
   const refreshIssueWorkspaceState = (projectId?: string | null) => {
     void queryClient.invalidateQueries({ queryKey: workspaceSummaryKeys.all });
@@ -41,28 +44,27 @@ export function useCreateWorkspace() {
   };
 
   const createWorkspace = useMutation({
-    mutationFn: async ({ data, linkToIssue }: CreateWorkspaceParams) => {
-      const { workspace } = await workspacesApi.createAndStart(data);
-
-      if (linkToIssue && workspace && !workspace.task_id) {
-        try {
-          await workspacesApi.linkToIssue(
-            workspace.id,
-            linkToIssue.remoteProjectId,
-            linkToIssue.issueId
+    retry: false,
+    mutationFn: async ({ data, linkToIssue }: CreateWorkspaceParams) =>
+      createLinkedWorkspace(
+        workspacesApi,
+        data,
+        linkToIssue,
+        isLocalOnlySession,
+        async (project) => {
+          const response = await fetch(
+            `/v1/fallback/issues?project_id=${encodeURIComponent(project)}`
           );
-          dispatchWorkspaceLinkRefresh({
-            projectId: linkToIssue.remoteProjectId,
-          });
-        } catch (linkError) {
-          console.error('Failed to link workspace to issue:', linkError);
+          if (!response.ok)
+            throw new Error('Unable to verify the selected issue.');
+          return response.json();
         }
-      }
-
-      return { workspace };
-    },
+      ),
     onSuccess: (_data, variables) => {
-      refreshIssueWorkspaceState(variables.linkToIssue?.remoteProjectId);
+      refreshIssueWorkspaceState(
+        variables.linkToIssue?.remoteProjectId ??
+          variables.data.linked_issue?.remote_project_id
+      );
     },
     onError: (err) => {
       console.error('Failed to create workspace:', err);

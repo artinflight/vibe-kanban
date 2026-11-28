@@ -608,6 +608,7 @@ export function ModelSelectorContainer({
           onModelSelect={handleModelSelect}
           onReasoningSelect={handleReasoningSelect}
           recentModelEntries={recentModelEntries}
+          preserveModelOrder={agent === 'CODEX'}
           showDefaultOption={showDefaultOption}
           onSelectDefault={() => handleModelSelect(null)}
           scrollRef={scrollRef}

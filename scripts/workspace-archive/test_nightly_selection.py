@@ -91,9 +91,10 @@ class NightlySelectionTests(unittest.TestCase):
             self.assertEqual(json.loads(row[0]), self.f.payload)
         with Custody(self.f.root / 'locks', self.f.w, exclusive=True):
             pass
-        with self.select() as next_selection:
-            self.assertEqual(next_selection.references, [])
-            self.assertTrue(next_selection.include(self.f.roots[0] + '/log'))
+        # Until revival finishes the bytes remain cold. It is unsafe to call
+        # this an empty active workspace and accept a backup with no references.
+        with self.assertRaisesRegex(Conflict, 'transition is incomplete'):
+            with self.select(): pass
 
     def test_history_read_intent_invalidates_exclusion_before_physical_restore(self):
         with self.select() as selection:
@@ -163,12 +164,11 @@ class NightlySelectionTests(unittest.TestCase):
                 stream.write(b'corrupt header!!')
             with self.assertRaises(Conflict): selection.descriptor()
 
-    def test_noncurrent_archived_generation_is_captured_normally(self):
+    def test_noncurrent_cold_generation_requires_restore_before_active_backup(self):
         self.f.c.db.execute('UPDATE workspace_archive_requests SET request_version=request_version+1')
-        with self.select() as selection:
-            self.assertEqual(selection.references, [])
-            self.assertTrue(selection.include(self.f.roots[0] + '/log'))
-            self.assertEqual(self.f.b.describes, 0)
+        with self.assertRaisesRegex(Conflict, 'transition is incomplete'):
+            with self.select(): pass
+        self.assertEqual(self.f.b.describes, 0)
 
 
 if __name__ == '__main__': unittest.main()

@@ -1,3 +1,5 @@
+import { useReadLater } from '@/shared/hooks/useReadLater';
+import { ReadLaterButton } from '@vibe/ui/components/ReadLaterButton';
 import { useCallback } from 'react';
 import { useRouter } from '@tanstack/react-router';
 import { BellIcon, CheckIcon, ChecksIcon } from '@phosphor-icons/react';
@@ -58,10 +60,27 @@ function NotificationMessage({
 
 export function NotificationsPage() {
   const router = useRouter();
+  const { isReadLater, setReadLater } = useReadLater();
   const { data, updateMany, enabled, unseenCount, groupedNotifications } =
     useNotifications();
   const { membersByUserId } = useNotificationMembers(data);
 
+  const deferred = (group: GroupedNotification) =>
+    !group.seen &&
+    group.unseenNotificationIds.every((id) => isReadLater('notification', id));
+  const sections = [
+    {
+      title: 'Attention',
+      groups: groupedNotifications.filter(
+        (group) => !group.seen && !deferred(group)
+      ),
+    },
+    { title: 'Read Later', groups: groupedNotifications.filter(deferred) },
+    {
+      title: 'Completed',
+      groups: groupedNotifications.filter((group) => group.seen),
+    },
+  ];
   const markGroupSeen = useCallback(
     (group: GroupedNotification) => {
       if (group.unseenNotificationIds.length === 0) {
@@ -127,69 +146,87 @@ export function NotificationsPage() {
           </div>
         ) : (
           <div className="divide-y divide-border">
-            {groupedNotifications.map((group) => (
-              <div
-                key={group.id}
-                role="button"
-                tabIndex={0}
-                onClick={() => handleClick(group)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    handleClick(group);
-                  }
-                }}
-                className={cn(
-                  'w-full flex items-center gap-base px-double py-base text-left transition-colors cursor-pointer outline-none',
-                  'hover:bg-secondary',
-                  'focus-visible:bg-secondary',
-                  'focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-brand',
-                  !group.seen && 'bg-brand/5'
-                )}
-              >
-                <span
-                  className={cn(
-                    'shrink-0 w-2 h-2 rounded-full',
-                    !group.seen && 'bg-brand'
-                  )}
-                />
-                <div className="flex-1 min-w-0">
-                  <p
-                    className={cn(
-                      'text-base truncate',
-                      group.seen ? 'text-normal' : 'text-high'
-                    )}
-                  >
-                    <NotificationMessage
-                      segments={getGroupedNotificationSegments(group)}
-                      membersByUserId={membersByUserId}
-                    />
-                  </p>
-                  <p className="text-sm text-low mt-0.5">
-                    {formatRelativeTime(group.latest.created_at)}
-                  </p>
-                </div>
-                {!group.seen && (
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      markGroupSeen(group);
+            {sections.map((section) => (
+              <section key={section.title} aria-label={section.title}>
+                <h2 className="px-double py-base text-base font-medium text-normal">
+                  {section.title}{' '}
+                  <span className="text-low">{section.groups.length}</span>
+                </h2>
+                {section.groups.map((group) => (
+                  <div
+                    key={group.id}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => handleClick(group)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        handleClick(group);
+                      }
                     }}
-                    onKeyDown={(e) => e.stopPropagation()}
                     className={cn(
-                      'shrink-0 inline-flex items-center gap-half rounded-sm px-half py-half text-sm text-low transition-colors cursor-pointer',
-                      'hover:bg-secondary hover:text-normal',
-                      'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brand'
+                      'w-full flex items-center gap-base px-double py-base text-left transition-colors cursor-pointer outline-none',
+                      'hover:bg-secondary',
+                      'focus-visible:bg-secondary',
+                      'focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-brand',
+                      !group.seen && 'bg-brand/5'
                     )}
-                    aria-label="Mark notification as read"
-                    title="Mark as read"
                   >
-                    <CheckIcon size={14} weight="bold" />
-                    <span className="hidden sm:inline">Mark as read</span>
-                  </button>
-                )}
-              </div>
+                    <span
+                      className={cn(
+                        'shrink-0 w-2 h-2 rounded-full',
+                        !group.seen && 'bg-brand'
+                      )}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p
+                        className={cn(
+                          'text-base truncate',
+                          group.seen ? 'text-normal' : 'text-high'
+                        )}
+                      >
+                        <NotificationMessage
+                          segments={getGroupedNotificationSegments(group)}
+                          membersByUserId={membersByUserId}
+                        />
+                      </p>
+                      <p className="text-sm text-low mt-0.5">
+                        {formatRelativeTime(group.latest.created_at)}
+                      </p>
+                    </div>
+                    {!group.seen && (
+                      <ReadLaterButton
+                        later={deferred(group)}
+                        onToggle={() => {
+                          const later = !deferred(group);
+                          for (const id of group.unseenNotificationIds)
+                            setReadLater({ kind: 'notification', id }, later);
+                        }}
+                      />
+                    )}
+                    {!group.seen && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          markGroupSeen(group);
+                        }}
+                        onKeyDown={(e) => e.stopPropagation()}
+                        className={cn(
+                          'shrink-0 inline-flex items-center gap-half rounded-sm px-half py-half text-sm text-low transition-colors cursor-pointer',
+                          'hover:bg-secondary hover:text-normal',
+                          'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brand'
+                        )}
+                        aria-label="Mark notification as read"
+                        title="Mark as read"
+                      >
+                        <CheckIcon size={14} weight="bold" />
+                        <span className="hidden sm:inline">Mark as read</span>
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </section>
             ))}
           </div>
         )}

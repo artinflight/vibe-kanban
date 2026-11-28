@@ -51,6 +51,7 @@ class IntegratedAuthorityTests(unittest.TestCase):
 
     def invoke(self, action):
         authority = WorkspaceAuthority(self.f.w, self.config, self.host)
+        self.current_authority = authority
         authority.bind_dependencies(SharedGit(self.root / 'controls', self.root / 'locks', self.provider, authority),
                                     SharedFiles(self.root / 'controls', self.root / 'locks', self.provider, authority))
         with Custody(self.root / 'locks', self.f.w, exclusive=True) as custody:
@@ -105,6 +106,27 @@ class IntegratedAuthorityTests(unittest.TestCase):
             self.invoke('archive')
         self.assertTrue(self.f.container.exists())
         self.assertIsNone(self.catalog.state(self.f.w))
+
+    def test_new_message_cancels_long_capture_before_retirement(self):
+        from contextlib import closing
+        original = self.provider.capture
+        payload = dict(prompt='arrived during capture', executor_config={'model': 'selected'},
+                       perform_git_reset=False, force_when_dirty=False, retry_process_id=None)
+        def capture(manifest):
+            # The real backend uses another connection while the helper streams
+            # B data. Its committed input must invalidate the next stream guard.
+            with closing(Catalog(self.f.f.db)) as other:
+                other.retain_input(self.f.w, str(self.f.f.sid), str(uuid.uuid4()), payload)
+            self.current_authority.check(self.f.w)
+            return original(manifest)
+        self.provider.capture = capture
+        with self.assertRaises(Conflict):
+            self.invoke('archive')
+        self.assertEqual(self.provider.captures, 0)
+        self.assertTrue(self.f.history.exists())
+        self.assertTrue(self.f.container.exists())
+        row = self.catalog.db.execute('SELECT payload FROM workspace_archive_inputs').fetchone()
+        self.assertEqual(json.loads(row[0]), payload)
 
     def test_generated_config_contract_matches_current_rust_source(self):
         source = (inventory_fixture.ROOT / 'crates/local-deployment/src/container.rs').read_text()

@@ -34,6 +34,16 @@ class Controller:
             if request is None or request['requested_state'] != 'archived':
                 raise Conflict('The current archive request was withdrawn')
             self.catalog._archive_current(self.workspace, request['request_version'])
+            observed_version = [None]
+            def current_request():
+                # Check new SQL commits at byte-stream guards without repeatedly
+                # rescanning unchanged queues. A retained message cancels slow
+                # preparation promptly; its original data remains available.
+                version = self.catalog.db.execute('PRAGMA data_version').fetchone()[0]
+                if observed_version[0] != version:
+                    self.catalog._archive_current(self.workspace, request['request_version'])
+                    observed_version[0] = version
+            self.authority.archive_guard = current_request
             if phase == 'restoring':
                 raise Conflict('Existing restoration must complete before a new archive')
             if phase == 'active':

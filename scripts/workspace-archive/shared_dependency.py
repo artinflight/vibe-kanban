@@ -63,7 +63,7 @@ class SharedGit:
     def ensure(self, spec):
         """Reuse a verified graph or capture/restore it through the normal owner."""
         self.authority.check_shared(spec)
-        if git_dependency.inspect(spec['worktree'], spec['repository'], spec['branch'].removeprefix('refs/heads/')) != spec:
+        if git_dependency.inspect_current(spec) != spec:
             raise Conflict('Workspace Git dependency changed before preparation')
         common = Path(spec['common'])
         required = spec['object_roots']
@@ -83,7 +83,7 @@ class SharedGit:
                 if self.provider.describe(record['recovery_locator'], record['manifest_sha256']) != record['manifest']:
                     raise Conflict('Shared normal-B recovery point changed')
                 check()
-                if git_dependency.inspect(spec['worktree'], spec['repository'], spec['branch'].removeprefix('refs/heads/')) != spec:
+                if git_dependency.inspect_current(spec) != spec:
                     raise Conflict('Workspace Git dependency changed during reuse')
                 return record
             check()
@@ -143,7 +143,7 @@ class SharedGit:
             if roots(stage / '0') != covered:
                 raise Conflict('Independently restored Git object inventory differs')
             check()
-            if git_dependency.inspect(spec['worktree'], spec['repository'], spec['branch'].removeprefix('refs/heads/')) != spec:
+            if git_dependency.inspect_current(spec) != spec:
                 raise Conflict('Workspace Git dependency changed during capture')
             record = dict(format='vk-workspace-shared-git-point-v1', manifest=manifest,
                 manifest_sha256=digest(manifest), recovery_locator=locator)

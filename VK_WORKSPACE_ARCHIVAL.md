@@ -76,7 +76,20 @@ separate. A UI flag or incomplete physical transaction never grants exclusion.
   stay in place; unrelated branch changes do not recapture an already covered
   graph. New workspace commits get a new immutable point. Dirty/untracked work,
   unfinished Git operations, filters and unqualified external/submodule objects
-  are protected. Production authority/driver integration remains required.
+  are protected. Durably removed worktrees still retain their shared branch
+  recovery graph; their absence does not erase that dependency.
+- `ownership.py` / `process_use.py`: exact current application/native/repository
+  bindings, overlap and dirty-work protection, and process cwd/open/mapped-file
+  checks. Custom outer-workspace files and external aliases remain protected.
+  This is a read-only ownership contract, not privileged host clearance.
+- `shared_files.py`: immutable normal-B points for shared attachments, verified
+  independently before reuse; missing-file recovery preserves later uploads and
+  refuses to overwrite changed shared files. Shared attachment roots stay live.
+- `controller.py` / `authority.py`: one finite operation reconciles the current
+  journal, composes ownership and shared recovery, and verifies dependencies
+  before retained input becomes ready. Lost capture receipts reuse the same
+  operation. No daemon, dispatch loop, service change or replacement controller
+  is created. The source-pinned production Host/factory still needs integration.
 - `nightly_selection.py`: scoped cold-generation custody, coherent SQLite API
   image, active-path filtering and independent SQL/cold-reference recovery
   validation. Exclusions invalidate on retained messages, history-read intent,
@@ -111,10 +124,20 @@ as authorization to erase local source. New absent worktrees can still be create
 
 ## Remaining implementation and acceptance
 
-The trusted physical driver, complete production ownership/Git/attachment closure
-and Nightly consumer remain unfinished. Runtime configuration stays absent in
+The finite controller, authority composition and shared Git/attachment contracts
+are implemented and fixture-tested. The source-pinned production Host/factory,
+actual process clearance and Nightly consumer integration remain unfinished. Runtime configuration stays absent in
 production until those dependencies and the combined release are qualified.
 Native metadata snapshots alone do not establish process or dependency custody.
+On November 28, ordinary `/proc` inspection was denied for the user service
+manager and some sandboxed processes. `process_use.py` refuses to call that clear.
+The installed digest-approved `vk-process-inspect-v1` accepts only its managed
+artifact scope; `vk-historical-archive-inspect-v1` accepts one fixed old backup.
+Neither provides workspace-path clearance. Do not reuse those sudo permissions
+outside their root-owned policies, exempt unreadable processes by name, or change
+host security settings to make a test pass. The production qualification must
+resolve bounded workspace process inspection and test it in the actual host
+context. Fixture process lists in tests are explicitly not that proof.
 The selection contract must be connected to Nightly's recorded namespace/current
 map and normal current-set acceptance; importing the helper alone is insufficient.
 The existing Nightly source owner, cursor, retained STOP/STARTED and schedule stay
@@ -172,9 +195,14 @@ These are source contracts, not an activated Nightly or actual-B acceptance.
 
 ## Validation
 
-The full81-test Python suite passes with the actual maintained Nightly modules
-supplied. This includes12 Nightly selection checks,7 real-Git dependency checks
-and6 actual cross-filesystem publication/recovery checks. The latter use small
+All 105 Python tests pass on the final source (49.251 seconds) with the actual maintained Nightly modules
+supplied. This includes 12 Nightly selection checks, 8 real-Git dependency checks,
+6 cross-filesystem recovery checks, 7 ownership checks, 6 finite-controller checks,
+6 shared-attachment checks and 4 composed authority/revival checks. The composed
+checks use actual Git/SQLite/filesystem data, exact retained inputs and shared
+attachment recovery; host and B connections are fixtures. They do not certify
+production service identities, privileged process visibility or actual Desktop B.
+Final run evidence is recorded in HANDOFF. The cross-filesystem checks use small
 disposable /tmp and /dev/shm fixtures on distinct devices; they are not production
 or actual Desktop B acceptance. Concurrent SQL commits during B metadata reopen,
 anonymous-file interruption, copy-intent interruption, interrupted staging

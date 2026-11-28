@@ -107,6 +107,7 @@ class Lifecycle:
         manifest = dict(format='vk-workspace-archive-v1', workspace_id=self.workspace,
                         request_version=version, operation_id=operation,
                         ownership=ownership, payloads=tree)
+        self.authority.validate_payloads(manifest)
         stage = self.staging / operation
         journal = dict(manifest=manifest, verification_stage=str(stage),
                        retired_roots=[str(Path(p).with_name('.vk-cold-' + operation + '-' + str(i)))
@@ -174,6 +175,7 @@ class Lifecycle:
         journal, manifest = record['journal'], record['journal']['manifest']
         tree = manifest['payloads']
         state = self.catalog.state(self.workspace)
+        self.authority.validate_payloads(manifest)
         if state['phase'] == 'verified':
             self._archive_check(record, ('verified',))
             payloads.verify(tree, versions=True, guard=lambda: self.check(manifest))
@@ -202,6 +204,7 @@ class Lifecycle:
         record = self._load()
         journal, manifest = record['journal'], record['journal']['manifest']
         self._archive_check(record, ('cold',))
+        self.authority.validate_payloads(manifest)
         if any(os.path.lexists(p) for p in manifest['payloads']['roots']):
             raise Conflict('Active path reappeared; cold retirement stopped')
         guard = lambda: self._archive_check(record, ('cold',))
@@ -288,6 +291,9 @@ class Lifecycle:
         manifest = journal['manifest']
         tree = manifest['payloads']
         payloads.verify(tree, guard=lambda: self.check(manifest))
+        # Bytes alone do not make a workspace runnable: shared Git/attachment
+        # dependencies must verify before any input becomes dispatchable.
+        self.authority.complete_restore(self.workspace, manifest)
         if not journal.get('publication_verified', False):
             journal['publication_verified'] = True
             self._save(record, journal)

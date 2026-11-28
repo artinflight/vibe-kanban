@@ -117,6 +117,28 @@ def inspect(worktree, repository, branch):
                 branch=reference, head=head, object_roots=roots)
 
 
+def inspect_branch(repository, branch):
+    """Preserve Git recovery for a durably removed worktree; move no Git data."""
+    repository = Path(repository)
+    payloads.parent_safe(repository)
+    if repository.resolve(strict=True) != repository:
+        raise Conflict('Canonical shared repository required')
+    common = Path(line(repository, 'rev-parse', '--path-format=absolute', '--git-common-dir')).resolve(strict=True)
+    reference = 'refs/heads/' + branch
+    git(repository, 'check-ref-format', reference)
+    head = object_id(line(repository, 'rev-parse', '--verify', '--end-of-options', reference + '^{commit}'))
+    if os.path.lexists(common / 'objects/info/alternates') or any((common / 'objects/pack').glob('*.promisor')):
+        raise Conflict('External Git object dependencies are protected')
+    return dict(format='vk-workspace-git-dependency-v1', worktree=None, admin=None,
+                repository=str(repository), common=str(common), branch=reference, head=head, object_roots=[head])
+
+
+def inspect_current(spec):
+    branch = spec['branch'].removeprefix('refs/heads/')
+    return (inspect(spec['worktree'], spec['repository'], branch) if spec['worktree']
+            else inspect_branch(spec['repository'], branch))
+
+
 def verify_shared_snapshot(common, roots):
     """Verify a separately restored common directory without external objects."""
     common = Path(common)
@@ -155,5 +177,5 @@ def verify_live(spec):
         git(repository, 'cat-file', '-e', object_id(root))
     # Inspect both immutable graph and the restored administrative binding. No
     # checkout, branch reset, source overwrite or shared-repository cleanup.
-    if inspect(spec['worktree'], spec['repository'], spec['branch'].removeprefix('refs/heads/')) != spec:
+    if inspect_current(spec) != spec:
         raise Conflict('Restored worktree Git identity differs')

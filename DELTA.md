@@ -3745,3 +3745,20 @@ using complete anonymous file inodes, target resource admission and durable
 verification before temporary-source retirement. The full81 Python tests pass,
 including real Git and two Linux fixture filesystems. No production movement,
 backend action, Nightly schedule change or actual-B acceptance is claimed.
+
+## 2026-11-28 — finite archive authority and shared attachment recovery
+
+Added current SQL/native/Git ownership closure, actual fixture cwd/FD/map protection,
+finite operation reconciliation, independently verified shared attachment points
+and missing-file recovery. Composed tests archive/revive a real Git worktree and
+retain exact input/settings, protect changed branches/new uploads, and require
+shared dependencies before input becomes ready. Removed worktrees retain branch
+recovery. Custom untracked container files and external aliases remain protected.
+
+The full suite expanded to 105 tests; final source result is in the private
+`source-recovery/archive-composed-final-tests.log`. Host/B are fixtures in the new
+composition tests. The actual Host/factory, bounded privileged process inspection,
+Nightly current-map integration, combined candidate/fallback qualification and
+staging handoff remain unfinished. Existing root inspectors' policy does not cover
+workspace paths; no permission bypass, privileged installation or production
+change occurred. Earlier approved source commits b8dd25238/750479729 are pushed.

@@ -37,11 +37,13 @@ Old generations retain immutable provider/index identities while using current
 qualified reader inputs. Updating software does not require recapturing bodies.
 Physical preparing state and its original-path journal now commit atomically.
 
-The full81-test Python suite passes with Nightlyd419d85f4. Added real Git graph
-recovery/reuse and actual cross-filesystem publication tests cover shared-history
-closure and the host's distinct SSD/live-history filesystems. This code preserves
-shared repositories and only exposes complete final-file writes after hashing.
-The production owner/attachment/driver integration remains unfinished. Earlier source checks
+The archive source suite has expanded from 81 to 105 tests. New source composes
+current SQL/native/Git ownership, finite archive/revival, shared attachment points
+and dependency verification before input readiness. It protects later shared
+writes and reconciles lost receipts against the same operation. Final run evidence
+is recorded in HANDOFF. Production Host/factory and process clearance remain open:
+ordinary inspection cannot read some host processes, and existing privileged
+helpers do not authorize workspace-path inspection. Earlier source checks
 passed:9 archive/revival Rust tests,2 custody tests,3 worktree-preservation tests,
 3 existing owner regressions, backend compilation, generated types/check, four
 frontend type checks, changed frontend lint and formatting. Local B/HTTP fixtures

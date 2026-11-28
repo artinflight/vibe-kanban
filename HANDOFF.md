@@ -27,8 +27,9 @@ request the writer's restoration. Concurrent readers share one restoration.
 The browser retains request identity and displays saved-message/recovery status.
 Ordinary recreation preserves populated/aliased worktrees on branch mismatch.
 
-The full81-test Python suite passes with Nightly source d419d85f4, including
-12 selection,7 real-Git dependency and6 cross-filesystem recovery tests. Nine archive/revival Rust tests,
+The earlier 81-test suite passed with Nightly source d419d85f4. Source integration
+has expanded it to 105 tests: ownership, finite-controller recovery, shared-upload
+recovery and composed Git/SQL/message revival. See the final run record below. Nine archive/revival Rust tests,
 two kernel-custody tests, three worktree-preservation tests and three existing
 owner regressions pass. Backend compilation, generated types/check, all four
 frontend type checks, changed frontend lint and formatting pass. TypeScript used
@@ -56,14 +57,24 @@ Logs: `archive-dependencies-tests.log`, `git-dependency-final-tests.log`,
 `cross-filesystem-tests.log`, `format-dependencies.log` in `source-recovery/`.
 
 The operator explicitly approved publication of this task's source/tests/docs to
-the existing public artinflight/vibe-kanban repository. b8dd25238 is verified pushed;
+the existing public artinflight/vibe-kanban repository. b8dd25238 and 750479729 are verified pushed;
 the earlier publication hold is resolved. Preserve private data/credentials externally.
 
 ## Remaining outcomes
 
-The immediate implementation gap is the source-pinned physical driver with actual
-serving-reader, native/process, Git and attachment dependency ownership. Reuse the
-checked lifecycle/custody/B adapter. Then wire the tested Nightly selection contract into the actual recorded namespace/current-map cycle,
+The finite controller/authority now composes the actual SQL/native/Git binding
+planner, shared Git/attachment recovery and journaled lifecycle. Integrated source
+tests archive a Git worktree and restore its exact retained message plus a missing
+shared upload while preserving newer uploads. A changed shared branch holds the
+input and preserves the newer branch. Existing/future dispatch remains backend-owned.
+
+The immediate gap is the production Host/factory and its live serving-parent,
+paired-reader/config/resource/process-visibility qualification. Ordinary same-user
+`/proc` reads are denied for some manager/browser processes. Existing sudo-approved
+inspectors are scoped to managed artifacts or one historical archive, not arbitrary
+workspace paths. Do not bypass their policy or mistake fixture process tests for
+host clearance. Preserve the existing security settings. Read the exact remaining
+boundary in VK_WORKSPACE_ARCHIVAL.md. Reuse the tested lifecycle/custody/B adapter. Then wire the tested Nightly selection contract into the actual recorded namespace/current-map cycle,
 actual B/current-SQL/software/frontend recovery, combined candidate/fallback and
 ordinary paired-reader/API/desktop/mobile validation, and qualified staging handoff.
 [Full takeover scope](VK_DEDUP_TAKEOVER.md) remains IN PROGRESS; no deployable
@@ -95,3 +106,17 @@ fallback must understand VKLOGCAS2 and use latest SQL, never overwrite later wri
 Historical73,893,642,640B savings exclude later staging and are not current net relief.
 
 Full historical archive: [HANDOFF history](HANDOFF_HISTORY_20261017.md).
+
+## November 28 composed integration evidence
+
+Source-only logs in adjacent `source-recovery/`: `ownership-tests.log` (7),
+`controller-tests.log` (6), `shared-files-tests.log` (6), `authority-tests.log` (4),
+`archive-composed-tests.log` (105 passing before the final inode-boundary check),
+and `archive-composed-final-tests.log` (all 105 final-source tests pass in 49.251 seconds, no skips).
+`format-composed.log` records the completed formatter. No live SQL, data, service,
+Nightly controller/schedule, privileged inspector or root policy was modified.
+
+The native goal API still reports the old `clear` goal paused and refuses
+checkpoint writes. Publication approval is resolved; do not create a replacement
+goal or claim the five release requirements complete. The user's full combined
+readiness objective and fixed checklist remain authoritative.

@@ -79,6 +79,12 @@ class FixtureAuthority:
         if ownership != {'roots': self.roots, 'fixture_only': True}:
             raise Conflict('unknown fixture ownership')
 
+    def validate_payloads(self, manifest):
+        self.check(manifest['workspace_id'], manifest)
+
+    def complete_restore(self, workspace, manifest):
+        self.check(workspace, manifest)
+
     def reserve_restore(self, manifest, stage):
         self.check(manifest['workspace_id'], manifest)
 

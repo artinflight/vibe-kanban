@@ -10,9 +10,9 @@ integration, not deployment, restart authorization or a completion claim.
 | --- | --- | --- |
 | Original writer cutover and history conversion | Original conversion and catch-up accepted; supported Codex resume avoids historical replay duplication | Preserve native context and verify current growth after final deployment |
 | Packed storage/performance repair | Three compatible readers and finite/daily converters tested; Desktop B recovery and private paired switch accepted | Deploy qualified readers, publish packed storage, retire only verified old objects, finish current public/recovery/performance checks |
-| Archived workspace separation | Finite controller/authority, journaled cross-filesystem movement, shared Git/attachment recovery and B adapter source; expanded 105-test suite | Qualify production Host/factory, actual process visibility and B recovery |
+| Archived workspace separation | Finite physical driver, paired-reader/resource guards, journaled movement, shared recovery and B adapter;119 source tests pass | External manager installs scoped inspector; qualify actual process visibility, paired readers and B recovery |
 | Automatic revival on message | Ordinary admission/readers and visible recovery state connected in opt-in source; backend compiles | Qualify physical driver, exact dispatch, both readers and ordinary UI on combined candidate |
-| Nightly active-workspace backup | Cold/current-SQL selection and recovery contract tested; existing Nightly retains its owner | Wire into recorded namespace/current-map and shared recovery closure; prove cold payloads aren't recopied; schedule remains off |
+| Nightly active-workspace backup | Maintained Nightly service/current-map/independent SQL consumer now integrates cold references; existing owner retained | Qualify the installed current-map/shared recovery cycle on actual B; prove no cold recapture; schedule remains off |
 
 **No dedup conversion job was running at the November27 readback.** The prepared
 packed-reader activation has no APPROVAL, ARMED, STARTED, ATTEMPT or POST_ACTIVATION

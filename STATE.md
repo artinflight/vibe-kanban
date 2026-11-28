@@ -1,98 +1,64 @@
-# Combined deduplication/archive release — 2026-11-27
+# Combined archive/revival release — November 28, 2026
 
-The authoritative goal is to prepare the complete release for the dedicated
-external restart agent. [Takeover scope](VK_DEDUP_TAKEOVER.md) and
-[archive acceptance](VK_WORKSPACE_ARCHIVAL.md) define the required outcome.
-No complete combined candidate/fallback manifest exists yet. Do not substitute
-the older sealed dedup-only package or claim readiness from source tests.
-No production restart/cutover is authorized for this inside-Vibe agent.
+The release is **not yet qualified for cutover**. The goal is the complete
+source-pinned dedup/packed-reader/archive/revival/Nightly release for the dedicated
+external managing agent. Source implementation or a successful build does not
+satisfy that goal. [Scope](VK_DEDUP_TAKEOVER.md),
+[archive acceptance](VK_WORKSPACE_ARCHIVAL.md), and [pickup](HANDOFF.md).
 
-## Current source
+## Live state
 
-Work continues on `vk/0815-archive-release` in the separate SSD checkout named in
-[HANDOFF](HANDOFF.md). It preserves staging78e472543's specialist-delegation and
-run-provenance changes. Their notes remain in
-[staging history](deployment-history/20261127-staging-integration/staging-HANDOFF.md).
-The managed0815 worktree was unexpectedly recreated on its recorded branch;
-actor/cause are unproven. Exact source writes were recovered and pushed. The
-candidate now refuses ordinary recreation over populated or aliased destinations.
-That safeguard is source only; production has not been changed.
+Production remains unchanged. On November28 the writer service
+`vibe-kanban-native-review-20261015.service` remained active at PID70372,
+invocation81dd8bb21f894aa1bd286f8f0029b770. The protected reader service
+`vk-chat-history-readonly-20261010.service` remained active with wrapperPID2573723,
+invocation9c0b08030aa445318309e41dff070786. These observations are historical;
+reconcile actual identities again before any deployment. Public frontend remains
+`/mnt/vk-storage/vk-codex-menu-20261120/release/paired/candidate`.
 
-Implemented archive contracts include the existing/future archive intent outbox,
-immutable recovery catalog, exact retained message/settings and reserved ordinary
-execution identity, native-child inventory, Linux per-workspace custody, journaled
-movement and same-path restoration. Normal send/review/worktree admission and
-raw/normalized history use the optional runtime. Protected readers consult the
-current catalog and request the writer's recovery. Browser requests retain their
-identity and show pending restoration or recovery errors.
+Production archive configuration and the new process inspector are absent.
+No live migration, archival retirement, schedule activation or restart occurred.
+Nightly remains OFF. Backend spinup/cutover belongs to the external managing agent.
+Preserve pending inputs, selected settings, backup epochs and other owners.
 
-Nightly selection now holds scoped cold custody, captures a matching SQL API
-image, filters active paths and validates independent SQL/cold-reference recovery.
-Messages, history-read intent, generation changes or reappearing paths invalidate
-exclusions. Remote metadata work does not pin a live SQL transaction. The contract
-still needs integration into the existing namespace/current-map cycle.
+## Candidate source and evidence
 
-Normal Desktop-B adapter code uses the maintained Nightly capture/index/decoder.
-Old generations retain immutable provider/index identities while using current
-qualified reader inputs. Updating software does not require recapturing bodies.
-Physical preparing state and its original-path journal now commit atomically.
+The source implements archive intent, immutable recovery generations, exact
+retained messages/settings, one reserved execution, kernel custody, native/Git/
+attachment ownership, lossless movement/revival and both history reader paths.
+The finite driver now checks the actual serving pair, source/config bindings,
+resources and privileged process-clearance receipts before physical changes.
+A root-owned metadata-only inspector package is prepared but not installed.
 
-The archive source suite has expanded from 81 to 105 tests. New source composes
-current SQL/native/Git ownership, finite archive/revival, shared attachment points
-and dependency verification before input readiness. It protects later shared
-writes and reconciles lost receipts against the same operation. Final run evidence
-is recorded in HANDOFF. Production Host/factory and process clearance remain open:
-ordinary inspection cannot read some host processes, and existing privileged
-helpers do not authorize workspace-path inspection. Earlier source checks
-passed:9 archive/revival Rust tests,2 custody tests,3 worktree-preservation tests,
-3 existing owner regressions, backend compilation, generated types/check, four
-frontend type checks, changed frontend lint and formatting. Local B/HTTP fixtures
-are not actual B or ordinary application acceptance. Exact scope/logs are in
-HANDOFF and the archive document.
+The maintained Nightly owner is contained at `scripts/nightly-owner/`, with
+upstream d419d85f4 provenance. Its ordinary service, current-map acceptance and
+independent current-SQL reader now support cold references. Pending revival
+cannot masquerade as empty active history. No second backlog converter is added.
 
-## Remaining release blockers
+119 archive integration tests passed against the contained Nightly source.
+Changed Nightly service/consumer suites passed14 each; composed restore passed7.
+These are source/local-transport evidence, not actual Desktop B acceptance.
+The offline backend build succeeded in17m11s. The frontend build succeeded with
+a bounded3072MiB heap; optional Sentry map upload lacked authentication.
 
-The trusted production movement driver and complete current process/Git/native/
-attachment ownership/dependency closure remain unfinished. Connect the tested
-Nightly selection contract to its existing recorded namespace and current-set
-acceptance, preserving its owner/cursor/retained records. Qualify actual Desktop B
-recovery, both readers, ordinary desktop/mobile/history/review/settings/queues,
-failure recovery and whole-population resource/performance behavior. Build and
-pin the combined candidate and compatible current-data fallback, then synchronize
-qualified source, CI and exact spinup/cutover instructions into staging.
+The actual live frontend had source patches absent from staging. Clean three-way
+reconciliation preserves those shipped menu/read-later/sidebar/preservation
+features plus archive UI. The 1,327-input preservation gate passes with only nine
+reviewed archive/staging differences. Do not replace this with a blanket allowlist.
 
-Production archive configuration remains absent: no live archive migration,
-retirement or Nightly exclusion is enabled. Nightly calendar remains OFF; daily
-dedup remains held. Preserve Nightly tracking, pending inputs, selected settings,
-all backup epochs and other owners. Never restart a consumed controller, create
-a second watcher, or replace current SQL with an older snapshot.
+## Remaining qualification
 
-## Accepted dedup evidence retained
+Install and exercise the scoped inspector through the external manager; qualify
+real paired readers, automatic archival/message revival, actual Desktop B and
+current SQL/software/frontend recovery, compatible current-data fallback,
+ordinary UI/queues/settings, resources/performance and Nightly current-map cycle.
+Then finish CI/staging and the executable combined handoff. No complete qualified
+combined candidate/fallback manifest exists yet. Do not substitute the older
+sealed dedup-only package or restart consumed controllers.
 
-Original finite conversion/catch-up is accepted. The earlier byte-saving layout
-increased file count; packed qualification addresses that performance regression.
-All274 prepared session groups,3,639 histories and580 packs are independently
-verified. Selected files go from1,057,171 to4,219 in preparation, occupying
-6,768,685,056 allocated bytes including directories. This is prepared state,
-not a live file-count reduction or new net savings.
-
-Both packed readers, exact full-EOF probes, complete original/object/metadata
-closure, current SQL/software/frontend recovery and latest-data fallback have
-accepted dedup-specific evidence. The paired private switch and finite publication
-packages are accepted and unarmed. Their existing evidence remains valid for that
-scope; it does not certify archive/revival/Nightly integration. Final current SQL
-and owner identities must be refreshed at the release boundary.
-
-[Packed evidence](VK_DEDUP_PACKED_LAYOUT.md) and
-[prior detailed state](deployment-history/20261127-before-nightly-selection/STATE.md)
-retain all measured stages, accepted B receipt counts, failed-attempt disposition
-and source pins. Evidence root:
+Original finite dedup and catch-up acceptance is retained under
 `/mnt/vk-storage/vk-log-dedup-20261103-0815/packed-object-qualification-20261124`.
-`PACKED_PAIR_PACKAGE_ACCEPTED` and `PACKED_FINITE_PACKAGE_ACCEPTED` are immutable
-scope evidence. No packed manifests have been published live. Post-publication
-fallback must understand VKLOGCAS2 and retain the latest SQL and later writes.
+311 packed plans/3,639 histories/580 packs were prepared, not published live.
+[Previous continuity](deployment-history/20261128-before-runtime-integration/STATE.md).
 
-Actual runtime truth remains [LIVE_DEPLOYMENT.json](LIVE_DEPLOYMENT.json), checked
-against serving processes/public routes before any action. Existing main and
-protected readers and the operator's current frontend remain unchanged here.
-Full historical archive: [STATE history](STATE_HISTORY_20261017.md).
+[Full historical archive](STATE_HISTORY_20261017.md).

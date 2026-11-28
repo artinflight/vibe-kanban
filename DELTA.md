@@ -3762,3 +3762,9 @@ Nightly current-map integration, combined candidate/fallback qualification and
 staging handoff remain unfinished. Existing root inspectors' policy does not cover
 workspace paths; no permission bypass, privileged installation or production
 change occurred. Earlier approved source commits b8dd25238/750479729 are pushed.
+
+2026-11-28: completed physical driver/Nightly source integration and corrected
+pending-revival backup coverage. Preserved exact shipped frontend features via
+three-way reconciliation; 1,327-input gate passes. Prepared root inspector
+package for external manager without installation/restart. Combined cutover
+qualification is still open; see HANDOFF.

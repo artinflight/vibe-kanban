@@ -1,122 +1,109 @@
-# Pickup — combined archive/revival release is not yet ready
+# Pickup: finish real qualification, then hand off to the external manager
 
-Authoritative goal: get the combined dedup/packed-reader/archive/revival/Nightly
-release ready for the dedicated external restart agent. The native controller's
-label `clear` is stale; the user's later goal and five durable requirements govern.
-No requirement is fully closed. Do not create another goal or continuation loop.
+**Not cutover-ready.** Authoritative goal: complete the combined dedup/packed-reader/
+archive/revival/Nightly release, not another source milestone. Five fixed outcomes
+remain: archive lifecycle; revival/history; Nightly selection; combined candidate;
+qualified staging/cutover handoff. Do not create a new goal or continuation loop.
 
-Continue on `vk/0815-archive-release`, based on staging
-`78e472543b950a15a260e2d6af249bd5bef671d2`, in:
-`/mnt/vk-storage/vk-archive-release-20261127/source`.
-Use operator remote `fork`, not upstream `origin`. Preserve the canonical staging
-worktree's unrelated dirty Antigravity/UI work. PR291 merged earlier source only.
+## Working source and authorization
 
-The managed0815 checkout was recreated on recorded branchd8bd57f5c at22:28:56Z,
-removing this turn's uncommitted edits. Actor/cause remain unproven. Committed
-154952af0 stayed safe; exact recorded source writes were recovered into the
-separate checkout above. Do not reset other worktrees to continue.
+Use `/mnt/vk-storage/vk-archive-release-20261127/source`, branch
+`vk/0815-archive-release`, operator remote `fork` (artinflight/vibe-kanban).
+The user explicitly approved this task's source/tests/docs publication to that
+public repository. Keep private histories/SQL/config/credentials/evidence outside
+Git. `origin` is upstream: do not push there. Preserve unrelated dirty canonical
+staging work. The managed0815 checkout was unexpectedly recreated; use this SSD
+checkout and preserve committed work. The earlier narrative is linked below.
 
-## Implemented and tested source
+Native goal bookkeeping remains the old `clear` goal in paused state. Checkpoint
+calls report no active goal. The publication hold was already resolved by Yes;
+do not ask again or invent completion to repair that bookkeeping.
 
-[Archive implementation/acceptance](VK_WORKSPACE_ARCHIVAL.md) describes the intent
-outbox, immutable recovery catalog, exact input/reserved dispatch, native child
-inventory, kernel custody, journaled movement and maintained normal-B adapter.
-The backend now connects ordinary send/review/worktree admission and raw/normalized
-history to restoration. Protected readers use the current catalog read-only and
-request the writer's restoration. Concurrent readers share one restoration.
-The browser retains request identity and displays saved-message/recovery status.
-Ordinary recreation preserves populated/aliased worktrees on branch mismatch.
+## What is implemented
 
-The earlier 81-test suite passed with Nightly source d419d85f4. Source integration
-has expanded it to 105 tests: ownership, finite-controller recovery, shared-upload
-recovery and composed Git/SQL/message revival. See the final run record below. Nine archive/revival Rust tests,
-two kernel-custody tests, three worktree-preservation tests and three existing
-owner regressions pass. Backend compilation, generated types/check, all four
-frontend type checks, changed frontend lint and formatting pass. TypeScript used
-a bounded1536MiB heap after default heap exhaustion; production settings stayed
-unchanged. Logs: adjacent `source-recovery/`. Local transport/HTTP/driver fixtures
-are not actual Desktop B or ordinary application acceptance.
+`scripts/workspace-archive` contains the tested catalog, lifecycle, kernel custody,
+current SQL/native/Git/attachment ownership, normal-B capture/recovery, finite
+controller, physical driver and actual serving-pair/config/resource guards.
+New messages invalidate byte-stream archive preparation before retirement.
+Backend/frontend source retains exact messages/settings, reserves one ordinary
+execution, restores send/review/worktree/history access, protects populated
+worktrees, and coordinates writer plus protected reader. Cross-filesystem restore
+publishes complete create-only files and journals interrupted publication.
 
-The new `nightly_selection.py` contract holds scoped cold custody, captures a
-matching current SQL image, filters active paths and validates independent
-SQL/cold-reference recovery. Message/read intent invalidates exclusions. B
-metadata work does not pin a live SQL transaction. Physical preparation now
-commits its path journal atomically. Normal B restores old generations using
-current qualified reader inputs while preserving immutable provider/index identity.
-New logs: `archive-nightly-tests.log`, `selection-final-tests.log`, `format-nightly.log`.
+`scripts/nightly-owner` contains exact maintained d419d85f4 source and tests plus
+archive integration. UPSTREAM_SOURCE.json pins the original files. The optional
+service bridge opens qualified shared cold custody before the normal capture
+lane. Its current-map finalizer requires cold payload absence and active SQL/shared
+coverage. The ordinary independent SQL decoder validates the exact cold catalog.
+Pending/incomplete revival holds a new backup; old backups and tracking remain.
+No second conversion workflow or recurring schedule was introduced.
 
-Shared Git dependency source now qualifies clean/private ownership, verifies an
-independently restored graph and reuses covered commit/tag roots across workspaces.
-It preserves shared repositories and older points. Production attachment closure
-and driver integration remain open. Host histories/common Git and SSD are on
-different devices; restore now journals create-only cross-filesystem publication,
-requires target resource admission and exposes only complete anonymous-file writes.
-Verified publication survives interrupted temporary-source retirement. Tests use
-actual Git and distinct Linux fixture filesystems, not live B or application QA.
-Logs: `archive-dependencies-tests.log`, `git-dependency-final-tests.log`,
-`cross-filesystem-tests.log`, `format-dependencies.log` in `source-recovery/`.
+The actual live frontend snapshot had menu/read-later/sidebar/preservation patches
+not present in staging. A clean three-way merge against dbcbfbe4e preserved them
+and the new archive UI. The preservation gate compares1,327 pinned live inputs and
+passes with only nine reviewed archive/staging differences. Preserve that merge.
 
-The operator explicitly approved publication of this task's source/tests/docs to
-the existing public artinflight/vibe-kanban repository. b8dd25238 and 750479729 are verified pushed;
-the earlier publication hold is resolved. Preserve private data/credentials externally.
+## Current external dependency
 
-## Remaining outcomes
+Ordinary same-user process inspection cannot read some host manager/browser
+processes. Existing sudo helpers are explicitly scoped to other artifact roots.
+Do not bypass their policy, exempt inaccessible tasks, or change security settings.
 
-The finite controller/authority now composes the actual SQL/native/Git binding
-planner, shared Git/attachment recovery and journaled lifecycle. Integrated source
-tests archive a Git worktree and restore its exact retained message plus a missing
-shared upload while preserving newer uploads. A changed shared branch holds the
-input and preserves the newer branch. Existing/future dispatch remains backend-owned.
+Prepared, NOT installed:
+`/mnt/vk-storage/vk-archive-release-20261127/inspector-package-v1`.
+ManifestSHA256 `d94163bfc902e4c1a445e6bfa9f11e096016644f56b1223f8006bbfa89cf5e22`.
+The root-owned metadata-only helper inspects current task/file metadata under
+inode-bound scopes. Requests require exact live owner/custody/nonce. It cannot
+read payload contents or mutate/restart anything. `install_inspector.py` grants
+only its SHA-pinned fixed no-arguments launcher and preserves differing existing
+files. The external managing agent must install it; this workspace lacks that
+root capability. A user question is pending for that installation.
 
-The immediate gap is the production Host/factory and its live serving-parent,
-paired-reader/config/resource/process-visibility qualification. Ordinary same-user
-`/proc` reads are denied for some manager/browser processes. Existing sudo-approved
-inspectors are scoped to managed artifacts or one historical archive, not arbitrary
-workspace paths. Do not bypass their policy or mistake fixture process tests for
-host clearance. Preserve the existing security settings. Read the exact remaining
-boundary in VK_WORKSPACE_ARCHIVAL.md. Reuse the tested lifecycle/custody/B adapter. Then wire the tested Nightly selection contract into the actual recorded namespace/current-map cycle,
-actual B/current-SQL/software/frontend recovery, combined candidate/fallback and
-ordinary paired-reader/API/desktop/mobile validation, and qualified staging handoff.
-[Full takeover scope](VK_DEDUP_TAKEOVER.md) remains IN PROGRESS; no deployable
-combined candidate/fallback manifest exists yet. Do not substitute the older
-sealed dedup-only package or treat source tests as cutover readiness.
+`INSPECTOR_MANAGER_HANDOFF.txt` in the private release root was published as
+attachmentf5a55e6b-940f-49c9-8099-6f777d166037. This is one prerequisite, not the final
+spinup/cutover handoff. Package scopes currently cover app/native histories,
+SSD worktrees, this repo's private Git administration and qualification inputs.
+Other repository administration must be explicitly qualified before retirement.
 
-Production archive configuration remains absent. No live migration, workspace
-retirement, Nightly schedule activation or service action occurred. Actual
-spinup/cutover belongs to the external managing agent. Preserve current data,
-inputs/settings/owners, backup epochs and the existing Nightly tracking/cursor.
-Recheck mounted SSD resources; earlier low-capacity readings are historical.
+## Validation and artifacts
 
-Read-only current inventory found1,296 workspaces/1,051 archived;1,011 have no
-metadata hold, of which634 have no local worktree and377 have one. This is not
-eligibility or movement proof: current process/Git/dependency and existing-history
-ownership remain required. Do not recapture/move the population from these counts.
+Private evidence: `/mnt/vk-storage/vk-archive-release-20261127/source-recovery/`.
+- `combined-nightly-archive-tests.log`:119 passed in93.322s, no skips.
+- `nightly-service-tests.log`:14 passed; `nightly-consumer-tests.log`:14 passed.
+- `nightly-composed-integration-tests.log`:7 normal composed restore and14 service
+  tests passed before the later service bridge; final service tests are above.
+- `combined-driver-build.log`:offline shared-target backend build completed in17m11s,
+  Rust source pinb2330ee1ff9d7640197f95d2a336d8cdb72d4aba. Qualification copy is sealed at `qualification-artifacts-v1/reader-server`,
+  SHA77f5ea94cd09dbab63633c77e8a7484295068a2b1eda1ab80b1c11308587cd9c.
+  Actual build-info confirms archive custody/packed reader protocols. It requires
+  the separately sealed frontend; it is not cutover-qualified.
+- `combined-frontend-preserved-build.log`:frontend build completed in2m15s with
+  bounded3072MiB heap. Optional Sentry map upload lacked authentication.
+- `frontend-preservation-reviewed.json`:all1,327 live source pins checked; pass.
 
-## Accepted dedup evidence to retain
+Earlier narrow Rust, generated-types, frontend check/lint and recovery results
+remain in the previous handoff. Final format and ops checks passed; continuity is within the pickup budget.
+The preserved live model menu passed3 tests and preservation reconciliation passed18.
+These fixtures/builds are not real Desktop B or combined serving acceptance.
 
-Original conversion/catch-up is accepted. Packed311 plans/3,639 histories are
-prepared, not published live. PACKED_PAIR_PACKAGE_ACCEPTED and
-PACKED_FINITE_PACKAGE_ACCEPTED retain valid private switch/fallback and actual B
-proof; read [packed evidence](VK_DEDUP_PACKED_LAYOUT.md) and
-[prior handoff](deployment-history/20261125-before-workspace-archival/HANDOFF.md).
-Evidence root: `/mnt/vk-storage/vk-log-dedup-20261103-0815/packed-object-qualification-20261124`.
-Do not edit accepted source pins, replay consumed controllers or duplicate
-WakeWatch. Daily dedup remains held; Nightly calendar stays off. After publication,
-fallback must understand VKLOGCAS2 and use latest SQL, never overwrite later writes.
-Historical73,893,642,640B savings exclude later staging and are not current net relief.
+## Next meaningful work
 
-Full historical archive: [HANDOFF history](HANDOFF_HISTORY_20261017.md).
+After the scoped helper is installed, test real process visibility under custody.
+Seal a source-pinned candidate plus compatible current-data fallback and current
+private driver/runtime/Nightly configs. Qualify real isolated writer/protected
+readers and B archive/restoration, automatic message revival, ordinary desktop/
+mobile/history/review/settings/queues, failure recovery and resource/performance.
+Retain current SQL/native/config/frontend/shared dependency recovery. Never
+restore old SQL over newer writes. Finish CI/staging and one unambiguous executable
+external-manager spinup/cutover handoff. No production restart/cutover here.
 
-## November 28 composed integration evidence
+Accepted finite dedup/catch-up evidence remains in
+`/mnt/vk-storage/vk-log-dedup-20261103-0815/packed-object-qualification-20261124`.
+Packed311 plans/3,639 histories/580 packs are prepared, not livepublished. The old
+sealed dedup-only activation is unarmed and must not be replayed. Production
+archive config is absent and Nightly remains OFF. Preserve current owner/cursor,
+pending inputs, selected settings and all backup epochs.
 
-Source-only logs in adjacent `source-recovery/`: `ownership-tests.log` (7),
-`controller-tests.log` (6), `shared-files-tests.log` (6), `authority-tests.log` (4),
-`archive-composed-tests.log` (105 passing before the final inode-boundary check),
-and `archive-composed-final-tests.log` (all 105 final-source tests pass in 49.251 seconds, no skips).
-`format-composed.log` records the completed formatter. No live SQL, data, service,
-Nightly controller/schedule, privileged inspector or root policy was modified.
+[Prior detailed pickup](deployment-history/20261128-before-runtime-integration/HANDOFF.md).
 
-The native goal API still reports the old `clear` goal paused and refuses
-checkpoint writes. Publication approval is resolved; do not create a replacement
-goal or claim the five release requirements complete. The user's full combined
-readiness objective and fixed checklist remain authoritative.
+[Full historical archive](HANDOFF_HISTORY_20261017.md).

@@ -16,6 +16,7 @@ class WorkspaceAuthority:
     def __init__(self, workspace, config, host):
         self.workspace, self.config, self.host = workspace, config, host
         self.action, self.git, self.files = None, None, None
+        self.archive_guard = lambda: None
         self.ownership = Ownership(config['database'], config['sessions_root'], config['native_state'],
             config['native_roots'], config['worktrees_root'], process_check=host.check_processes)
 
@@ -35,6 +36,8 @@ class WorkspaceAuthority:
         if workspace != self.workspace or self.action is None:
             raise Conflict('Workspace action has not been admitted by its serving owner')
         self.host.check()
+        if self.action == 'archive':
+            self.archive_guard()
         self.ownership.check_bindings()
         if manifest is not None and manifest['workspace_id'] != workspace:
             raise Conflict('Manifest belongs to another workspace')
@@ -81,7 +84,9 @@ class WorkspaceAuthority:
         self.check(self.workspace, manifest)
         plan = manifest['ownership']
         identities = {tuple(row['version'][:2]) for row in manifest['payloads']['entries']}
-        self.host.check_processes(plan['roots'], identities=identities)
+        retired = [str(Path(p).with_name('.vk-cold-' + manifest['operation_id'] + '-' + str(i)))
+                   for i, p in enumerate(plan['roots'])]
+        self.host.check_processes(plan['roots'] + retired, identities=identities)
         roots = [Path(p) for p in plan['roots'] + self.config['attachment_roots']]
         roots += [Path(spec['common']) for spec in plan['git']]
         for row in manifest['payloads']['entries']:

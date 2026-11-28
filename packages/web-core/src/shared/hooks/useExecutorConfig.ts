@@ -7,6 +7,10 @@ import {
 } from 'shared/types';
 import { getVariantOptions } from '@/shared/lib/executor';
 import { usePresetOptions } from '@/shared/hooks/usePresetOptions';
+import {
+  DEFAULT_CODEX_MODEL_ID,
+  applyFrontendCodexDefault,
+} from '@/shared/lib/codexModelSelector';
 
 function getProfileKey(
   executor: BaseCodingAgent | null,
@@ -25,7 +29,7 @@ const OVERRIDE_FIELDS = [
 ] as const;
 
 const DEFAULT_CODEX_OVERRIDES: Partial<ExecutorConfig> = {
-  model_id: 'gpt-6.1-sol',
+  model_id: DEFAULT_CODEX_MODEL_ID,
   reasoning_id: 'high',
 };
 
@@ -338,6 +342,11 @@ export function useExecutorConfig({
     executor.effective,
     variant.resolved
   );
+  const frontendPresetOptions = applyFrontendCodexDefault(
+    executor.effective,
+    variant.resolved,
+    presetOptions
+  );
 
   const executorConfig = useEffectiveOverrides(
     executor.effective,
@@ -346,7 +355,7 @@ export function useExecutorConfig({
     scratchConfig,
     lastUsedConfig,
     variant.wasUserSelected,
-    presetOptions,
+    frontendPresetOptions,
     preferPresetOverrides,
     sessionConfig,
     isNewSession
@@ -461,7 +470,7 @@ export function useExecutorConfig({
     selectedVariant: variant.resolved,
     executorOptions: executor.options,
     variantOptions: variant.options,
-    presetOptions,
+    presetOptions: frontendPresetOptions,
     setExecutor,
     setVariant,
     setOverrides,

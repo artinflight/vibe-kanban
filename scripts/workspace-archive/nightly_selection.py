@@ -37,6 +37,17 @@ def records(catalog):
                  recovery_locator=r['recovery_locator']) for r in sorted(catalog.cold_generations(), key=lambda r: r['workspace_id'])]
 
 
+def require_complete_physical_state(catalog, selected):
+    # A pending message removes a cold workspace from exclusion eligibility,
+    # but its bytes are still absent until revival completes. Treating it as
+    # an empty active workspace would silently omit history from a new backup.
+    physical = {str(uuid.UUID(bytes=row[0])): row[1] for row in catalog.db.execute(
+        "SELECT workspace_id,phase FROM workspace_archive_state WHERE phase!='active'")}
+    eligible = {row['workspace_id'] for row in selected}
+    if set(physical) != eligible or any(phase != 'cold' for phase in physical.values()):
+        raise Conflict('Archive/revival transition is incomplete; retain prior Nightly and reselect after restoration')
+
+
 def within(path, root):
     return path == root or root in path.parents
 
@@ -73,6 +84,7 @@ class Selection:
         try:
             with closing(SnapshotCatalog(self.database)) as initial:
                 proposed = records(initial)
+                require_complete_physical_state(initial, proposed)
             for row in sorted(proposed, key=lambda r: r['workspace_id']):
                 lock = self.stack.enter_context(Custody(self.custody_root, row['workspace_id'], exclusive=False))
                 self.locks.append(lock)
@@ -80,6 +92,7 @@ class Selection:
             # cannot silently substitute a different generation from the plan.
             with closing(SnapshotCatalog(self.database)) as current:
                 actual = records(current)
+                require_complete_physical_state(current, actual)
                 if actual != proposed:
                     raise Conflict('Cold generations changed during Nightly selection')
                 journals = {r['workspace_id']: current.io(r['workspace_id']) for r in actual}
@@ -134,7 +147,9 @@ class Selection:
         for lock in self.locks:
             lock.check()
         with closing(SnapshotCatalog(self.database)) as current:
-            if records(current) != self.references:
+            actual = records(current)
+            require_complete_physical_state(current, actual)
+            if actual != self.references:
                 raise Conflict('Archive exclusion invalidated; retain prior backup and reselect current work')
         for row in self.references:
             self.authority.check(row['workspace_id'], row['manifest'])
@@ -163,7 +178,9 @@ class Selection:
         fd = os.open(destination, os.O_CREAT | os.O_EXCL | os.O_WRONLY | os.O_NOFOLLOW, 0o600)
         os.close(fd)
         with closing(SnapshotCatalog(self.database)) as current:
-            if records(current) != self.references:
+            actual = records(current)
+            require_complete_physical_state(current, actual)
+            if actual != self.references:
                 raise Conflict('Current SQL generation differs before snapshot')
             pages = current.db.execute('PRAGMA page_count').fetchone()[0]
             page_size = current.db.execute('PRAGMA page_size').fetchone()[0]
@@ -270,6 +287,7 @@ def verify_recovery(descriptor, expected_sha256, restored_sql, provider, *, requ
             raise ValueError('Restored SQL bytes differ from archive selection')
     with closing(SnapshotCatalog(restored_sql)) as copied:
         actual = records(copied)
+        require_complete_physical_state(copied, actual)
         if actual != descriptor['cold_generations']:
             raise Conflict('Restored SQL/catalog and cold dependency references differ')
     roots = {}

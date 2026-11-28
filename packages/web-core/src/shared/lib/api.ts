@@ -1,3 +1,4 @@
+import { createScratchReadLaterTransport } from '@/shared/lib/readLater/scratchTransport';
 // Import all necessary types from shared types
 
 import {
@@ -1979,4 +1980,53 @@ export const searchApi = {
     );
     return handleApiResponse<SearchResult[]>(response);
   },
+};
+
+export type ReadLaterRecord = {
+  item: import('@/shared/stores/useReadLaterStore').ReadLaterItem;
+  saved: boolean;
+  revision: number;
+};
+
+const readLaterClients = new Map<
+  string,
+  ReturnType<typeof createScratchReadLaterTransport>
+>();
+function readLaterClient(hostId: string | null, user: string) {
+  const scope = JSON.stringify([hostId, user]);
+  let client = readLaterClients.get(scope);
+  if (!client) {
+    const request = async <T>(path: string, options?: RequestInit) =>
+      handleApiResponse<T>(await makeHostAwareRequest(path, hostId, options));
+    client = createScratchReadLaterTransport(user, {
+      list: () => request<Scratch[]>('/api/scratch'),
+      get: (id) => request<Scratch>(`/api/scratch/WORKSPACE_NOTES/${id}`),
+      create: async (id, content) => {
+        await request(`/api/scratch/WORKSPACE_NOTES/${id}`, {
+          method: 'POST',
+          body: JSON.stringify({
+            payload: { type: 'WORKSPACE_NOTES', data: { content } },
+          }),
+        });
+      },
+    });
+    readLaterClients.set(scope, client);
+  }
+  return client;
+}
+export const readLaterApi = {
+  list: (host: string | null, user: string) =>
+    readLaterClient(host, user).list(),
+  import: (
+    host: string | null,
+    user: string,
+    items: ReadLaterRecord['item'][]
+  ) => readLaterClient(host, user).import(items),
+  set: (
+    host: string | null,
+    user: string,
+    item: ReadLaterRecord['item'],
+    saved: boolean,
+    changeId: string
+  ) => readLaterClient(host, user).set(item, saved, changeId),
 };

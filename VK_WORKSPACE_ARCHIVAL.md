@@ -1,5 +1,48 @@
 # Workspace archival, revival and Nightly separation
 
+## November 28 integration checkpoint — still not qualified for cutover
+
+The finite production `driver.py`, serving-pair/config/resource qualification,
+normal-B provider factory, and metadata-only process-inspector client now exist.
+Archive streaming checks newly committed inputs and yields before retirement.
+A source-only root inspector and create-only installer are prepared; no sudo
+policy/helper has been installed. The external manager must install the reviewed
+capability before actual host process-clearance qualification can run. Existing
+inspectors cannot cover this scope. No security setting or service was changed.
+
+The exact maintained Nightly source at d419d85f4 is now contained under
+`scripts/nightly-owner/` with an upstream file-hash inventory. Its ordinary service,
+current-map finalizer and independent SQL consumer have optional archive integration.
+Shared cold custody and current catalog references are checked before acceptance;
+current SQL/shared sources remain mandatory. A pending revival now blocks a new
+backup until its absent bytes are restored instead of being mistaken for empty
+active work. Current-map removal still follows the existing journal; there is no
+second archive converter, source sweep, schedule, controller or new body codec.
+
+The 119-test combined archive suite passed with this contained Nightly source.
+The changed Nightly consumer and service suites each passed 14 tests; normal
+composed restore passed 7. These are source/local-transport evidence, not actual
+Desktop B or whole-release acceptance. The offline shared-target backend build
+completed. Its source pin is b2330ee1f; later script/frontend integration is recorded
+separately and must be sealed together in the final release manifest.
+
+The actual public frontend snapshot contained shipped changes absent from staging,
+including GPT-6.2 menu behavior and read-later/sidebar/preservation UI. A clean
+three-way reconciliation preserved those live changes plus the new archive UI.
+The preservation gate now passes all 1,327 pinned live inputs with only nine
+reviewed archive/staging differences. The candidate frontend build passed. Complete
+runtime/fallback/B restore/UI qualification remains open. Initial frontend build
+exceeded a 1536MiB heap; the preserved build uses a bounded 3072MiB heap.
+
+Private source/build/test evidence and the exact inspector installation manifest
+are under `/mnt/vk-storage/vk-archive-release-20261127/`. The inspector handoff is
+one installation prerequisite, not a cutover-ready release or restart approval.
+Actual paired-reader tests, Desktop B restoration, compatible current-data
+fallback, resource/performance proof, current Nightly configuration, CI/staging
+publication and the executable combined handoff remain unfinished. Nightly stays
+OFF and production restart/cutover remains exclusively with the external manager.
+
+
 ## Operator decision — 2026-11-25
 
 Archive separation is now authorized preparation work, including automatic
@@ -89,13 +132,13 @@ separate. A UI flag or incomplete physical transaction never grants exclusion.
   journal, composes ownership and shared recovery, and verifies dependencies
   before retained input becomes ready. Lost capture receipts reuse the same
   operation. No daemon, dispatch loop, service change or replacement controller
-  is created. The source-pinned production Host/factory still needs integration.
+  is created. The source-pinned Host/factory now exists; installed process clearance and live qualification remain open.
 - `nightly_selection.py`: scoped cold-generation custody, coherent SQLite API
   image, active-path filtering and independent SQL/cold-reference recovery
   validation. Exclusions invalidate on retained messages, history-read intent,
   generation changes or reappearing local paths. The external owner contract
   supplies required SQL/catalog/shared sources; a backup cannot choose its own
-  minimum scope. This contract is not yet wired into the installed Nightly cycle.
+  minimum scope. The maintained service/finalizer/consumer source now uses this contract; installation and actual cycle qualification remain open.
 
 The normal-B adapter uses the maintained Nightly source closure, currently tested
 against d419d85f4f5652a36f9372feaa889d59e4ee8079. Its source/configuration must be
@@ -125,8 +168,8 @@ as authorization to erase local source. New absent worktrees can still be create
 ## Remaining implementation and acceptance
 
 The finite controller, authority composition and shared Git/attachment contracts
-are implemented and fixture-tested. The source-pinned production Host/factory,
-actual process clearance and Nightly consumer integration remain unfinished. Runtime configuration stays absent in
+are implemented and fixture-tested. The source-pinned Host/factory and Nightly consumer source are integrated.
+Installed process clearance and actual whole-cycle qualification remain unfinished. Runtime configuration stays absent in
 production until those dependencies and the combined release are qualified.
 Native metadata snapshots alone do not establish process or dependency custody.
 On November 28, ordinary `/proc` inspection was denied for the user service
@@ -195,7 +238,8 @@ These are source contracts, not an activated Nightly or actual-B acceptance.
 
 ## Validation
 
-All 105 Python tests pass on the final source (49.251 seconds) with the actual maintained Nightly modules
+The preceding 105-test source milestone passed (49.251 seconds); the November28
+combined suite now passes119 tests (93.322 seconds) with the actual maintained Nightly modules
 supplied. This includes 12 Nightly selection checks, 8 real-Git dependency checks,
 6 cross-filesystem recovery checks, 7 ownership checks, 6 finite-controller checks,
 6 shared-attachment checks and 4 composed authority/revival checks. The composed

@@ -60,6 +60,15 @@ class GitDependencyTests(unittest.TestCase):
         self.assertEqual((self.worktree / 'tracked').read_text(), 'original code\n')
         gd.verify_live(self.spec)
 
+    def test_removed_worktree_keeps_branch_graph_independently_recoverable(self):
+        gd.git(self.repo, 'worktree', 'remove', str(self.worktree))
+        spec = gd.inspect_branch(self.repo, 'archive-workspace')
+        accepted = self.dependency.ensure(spec)
+        with self.dependency.recall(accepted, spec, self.root / 'removed-tree-restore') as restored:
+            gd.verify_shared_snapshot(restored, spec['object_roots'])
+        gd.verify_live(spec)
+        self.assertFalse(self.worktree.exists())
+
     def test_second_workspace_reuses_same_shared_graph(self):
         accepted = self.dependency.ensure(self.spec)
         other = self.root / 'other-workspace'

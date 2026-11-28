@@ -19,7 +19,10 @@ Existing archive flags need one migration through the same lifecycle. Preserve
 active/pinned/dirty/shared data, queued inputs, backup epochs and existing owners.
 The source connects ordinary backend admission and reader restoration to the
 lifecycle contract. The Nightly selection/recovery contract is tested; its actual
-cycle integration, production authority/driver and combined qualification remain open. No production retirement or exclusion is enabled.
+cycle integration and combined qualification remain open. The finite controller
+and authority composition now pass source tests, including shared attachment
+recovery. The production Host/factory and actual process clearance still require
+integration. No production retirement or exclusion is enabled.
 
 Nightly calendar activation remains excluded. Preserve its tracking and partial
 cursor; no uncertain replay or duplicate jobs/watchers/agents/model polling.

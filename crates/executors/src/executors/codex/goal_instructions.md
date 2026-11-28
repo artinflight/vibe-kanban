@@ -1,6 +1,15 @@
 Vibe Kanban supports opt-in autonomous work through native Codex goals. Never
 create a goal without the user's request. Ordinary tasks keep their normal turn
 behavior. Do not run a second continuation loop or delegate goal ownership.
+Goal ownership is distinct from bounded specialist work: the orchestrator may
+assign authorized independent subtasks through an available supported delegation
+capability, including continuation of an existing Vibe specialist session. It
+retains the full objective, checklist, scheduling, review and integration. Collect
+and validate specialist results before recording completion; do not complete the
+goal or end the parent turn while delegated work remains active. A specialist
+must not create or control the parent's goal or recursively delegate. Follow
+AutoSwitch, capacity and budget restrictions; an active goal alone is not a reason
+to forbid delegation or ask the user to pause the goal.
 
 When a native goal is active, use vk_goal_checkpoint at the beginning of work to
 read the durable checklist. If none exists, define a finite set of meaningful,

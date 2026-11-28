@@ -1,0 +1,90 @@
+{
+  "scope": "Redacted targeted findings; private originals and independent reviewer verdict not republished or extended.",
+  "artifacts": [
+    {
+      "file": "authenticated-sources.json",
+      "bytes": 3972,
+      "sha256": "28974e900fbb86db1978502178a1e93e6bdbab99e872259155b106e469213102"
+    },
+    {
+      "file": "candidate-provenance.csv",
+      "bytes": 26418,
+      "sha256": "0e7a3d6cb5c482658207f0db65be1c114b44352d4e93f0857d33a42d76abb8f7"
+    },
+    {
+      "file": "captured-metadata.csv",
+      "bytes": 2710809,
+      "sha256": "00941be6a147947f01f32afd203f3ace6cd9d0be9dc71c3b260885427642b6ad"
+    },
+    {
+      "file": "graph-verification.json",
+      "bytes": 2672,
+      "sha256": "5cc560e113379d20e97fdb4e1a7eab493259fb0ca102f1fbfef355fb949bfbeb"
+    },
+    {
+      "file": "initial-journal-proof.json",
+      "bytes": 340,
+      "sha256": "6ed5d9c91d0eaa39f533a4aba872f060565f66972ec4e5326f48f49f48194fbc"
+    },
+    {
+      "file": "missing-tree-retained-index-search.json",
+      "bytes": 32768,
+      "sha256": "0ce0b4b6273ef9a6f453e1e93ee03774085f1824027a4154feaf04954b678e78"
+    },
+    {
+      "file": "native-git-blocker.json",
+      "bytes": 499,
+      "sha256": "d2401f5978cd233c6b192abe00e9b0e108698b36adf4d89925123869935ca4e7"
+    },
+    {
+      "file": "original-145-accounting.csv",
+      "bytes": 74784,
+      "sha256": "9e9d05daef158d9dcc4b01a2aeeba8f9032d7285becf300b1ea65fe6b794b6db"
+    },
+    {
+      "file": "private-preservation-followup-receipt.json",
+      "bytes": 645,
+      "sha256": "4ed616512837a138a1fb2b4c7664d7604252371bb317840532784bf805a1e701"
+    },
+    {
+      "file": "private-preservation-receipt.json",
+      "bytes": 555,
+      "sha256": "c8b5301a606445a3f82af232abeda57b587cbb0dc3f58b73eb8f1a784de91b3c"
+    },
+    {
+      "file": "private-receipt-digests.json",
+      "bytes": 13417,
+      "sha256": "251a01237855624150efd649e44f2fb87054f4d4dc0de8f53af39cad0f654887"
+    },
+    {
+      "file": "remaining-hyrox-blob-recovery.json",
+      "bytes": 612,
+      "sha256": "39615e72f3ed4779eadf733297bfd87e866ddea6667ca3096cacdb5429d9bd3c"
+    },
+    {
+      "file": "snapshot-mode-proof.json",
+      "bytes": 1939,
+      "sha256": "76319aaa4b0ad18b89854bfdd75bcd44546db036da120ae8963177d559b27ebb"
+    },
+    {
+      "file": "summary.json",
+      "bytes": 1858,
+      "sha256": "ddec27603dbb4501b75576457aadbbfd0520905d7dcb3ed6addb5f63086eade4"
+    },
+    {
+      "file": "transcript-counterparts.json",
+      "bytes": 3977,
+      "sha256": "19280c8305eb588f1959e27688fd5a6446f6d59900c2ed4ce096b1b51884392f"
+    },
+    {
+      "file": "unresolved-448-accounting.csv",
+      "bytes": 50751,
+      "sha256": "b9cb688eff10820c23d95a57819e89a03355584df5c65b9fbb304cfb4d091d58"
+    },
+    {
+      "file": "validation.json",
+      "bytes": 1153,
+      "sha256": "c54a0d95eb25d0cd5b3affb89fd387ba42bdf41419158c2bc1ee4553c8600a5e"
+    }
+  ]
+}

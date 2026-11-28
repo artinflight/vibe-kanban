@@ -24,6 +24,7 @@ const browser = await chromium.launch({
   headless: true,
 });
 const results = [];
+let closingBrowser = false;
 await fs.mkdir(output, { recursive: true });
 
 try {
@@ -43,9 +44,12 @@ try {
           'Mozilla/5.0 (Linux; Android 15; SM-S936W) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36',
       }),
     });
+    let closingContext = false;
     const writes = [];
     const scratch = new Map();
-    await context.route('**/api/**', async (route) => {
+    const summaryOverrides = new Map();
+    // Both local API routes and project fallback routes must remain read-only.
+    await context.route(/\/(?:api|v1)\//, async (route) => {
       const request = route.request();
       const path = new URL(request.url()).pathname;
       if (
@@ -73,6 +77,24 @@ try {
             },
           },
         });
+      }
+      if (path === '/api/workspaces/summaries' && summaryOverrides.size) {
+        try {
+          const response = await route.fetch({
+            headers: { ...request.headers(), origin: new URL(backend).origin },
+          });
+          const json = await response.json();
+          for (const summary of json.data.summaries) {
+            const override = summaryOverrides.get(summary.workspace_id);
+            if (override) Object.assign(summary, override);
+          }
+          return await route.fulfill({ response, json });
+        } catch (error) {
+          // Keep the write guard installed through teardown. A summaries read
+          // can be cancelled when closing the context; other failures surface.
+          if (!closingContext && !closingBrowser) throw error;
+        }
+        return;
       }
       if (
         ['GET', 'HEAD'].includes(request.method()) ||
@@ -156,6 +178,31 @@ try {
       );
     };
 
+    console.log(`START ${width}px landing`);
+    await goto('/');
+    await page.waitForURL('**/workspaces', { timeout: 60000 });
+    await page.getByRole('textbox', { name: /search workspaces/i }).waitFor();
+    assert.equal(
+      await page.locator('[contenteditable="true"]').count(),
+      0,
+      'Landing lists workspaces without a standalone prompt composer'
+    );
+    if (mobile) {
+      const nav = page.getByRole('navigation', { name: 'Primary navigation' });
+      assert.equal(
+        await nav.getByRole('button', { name: 'Chat', exact: true }).count(),
+        0,
+        'Chat is available only inside a workspace'
+      );
+      assert.equal(
+        await nav
+          .getByRole('button', { name: 'Workspaces', exact: true })
+          .getAttribute('aria-current'),
+        'page'
+      );
+    }
+    await noHorizontalOverflow();
+    await screenshot('after-landing');
     console.log(`START ${width}px board`);
     await goto(`/projects/${project.id}`);
     await (
@@ -164,7 +211,201 @@ try {
         : page.getByText('To do', { exact: true }).first()
     ).waitFor({ timeout: 60000 });
     await noHorizontalOverflow();
+    if (mobile) {
+      assert.equal(
+        await page
+          .locator('.phone-status-tabs button')
+          .filter({ hasText: 'To do' })
+          .getAttribute('aria-pressed'),
+        'true',
+        'Projects open at To do'
+      );
+      assert.equal(
+        await page
+          .locator('.phone-status-tabs button')
+          .filter({ hasText: /^All$/ })
+          .getAttribute('aria-pressed'),
+        'false'
+      );
+    }
     await screenshot('after-board');
+    if (process.env.VK_TEST_ATTENTION === '1') {
+      // Browser-only overrides make all attention states deterministic without
+      // mutating live turn flags. Use real linked issues/workspaces from GETs.
+      const [issueData, workspaceData] = await Promise.all([
+        fetch(`${backend}/v1/fallback/issues?project_id=${project.id}`).then(
+          (r) => r.json()
+        ),
+        fetch(
+          `${backend}/v1/fallback/project_workspaces?project_id=${project.id}`
+        ).then((r) => r.json()),
+      ]);
+      const linked = workspaceData.workspaces
+        .filter((w) => !w.archived && w.local_workspace_id)
+        .map((workspace) => ({
+          workspace,
+          issue: issueData.issues.find((i) => i.id === workspace.issue_id),
+        }))
+        .filter(
+          ({ issue }) =>
+            issue && !issue.extension_metadata?.vk_flags?.needs_review
+        );
+      assert(
+        linked.length >= 4,
+        'Need four unflagged linked tasks for attention checks'
+      );
+      const targets = linked
+        .filter(
+          ({ issue }, index) =>
+            linked.findIndex((item) => item.issue.id === issue.id) === index
+        )
+        .slice(0, 4);
+      assert.equal(targets.length, 4, 'Need four distinct linked issues');
+      const states = [
+        {
+          latest_process_status: 'completed',
+          has_unseen_turns: true,
+          has_pending_approval: false,
+        },
+        {
+          latest_process_status: 'running',
+          has_unseen_turns: false,
+          has_pending_approval: true,
+        },
+        {
+          latest_process_status: 'killed',
+          has_unseen_turns: true,
+          has_pending_approval: false,
+        },
+        {
+          latest_process_status: 'completed',
+          has_unseen_turns: false,
+          has_pending_approval: false,
+        },
+      ];
+      // Clear other workspace indicators on these same issues in the fixture.
+      for (const { issue } of targets) {
+        for (const w of workspaceData.workspaces.filter(
+          (w) => w.issue_id === issue.id
+        ))
+          summaryOverrides.set(w.local_workspace_id, states[3]);
+      }
+      targets.forEach(({ workspace }, index) =>
+        summaryOverrides.set(workspace.local_workspace_id, states[index])
+      );
+      if (mobile)
+        await page
+          .locator('.phone-status-tabs button')
+          .filter({ hasText: /^All$/ })
+          .click();
+      const cardFor = (issue) =>
+        page
+          .locator('.mobile-task-card')
+          .filter({ has: page.getByText(issue.simple_id, { exact: true }) });
+      for (const [index, { issue }] of targets.entries()) {
+        const card = cardFor(issue);
+        await card.waitFor();
+        if (index < 2 && mobile) {
+          await card
+            .getByText(index === 0 ? 'Needs review' : 'Needs approval', {
+              exact: true,
+            })
+            .waitFor({ timeout: 15000 });
+          assert.match(
+            await card.getAttribute('class'),
+            /kanban-attention-card/
+          );
+          assert.notEqual(
+            await card.evaluate((el) => getComputedStyle(el).backgroundImage),
+            'none',
+            'Attention fills the entire card'
+          );
+        } else if (index < 2) {
+          assert(
+            !/kanban-attention-card/.test(await card.getAttribute('class')),
+            'Desktop issue cards retain their compact attention indicators'
+          );
+          assert.equal(
+            await card
+              .getByText(index === 0 ? 'Needs review' : 'Needs approval', {
+                exact: true,
+              })
+              .count(),
+            0,
+            'Desktop does not gain the phone attention label'
+          );
+          for (const item of [
+            card,
+            ...(await card.locator('.kanban-attention-card').all()),
+          ]) {
+            assert.equal(
+              await item.evaluate((el) => getComputedStyle(el).backgroundImage),
+              'none',
+              'Phone attention tint does not apply to desktop cards'
+            );
+          }
+        } else {
+          await page.waitForTimeout(3500);
+          assert(
+            !/kanban-attention-card/.test(await card.getAttribute('class')),
+            'Read and interrupted workspaces do not get a review highlight'
+          );
+        }
+      }
+      if (mobile) {
+        const label = cardFor(targets[0].issue).locator('.phone-task-review');
+        assert.equal(
+          await label.evaluate((el) => {
+            const probe = document.createElement('span');
+            probe.style.color = 'hsl(var(--text-high))';
+            el.append(probe);
+            const expected = getComputedStyle(probe).color;
+            probe.remove();
+            return getComputedStyle(el).color === expected;
+          }),
+          true,
+          'Attention labels use the readable theme foreground'
+        );
+      }
+      await screenshot('after-attention-fixture');
+      summaryOverrides.set(targets[0].workspace.local_workspace_id, states[3]);
+      await cardFor(targets[0].issue)
+        .getByText('Needs review', { exact: true })
+        .waitFor({ state: 'hidden', timeout: 15000 });
+      assert(
+        !/kanban-attention-card/.test(
+          await cardFor(targets[0].issue).getAttribute('class')
+        ),
+        'Polling clears the card highlight when attention clears'
+      );
+      summaryOverrides.clear();
+      if (mobile)
+        await page
+          .locator('.phone-status-tabs button')
+          .filter({ hasText: 'To do' })
+          .click();
+    }
+    if (process.env.VK_TEST_ATTENTION_ONLY === '1') {
+      assert.equal(errors.length, 0, errors.join('\n'));
+      results.push({
+        width,
+        colorScheme,
+        passed: true,
+        attentionStates: [
+          'review',
+          'approval',
+          'interrupted',
+          'read',
+          'cleared',
+        ],
+        promptSubmitted: false,
+      });
+      for (const socket of sockets) socket.close();
+      closingContext = true;
+      await context.close();
+      console.log(`PASS attention ${width}px ${colorScheme}`);
+      continue;
+    }
     let searchHeight;
     if (mobile) {
       const taskSearch = page.getByRole('textbox', {
@@ -210,6 +451,18 @@ try {
         0,
         'Tasks need no drag gesture'
       );
+      await page
+        .locator('.phone-status-tabs button')
+        .filter({ hasText: /^All$/ })
+        .click();
+      assert.equal(
+        await page
+          .locator('.phone-status-tabs button')
+          .filter({ hasText: /^All$/ })
+          .getAttribute('aria-pressed'),
+        'true',
+        'All stays available as an explicit choice'
+      );
       const rows = page.locator('.phone-task-row');
       assert((await rows.count()) > 2, 'Useful task feed populated');
       await page.getByRole('button', { name: /filters/i, exact: true }).click();
@@ -224,8 +477,12 @@ try {
       await nav.getByRole('button', { name: 'Projects', exact: true }).click();
       const sheet = page.getByRole('dialog', { name: 'Projects', exact: true });
       await sheet.waitFor();
+      // A project can append an accessible needs-review indicator to its name.
+      // Match its exact visible title while preserving that announced state.
       await touchTarget(
-        sheet.getByRole('button', { name: project.name, exact: true })
+        sheet
+          .getByRole('button')
+          .filter({ has: page.getByText(project.name, { exact: true }) })
       );
       assert(
         await sheet.evaluate((el) => el.contains(document.activeElement)),
@@ -256,12 +513,21 @@ try {
       await nav.getByRole('button', { name: 'Projects', exact: true }).click();
       const another = projects.find((p) => !p.archived && p.id !== project.id);
       await sheet
-        .getByRole('button', { name: another.name, exact: true })
+        .getByRole('button')
+        .filter({ has: page.getByText(another.name, { exact: true }) })
         .click();
       await page.waitForURL(`**/projects/${another.id}`);
       await page.goBack();
       await page.waitForURL(`**/projects/${project.id}`);
       await sheet.waitFor({ state: 'hidden' });
+      assert.equal(
+        await page
+          .locator('.phone-status-tabs button')
+          .filter({ hasText: /^All$/ })
+          .getAttribute('aria-pressed'),
+        'true',
+        'Returning to a project preserves an explicit status choice'
+      );
 
       const statusChip = page
         .locator('.phone-status-tabs button')
@@ -641,6 +907,7 @@ try {
       promptSubmitted: false,
     });
     for (const socket of sockets) socket.close();
+    closingContext = true;
     await context.close();
     console.log(`PASS ${width}px ${colorScheme}`);
   }
@@ -649,5 +916,6 @@ try {
     JSON.stringify(results, null, 2)
   );
 } finally {
+  closingBrowser = true;
   await browser.close();
 }

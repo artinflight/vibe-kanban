@@ -1,5 +1,6 @@
 pub mod queue;
 pub mod review;
+pub mod steering;
 
 use axum::{
     Extension, Json, Router,
@@ -111,7 +112,7 @@ pub async fn update_session(
     Ok(ResponseJson(ApiResponse::success(updated)))
 }
 
-#[derive(Debug, Deserialize, TS)]
+#[derive(Debug, serde::Serialize, Deserialize, TS)]
 pub struct CreateFollowUpAttempt {
     pub prompt: String,
     pub executor_config: ExecutorConfig,
@@ -128,10 +129,126 @@ pub struct ResetProcessRequest {
 }
 
 pub async fn follow_up(
+    headers: axum::http::HeaderMap,
     Extension(session): Extension<Session>,
     State(deployment): State<DeploymentImpl>,
     Json(payload): Json<CreateFollowUpAttempt>,
 ) -> Result<ResponseJson<ApiResponse<ExecutionProcess, QueueStatus>>, ApiError> {
+    use services::services::workspace_archive as archive;
+    let request = headers
+        .get("Idempotency-Key")
+        .map(|value| {
+            value
+                .to_str()
+                .ok()
+                .and_then(|v| Uuid::parse_str(v).ok())
+                .ok_or_else(|| ApiError::BadRequest("A UUID Idempotency-Key is required".into()))
+        })
+        .transpose()?;
+    let configured = archive::runtime::configured()
+        .map_err(|e| ApiError::Conflict(e.to_string()))?
+        .is_some();
+    let existing = if configured && let Some(request) = request {
+        sqlx::query_scalar::<_, bool>(
+            "SELECT EXISTS(SELECT 1 FROM workspace_archive_inputs WHERE request_id=?)",
+        )
+        .bind(request)
+        .fetch_one(&deployment.db().pool)
+        .await?
+    } else {
+        false
+    };
+    if existing
+        || archive::runtime::requires_revival(&deployment.db().pool, session.workspace_id)
+            .await
+            .map_err(|e| ApiError::Conflict(e.to_string()))?
+    {
+        let request = request.unwrap_or_else(Uuid::new_v4);
+        let exact =
+            serde_json::to_value(&payload).map_err(|e| ApiError::BadRequest(e.to_string()))?;
+        let revival = archive::retain(
+            &deployment.db().pool,
+            session.workspace_id,
+            session.id,
+            request,
+            &exact,
+        )
+        .await
+        .map_err(|e| ApiError::Conflict(e.to_string()))?;
+        if revival.state == "dispatched" {
+            let execution: Uuid = sqlx::query_scalar(
+                "SELECT execution_id FROM workspace_archive_inputs WHERE request_id=?",
+            )
+            .bind(request)
+            .fetch_one(&deployment.db().pool)
+            .await?;
+            let process = ExecutionProcess::find_by_id(&deployment.db().pool, execution)
+                .await?
+                .ok_or_else(|| {
+                    ApiError::Conflict("The retained execution receipt needs reconciliation".into())
+                })?;
+            return Ok(ResponseJson(ApiResponse::success(process)));
+        }
+        if revival.state == "cancelled" {
+            return Err(ApiError::Conflict(
+                "This saved message was cancelled".into(),
+            ));
+        }
+        return Ok(ResponseJson(ApiResponse::error_with_data(
+            QueueStatus::Restoring { revival },
+        )));
+    }
+    let _archive_custody = archive::runtime::readable(&deployment.db().pool, session.workspace_id)
+        .await
+        .map_err(|e| ApiError::Conflict(e.to_string()))?;
+    services::services::provider_admission::before_start(
+        deployment.container(),
+        session.workspace_id,
+        session.id,
+    )
+    .await?;
+    let pool = deployment.db().pool.clone();
+    let received = services::services::queued_message::QueuedMessageService::receive(
+        &pool,
+        session.id,
+        serde_json::json!({"kind": "follow_up", "payload": &payload}),
+    )
+    .await?;
+    let result = services::services::admission::run(services::services::admission::owner(
+        session.workspace_id,
+        follow_up_admitted(Extension(session), State(deployment), Json(payload)),
+    ))
+    .await;
+    if result.is_ok() {
+        services::services::queued_message::QueuedMessageService::acknowledge(&pool, received)
+            .await?;
+    }
+    result
+}
+
+pub(crate) async fn follow_up_admitted<D: Deployment>(
+    Extension(session): Extension<Session>,
+    State(deployment): State<D>,
+    Json(payload): Json<CreateFollowUpAttempt>,
+) -> Result<ResponseJson<ApiResponse<ExecutionProcess, QueueStatus>>, ApiError> {
+    services::services::provider_admission::before_start(
+        deployment.container(),
+        session.workspace_id,
+        session.id,
+    )
+    .await?;
+    services::services::original_worker::record_input(
+        &deployment.db().pool,
+        session.id,
+        payload.prompt.trim() == "/goal resume"
+            && payload.retry_process_id.is_none()
+            && payload.perform_git_reset != Some(true),
+    )
+    .await
+    .map_err(|e| ApiError::Conflict(e.to_string()))?;
+    services::services::original_worker::ordinary_input(session.id, &payload.prompt)
+        .await
+        .map_err(|e| ApiError::Conflict(e.to_string()))?;
     let pool = &deployment.db().pool;
 
     // Load workspace from session
@@ -183,7 +300,11 @@ pub async fn follow_up(
     }
     // Give an explicit owner message priority before acquiring an executor slot
     // or resetting files. This can stop an active scheduled run of this session.
-    executors::capacity::controller::before_launch(session.id, false).await?;
+    if services::services::original_worker::in_dispatch() {
+        executors::capacity::controller::before_bounded_worker_launch().await?;
+    } else {
+        executors::capacity::controller::before_launch(session.id, false).await?;
+    }
 
     if let Some(proc_id) = payload.retry_process_id {
         let force_when_dirty = payload.force_when_dirty.unwrap_or(false);
@@ -258,6 +379,13 @@ pub async fn follow_up(
     {
         Ok(execution_process) => execution_process,
         Err(error) if error.is_execution_limit_reached() => {
+            if services::services::workspace_archive::in_dispatch()
+                || services::services::original_worker::in_dispatch()
+            {
+                return Err(ApiError::Conflict(
+                    "Bounded continuation cannot be queued after failed admission".into(),
+                ));
+            }
             let queued = deployment.queued_message_service().queue_for_capacity(
                 session.id,
                 DraftFollowUpData {
@@ -265,6 +393,12 @@ pub async fn follow_up(
                     executor_config: payload.executor_config.clone(),
                 },
             );
+            if services::services::admission::automatic_git_sync() {
+                deployment
+                    .queued_message_service()
+                    .persist(pool, session.id)
+                    .await?;
+            }
 
             deployment
                 .track_if_analytics_allowed(
@@ -320,6 +454,25 @@ pub async fn reset_process(
     State(deployment): State<DeploymentImpl>,
     Json(payload): Json<ResetProcessRequest>,
 ) -> Result<ResponseJson<ApiResponse<()>>, ApiError> {
+    services::services::admission::locked(reset_process_admitted(
+        Extension(session),
+        State(deployment),
+        Json(payload),
+    ))
+    .await
+}
+
+async fn reset_process_admitted(
+    Extension(session): Extension<Session>,
+    State(deployment): State<DeploymentImpl>,
+    Json(payload): Json<ResetProcessRequest>,
+) -> Result<ResponseJson<ApiResponse<()>>, ApiError> {
+    services::services::provider_admission::before_start(
+        deployment.container(),
+        session.workspace_id,
+        session.id,
+    )
+    .await?;
     let force_when_dirty = payload.force_when_dirty.unwrap_or(false);
     let perform_git_reset = payload.perform_git_reset.unwrap_or(true);
 
@@ -411,6 +564,7 @@ pub fn router(deployment: &DeploymentImpl) -> Router<DeploymentImpl> {
     let sessions_router = Router::new()
         .route("/", get(get_sessions).post(create_session))
         .nest("/{session_id}", session_id_router)
+        .nest("/{session_id}/steer", steering::router(deployment))
         .nest("/{session_id}/queue", queue::router(deployment));
 
     Router::new().nest("/sessions", sessions_router)

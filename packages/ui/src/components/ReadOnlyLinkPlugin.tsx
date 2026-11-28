@@ -2,41 +2,48 @@ import { useEffect } from 'react';
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
 import { LinkNode } from '@lexical/link';
 
-/**
- * Sanitize href to block dangerous protocols.
- * Returns undefined if the href is blocked.
- */
+/** Only web URLs are navigable; file paths and custom schemes stay disabled. */
 function sanitizeHref(href?: string): string | undefined {
-  if (typeof href !== 'string') return undefined;
-  const trimmed = href.trim();
-  // Block dangerous protocols
-  if (/^(javascript|vbscript|data):/i.test(trimmed)) return undefined;
-  // Allow anchors and common relative forms (but they'll be disabled)
-  if (
-    trimmed.startsWith('#') ||
-    trimmed.startsWith('./') ||
-    trimmed.startsWith('../') ||
-    trimmed.startsWith('/')
-  )
-    return trimmed;
-  // Allow only https
-  if (/^https:\/\//i.test(trimmed)) return trimmed;
-  // Block everything else by default
+  if (!href || !/^https?:\/\//i.test(href.trim())) return undefined;
+  try {
+    const url = new URL(href.trim());
+    if (url.protocol === 'https:' || url.protocol === 'http:')
+      return href.trim();
+  } catch {
+    // Incomplete streaming URLs are not navigable yet.
+  }
   return undefined;
 }
 
-/**
- * Check if href is an external HTTPS link.
- */
-function isExternalHref(href?: string): boolean {
-  if (!href) return false;
-  return /^https:\/\//i.test(href);
+function configureLink(link: HTMLAnchorElement) {
+  const href = link.getAttribute('href');
+  const safeHref = sanitizeHref(href ?? undefined);
+  if (!safeHref) {
+    link.removeAttribute('href');
+    link.style.cursor = 'not-allowed';
+    link.style.pointerEvents = 'none';
+    link.setAttribute('role', 'link');
+    link.setAttribute('aria-disabled', 'true');
+    link.title = href ?? '';
+    return;
+  }
+
+  // Clear disabled state if a streaming/reused node becomes a valid web link.
+  link.setAttribute('href', safeHref);
+  link.style.cursor = '';
+  link.style.pointerEvents = '';
+  link.removeAttribute('aria-disabled');
+  link.removeAttribute('role');
+  link.removeAttribute('title');
+  link.setAttribute('target', '_blank');
+  link.setAttribute('rel', 'noopener noreferrer');
+  link.onclick = (event) => event.stopPropagation();
 }
 
 /**
  * Plugin that handles link sanitization and security attributes in read-only mode.
  * - Blocks dangerous protocols (javascript:, vbscript:, data:)
- * - External HTTPS links: clickable with target="_blank" and rel="noopener noreferrer"
+ * - External HTTP(S) links: clickable with target="_blank" and rel="noopener noreferrer"
  * - Internal/relative links: rendered but not clickable
  */
 export function ReadOnlyLinkPlugin() {
@@ -53,33 +60,7 @@ export function ReadOnlyLinkPlugin() {
           const dom = editor.getElementByKey(nodeKey);
           if (!dom || !(dom instanceof HTMLAnchorElement)) continue;
 
-          const href = dom.getAttribute('href');
-          const safeHref = sanitizeHref(href ?? undefined);
-
-          if (!safeHref) {
-            // Dangerous protocol - remove href entirely
-            dom.removeAttribute('href');
-            dom.style.cursor = 'not-allowed';
-            dom.style.pointerEvents = 'none';
-            continue;
-          }
-
-          const isExternal = isExternalHref(safeHref);
-
-          if (isExternal) {
-            // External HTTPS link - add security attributes
-            dom.setAttribute('target', '_blank');
-            dom.setAttribute('rel', 'noopener noreferrer');
-            dom.onclick = (e) => e.stopPropagation();
-          } else {
-            // Internal/relative link - disable clicking
-            dom.removeAttribute('href');
-            dom.style.cursor = 'not-allowed';
-            dom.style.pointerEvents = 'none';
-            dom.setAttribute('role', 'link');
-            dom.setAttribute('aria-disabled', 'true');
-            dom.title = href ?? '';
-          }
+          configureLink(dom);
         }
       }
     );
@@ -90,32 +71,7 @@ export function ReadOnlyLinkPlugin() {
       if (!root) return;
 
       const links = root.querySelectorAll('a');
-      links.forEach((link) => {
-        const href = link.getAttribute('href');
-        const safeHref = sanitizeHref(href ?? undefined);
-
-        if (!safeHref) {
-          link.removeAttribute('href');
-          link.style.cursor = 'not-allowed';
-          link.style.pointerEvents = 'none';
-          return;
-        }
-
-        const isExternal = isExternalHref(safeHref);
-
-        if (isExternal) {
-          link.setAttribute('target', '_blank');
-          link.setAttribute('rel', 'noopener noreferrer');
-          link.onclick = (e) => e.stopPropagation();
-        } else {
-          link.removeAttribute('href');
-          link.style.cursor = 'not-allowed';
-          link.style.pointerEvents = 'none';
-          link.setAttribute('role', 'link');
-          link.setAttribute('aria-disabled', 'true');
-          link.title = href ?? '';
-        }
-      });
+      links.forEach(configureLink);
     });
 
     return unregister;

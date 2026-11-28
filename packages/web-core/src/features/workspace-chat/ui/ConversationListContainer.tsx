@@ -20,6 +20,7 @@ import { deriveConversationEntries } from '../model/deriveConversationEntries';
 import { deriveConversationTimeline } from '../model/deriveConversationTimeline';
 import { useConversationVirtualizer } from '../model/useConversationVirtualizer';
 import { useResumeConversationAtBottom } from '../model/useResumeConversationAtBottom';
+import { useReadOnConversationView } from '../model/useReadOnConversationView';
 import { useScrollCommandExecutor } from '../model/useScrollCommandExecutor';
 
 import DisplayConversationEntry from './DisplayConversationEntry';
@@ -166,6 +167,7 @@ export const ConversationList = forwardRef<
   const [hasSetupScriptRun, setHasSetupScriptRun] = useState(false);
   const [hasCleanupScriptRun, setHasCleanupScriptRun] = useState(false);
   const [hasRunningProcess, setHasRunningProcess] = useState(false);
+  const [hasPendingApproval, setHasPendingApproval] = useState(false);
   const lastSettledTailStartIndexRef = useRef<number | null>(null);
   const { setEntries, reset } = useEntriesActions();
   const setTokenUsageInfo = useSetTokenUsageInfo();
@@ -251,6 +253,7 @@ export const ConversationList = forwardRef<
     setHasSetupScriptRun(false);
     setHasCleanupScriptRun(false);
     setHasRunningProcess(false);
+    setHasPendingApproval(false);
     setFilteredEntries([]);
     setDataVersion(0);
     lastSettledTailStartIndexRef.current = null;
@@ -385,6 +388,7 @@ export const ConversationList = forwardRef<
     setHasSetupScriptRun(derivedEntries.hasSetupScriptRun);
     setHasCleanupScriptRun(derivedEntries.hasCleanupScriptRun);
     setHasRunningProcess(derivedEntries.hasRunningProcess);
+    setHasPendingApproval(derivedEntries.hasPendingApproval);
     setTokenUsageInfo(derivedEntries.latestTokenUsageInfo);
 
     const derivedTimeline = deriveConversationTimeline(
@@ -449,6 +453,7 @@ export const ConversationList = forwardRef<
     isLoadingHistory,
     hasMoreHistory,
     historyError,
+    historyErrorDetail,
     loadMoreHistory,
   } = useConversationHistory({
     attempt,
@@ -869,6 +874,25 @@ export const ConversationList = forwardRef<
     ]
   );
 
+  const latestReply = conversationRows.findLast(
+    (row) =>
+      row.rowFamily === 'assistant_message' || row.rowFamily === 'error_message'
+  );
+  useReadOnConversationView({
+    workspaceId: attempt.id,
+    sessionId: attempt.session?.id,
+    ready:
+      !loading && !historyError && !hasRunningProcess && !hasPendingApproval,
+    replyKey: latestReply?.semanticKey,
+    revision:
+      latestReply?.entry.type === 'NORMALIZED_ENTRY' &&
+      latestReply.entry.content.content.trim().length > 0
+        ? `${latestReply.semanticKey}:${latestReply.entry.content.content}`
+        : undefined,
+    scrollRef: tanstackScrollRef,
+    revealLatest: () => scrollToBottomAndClearSpacer('auto'),
+  });
+
   const showLoader = loading && conversationRows.length === 0;
   const showEmptyState =
     !loading && !historyError && conversationRows.length === 0;
@@ -918,6 +942,7 @@ export const ConversationList = forwardRef<
     loadOlderHistory,
     loading,
     historyError,
+    historyErrorDetail,
   ]);
 
   return (
@@ -954,7 +979,8 @@ export const ConversationList = forwardRef<
                 <div className="flex flex-col items-center gap-2 px-double py-3">
                   {historyError && (
                     <span role="alert" className="text-sm text-error">
-                      {t('conversation.historyLoadFailed')}
+                      {historyErrorDetail ??
+                        t('conversation.historyLoadFailed')}
                     </span>
                   )}
                   <button
@@ -1023,6 +1049,12 @@ export const ConversationList = forwardRef<
                       data-index={virtualItem.index}
                       data-row-index={virtualItem.index}
                       data-semantic-key={row.semanticKey}
+                      data-workspace-read-reply={
+                        row.rowFamily === 'assistant_message' ||
+                        row.rowFamily === 'error_message'
+                          ? row.semanticKey
+                          : undefined
+                      }
                       ref={measureElement}
                       style={{
                         position: 'absolute',
@@ -1046,6 +1078,12 @@ export const ConversationList = forwardRef<
                   key={row.semanticKey}
                   data-row-index={rowIndex}
                   data-semantic-key={row.semanticKey}
+                  data-workspace-read-reply={
+                    row.rowFamily === 'assistant_message' ||
+                    row.rowFamily === 'error_message'
+                      ? row.semanticKey
+                      : undefined
+                  }
                 >
                   {renderRowContent(row.entry, attempt, resetAction, repos)}
                 </div>

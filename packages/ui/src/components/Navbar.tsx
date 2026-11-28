@@ -5,6 +5,7 @@ import type { Icon } from '@phosphor-icons/react';
 import {
   Layout as LayoutIcon,
   ChatsTeardrop as ChatsTeardropIcon,
+  ChatCircleDots as ChatCircleDotsIcon,
   GitDiff as GitDiffIcon,
   Terminal as TerminalIcon,
   Desktop as DesktopIcon,
@@ -97,10 +98,17 @@ function NavbarIconButton({
 export type MobileTabId =
   | 'workspaces'
   | 'chat'
+  | 'dot'
   | 'changes'
   | 'logs'
   | 'preview'
   | 'git';
+
+export const DOT_MOBILE_TAB = {
+  id: 'dot',
+  icon: ChatCircleDotsIcon,
+  label: 'Dot',
+} as const;
 
 export const MOBILE_TABS: { id: MobileTabId; icon: Icon; label: string }[] = [
   { id: 'workspaces', icon: LayoutIcon, label: 'Workspaces' },
@@ -142,7 +150,10 @@ function NavbarBreadcrumbs({
               </button>
             ) : (
               <span
-                className={cn('truncate', isLast ? 'text-normal' : 'text-low')}
+                className={cn(
+                  'truncate',
+                  isLast ? 'text-xl font-semibold text-high' : 'text-low'
+                )}
               >
                 {crumb.label}
               </span>
@@ -178,6 +189,7 @@ export interface NavbarProps {
   onOpenCommandBar?: () => void;
   onOpenSettings?: () => void;
   onNavigateToBoard?: (() => void) | null;
+  onNavigateToDot?: () => void;
   onNavigateBack?: () => void;
   onReload?: () => void;
   onOpenDrawer?: () => void;
@@ -208,6 +220,7 @@ export function Navbar({
   onOpenCommandBar,
   onOpenSettings,
   onNavigateToBoard,
+  onNavigateToDot,
   onNavigateBack,
   onReload,
   onOpenDrawer,
@@ -249,10 +262,10 @@ export function Navbar({
     const tabs = mobileTabs ?? MOBILE_TABS;
     const navigationSlot = mobileNavigationSlot;
     const primaryTabs = tabs.filter((tab) =>
-      ['workspaces', 'chat', 'changes'].includes(tab.id)
+      ['workspaces', 'chat', 'dot', 'changes'].includes(tab.id)
     );
     const secondaryTabs = tabs.filter(
-      (tab) => !['workspaces', 'chat', 'changes'].includes(tab.id)
+      (tab) => !['workspaces', 'chat', 'dot', 'changes'].includes(tab.id)
     );
     const isSecondaryActive = secondaryTabs.some(
       (tab) => tab.id === mobileActiveTab
@@ -276,6 +289,14 @@ export function Navbar({
               </span>
               <span>Workspaces</span>
             </button>
+            {onNavigateToDot && (
+              <button type="button" onClick={onNavigateToDot}>
+                <span className="mobile-nav-symbol">
+                  <ChatCircleDotsIcon />
+                </span>
+                <span>Dot</span>
+              </button>
+            )}
           </>
         ) : (
           primaryTabs.map((tab) => {
@@ -337,7 +358,14 @@ export function Navbar({
               )
             )}
             <div className="min-w-0 flex-1">
-              <p className="text-lg text-high font-medium truncate">
+              <p
+                className={cn(
+                  'truncate',
+                  isOnProjectPage
+                    ? 'text-lg text-high font-medium'
+                    : 'text-xl text-high font-semibold'
+                )}
+              >
                 {workspaceTitle || (isOnProjectPage ? 'Project' : 'Workspaces')}
               </p>
               {!isOnProjectPage && breadcrumbs && breadcrumbs.length > 0 && (
@@ -441,7 +469,7 @@ export function Navbar({
     <nav
       data-tauri-drag-region
       className={cn(
-        'flex items-center justify-between px-base py-half bg-secondary border-b shrink-0',
+        'flex min-w-0 items-center justify-between px-base py-half bg-secondary border-b shrink-0',
         className
       )}
     >
@@ -465,7 +493,12 @@ export function Navbar({
           />
         ) : (
           <p
-            className="text-base text-low truncate cursor-text select-text"
+            className={cn(
+              'truncate cursor-text select-text',
+              isOnProjectPage
+                ? 'text-base text-low'
+                : 'text-xl font-semibold text-high'
+            )}
             title={workspaceTitle ?? undefined}
           >
             {workspaceTitle ?? ''}

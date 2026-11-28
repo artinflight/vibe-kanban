@@ -114,6 +114,16 @@ impl CodingAgentTurn {
         pool: &SqlitePool,
         session_id: Uuid,
     ) -> Result<Vec<CodingAgentInterruptedContext>, sqlx::Error> {
+        Self::find_interrupted_context_excluding(pool, session_id, None).await
+    }
+
+    /// A new reserved row is not prior history. Exclude only its exact identity;
+    /// retain every other interrupted instruction using the established recovery path.
+    pub async fn find_interrupted_context_excluding(
+        pool: &SqlitePool,
+        session_id: Uuid,
+        own: Option<Uuid>,
+    ) -> Result<Vec<CodingAgentInterruptedContext>, sqlx::Error> {
         // A durable completed reply acknowledges prior recovery context even when
         // this turn does not emit a new native resume anchor.
         sqlx::query_as::<_, CodingAgentInterruptedContext>(
@@ -121,7 +131,7 @@ impl CodingAgentTurn {
                 SELECT ep.created_at
                 FROM execution_processes ep
                 JOIN coding_agent_turns cat ON ep.id = cat.execution_process_id
-                WHERE ep.session_id = $1
+                WHERE ep.session_id = $1 AND ($2 IS NULL OR ep.id != $2)
                   AND ep.run_reason = 'codingagent'
                   AND ep.dropped = FALSE
                   AND ep.status = 'completed'
@@ -139,7 +149,7 @@ impl CodingAgentTurn {
                 ep.created_at as created_at
                FROM execution_processes ep
                JOIN coding_agent_turns cat ON ep.id = cat.execution_process_id
-               WHERE ep.session_id = $1
+               WHERE ep.session_id = $1 AND ($2 IS NULL OR ep.id != $2)
                  AND ep.run_reason = 'codingagent'
                  AND ep.dropped = FALSE
                  AND ((SELECT created_at FROM latest_success) IS NULL
@@ -157,6 +167,7 @@ impl CodingAgentTurn {
                LIMIT 10"#,
         )
         .bind(session_id)
+        .bind(own)
         .fetch_all(pool)
         .await
     }

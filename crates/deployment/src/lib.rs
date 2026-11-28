@@ -80,6 +80,12 @@ pub enum DeploymentError {
 pub trait Deployment: Clone + Send + Sync + 'static {
     async fn new(shutdown: CancellationToken) -> Result<Self, DeploymentError>;
 
+    /// Executable background services start only after backend configuration and
+    /// bootstrap have succeeded. Constructors must not launch these producers.
+    async fn start_background_services(&self) -> Result<(), DeploymentError> {
+        Ok(())
+    }
+
     fn user_id(&self) -> &str;
 
     fn config(&self) -> &Arc<RwLock<Config>>;

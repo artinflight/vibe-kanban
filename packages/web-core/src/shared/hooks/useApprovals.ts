@@ -13,12 +13,16 @@ type ApprovalState = {
   pending: Record<string, ApprovalInfo>;
 };
 
+const initialApprovals = (): ApprovalState => ({ pending: {} });
+
 export function useApprovals(): UseApprovalsResult {
-  const { data, isConnected } = useJsonPatchWsStream<ApprovalState>(
-    '/api/approvals/stream/ws',
-    true,
-    () => ({ pending: {} })
-  );
+  const { data, isConnected, isInitialized } =
+    useJsonPatchWsStream<ApprovalState>(
+      '/api/approvals/stream/ws',
+      true,
+      initialApprovals,
+      { resetOnReconnect: true, reconnectOnCleanClose: true }
+    );
 
   const pendingById = useMemo(() => data?.pending ?? {}, [data?.pending]);
   const pendingApprovals = useMemo(
@@ -29,7 +33,10 @@ export function useApprovals(): UseApprovalsResult {
   const getPendingForProcess = useCallback(
     (executionProcessId: string): ApprovalInfo | null => {
       for (const info of pendingApprovals) {
-        if (info.execution_process_id === executionProcessId) {
+        if (
+          info.execution_process_id === executionProcessId &&
+          info.tool_name !== 'codex.mcp_approval'
+        ) {
           return info;
         }
       }
@@ -49,6 +56,6 @@ export function useApprovals(): UseApprovalsResult {
     pendingApprovals,
     getPendingForProcess,
     getPendingById,
-    isConnected,
+    isConnected: isConnected && isInitialized,
   };
 }

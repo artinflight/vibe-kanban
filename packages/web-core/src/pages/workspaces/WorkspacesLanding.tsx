@@ -1,19 +1,18 @@
 import { useEffect } from 'react';
-import { SpinnerIcon } from '@phosphor-icons/react';
-import { useAppNavigation } from '@/shared/hooks/useAppNavigation';
+import { useMobileActiveTab } from '@/shared/stores/useUiPreferencesStore';
+import { usePageTitle } from '@/shared/hooks/usePageTitle';
+import { WorkspacesSidebarContainer } from './WorkspacesSidebarContainer';
 
 export function WorkspacesLanding() {
-  const appNavigation = useAppNavigation();
-
+  const [, setMobileTab] = useMobileActiveTab();
+  usePageTitle('Workspaces');
   useEffect(() => {
-    appNavigation.goToWorkspacesCreate({
-      replace: true,
-    });
-  }, [appNavigation]);
+    setMobileTab('workspaces');
+  }, [setMobileTab]);
 
   return (
-    <div className="flex h-full flex-1 items-center justify-center bg-primary">
-      <SpinnerIcon className="size-6 animate-spin text-low" />
+    <div className="flex h-full min-h-0 flex-1 flex-col bg-primary">
+      <WorkspacesSidebarContainer />
     </div>
   );
 }

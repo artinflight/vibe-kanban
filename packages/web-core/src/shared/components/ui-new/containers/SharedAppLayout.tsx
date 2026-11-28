@@ -12,6 +12,7 @@ import {
 import { SyncErrorProvider } from '@/shared/providers/SyncErrorProvider';
 import { useIsMobile } from '@/shared/hooks/useIsMobile';
 import { useMobileViewport } from '@/shared/hooks/useMobileViewport';
+import { useDotProjectNotifications } from '@/shared/hooks/useDotNotifications';
 import { useMobileSheet } from '@/shared/hooks/useMobileSheet';
 import { useUiPreferencesStore } from '@/shared/stores/useUiPreferencesStore';
 import { cn } from '@/shared/lib/utils';
@@ -23,7 +24,6 @@ import {
   type AppBarHostStatus,
   type AppBarProject,
   type AppBarProjectUpdate,
-  PASTEL_PROJECT_COLORS,
 } from '@vibe/ui/components/AppBar';
 import { MobileDrawer } from '@vibe/ui/components/MobileDrawer';
 import { AppBarUserPopoverContainer } from './AppBarUserPopoverContainer';
@@ -60,14 +60,7 @@ import { WorkspacesSidebarContainer } from '@/pages/workspaces/WorkspacesSidebar
 import { WorkspacesSidebarReopenTag } from '@vibe/ui/components/WorkspacesSidebar';
 import { useRemoteCloudHostsAppBarModel } from '@/shared/hooks/useRemoteCloudHosts';
 import { projectsApi, workspacesApi } from '@/shared/lib/api';
-
-function getLocalProjectColor(projectId: string): string {
-  let hash = 0;
-  for (const char of projectId) {
-    hash = (hash * 31 + char.charCodeAt(0)) % PASTEL_PROJECT_COLORS.length;
-  }
-  return PASTEL_PROJECT_COLORS[hash];
-}
+import { getLocalProjectColor } from '@vibe/ui/lib/projectAppearance';
 
 function workspaceNeedsReview(workspace: {
   has_pending_approval?: boolean;
@@ -287,6 +280,7 @@ export function SharedAppLayout() {
     needsReviewWorkspaceIds,
     userWorkspaces,
   ]);
+  const dotProjectNotifications = useDotProjectNotifications();
   const allAppBarProjects = useMemo(
     () =>
       (isLocalAuthBypassed ? localAppBarProjects : sortedProjects).map(
@@ -295,6 +289,14 @@ export function SharedAppLayout() {
           abbreviation: localProjectCustomizations[project.id]?.abbreviation,
           color: localProjectCustomizations[project.id]?.color ?? project.color,
           hasNeedsReview: needsReviewProjectIds.has(project.id),
+          dotUnreadCount:
+            dotProjectNotifications.find(
+              (item) => item.project_id === project.id
+            )?.unread_count ?? 0,
+          dotNeedsAttentionCount:
+            dotProjectNotifications.find(
+              (item) => item.project_id === project.id
+            )?.needs_attention_count ?? 0,
         })
       ),
     [
@@ -302,6 +304,7 @@ export function SharedAppLayout() {
       localAppBarProjects,
       localProjectCustomizations,
       needsReviewProjectIds,
+      dotProjectNotifications,
       sortedProjects,
     ]
   );
@@ -598,7 +601,7 @@ export function SharedAppLayout() {
           'bg-primary',
           isMobile
             ? 'mobile-app-shell flex fixed inset-x-0 top-0 h-dvh'
-            : 'grid grid-cols-[auto_1fr] grid-rows-[auto_1fr] h-screen'
+            : 'grid grid-cols-[auto_1fr] grid-rows-[auto_minmax(0,1fr)] h-screen'
         )}
       >
         {!isMobile && (
@@ -721,8 +724,9 @@ export function SharedAppLayout() {
         <MobileDrawer
           open={projectSheet.isOpen && isMobile}
           onClose={projectSheet.close}
+          contentClassName="flex flex-col overflow-hidden"
         >
-          <div className="flex flex-col min-h-0">
+          <div className="flex min-h-0 flex-1 flex-col">
             {/* Workspaces link */}
             <button
               type="button"
@@ -744,7 +748,7 @@ export function SharedAppLayout() {
             <div className="border-t border-border mx-4" />
 
             {/* Project list */}
-            <div className="flex-1 overflow-y-auto p-2">
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain scrollbar-none p-2">
               {isSignedIn || isLocalAuthBypassed ? (
                 <div className="space-y-3">
                   <div className="space-y-1">
@@ -817,7 +821,7 @@ export function SharedAppLayout() {
 
             {/* Create Project button */}
             {(isSignedIn || isLocalAuthBypassed) && (
-              <div className="space-y-1 p-3 border-t border-border">
+              <div className="shrink-0 space-y-1 p-3 border-t border-border">
                 {archivedProjects.length > 0 && (
                   <button
                     type="button"

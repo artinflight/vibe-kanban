@@ -1,0 +1,10 @@
+[Unit]
+Description=OP storage incident observation and guarded owner response
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 -B %h/.local/lib/storage-alert-response/monitor.py --config %h/.config/storage-alert-response/config.json --activate
+StateDirectory=storage-alert-response
+UMask=0077
+NoNewPrivileges=true
+TimeoutStartSec=120

@@ -1,0 +1,12 @@
+{
+  "workspace_id": "fcf2fbbf-9dfd-4c2e-9588-7f3003ebb20d",
+  "session_id": "cdba0e6c-cfba-4fbe-bddf-1e3b92838c38",
+  "execution_revision": "2026-10-10T11:07:30.435195078Z",
+  "native_session_id": "01a100fa-c924-7751-ba5b-36a55a27ff38",
+  "native_turn_id": "01a1257f-485f-7851-850d-12935a71ea59",
+  "source_prefix_bytes": 71704365,
+  "source_prefix_sha256": "35ef28e9dd31ef8bde1352279a3b180b56a5c1eafcb1e9e3352d49262ea66d42",
+  "original_capture_sha256": "0c531ed4f6f7066245258ffba6fd5f8130f0f0a53e02a7420a62c03d785ae2ed",
+  "prompt_sha256": "b7b77d5696ee56f31a88c40abeaf566601b0978c32888fb8f58bf49b0d3558bf",
+  "reply_sha256": "35c8e14f682f34ae484612283a5b459b53ff84d13575975672b43bc9e99acf27"
+}

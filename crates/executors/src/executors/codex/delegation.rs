@@ -23,13 +23,24 @@ use crate::{
 };
 
 pub const TOOL: &str = "vk_delegate";
-pub const INSTRUCTIONS: &str = "AutoSwitch controls delegation through vk_delegate. Native collaboration tools are disabled for this execution. Delegate only independent, substantial work or a useful batch; perform tiny operations yourself. Supply a compact requirements/decisions brief and repository-relative scope paths. Do not copy conversation history. Scope paths are ownership declarations, not permission to ignore repository instructions. Use start, then status to collect results; cancel work that has become obsolete. Do not finish while a child remains active. Use follow_up on the same task for corrections; observable failure can raise its model at that boundary if the operator permits escalation. Do not relaunch duplicates under new task names or invoke another Codex CLI to evade these controls. You own review, integration and final acceptance. Children cannot delegate or own native goals. Do not delegate while a native goal owns this execution.";
+pub const INSTRUCTIONS: &str = include_str!("delegation_instructions.md");
+
 static ACTIVE: AtomicUsize = AtomicUsize::new(0);
 static ADMISSION: StdMutex<()> = StdMutex::new(());
 pub fn active_count() -> usize {
     ACTIVE.load(Ordering::SeqCst)
 }
-struct Permit;
+struct Permit {
+    lease: Option<crate::workspace_admission::JobLease>,
+}
+impl Permit {
+    async fn finish(mut self) -> Result<(), String> {
+        if let Some(lease) = self.lease.take() {
+            lease.close().await?;
+        }
+        Ok(())
+    }
+}
 impl Drop for Permit {
     fn drop(&mut self) {
         ACTIVE.fetch_sub(1, Ordering::SeqCst);
@@ -43,7 +54,7 @@ fn permit() -> Result<Permit, String> {
         return Err(error.to_string());
     }
     ACTIVE.fetch_add(1, Ordering::SeqCst);
-    Ok(Permit)
+    Ok(Permit { lease: None })
 }
 
 pub fn tool_spec() -> DynamicToolSpec {
@@ -365,9 +376,12 @@ impl Delegation {
             let failed = previous.as_ref().is_some_and(|p| {
                 p.pending_failure || p.status == "failed" || p.validation_failures >= 2
             });
-            let permit = tokio::task::spawn_blocking(permit)
+            let mut permit = tokio::task::spawn_blocking(permit)
                 .await
                 .map_err(|e| e.to_string())??;
+            if let Some(admission) = &self.env.job_admission {
+                permit.lease = Some(admission.reserve().await?);
+            }
             let record = Record {
                 id: previous
                     .as_ref()
@@ -392,6 +406,7 @@ impl Delegation {
             state.records.insert(task.clone(), record);
             if let Err(error) = self.save(&state).await {
                 state.records.remove(&task);
+                permit.finish().await?;
                 if let Some(p) = previous.clone() {
                     state.records.insert(task.clone(), p);
                 }
@@ -426,7 +441,9 @@ impl Delegation {
                 if failed {
                     r.choice = previous.as_ref().and_then(|p| p.choice.clone());
                 }
-                state.permits.remove(&task);
+                if let Some(permit) = state.permits.remove(&task) {
+                    permit.finish().await?;
+                }
                 if let Err(error) = self.save(&state).await {
                     self.close();
                     tracing::warn!(%error,"Delegation journal unavailable; further child admission closed");
@@ -684,6 +701,13 @@ impl Delegation {
             r.pending_failure = false;
             let r = r.clone();
             self.save(&state).await?;
+            if let Some(lease) = state
+                .permits
+                .get(task)
+                .and_then(|permit| permit.lease.as_ref())
+            {
+                lease.mark_running()?;
+            }
             r
         };
         if let Some(binding) = crate::routing_telemetry::NativeBinding::new(
@@ -800,8 +824,10 @@ impl Delegation {
                 _ => return Ok(true),
             }
             let r = r.clone();
-            if !r.active() {
-                state.permits.remove(&task);
+            if !r.active()
+                && let Some(permit) = state.permits.remove(&task)
+            {
+                permit.finish().await?;
             }
             self.save(&state).await?;
             r
@@ -919,6 +945,15 @@ mod tests {
     }
     #[tokio::test]
     async fn delegation_cancel_dispatch_keeps_reader_and_parent_alive() {
+        bounded_specialist_fixture(false).await;
+    }
+
+    #[tokio::test]
+    async fn active_goal_delegates_bounded_specialist_without_transferring_ownership() {
+        bounded_specialist_fixture(true).await;
+    }
+
+    async fn bounded_specialist_fixture(with_goal: bool) {
         use codex_app_server_protocol::{JSONRPCNotification, JSONRPCRequest};
         use tokio_util::sync::CancellationToken;
 
@@ -929,16 +964,23 @@ mod tests {
         use crate::env::RepoContext;
         let dir = std::env::temp_dir().join(format!("vk-delegation-test-{}", Uuid::new_v4()));
         std::fs::create_dir(&dir).unwrap();
+        std::fs::write(dir.join("README.md"), "Review teh fixture only.\n").unwrap();
         let mut process=tokio::process::Command::new("python3").args(["-u","-c",r#"
 import sys,json
+from pathlib import Path
 model,effort='gpt-5.6-luna','low'
 for line in sys.stdin:
     d=json.loads(line)
+    if d.get('id')=='start-admission' and 'result' in d:
+        Path('admission.tmp').write_text(json.dumps(d['result']))
+        Path('admission.tmp').rename('admission.json')
     if d.get('method') in ('thread/start','thread/resume'):
         p=d['params']
         assert p['model'] in ('gpt-5.6-luna','gpt-6.1-sol')
         assert p['config']['features.multi_agent'] is False and p['config']['features.multi_agent_v2'] is False
         assert 'PARENT_PRIVATE_HISTORY' not in json.dumps(p)
+        assert p['config']['features.goals'] is False
+        assert not p.get('dynamicTools')
         print(json.dumps({'id':d['id'],'result':{'thread':{'id':'11111111-1111-4111-8111-111111111111'},'model':model,'reasoningEffort':effort,'modelProvider':'openai','serviceTier':None}}),flush=True)
     elif d.get('method')=='thread/settings/update':
         p=d['params']; model,effort=p['model'],p['effort']
@@ -950,12 +992,17 @@ for line in sys.stdin:
         assert 'Delegated assignment:' in p['input'][0]['text']
         print(json.dumps({'id':d['id'],'result':{'turn':{'id':'native-fixture-turn'}}}),flush=True)
         print(json.dumps({'method':'turn/started','params':{'threadId':p['threadId'],'turn':{'id':'native-fixture-turn','status':'inProgress'}}}),flush=True)
+        text=Path('README.md').read_text()
+        result=f"Reviewed README.md: {text.count('teh')} spelling defect; no files changed"
+        print(json.dumps({'method':'item/completed','params':{'threadId':p['threadId'],'turnId':'native-fixture-turn','item':{'type':'agentMessage','id':'review-result','text':result}}}),flush=True)
         print(json.dumps({'method':'thread/tokenUsage/updated','params':{'threadId':p['threadId'],'turnId':'native-fixture-turn','tokenUsage':{'last':{'inputTokens':42,'cachedInputTokens':11,'outputTokens':7,'reasoningOutputTokens':2}}}}),flush=True)
         print(json.dumps({'method':'turn/completed','params':{'threadId':p['threadId'],'turn':{'id':'native-fixture-turn','status':'completed'}}}),flush=True)
+    elif d.get('method')=='turn/steer':
+        print(json.dumps({'id':d['id'],'result':{'turnId':d['params']['expectedTurnId']}}),flush=True)
     elif d.get('method')=='turn/interrupt':
         print(json.dumps({'id':d['id'],'result':{}}),flush=True)
         print(json.dumps({'method':'turn/completed','params':{'threadId':'child','turn':{'id':'child-turn','status':'interrupted'}}}),flush=True)
-"#]).stdin(std::process::Stdio::piped()).stdout(std::process::Stdio::piped()).kill_on_drop(true).spawn().unwrap();
+"#]).current_dir(&dir).stdin(std::process::Stdio::piped()).stdout(std::process::Stdio::piped()).kill_on_drop(true).spawn().unwrap();
         let cancel = CancellationToken::new();
         let (tx, mut rx) = tokio::sync::oneshot::channel();
         let signal = ExitSignalSender::new(tx);
@@ -978,11 +1025,18 @@ for line in sys.stdin:
         );
         client.connect(peer.clone());
         client.set_exit_signal(signal);
-        client.register_session("root").await.unwrap();
-        client.on_notification(&peer,"{}",JSONRPCNotification{method:"turn/started".into(),params:Some(json!({"threadId":"root","turn":{"id":"parent-turn","status":"inProgress","items":[],"error":null}}))}).await.unwrap();
+        let root_id = Uuid::new_v4().to_string();
+        client.register_session(&root_id).await.unwrap();
+        if with_goal {
+            client.on_notification(&peer, "{}", JSONRPCNotification {
+                method: "thread/goal/updated".into(),
+                params: Some(json!({"threadId":root_id,"goal":{"threadId":root_id,"objective":"Verify parent outcome using bounded specialist evidence","status":"active","createdAt":1,"tokenBudget":null}})),
+            }).await.unwrap();
+        }
+        client.on_notification(&peer,"{}",JSONRPCNotification{method:"turn/started".into(),params:Some(json!({"threadId":root_id,"turn":{"id":"parent-turn","status":"inProgress","items":[],"error":null}}))}).await.unwrap();
         let assignment = Assignment {
             task: "child".into(),
-            message: "Fix spelling typos in README.md".into(),
+            message: "Review spelling typos in README.md and report findings".into(),
             context: String::new(),
             paths: vec!["README.md".into()],
             independent: true,
@@ -1013,12 +1067,13 @@ for line in sys.stdin:
         let control = Arc::new(Delegation {
             policy,
             parent,
-            root_thread: "root".into(),
+            root_thread: root_id.clone(),
             root: dir.clone(),
             params: ThreadStartParams {
                 config: Some(HashMap::from([
                     ("features.multi_agent".into(), json!(false)),
                     ("features.multi_agent_v2".into(), json!(false)),
+                    ("features.goals".into(), json!(false)),
                 ])),
                 ..Default::default()
             },
@@ -1034,12 +1089,43 @@ for line in sys.stdin:
             closing: AtomicBool::new(false),
         });
         client.set_delegation(control.clone());
+        // Exercise real dynamic start admission before assessment. An active goal
+        // must reach the normal size guard, not the former blanket goal rejection.
+        let request = JSONRPCRequest {
+            trace: None,
+            id: codex_app_server_protocol::RequestId::String("start-admission".into()),
+            method: "item/tool/call".into(),
+            params: Some(
+                json!({"threadId":root_id,"turnId":"parent-turn","callId":"admit","tool":TOOL,
+                "arguments":{"action":"start","task":"tiny","message":"Inspect one word","context":"bounded test","paths":["README.md"],"independent":true,"size":"tiny","read_only":true}}),
+            ),
+        };
+        client
+            .on_request(&peer, &serde_json::to_string(&request).unwrap(), request)
+            .await
+            .unwrap();
+        tokio::time::timeout(std::time::Duration::from_secs(3), async {
+            while !dir.join("admission.json").exists() {
+                tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+            }
+        })
+        .await
+        .unwrap();
+        let admission: Value =
+            serde_json::from_slice(&std::fs::read(dir.join("admission.json")).unwrap()).unwrap();
+        assert_eq!(admission["success"], false);
+        assert!(
+            admission
+                .to_string()
+                .contains("Perform tiny or dependent work in the parent"),
+            "{admission}"
+        );
         let request = JSONRPCRequest {
             trace: None,
             id: codex_app_server_protocol::RequestId::String("dynamic-call".into()),
             method: "item/tool/call".into(),
             params: Some(
-                json!({"threadId":"root","turnId":"parent-turn","callId":"call","tool":TOOL,"arguments":{"action":"cancel","task":"child"}}),
+                json!({"threadId":root_id,"turnId":"parent-turn","callId":"call","tool":TOOL,"arguments":{"action":"cancel","task":"child"}}),
             ),
         };
         tokio::time::timeout(
@@ -1061,6 +1147,7 @@ for line in sys.stdin:
             "interrupted"
         );
         assert!(client.delegation_turn_current("parent-turn").await);
+        assert!(!client.delegation_turn_current("stale-turn").await);
         assert!(
             rx.try_recv().is_err(),
             "A child completion cannot end the owner"
@@ -1110,8 +1197,17 @@ for line in sys.stdin:
         .unwrap();
         let record = control.state.lock().await.records["child"].clone();
         assert_eq!(record.status, "completed");
+        assert_eq!(
+            record.result,
+            "Reviewed README.md: 1 spelling defect; no files changed"
+        );
+        assert_eq!(
+            std::fs::read_to_string(dir.join("README.md")).unwrap(),
+            "Review teh fixture only.\n"
+        );
         assert_eq!(record.usage.unwrap()["last"]["cachedInputTokens"], 11);
         assert!(client.delegation_turn_current("parent-turn").await);
+        assert!(!client.delegation_turn_current("stale-turn").await);
         let previous = control.state.lock().await.records["child"].clone();
         {
             let mut state = control.state.lock().await;

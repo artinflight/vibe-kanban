@@ -1,0 +1,38 @@
+{
+  "producer": {
+    "authenticated_runtime_bundle_sha256": "65ca093990ccacebe24da9872a61e80b1fde8c8eda87e40dceb8a27132a98bd1",
+    "package_sha256": "bb98c78bcee45a7c873c54e9904f87ba6fa541332a4f97b2633c54d50299ec76",
+    "package_bytes": 4977437,
+    "source_commit": "49cf82d603b765b4ceaf5a8b4462f046e6181c0f",
+    "producer_source_sha256": "1f5759398d486835cc4eebc0d39a3438cdf5f0760eeb76419bfe1a3e69024a08",
+    "source_permission_bits_copied": true,
+    "source_uid_gid_preserved": false
+  },
+  "snapshots": [
+    {
+      "captured_snapshot_mode": 436,
+      "producer_copies_source_mode": true,
+      "original_uid_gid_preserved": false,
+      "archive_sha256": "9beef7c6ca1e533b9861f186d6654e5db0c4d7e13482bdddc70f0673b9b32e4d",
+      "root_relative_path_sha256": "5a4c1475f2da4c905859abae1e484c91971be8edea017e566125c210cdbe087b",
+      "snapshot_member_sha256": "ba0733d741451e21febb0cf527738ce4e586a6ef0136b88211b6958c007abb3f"
+    },
+    {
+      "captured_snapshot_mode": 436,
+      "producer_copies_source_mode": true,
+      "original_uid_gid_preserved": false,
+      "archive_sha256": "9beef7c6ca1e533b9861f186d6654e5db0c4d7e13482bdddc70f0673b9b32e4d",
+      "root_relative_path_sha256": "f91231607183dad06b4f0841e26d0e90acbb09cd429d65b063cb9ba2c731563d",
+      "snapshot_member_sha256": "fcde26242d99ab74f8a07a4a735f8dc36bc11a9b9a41f4308a6ca705a7a128f3"
+    },
+    {
+      "captured_snapshot_mode": 436,
+      "producer_copies_source_mode": true,
+      "original_uid_gid_preserved": false,
+      "archive_sha256": "9beef7c6ca1e533b9861f186d6654e5db0c4d7e13482bdddc70f0673b9b32e4d",
+      "root_relative_path_sha256": "66cb3dc6ac9f216b2ad86fb2af70d075d8c83effd85549e266d1ea9da2d09ba0",
+      "snapshot_member_sha256": "e8543a10efbe4e04137406ee9fa879aa95666956d09d2da3e993cf470ab19d72"
+    }
+  ],
+  "limitation": "Copied source permission bits at sampling time; source ownership and subsequent metadata are not established."
+}

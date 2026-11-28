@@ -10,18 +10,23 @@ pub mod diff;
 pub mod execution_logs;
 pub mod http_headers;
 pub mod jwt;
+pub mod log_archive;
+mod log_archive_packed;
 pub mod log_msg;
+pub mod log_mutation;
 pub mod msg_store;
 pub mod path;
 pub mod port_file;
 pub mod process;
 pub mod response;
+pub mod runtime_safety;
 pub mod sentry;
 pub mod shell;
 pub mod stream_lines;
 pub mod text;
 pub mod tokio;
 pub mod version;
+pub mod workspace_custody;
 
 /// Cache for WSL2 detection result
 static WSL2_CACHE: OnceLock<bool> = OnceLock::new();

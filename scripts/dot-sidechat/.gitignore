@@ -1,0 +1,10 @@
+dist/
+__pycache__/
+*.sqlite*
+*.key
+*.pem
+*.crt
+*.log
+pairing-code*
+runtime/
+state/

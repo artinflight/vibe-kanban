@@ -40,7 +40,7 @@ python3 scripts/deployment/vk_prepare.py init \
   --deployed VERIFIED_DEPLOYED_COMMIT
 python3 scripts/deployment/vk_prepare.py run \
   --source /absolute/clean/candidate --root /mnt/vk-storage/vk-next-preparation \
-  --plan /mnt/vk-storage/vk-next-preparation/plan.json
+  --plan /mnt/vk-storage/vk-next-preparation/plan.json --compact
 ```
 
 Review the generated private plan against the release. Its commands are trusted
@@ -50,6 +50,15 @@ Review build environment overrides and dependency availability before starting.
 The runner checks declared tool prerequisites before expensive work and records
 logs, per-step durations, cache hits, total runner time, and elapsed preparation
 time. A failed prerequisite or check is not a readiness pass.
+
+`--compact` returns a small, durable job outcome rather than repeating every
+output hash/path in the conversation. The complete existing result, logs and
+fingerprinted evidence remain on disk; `result.path/bytes/sha256` binds the
+run-specific report. Use the returned `job_id`, not an older latest-result
+alias. Failure stays nonzero and names the phase; blocked work cannot reuse an
+older success. Preparation completion proves neither message delivery, human QA
+nor cutover permission. Omit the flag for existing full-JSON consumers. See
+[compact outcome acceptance](USAGE_JOB_OUTCOMES.md).
 
 The default local recipe handles docs/preparation-only changes without a server
 build. Frontend-only changes do not require a backend cutover. Unknown/shared

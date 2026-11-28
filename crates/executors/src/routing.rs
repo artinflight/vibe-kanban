@@ -406,14 +406,36 @@ fn resolve_action_inner(
             })
             .or_else(|| match &p.typ {
                 ExecutorActionType::CodingAgentInitialRequest(r) => Some(
-                    crate::routing_assessment::assess(&r.prompt)
-                        .envelope
-                        .to_owned(),
+                    crate::routing_module::assess(
+                        &r.prompt,
+                        None,
+                        None,
+                        None,
+                        None,
+                        false,
+                        &policy,
+                        false,
+                        serde_json::Value::Null,
+                    )
+                    .0
+                    .envelope
+                    .to_owned(),
                 ),
                 ExecutorActionType::CodingAgentFollowUpRequest(r) => Some(
-                    crate::routing_assessment::assess(&r.prompt)
-                        .envelope
-                        .to_owned(),
+                    crate::routing_module::assess(
+                        &r.prompt,
+                        None,
+                        None,
+                        None,
+                        None,
+                        false,
+                        &policy,
+                        false,
+                        serde_json::Value::Null,
+                    )
+                    .0
+                    .envelope
+                    .to_owned(),
                 ),
                 _ => None,
             })

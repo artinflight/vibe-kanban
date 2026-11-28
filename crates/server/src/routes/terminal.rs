@@ -87,8 +87,11 @@ async fn terminal_ws(
         }
     }
 
-    Ok(ws.on_upgrade(move |socket| {
-        handle_terminal_ws(socket, deployment, working_dir, query.cols, query.rows)
+    let writer_lease =
+        services::services::admission::interactive_writer().map_err(ApiError::BadRequest)?;
+    Ok(ws.on_upgrade(move |socket| async move {
+        let _writer_lease = writer_lease;
+        handle_terminal_ws(socket, deployment, working_dir, query.cols, query.rows).await
     }))
 }
 

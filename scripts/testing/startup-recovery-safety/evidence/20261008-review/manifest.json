@@ -1,0 +1,49 @@
+{
+  "scope": "safe redacted parent checks; independent sign-off withheld",
+  "files": {
+    "archive-authentication.json": {
+      "bytes": 11123,
+      "sha256": "fd97e47a000e1b179aed36d5ff9d9b127dc548c07c5f233e70fccb476b849fb0"
+    },
+    "correction-bundle-desktop-receipt.json": {
+      "bytes": 422,
+      "sha256": "a646a5d0213ef8778f6c40b946acf2db851a52dcd1ca441a3483c55e17f32bb6"
+    },
+    "hosted-ci-984f5ee79.json": {
+      "bytes": 2555,
+      "sha256": "e5077cd99d90ad5e2719b69925a9b2d9c67e691ad8a9feeb667dfe690592cf9c"
+    },
+    "local-validation.json": {
+      "bytes": 1209,
+      "sha256": "aae0fb7bfb01ce59015eace2924d85b15a54f729060fe793aee5e67f5e33e617"
+    },
+    "mutation-dispositions-redacted.json": {
+      "bytes": 335130,
+      "sha256": "8a2358c443873b4b2ab19b88bca9f3176735af35eece87ec2f2acec2d6c52e02"
+    },
+    "original-history-cross-reference.json": {
+      "bytes": 80504,
+      "sha256": "9ea7f092f976927355256d8847a78a6c675072e0278030989da3e2739b97c452"
+    },
+    "pr223.json": {
+      "bytes": 3344,
+      "sha256": "bf7b9951aa92970339f006976cc9989fb4114993e2d7b3c010500b95ec472d33"
+    },
+    "recovery-files.json": {
+      "bytes": 5497,
+      "sha256": "8eba718f10a29210daf3597e3f7be6534b0f0559cf9d7e8ecc6b010b3bf0389b"
+    },
+    "retirement-evidence.json": {
+      "bytes": 446,
+      "sha256": "d793eb32250408322a7bd306bc8a47031bd9fecc37d6959de7469fdf54de1911"
+    },
+    "strict-owner-replay.json": {
+      "bytes": 8444,
+      "sha256": "de8e914d48e7dc16440a70d268c5068d6ff417197ceef03fa01a8f171bbbe33e"
+    },
+    "verdict.json": {
+      "bytes": 3113,
+      "sha256": "4d150b9604ee6615308f9cadb092730fc69a1d4e2ad5f12e0c6cdced647e7254"
+    }
+  }
+}

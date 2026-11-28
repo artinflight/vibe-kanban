@@ -181,6 +181,7 @@ interface SessionChatBoxProps<TExecutor extends string = string> {
   feedbackMode?: FeedbackModeProps;
   editMode?: EditModeProps;
   approvalMode?: ApprovalModeProps;
+  consentCards?: ReactNode;
   askQuestionMode?: AskQuestionModeProps;
   reviewComments?: ReviewCommentsProps;
   subagentActivity?: SubagentActivityProps;
@@ -201,6 +202,7 @@ interface SessionChatBoxProps<TExecutor extends string = string> {
   inProgressTodo?: TodoProgressItem | null;
   localAttachments?: LocalAttachmentMetadata[];
   footerLeftExtra?: ReactNode;
+  statusNotice?: ReactNode;
   onPrCommentClick?: () => void;
   onViewCode?: () => void;
   onOpenWorkspace?: () => void;
@@ -249,6 +251,7 @@ export function SessionChatBox<TExecutor extends string = string>({
   feedbackMode,
   editMode,
   approvalMode,
+  consentCards,
   askQuestionMode,
   reviewComments,
   subagentActivity,
@@ -266,6 +269,7 @@ export function SessionChatBox<TExecutor extends string = string>({
   inProgressTodo,
   localAttachments,
   footerLeftExtra,
+  statusNotice,
   onPrCommentClick,
   onViewCode,
   onOpenWorkspace,
@@ -301,6 +305,7 @@ export function SessionChatBox<TExecutor extends string = string>({
   // Derived state from status
   const isDisabled = Boolean(
     status === 'sending' ||
+      status === 'queue-loading' ||
       status === 'stopping' ||
       feedbackMode?.isSubmitting ||
       editMode?.isSubmitting ||
@@ -531,7 +536,7 @@ export function SessionChatBox<TExecutor extends string = string>({
       case 'sending':
         return (
           <PrimaryButton
-            onClick={actions.onStop}
+            disabled
             actionIcon="spinner"
             value={t('conversation.actions.sending')}
           />
@@ -725,7 +730,13 @@ export function SessionChatBox<TExecutor extends string = string>({
         localAttachments,
       })}
       error={displayError}
-      banner={renderBanner()}
+      banner={
+        <>
+          {statusNotice}
+          {consentCards}
+          {renderBanner()}
+        </>
+      }
       visualVariant={getVisualVariant()}
       isRunning={showRunningAnimation}
       dropzone={dropzone}

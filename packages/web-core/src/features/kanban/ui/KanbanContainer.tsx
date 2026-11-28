@@ -1,3 +1,7 @@
+import { IssueReadLaterAction } from '@/shared/components/IssueReadLaterAction';
+import { useOpenProjectWorkspace } from '@/shared/hooks/useOpenProjectWorkspace';
+import { DotActivityIndicators } from '@vibe/ui/components/DotActivityIndicators';
+import { useDotNotifications } from '@/shared/hooks/useDotNotifications';
 import {
   useMemo,
   useCallback,
@@ -13,7 +17,8 @@ import { useProjectContext } from '@/shared/hooks/useProjectContext';
 import { useOrgContext } from '@/shared/hooks/useOrgContext';
 import { useWorkspaceContext } from '@/shared/hooks/useWorkspaceContext';
 import { useActions } from '@/shared/hooks/useActions';
-import { useAuth } from '@/shared/hooks/auth/useAuth';
+import { useAssignmentIdentity } from '@/shared/hooks/useLocalParticipants';
+import { resolvePhoneTaskStatus } from '../model/phoneTaskStatus';
 import { useUserSystem } from '@/shared/hooks/useUserSystem';
 import { useAppNavigation } from '@/shared/hooks/useAppNavigation';
 import { useIsMobile } from '@/shared/hooks/useIsMobile';
@@ -23,6 +28,7 @@ import {
   useUiPreferencesStore,
   resolveKanbanProjectState,
   KANBAN_ASSIGNEE_FILTER_VALUES,
+  resolveKanbanViewFilters,
   KANBAN_PROJECT_VIEW_IDS,
   type KanbanFilterState,
   type KanbanSortField,
@@ -32,7 +38,9 @@ import {
   PRIORITY_ORDER,
 } from '../model/hooks/useKanbanFilters';
 import {
+  CaretDownIcon,
   CaretLeftIcon,
+  CaretRightIcon,
   DotsThreeIcon,
   PlusIcon,
   XIcon,
@@ -54,6 +62,11 @@ import {
   KanbanHeader,
   type DropResult,
 } from '@vibe/ui/components/KanbanBoard';
+import {
+  getWorkspaceAttentionLabel,
+  getWorkspacesAttentionLabel,
+} from '@vibe/ui/lib/workspaceAttention';
+import { IssueReviewFlagButton } from '@vibe/ui/components/IssueReviewFlagButton';
 import { KanbanCardContent } from '@vibe/ui/components/KanbanCardContent';
 import {
   IssueWorkspaceCard,
@@ -113,13 +126,6 @@ const areKanbanFiltersEqual = (
   );
 };
 
-type WorkspaceReviewState = {
-  hasPendingApproval?: boolean | null;
-  hasUnseenActivity?: boolean | null;
-  isRunning?: boolean | null;
-  latestProcessStatus?: string | null;
-};
-
 const ISSUE_FLAGS_METADATA_KEY = 'vk_flags';
 const NEEDS_REVIEW_ISSUE_FLAG = 'needs_review';
 
@@ -171,27 +177,6 @@ function setIssueFlag(
   }
 
   return nextMetadata;
-}
-
-function workspaceNeedsActionableReview(
-  workspace: WorkspaceReviewState
-): boolean {
-  if (
-    workspace.latestProcessStatus === 'failed' ||
-    workspace.latestProcessStatus === 'killed'
-  ) {
-    return false;
-  }
-
-  if (workspace.hasPendingApproval === true) {
-    return true;
-  }
-
-  return (
-    workspace.hasUnseenActivity === true &&
-    workspace.isRunning !== true &&
-    workspace.latestProcessStatus !== 'running'
-  );
 }
 
 function LoadingState() {
@@ -708,10 +693,18 @@ function CollapsedKanbanColumn({
  * Must be rendered within both OrgProvider and ProjectProvider.
  */
 export function KanbanContainer() {
+  const navigateToProjectWorkspace = useOpenProjectWorkspace();
   const isMobile = useIsMobile();
-  const [phoneStatus, setPhoneStatus] = useState<string | null>(null);
+  const phoneStatusByProject = useUiPreferencesStore(
+    (s) => s.phoneStatusByProject
+  );
+  const setPhoneProjectStatus = useUiPreferencesStore(
+    (s) => s.setPhoneProjectStatus
+  );
   const workspaceColors = useUiPreferencesStore((s) => s.workspaceColors);
   const setWorkspaceColor = useUiPreferencesStore((s) => s.setWorkspaceColor);
+  const expanded = useUiPreferencesStore((s) => s.expanded);
+  const toggleExpanded = useUiPreferencesStore((s) => s.toggleExpanded);
   const { t } = useTranslation('common');
   const appNavigation = useAppNavigation();
   const routeState = useCurrentKanbanRouteState();
@@ -746,7 +739,8 @@ export function KanbanContainer() {
     isLoading: orgLoading,
   } = useOrgContext();
   const { activeWorkspaces } = useWorkspaceContext();
-  const { userId } = useAuth();
+  const dotNotifications = useDotNotifications();
+  const userId = useAssignmentIdentity();
   const { loginStatus } = useUserSystem();
   const isLocalOnlySession =
     loginStatus?.status === 'loggedin' && !loginStatus.profile;
@@ -773,13 +767,9 @@ export function KanbanContainer() {
   );
   const openIssueWorkspace = useCallback(
     (issueId: string, workspaceAttemptId: string) => {
-      appNavigation.goToProjectIssueWorkspace(
-        projectId,
-        issueId,
-        workspaceAttemptId
-      );
+      navigateToProjectWorkspace(projectId, issueId, workspaceAttemptId);
     },
-    [appNavigation, projectId]
+    [navigateToProjectWorkspace, projectId]
   );
   const startCreate = useCallback(
     (options?: ProjectIssueCreateOptions) => {
@@ -851,7 +841,12 @@ export function KanbanContainer() {
     collapsedStatusIds: defaultCollapsedStatusIds,
   } = resolvedProjectState;
   const projectViewPreferences = projectViewPreferencesById?.[activeViewId];
-  const kanbanFilters = projectViewPreferences?.filters ?? defaultKanbanFilters;
+  const storedKanbanFilters =
+    projectViewPreferences?.filters ?? defaultKanbanFilters;
+  const kanbanFilters = useMemo(
+    () => resolveKanbanViewFilters(activeViewId, storedKanbanFilters),
+    [activeViewId, storedKanbanFilters]
+  );
   const showSubIssues =
     projectViewPreferences?.showSubIssues ?? defaultShowSubIssues;
   const showWorkspaces =
@@ -1275,6 +1270,9 @@ export function KanbanContainer() {
             hasPendingApproval: localWorkspace?.hasPendingApproval,
             hasRunningDevServer: localWorkspace?.hasRunningDevServer,
             hasUnseenActivity: localWorkspace?.hasUnseenActivity,
+            dotManaged: localWorkspace?.dotManaged,
+            dotUnreadCount: localWorkspace?.dotUnreadCount,
+            dotNeedsAttentionCount: localWorkspace?.dotNeedsAttentionCount,
             latestProcessCompletedAt: localWorkspace?.latestProcessCompletedAt,
             latestProcessStatus: localWorkspace?.latestProcessStatus,
           };
@@ -1296,6 +1294,29 @@ export function KanbanContainer() {
     userId,
   ]);
 
+  const renderReadLaterAction = (issueId: string) => {
+    const issue = issuesById.get(issueId);
+    if (!issue) return null;
+    const unread =
+      dotNotifications.some(
+        (notice) => notice.issue_id === issueId && notice.unread_count > 0
+      ) ||
+      getWorkspacesForIssue(issueId).some((workspace) => {
+        const local = workspace.local_workspace_id
+          ? localWorkspacesById.get(workspace.local_workspace_id)
+          : undefined;
+        return local?.hasUnseenActivity || (local?.dotUnreadCount ?? 0) > 0;
+      });
+    return (
+      <IssueReadLaterAction
+        issueId={issue.id}
+        projectId={issue.project_id}
+        title={issue.title}
+        unread={unread}
+      />
+    );
+  };
+
   const needsReviewByStatusId = useMemo(() => {
     const map = new Map<string, boolean>();
 
@@ -1315,7 +1336,7 @@ export function KanbanContainer() {
           );
 
           return localWorkspace
-            ? workspaceNeedsActionableReview(localWorkspace)
+            ? !!getWorkspaceAttentionLabel(localWorkspace)
             : false;
         })
       );
@@ -1618,9 +1639,31 @@ export function KanbanContainer() {
     [insertTag, projectId]
   );
 
-  useEffect(() => {
-    setPhoneStatus(null);
-  }, [projectId, kanbanViewMode, listViewStatusFilter]);
+  // Untouched projects show all statuses. Explicit selections survive navigating
+  // between tasks, workspaces and projects during this browser session.
+  const phoneStatuses = (
+    kanbanViewMode === 'kanban' ? visibleStatuses : sortedStatuses
+  ).filter(
+    (status) => !listViewStatusFilter || status.id === listViewStatusFilter
+  );
+  const phoneStatus = resolvePhoneTaskStatus(
+    phoneStatuses,
+    phoneStatusByProject[projectId]
+  );
+  const setPhoneStatus = (statusId: string | null) => {
+    setPhoneProjectStatus(projectId, statusId);
+  };
+
+  const getIssueAttentionLabel = (issueId: string) =>
+    getWorkspacesAttentionLabel(
+      getWorkspacesForIssue(issueId)
+        .filter(
+          (workspace) => !workspace.archived && workspace.local_workspace_id
+        )
+        .map((workspace) =>
+          localWorkspacesById.get(workspace.local_workspace_id!)
+        )
+    );
 
   const isLoading = projectLoading || orgLoading;
 
@@ -1831,12 +1874,42 @@ export function KanbanContainer() {
                   const workspace = workspaces.find(
                     (ws) => ws.localWorkspaceId
                   );
+                  const attentionLabel = getIssueAttentionLabel(id);
+                  const isExpanded = expanded[`kanban-issue:${id}`] ?? true;
                   return (
                     <article
                       key={id}
-                      className="mobile-task-card phone-task-row"
+                      className={cn(
+                        'mobile-task-card phone-task-row',
+                        !isExpanded && 'pb-6 kanban-issue-collapsed',
+                        attentionLabel && 'kanban-attention-card'
+                      )}
                     >
                       <div className="phone-task-main">
+                        <button
+                          type="button"
+                          className="phone-row-more text-low focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brand"
+                          aria-expanded={isExpanded}
+                          aria-label={t(
+                            isExpanded
+                              ? 'kanban.collapseIssue'
+                              : 'kanban.expandIssue',
+                            { displayId: issue.simple_id }
+                          )}
+                          onClick={() => toggleExpanded(`kanban-issue:${id}`)}
+                        >
+                          {isExpanded ? (
+                            <CaretDownIcon
+                              className="size-icon-sm"
+                              weight="bold"
+                            />
+                          ) : (
+                            <CaretRightIcon
+                              className="size-icon-sm"
+                              weight="bold"
+                            />
+                          )}
+                        </button>
                         <button
                           type="button"
                           className="mobile-task-metadata phone-task-open"
@@ -1852,17 +1925,27 @@ export function KanbanContainer() {
                             </span>
                           </span>
                           <span className="phone-task-title">
-                            {issue.title}
+                            {isExpanded && workspace
+                              ? workspace.name
+                              : issue.title}
                           </span>
-                          {issueHasFlag(
-                            issue.extension_metadata,
-                            NEEDS_REVIEW_ISSUE_FLAG
-                          ) && (
+                          <DotActivityIndicators
+                            dotUnreadCount={
+                              dotNotifications.find((n) => n.issue_id === id)
+                                ?.unread_count
+                            }
+                            dotNeedsAttentionCount={
+                              dotNotifications.find((n) => n.issue_id === id)
+                                ?.needs_attention_count
+                            }
+                          />
+                          {attentionLabel && (
                             <span className="phone-task-review">
-                              Needs review
+                              {attentionLabel}
                             </span>
                           )}
                         </button>
+                        {renderReadLaterAction(id)}
                         <button
                           type="button"
                           className="phone-row-more"
@@ -1872,7 +1955,20 @@ export function KanbanContainer() {
                           <DotsThreeIcon size={22} weight="bold" />
                         </button>
                       </div>
-                      {showWorkspaces && workspace && (
+                      {issueHasFlag(
+                        issue.extension_metadata,
+                        NEEDS_REVIEW_ISSUE_FLAG
+                      ) && (
+                        <div className="px-base pb-half">
+                          <IssueReviewFlagButton
+                            flagged
+                            showLabel
+                            displayId={issue.simple_id}
+                            onToggle={() => handleNeedsReviewFlagToggle(id)}
+                          />
+                        </div>
+                      )}
+                      {isExpanded && showWorkspaces && workspace && (
                         <button
                           type="button"
                           className="phone-task-workspace"
@@ -1904,7 +2000,25 @@ export function KanbanContainer() {
               <div className="phone-empty-state">
                 <h3>No matching tasks</h3>
                 <p>Try another status or clear your filters.</p>
-                <button type="button" onClick={clearKanbanFilters}>
+                {(phoneStatus || listViewStatusFilter) && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPhoneStatus(null);
+                      setListViewStatusFilter(null);
+                    }}
+                  >
+                    Clear status filter
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    clearKanbanFilters();
+                    setPhoneStatus(null);
+                    setListViewStatusFilter(null);
+                  }}
+                >
                   Clear filters
                 </button>
               </div>
@@ -2033,7 +2147,11 @@ export function KanbanContainer() {
                                 id={issue.id}
                                 name={issue.title}
                                 index={index}
-                                className="group"
+                                className={cn(
+                                  'group',
+                                  expanded[`kanban-issue:${issue.id}`] ===
+                                    false && 'kanban-issue-collapsed'
+                                )}
                                 onClick={(e) => handleCardClick(issue.id, e)}
                                 isOpen={selectedKanbanIssueId === issue.id}
                                 isMobile={isMobile}
@@ -2041,8 +2159,15 @@ export function KanbanContainer() {
                                 dragDisabled={isMultiSelectActive}
                               >
                                 <KanbanCardContent
+                                  headerAction={renderReadLaterAction(issue.id)}
                                   displayId={issue.simple_id}
                                   title={issue.title}
+                                  isExpanded={
+                                    expanded[`kanban-issue:${issue.id}`] ?? true
+                                  }
+                                  onToggleExpanded={() =>
+                                    toggleExpanded(`kanban-issue:${issue.id}`)
+                                  }
                                   primaryContent={
                                     issueWorkspaces.length > 0 ? (
                                       <div className="flex flex-col gap-half">
@@ -2150,6 +2275,7 @@ export function KanbanContainer() {
         <div className="flex-1 overflow-y-auto px-double">
           <KanbanProvider onDragEnd={handleDragEnd} className="!block !w-full">
             <IssueListView
+              renderIssueAction={renderReadLaterAction}
               statuses={listViewStatuses}
               items={items}
               issueMap={issueMap}

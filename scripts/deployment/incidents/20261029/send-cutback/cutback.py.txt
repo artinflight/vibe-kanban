@@ -1,0 +1,165 @@
+"""Fresh authorized current-data cutback for the reproduced send regression.
+No history restoration, queue acknowledgement/replay or preservation-gate edits.
+"""
+import ast,fcntl,hashlib,importlib.util,json,os,sqlite3,subprocess,sys,time
+from pathlib import Path
+sys.dont_write_bytecode=True
+D=Path(__file__).resolve().parent
+R=Path('/mnt/vk-storage/vk-cutover-repair-20261029/source/scripts/deployment')
+sys.path.insert(0,str(R))
+spec=importlib.util.spec_from_file_location('primitives','/mnt/vk-storage/vk-cutover-repair-20261029/continuation-v2/repair.py');P=importlib.util.module_from_spec(spec);spec.loader.exec_module(P)
+P.ROOT=D
+base=P.base;digest=P.digest;unit=P.unit_state;members=P.members;save=P.save;progress=P.progress
+from vk_restart_ingress_hold import install,verify
+from vk_restart_no_progress import supervise
+UNITS=[base.UNIT,'vibe-dot-connector.service','vibe-dot-sidechat-publisher.service','fitrdy-manager.service']
+ADAPTER=Path('/home/mcp/code/vibe-dot-connector/adapter.py')
+def setup():
+ assert os.path.ismount('/mnt/vk-storage')
+ raw=P.OLD/'MANIFEST.private.json';assert digest(raw)=='703488c3caa16d48336049e9be23e60967cccb95c4a48b10466b896200d0c961'
+ cfg=json.loads(raw.read_text());P.verify_references(cfg['references'])
+ cfg.update(runtime_state=str(D/'RUNTIME_STATE.private.json'),evidence_output=str(D/'evidence'),browser_output_candidate=str(D/'BROWSER_CANDIDATE.private.json'),browser_output_fallback=str(D/'BROWSER_FALLBACK.private.json'))
+ cfg['recent_histories']=json.loads((P.OLD/'QUIET_RECENT_HISTORY_BINDING.private.json').read_text())['recent_histories']
+ ops=P.build_ops(cfg,base,P.transaction)
+ initial=json.loads((D/'INITIAL.private.json').read_text())
+ cfg['owned_writers']={n:dict(pid=int(initial['units'][n]['MainPID']),invocation=initial['units'][n]['InvocationID'])for n in UNITS[1:3]}
+ ops.h=base.load(Path(cfg['release_primitives']),'fresh_send_release');ops.boundary=base.load(Path(cfg['queue_boundary']),'fresh_send_boundary')
+ ops.queue_namespace=dict(DB=base.DB,PORT=5621,ROUTE=base.ROUTE,OLD=base.UNIT,h=ops.h,vibe_cgroup_quiet=lambda:members(unit(base.UNIT)['ControlGroup'])=={int(unit(base.UNIT)['MainPID'])})
+ base.load(Path(cfg['queue_hooks']),'fresh_send_queues').install(ops.queue_namespace)
+ ops.total_end=ops.data_end=None;ops.maintenance_started=time.monotonic();ops.installed_dropin_sha=initial['dropin_sha256'];ops.variant='candidate'
+ if (D/'RUNTIME_STATE.private.json').exists():
+  st=json.loads((D/'RUNTIME_STATE.private.json').read_text())
+  for k in ['owned_stops','owned_start_holds','owned_poller_freeze','released_response','installed_dropin_sha','variant']:setattr(ops,k,st[k])
+ if (D/'RELEASED.private.json').exists():ops.released_response=json.loads((D/'RELEASED.private.json').read_text())
+ ops.output.mkdir(mode=0o700,exist_ok=True);ops.sequence=max([int(p.name[:4])for p in ops.output.glob('[0-9][0-9][0-9][0-9]-*')]or[0])
+ record=ops.record
+ def observed(phase,value):record(phase,value);progress(phase)
+ ops.record=observed
+ nodes=[n for n in ast.parse(base.ORIGINAL.read_text()).body if isinstance(n,ast.FunctionDef)and n.name in ('routed_get','live_acceptance')]
+ ops.smoke=dict(json=json,ssl=P.ssl,CA=base.CA,re=P.re,time=time,urllib=__import__('urllib'),META=base.META,digest=digest,hashlib=hashlib)
+ exec(compile(ast.Module(body=nodes,type_ignores=[]),str(base.ORIGINAL),'exec'),ops.smoke)
+ return cfg,ops,initial
+
+def exact_owner(n,expected):
+ s=unit(n);assert all(s[k]==expected[k]for k in ['MainPID','InvocationID']), 'Unit owner changed: '+n
+ assert s['ActiveState']=='active'and s['FreezerState']=='running'
+ if n=='vibe-dot-connector.service':
+  assert members(s['ControlGroup'])==set(expected['members']),'Connector membership changed'
+ else:assert members(s['ControlGroup'])=={int(s['MainPID'])},'Unit not naturally idle: '+n
+
+def adapter(cfg,variant):
+ target=cfg['companion_previous'][str(ADAPTER)]['backup']['path']if variant=='fallback'else cfg['companion_forward'][str(ADAPTER)]
+ expected=cfg['companion_previous'][str(ADAPTER)]['sha256']if variant=='fallback'else cfg['companion_forward_sha256'][str(ADAPTER)]
+ assert digest(target)==expected
+ allowed={cfg['companion_previous'][str(ADAPTER)]['sha256'],cfg['companion_forward_sha256'][str(ADAPTER)]}
+ assert digest(ADAPTER)in allowed,'Unrelated connector source changed'
+ for n in UNITS[1:3]:assert unit(n)['MainPID']=='0'and unit(n)['ActiveState']=='inactive'
+ base.atomic_bytes(ADAPTER,Path(target).read_bytes());os.chmod(ADAPTER,0o600)
+ progress(variant+'-matching-connector-selected')
+
+def accept(cfg,ops,variant,before):
+ ops.verify_executable(variant)
+ old=before['info'];new=ops.info()
+ assert old['config']==new['config'],'User config changed'
+ missing=set(old['executors'])-set(new['executors'])
+ if missing:
+  assert missing=={'ANTIGRAVITY'}and hashlib.sha256(json.dumps(old['executors']['ANTIGRAVITY'],sort_keys=True).encode()).hexdigest()=='e08a58a5ceeb1f0901db08800a9315a67fd20867c1ccad6574d6f4f4c39ea50b','Unexpected removed executor'
+  old=dict(old,executors={k:v for k,v in old['executors'].items()if k!='ANTIGRAVITY'})
+ P.transaction.preserve_settings(old,new,candidate=variant=='candidate')
+ ops.verify_semantics(before['semantic']);ops.recovery_acceptance(variant);ops.reader_check()
+ assert P.quiet(ops)['fingerprint']==before['boundary']['fingerprint'],'Queue/history changed during switch'
+ progress(variant+'-fresh-data-history-settings-verified')
+
+def worker():
+ assert not (D/'SWITCH_INTENT.private.json').exists(),'Consumed operation; inspect recovery receipt'
+ cfg,ops,initial=setup();assert P.current_variant(cfg)=='candidate'
+ for n in UNITS:exact_owner(n,initial['units'][n])
+ assert digest(base.DROPIN)==initial['dropin_sha256']and str(base.POINTER.resolve())==initial['frontend']
+ assert base.ROUTE.read_text()==initial['route']
+ assert digest(ADAPTER)==initial['adapter_sha256']
+ ops.reader_check();ops.resources();P.quiet(ops)
+ lease=os.open(cfg['cutover_lease'],os.O_RDONLY|os.O_NOFOLLOW);fcntl.flock(lease,fcntl.LOCK_EX|fcntl.LOCK_NB)
+ try:
+  save('CONTROL_INTENT.private.json',dict(original=initial,controller_sha256=digest(__file__),purpose='restore ordinary sends on verified earlier build; latest data retained'))
+  ops.route_maintenance();ops.record('maintenance-route-established',{})
+  holds=[]
+  for n in UNITS[1:3]:
+   body='# Owned send-recovery-20261029\n[Unit]\nRefuseManualStart=yes\n';holds.append(dict(unit=n,path='/run/user/1000/systemd/user/'+n+'.d/90-vk-send-recovery-20261029.conf',body=body,sha256=hashlib.sha256(body.encode()).hexdigest()))
+  ops.owned_start_holds=holds;ops.record('fresh-ingress-holds-intent',{})
+  install(holds,record=ops.record)
+  for n in UNITS[1:3]:
+   exact_owner(n,initial['units'][n]);ops.owned_stops.append(n);ops.record('fresh-ingress-stop-intent',dict(unit=n));ops.h.ctl('stop',n)
+   assert unit(n)['MainPID']=='0'and unit(n)['ActiveState']=='inactive'
+  exact_owner('fitrdy-manager.service',initial['units']['fitrdy-manager.service']);ops.owned_poller_freeze=True;ops.record('fresh-poller-freeze-intent',{});ops.h.ctl('freeze','fitrdy-manager.service')
+  boundary=P.quiet(ops);before=dict(info=ops.info(),semantic=ops.semantic_snapshot(),boundary=boundary)
+  save('BEFORE.private.json',before)
+  released=ops.release_ownership();save('RELEASED.private.json',ops.released_response);ops.record('fresh-capacity-released',{})
+  ops.h.ctl('freeze',base.UNIT)
+  assert unit(base.UNIT)['FreezerState']=='frozen'and unit('fitrdy-manager.service')['FreezerState']=='frozen';verify(holds)
+  assert ops.boundary.inventory(base.DB)['fingerprint']==boundary['fingerprint']
+  cap=Path('/mnt/vk-storage/codexusage-capacity/runtime/controller/controller.lock')
+  # Use the configured existing lock path, never invent a second authority.
+  plan=json.loads(Path(cfg['plan']['path']).read_text());cap=Path(plan['writer_fence']['capacity_lock'])
+  capfd=os.open(cap,os.O_RDONLY|os.O_NOFOLLOW);fcntl.flock(capfd,fcntl.LOCK_EX|fcntl.LOCK_NB)
+  try:
+   durable=json.loads(Path(plan['writer_fence']['capacity_state']).read_text());assert dict(durable,version=1)==released
+   P.backup(cfg,ops)
+   assert ops.boundary.inventory(base.DB)['fingerprint']==boundary['fingerprint'];ops.verify_semantics(before['semantic']);ops.reader_check()
+  finally:os.close(capfd)
+  save('SWITCH_INTENT.private.json',dict(from_PID=initial['units'][base.UNIT]['MainPID'],target_sha256=cfg['pair']['fallback']['sha256'],retained_latest_database=True))
+  ops.thaw_if_frozen();ops.stop_variant_if_running();ops.install_variant('fallback');ops.record('fallback-dropin-installed',{})
+  adapter(cfg,'fallback');ops.start_variant('fallback');ops.wait_health('fallback');ops.record('fallback-started',{})
+  accept(cfg,ops,'fallback',before);P.publish(cfg,ops,'fallback',before['info'])
+  save('ACCEPTED.private.json',dict(variant='fallback',PID=unit(base.UNIT)['MainPID'],sha256=cfg['pair']['fallback']['sha256'],UTC=time.strftime('%Y-%m-%dT%H:%M:%SZ',time.gmtime())))
+  ops.resume_owned_consumers(False)
+  save('RESULT.private.json',dict(status='verified-earlier-build-serving',PID=unit(base.UNIT)['MainPID'],current_data_retained=True,received_inputs_preserved_not_replayed=boundary['unresolved_incoming_preserved_not_resumed'],protected_histories=18,recent_histories=3,consumers_resumed=True,UTC=time.strftime('%Y-%m-%dT%H:%M:%SZ',time.gmtime())))
+  progress('send-regression-cutback-complete')
+ finally:os.close(lease)
+
+def recover():
+ if (D/'RESULT.private.json').exists():return
+ cfg,ops,initial=setup()
+ lease=os.open(cfg['cutover_lease'],os.O_RDONLY|os.O_NOFOLLOW);fcntl.flock(lease,fcntl.LOCK_EX|fcntl.LOCK_NB)
+ try:
+  variant=P.current_variant(cfg)
+  if (D/'ACCEPTED.private.json').exists():
+   assert variant=='fallback';ops.verify_public_review();ops.resume_owned_consumers(False);save('RESULT.private.json',dict(status='verified-earlier-build-serving',recovered_cleanup=True,PID=unit(base.UNIT)['MainPID']));return
+  ops.thaw_if_frozen()
+  if variant!='candidate':
+   ops.route_maintenance()
+   if variant:
+    owned=ops.h.ownership(5621)
+    if owned['owned']:ops.released_response=ops.h.ownership(5621,'release',owned['state']);save('RELEASED.private.json',ops.released_response)
+    ops.stop_variant_if_running()
+   ops.install_variant('candidate');ops.record('recovery-candidate-installed',{});ops.start_variant('candidate');ops.wait_health('candidate')
+  if ops.owned_stops:adapter(cfg,'candidate')
+  if (D/'BEFORE.private.json').exists():
+   before=json.loads((D/'BEFORE.private.json').read_text());review=base.load(Path(cfg['review_projection']),'fresh_recovery_review');snap=D/'current-before-switch.sqlite';baseline=review.capture(snap if snap.exists()else base.DB,'Recovery baseline')
+   ops.review_before=hashlib.sha256(json.dumps(baseline['tables'],sort_keys=True).encode()).hexdigest();accept(cfg,ops,'candidate',before)
+  ops.select_frontend('candidate');owned=ops.h.ownership(5621)
+  if not owned['owned']:
+   assert ops.released_response;P.transaction.same_ownership(ops.released_response['state'],ops.acquire_ownership(ops.released_response['state']))
+  ops.route_serving();ops.resume_owned_consumers(False);save('RECOVERED.private.json',dict(status='original-candidate-restored',PID=unit(base.UNIT)['MainPID'],data_restored=False));progress('original-service-recovered')
+ finally:os.close(lease)
+
+def init():
+ assert not (D/'INITIAL.private.json').exists()
+ states={n:unit(n)for n in UNITS}
+ for n in UNITS:states[n]['members']=sorted(members(states[n]['ControlGroup']))
+ for n in UNITS:exact_owner(n,states[n])
+ assert states[base.UNIT]['MainPID']=='758531'
+ save('INITIAL.private.json',dict(units=states,dropin_sha256=digest(base.DROPIN),frontend=str(base.POINTER.resolve()),route=base.ROUTE.read_text(),adapter_sha256=digest(ADAPTER)))
+ cfg,ops,_=setup();P.quiet(ops);ops.reader_check();ops.resources();print('Fresh current-owner preflight passed; no service actions',flush=True)
+
+if __name__=='__main__':
+ mode=sys.argv[1]
+ if mode=='init':init()
+ elif mode=='worker':
+  try:worker()
+  except BaseException as e:save('FAILURE.private.json',dict(type=type(e).__name__,reason=str(e)));raise
+ elif mode=='recover':recover()
+ elif mode=='supervise':
+  try:supervise([sys.executable,'-B',str(Path(__file__).resolve()),'worker'],D/'progress.json',idle_seconds=600)
+  except BaseException as e:
+   save('SUPERVISOR_FAILURE.private.json',dict(type=type(e).__name__,reason=str(e)));subprocess.run([sys.executable,'-B',str(Path(__file__).resolve()),'recover'],check=True,timeout=300);raise
+ else:raise ValueError('Explicit init/worker/recover/supervise mode required')

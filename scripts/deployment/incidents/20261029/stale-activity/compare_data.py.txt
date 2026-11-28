@@ -1,0 +1,19 @@
+import hashlib,importlib.util,json,sqlite3
+from pathlib import Path
+D=Path(__file__).resolve().parent
+S=Path('/mnt/vk-storage/vk-cutback-ready-20261029/bundle/rehearsal/latest_data_audit.py')
+s=importlib.util.spec_from_file_location('audit',S);a=importlib.util.module_from_spec(s);s.loader.exec_module(a)
+old=sqlite3.connect('file:/mnt/vk-storage/vk-cutover-repair-20261029/continuation-v2/current-before-switch.sqlite?mode=ro&immutable=1',uri=True)
+now=sqlite3.connect('file:/home/mcp/.local/share/vibe-kanban-green-xdg/vibe-kanban/db.v2.sqlite?mode=ro',uri=True)
+now.execute('BEGIN');old.execute('BEGIN')
+names=[r[0]for r in old.execute("select name from sqlite_master where type='table' and name not like 'sqlite_%' order by name")];report=[]
+for name in names:
+ before=a.table_digest(old,name);after=a.table_digest(now,name);r=dict(table=name,before=before,after=after,identical=before==after)
+ if before!=after:
+  cols=[x[1]for x in now.execute('pragma table_info("'+name+'")')]
+  first={x[0]:x[1:]for x in old.execute('select rowid,* from "'+name+'"')};last={x[0]:x[1:]for x in now.execute('select rowid,* from "'+name+'"')}
+  r.update(missing_rowids=len(first.keys()-last.keys()),added_rowids=len(last.keys()-first.keys()),changed_rows=sum(first[k]!=last[k]for k in first.keys()&last.keys()),changed_columns=sorted({cols[i]for k in first.keys()&last.keys()for i,(x,y)in enumerate(zip(first[k],last[k]))if x!=y}))
+ report.append(r)
+value=dict(tables_checked=len(names),missing_tables=False,total_missing_rowids=sum(x.get('missing_rowids',0)for x in report),tables=report)
+(D/'DATA_FRESHNESS_BEFORE.private.json').write_text(json.dumps(value,indent=2)+'\n')
+print(json.dumps(dict(tables_checked=len(names),unchanged_tables=sum(x['identical']for x in report),missing_rows=value['total_missing_rowids'],changes=[{k:v for k,v in x.items()if k not in ['before','after']}for x in report if not x['identical']]),indent=2))

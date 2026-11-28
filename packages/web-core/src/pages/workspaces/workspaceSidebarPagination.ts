@@ -1,7 +1,10 @@
 interface WorkspaceActivity {
+  readLater?: boolean;
   isRunning?: boolean;
   hasPendingApproval?: boolean;
   hasUnseenActivity?: boolean;
+  dotUnreadCount?: number;
+  dotNeedsAttentionCount?: number;
   activeSubagentCount?: number;
   unresolvedSubagentCount?: number;
 }
@@ -17,11 +20,14 @@ export function paginateWorkspaceSidebar<T extends WorkspaceActivity>(
   // Idle history is paginated; actionable work must remain visible in its section.
   return workspaces.filter(
     (workspace, index) =>
+      workspace.readLater ||
       index < limit ||
       (accordion &&
         (workspace.isRunning ||
           workspace.hasPendingApproval ||
           workspace.hasUnseenActivity ||
+          (workspace.dotUnreadCount ?? 0) > 0 ||
+          (workspace.dotNeedsAttentionCount ?? 0) > 0 ||
           (workspace.activeSubagentCount ?? 0) > 0 ||
           (workspace.unresolvedSubagentCount ?? 0) > 0))
   );

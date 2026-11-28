@@ -1,0 +1,45 @@
+"""Read-only external ownership/evidence guard for the exact October 29 plan."""
+from pathlib import Path
+import datetime,hashlib,json,os,sqlite3,subprocess,uuid
+DB=Path('/home/mcp/.local/share/vibe-kanban-green-xdg/vibe-kanban/db.v2.sqlite')
+N=Path('/home/mcp/.local/share/vibe-kanban-green-codex-home/state_5.sqlite')
+UNIT='vibe-kanban-native-review-20261015.service'
+EXPECTED='469f5959b1b7488876bd9d0f76df834fb00c3819af6fee5fe64dfd9cce636753'
+def sha(p):
+ with Path(p).open('rb')as f:return hashlib.file_digest(f,'sha256').hexdigest()
+def verify(plan):
+ if not os.path.ismount('/mnt/vk-storage'):raise ValueError('SSD unmounted')
+ boot=datetime.datetime.fromtimestamp(int(next(l.split()[1]for l in Path('/proc/stat').read_text().splitlines()if l.startswith('btime '))),datetime.timezone.utc).isoformat()
+ if boot!=plan['boot_UTC']:raise ValueError('Host boot changed')
+ if str(DB.resolve())!=plan['database']or DB.stat().st_ino!=plan['database_inode']:raise ValueError('Enrolled current database changed')
+ fields=dict(x.split('=',1)for x in subprocess.check_output(['systemctl','--user','show',UNIT,'-p','MainPID','-p','InvocationID','-p','ActiveState','-p','FreezerState','-p','ControlGroup'],text=True).splitlines())
+ if fields['MainPID']!='758531'or fields['InvocationID']!='d99c623551eb4c92bc71a3a3cec9ae29'or fields['ActiveState']!='active'or fields['FreezerState']!='running'or sha('/proc/'+fields['MainPID']+'/exe')!=EXPECTED:raise ValueError('Current backend ownership changed')
+ group=Path('/sys/fs/cgroup')/fields['ControlGroup'].lstrip('/')
+ members=set()
+ for p in group.rglob('cgroup.procs'):members.update(int(x)for x in p.read_text().split())
+ if members!={758531}:raise ValueError('Additional process in backend cgroup')
+ if subprocess.check_output(['systemctl','--user','list-units','--type=service','--state=running','--plain','--no-legend','vk-exec-*'],text=True).strip():raise ValueError('Native execution service active')
+ with sqlite3.connect(N.resolve().as_uri()+'?mode=ro',uri=True,timeout=2)as n:
+  n.row_factory=sqlite3.Row
+  for row in plan['records']:
+   current=n.execute('select id,rollout_path,created_at_ms,updated_at_ms from threads where id=?',(row['job']['agent_id'],)).fetchone()
+   if not current or dict(current)!=row['native_thread']:raise ValueError('Native thread evidence changed')
+   p=Path(current['rollout_path'])
+   proof=row.get('rollout_proof')
+   if proof:
+    s=p.stat()
+    if (s.st_ino,s.st_size,s.st_mtime_ns)!=(proof['inode'],proof['bytes'],proof['mtime_ns'])or sha(p)!=proof['sha256']:raise ValueError('Native transcript changed')
+   elif p.exists():raise ValueError('Previously missing native evidence appeared')
+ patterns=set()
+ for row in plan['records']:
+  patterns.update(x for x in [row['job']['agent_id'],row['native_root'],row['native_thread']['rollout_path']]if x)
+ for p in Path('/proc').iterdir():
+  if not p.name.isdigit()or int(p.name)==os.getpid():continue
+  try:
+   if any(x in (p/'cmdline').read_bytes().decode(errors='replace')for x in patterns):raise ValueError('Matching native owner exists: '+p.name)
+   for f in (p/'fd').iterdir():
+    try:target=os.readlink(f)
+    except OSError:continue
+    if target in patterns:raise ValueError('Native transcript open by PID '+p.name)
+  except (PermissionError,FileNotFoundError,ProcessLookupError):pass
+ return dict(backend_PID=758531,matching_owners=0,boot_UTC=boot)

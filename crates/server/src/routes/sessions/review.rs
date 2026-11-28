@@ -45,6 +45,31 @@ pub async fn start_review(
     State(deployment): State<DeploymentImpl>,
     Json(payload): Json<StartReviewRequest>,
 ) -> Result<ResponseJson<ApiResponse<ExecutionProcess, ReviewError>>, ApiError> {
+    let _archive_custody = services::services::workspace_archive::runtime::readable(
+        &deployment.db().pool,
+        session.workspace_id,
+    )
+    .await
+    .map_err(|e| ApiError::Conflict(e.to_string()))?;
+    services::services::admission::locked(start_review_admitted(
+        Extension(session),
+        State(deployment),
+        Json(payload),
+    ))
+    .await
+}
+
+async fn start_review_admitted(
+    Extension(session): Extension<Session>,
+    State(deployment): State<DeploymentImpl>,
+    Json(payload): Json<StartReviewRequest>,
+) -> Result<ResponseJson<ApiResponse<ExecutionProcess, ReviewError>>, ApiError> {
+    services::services::provider_admission::before_start(
+        deployment.container(),
+        session.workspace_id,
+        session.id,
+    )
+    .await?;
     let pool = &deployment.db().pool;
 
     let workspace = Workspace::find_by_id(pool, session.workspace_id)

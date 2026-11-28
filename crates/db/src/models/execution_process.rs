@@ -249,6 +249,22 @@ impl ExecutionProcess {
         .await
     }
 
+    /// Bounded ownership check before a protected provider start; excludes its own native row.
+    pub async fn has_other_running_workspace_owner(
+        pool: &SqlitePool,
+        workspace_id: Uuid,
+        execution_id: Uuid,
+    ) -> Result<bool, sqlx::Error> {
+        let count: i64 = sqlx::query_scalar(
+            "SELECT count(*) FROM execution_processes e JOIN sessions s ON s.id=e.session_id WHERE s.workspace_id=? AND e.id!=? AND e.status='running' AND e.run_reason='codingagent'",
+        )
+        .bind(workspace_id)
+        .bind(execution_id)
+        .fetch_one(pool)
+        .await?;
+        Ok(count != 0)
+    }
+
     /// Find running execution processes
     pub async fn find_running(pool: &SqlitePool) -> Result<Vec<Self>, sqlx::Error> {
         sqlx::query_as!(

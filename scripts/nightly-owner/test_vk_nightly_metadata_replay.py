@@ -1,0 +1,226 @@
+import copy
+import hashlib
+import json
+from pathlib import Path
+import sqlite3
+import stat
+import tempfile
+import unittest
+from unittest.mock import patch
+
+from vk_nightly_current_map import CurrentMap,decode_member,encode_member
+from vk_nightly_qualification import encode_observation
+
+
+class MetadataReplayTests(unittest.TestCase):
+    def setUp(self):
+        self.temp=tempfile.TemporaryDirectory();self.addCleanup(self.temp.cleanup)
+        self.path=Path(self.temp.name)/'map.sqlite';self.binding={'test':'metadata-replay'}
+        self.obs=dict(kind='file',identity=[1,2,stat.S_IFREG|0o600,3,123,456,1000,1000,1],
+                      mode=0o600,uid=1000,gid=1000,mtime_ns=123,bytes=3,xattrs={})
+        self.version=dict(source='/home/a',source_identity=self.obs['identity'],state='qualified-retained-body',
+            row=dict(kind='file',mode=0o600,uid=1000,gid=1000,mtime_ns=123,bytes=3,xattrs={},sha256='a'*64,
+                     segments=[dict(layer='accepted-base',selector='old/a',bytes=3,sha256='a'*64)]))
+        self.epoch=dict(instance='inode-epoch',plan_sha256='a'*64,scope_sha256='b'*64,start_sequence=17,
+            required_root_bindings={'/home':dict(resolved='/home',literal=None,identity=[1,99,stat.S_IFDIR])},original_epoch_repaired=False)
+        ns=sqlite3.connect(':memory:');self.addCleanup(ns.close)
+        ns.execute('create table namespace(name text primary key,row blob)')
+        ns.execute('create table namespace_errors(name text primary key,error blob)')
+        ns.execute('create table gap_meta(id integer primary key,binding text,complete integer)')
+        ns.execute('insert into gap_meta values(1,?,1)',(json.dumps(self.epoch),))
+        ns.executemany('insert into namespace values(?,?)',[(n,encode_observation(self.obs)) for n in ['home/a','home/old','home/old/child']])
+        with CurrentMap.held(self.path,binding=self.binding,create=True) as m:
+            m.compile(ns,lambda n:dict(self.version,source='/'+n),SQL_sources=[],checkpoint=lambda:None,maximum_paths=100)
+            m.reconcile_namespace(ns,lambda n:dict(self.version,source='/'+n),checkpoint=lambda:None,maximum_paths=100)
+
+    def inputs(self,events=None,**updates):
+        events={} if events is None else events
+        report=dict(instance=self.epoch['instance'],plan_sha256='a'*64,scope_sha256='b'*64,since=17,sequence=25,
+            ready=True,errors=[],terminal=None,coverage_model='all-selected-inodes-v1',changed=sorted(events),events=events,
+            barrier=dict(kernel_drain_completed=True,instance=self.epoch['instance'],durable_sequence=25))
+        replay=dict(instance=self.epoch['instance'],plan_sha256='a'*64,scope_sha256='b'*64,since=17,through=25,
+            observations={p:copy.deepcopy(self.obs) for p in events},absent_observations=[],excluded_observations=[],
+            absent_subtrees=[],expanded_subtrees=[],required_root_bindings=self.epoch['required_root_bindings'],
+            unchanged_paths_scanned=0,source_payload_bytes_read=0,backup_payload_bytes_copied=0,
+            baseline_accepted=False,subsequent_changes_replayed=False)
+        replay.update(updates);return report,replay
+
+    def apply(self,m,pair,checkpoint=lambda:None):
+        return m.apply_metadata_replay(*pair,checkpoint=checkpoint,maximum_paths=1000)
+
+    def test_exact_unchanged_version_reused_and_deleted_subtree_retained(self):
+        pair=self.inputs({'/home/a':4,'/home/old':0x40000200},observations={'/home/a':self.obs},
+                         absent_observations=['/home/old'],absent_subtrees=['/home/old'])
+        with CurrentMap.held(self.path,binding=self.binding) as m:
+            result=self.apply(m,pair)
+            self.assertEqual(m.db.execute('select name,state from members').fetchall(),[('home/a','verified-file')])
+            self.assertEqual(m.db.execute('select name from namespace_replay_history order by name').fetchall(),
+                             [('home/a',),('home/old',),('home/old/child',)])
+            self.assertEqual(m.db.execute('select suffix_complete from namespace_reconciliation').fetchone(),(1,))
+            self.assertFalse(result['baseline_accepted']);self.assertFalse(result['original_epoch_repaired'])
+            self.assertTrue(self.apply(m,pair)['already_complete'])
+            self.assertEqual(m.db.execute('select count(*) from namespace_replay_windows').fetchone(),(1,))
+
+    def test_new_version_requires_qualification_and_parent_replacement_removes_descendants(self):
+        changed=copy.deepcopy(self.obs);changed['identity'][5]+=1
+        pair=self.inputs({'/home/a':2,'/home/old':2},observations={'/home/a':changed,'/home/old':self.obs})
+        with CurrentMap.held(self.path,binding=self.binding) as m:
+            self.apply(m,pair)
+            self.assertEqual(m.db.execute("select state from members where name='home/a'").fetchone(),('file-needs-qualification',))
+            self.assertIsNone(m.db.execute("select 1 from members where name='home/old/child'").fetchone())
+
+    def test_metadata_only_empty_suffix_never_looks_up_unchanged_members(self):
+        with CurrentMap.held(self.path,binding=self.binding) as m:
+            with patch('vk_nightly_current_map.classify',side_effect=AssertionError('unchanged path reclassified')):
+                result=self.apply(m,self.inputs())
+            self.assertEqual(result['replayed_paths'],0);self.assertEqual(result['unchanged_paths_scanned'],0)
+            self.assertEqual(m.db.execute('select count(*) from members').fetchone(),(3,))
+
+    def test_partial_commit_resumes_exact_input_without_duplicate_history(self):
+        pair=self.inputs({'/home/new'+str(i).zfill(3):2 for i in range(130)})
+        calls=0
+        def fail():
+            nonlocal calls
+            calls+=1
+            if calls==4:raise OSError('synthetic later batch failure')
+        with CurrentMap.held(self.path,binding=self.binding) as m:
+            with self.assertRaisesRegex(OSError,'later batch'):self.apply(m,pair,fail)
+            self.assertEqual(m.db.execute('select complete from namespace_replay_windows').fetchone(),(0,))
+            self.assertEqual(m.db.execute('select suffix_complete from namespace_reconciliation').fetchone(),(0,))
+            other=copy.deepcopy(pair);other[1]['observations']['/home/new129']['identity'][5]+=1
+            with self.assertRaisesRegex(ValueError,'exact retained unfinished'):self.apply(m,other)
+            self.apply(m,pair)
+            self.assertEqual(m.db.execute('select count(*) from members').fetchone(),(133,))
+            self.assertTrue(self.apply(m,pair)['already_complete'])
+
+    def test_actual_WAL_event_requires_new_API_point_and_retains_old_proof(self):
+        pair=self.inputs({'/home/a-wal':2})
+        with CurrentMap.held(self.path,binding=self.binding) as m:
+            m.db.execute('insert into SQL_sources values(?)',('/home/a',))
+            m.db.execute("update members set row=? where name='home/a'",(encode_member(dict(member=self.version['row'],SQL_point={'source':'/home/a','retained':'old API proof'})),))
+            self.apply(m,pair)
+            state,raw=m.db.execute("select state,row from members where name='home/a'").fetchone()
+            self.assertEqual(state,'SQLite-needs-image')
+            self.assertEqual(decode_member(raw)['previous_SQL_point']['retained'],'old API proof')
+            self.assertEqual(m.db.execute("select state from members where name='home/a-wal'").fetchone(),('SQLite-sidecar',))
+
+    def test_rejects_wrong_epoch_fault_missing_names_extra_paths_and_fake_expansion(self):
+        good=self.inputs({'/home/a':2});variants=[]
+        for key,value in [('ready',False),('coverage_model','directory-namespace-only-v1'),('errors',[{'overflow':16384}]),('since',16)]:
+            bad=copy.deepcopy(good);bad[0][key]=value;variants.append(bad)
+        bad=copy.deepcopy(good);bad[0]['barrier']['durable_sequence']=24;variants.append(bad)
+        bad=copy.deepcopy(good);bad[1]['observations']={};variants.append(bad)
+        bad=copy.deepcopy(good);bad[1]['observations']['/home/extra']=self.obs;variants.append(bad)
+        bad=copy.deepcopy(good);bad[1]['expanded_subtrees']=['/home/a'];variants.append(bad)
+        bad=copy.deepcopy(good);bad[1]['required_root_bindings']={};variants.append(bad)
+        with CurrentMap.held(self.path,binding=self.binding) as m:
+            for bad in variants:
+                with self.subTest(bad=bad),self.assertRaises(ValueError):self.apply(m,bad)
+            self.assertEqual(m.db.execute('select suffix_complete from namespace_reconciliation').fetchone(),(0,))
+
+    def test_new_partial_suffix_clears_old_readiness_until_commit(self):
+        with CurrentMap.held(self.path,binding=self.binding) as m:
+            self.apply(m,self.inputs())
+            pair=self.inputs({'/home/a':2});pair[0]['since']=25;pair[1]['since']=25
+            pair[0]['sequence']=30;pair[0]['barrier']['durable_sequence']=30;pair[1]['through']=30
+            def failed():raise OSError('synthetic next suffix stop')
+            with self.assertRaisesRegex(OSError,'next suffix stop'):self.apply(m,pair,failed)
+            self.assertEqual(m.db.execute('select suffix_complete from namespace_reconciliation').fetchone(),(0,))
+            self.apply(m,pair)
+            self.assertEqual(m.db.execute('select suffix_complete from namespace_reconciliation').fetchone(),(1,))
+
+    def qualification_request(self,m):
+        old=encode_member(dict(source='/home/a',namespace=self.obs))
+        m.db.execute("update members set state='file-needs-qualification',row=? where name='home/a'",(old,))
+        version=copy.deepcopy(self.version);version['state']='qualified-pending-body';version['row'].pop('segments')
+        version.update(source_payload_bytes_hashed=3,source_observed_at='2026-10-27T11:00:00+00:00',journal={k:self.epoch[k] for k in ('instance','plan_sha256','scope_sha256')})
+        version['journal']['sequence']=17
+        return dict(name='home/a',original_sha256=hashlib.sha256(old).hexdigest(),version=version)
+
+    def test_new_qualification_reuses_full_hash_carrier_without_copy_and_lost_reply(self):
+        with CurrentMap.held(self.path,binding=self.binding) as m:
+            request=self.qualification_request(m);calls=[]
+            def carriers(sha,size):calls.append((sha,size));yield self.version['row']
+            result=m.adopt_qualifications([request],carriers,checkpoint=lambda:None)
+            self.assertEqual(result['retained_body_matches'],1);self.assertEqual(result['backup_payload_bytes_copied'],0)
+            self.assertEqual(m.db.execute("select state from members where name='home/a'").fetchone(),('verified-file',))
+            retry=m.adopt_qualifications([request],lambda *_:self.fail('completed point looked up again'),checkpoint=lambda:None)
+            self.assertEqual(retry['already_adopted'],1);self.assertEqual(len(calls),1)
+            self.assertEqual(m.db.execute('select count(*) from qualification_replaced_members').fetchone(),(1,))
+
+    def test_qualification_does_not_drop_new_bytes_or_deferred_SQL(self):
+        with CurrentMap.held(self.path,binding=self.binding) as m:
+            request=self.qualification_request(m)
+            result=m.adopt_qualifications([request],lambda *_:[],checkpoint=lambda:None)
+            self.assertEqual(result['qualified_pending_bodies'],1)
+            request=self.qualification_request(m);request['version']=dict(source='/home/a',state='current-version-deferred',
+                reason='SQLite requires its consistent snapshot API',journal=request['version']['journal'])
+            result=m.adopt_qualifications([request],lambda *_:[],checkpoint=lambda:None)
+            self.assertEqual(result['SQL_API_sources_discovered'],1)
+            self.assertEqual(m.db.execute('select path from SQL_sources').fetchall(),[('/home/a',)])
+
+    def test_qualification_rejects_wrong_source_epoch_old_cursor_changed_row_or_carrier(self):
+        with CurrentMap.held(self.path,binding=self.binding) as m:
+            good=self.qualification_request(m);variants=[]
+            bad=copy.deepcopy(good);bad['version']['source']='/home/other';variants.append(bad)
+            bad=copy.deepcopy(good);bad['version']['journal']['instance']='old';variants.append(bad)
+            bad=copy.deepcopy(good);bad['version']['journal']['sequence']=16;variants.append(bad)
+            bad=copy.deepcopy(good);bad['original_sha256']='f'*64;variants.append(bad)
+            bad=copy.deepcopy(good);bad['version']['source_identity'][3]=100;variants.append(bad)
+            for bad in variants:
+                with self.subTest(request=bad),self.assertRaises(ValueError):m.adopt_qualifications([bad],lambda *_:[],checkpoint=lambda:None)
+            with self.assertRaisesRegex(ValueError,'carrier/full point'):
+                m.adopt_qualifications([good],lambda *_:[dict(self.version['row'],sha256='f'*64)],checkpoint=lambda:None)
+            self.assertEqual(m.db.execute('select count(*) from qualification_adoptions').fetchone(),(0,))
+
+    def test_qualification_commit_failure_retains_exact_pending_row_and_no_acceptance(self):
+        with CurrentMap.held(self.path,binding=self.binding) as m:
+            request=self.qualification_request(m);calls=0
+            def fail():
+                nonlocal calls
+                calls+=1
+                if calls==2:raise OSError('synthetic qualification commit failure')
+            with self.assertRaisesRegex(OSError,'qualification commit'):
+                m.adopt_qualifications([request],lambda *_:[],checkpoint=fail)
+            self.assertEqual(m.db.execute('select count(*) from qualification_adoptions').fetchone(),(0,))
+            self.assertEqual(m.db.execute("select state from members where name='home/a'").fetchone(),('file-needs-qualification',))
+            self.assertEqual(m.adopt_qualifications([request],lambda *_:[],checkpoint=lambda:None)['adopted'],1)
+
+    def test_successor_cursor_does_not_inherit_a_larger_prior_epoch_counter(self):
+        from vk_nightly_metadata_replay import replay_cursor
+        with CurrentMap.held(self.path,binding=self.binding) as m:
+            self.apply(m,self.inputs())
+            new=dict(self.epoch,instance='successor',start_sequence=3)
+            m.db.execute('update namespace_reconciliation set binding=?,suffix_complete=0',(json.dumps(new),))
+            report,replay=self.inputs()
+            report.update(instance='successor',since=3,sequence=7,barrier=dict(kernel_drain_completed=True,instance='successor',durable_sequence=7))
+            replay.update(instance='successor',since=3,through=7)
+            self.assertEqual(replay_cursor(m.db,'successor',3),3)
+            result=self.apply(m,(report,replay));self.assertEqual(result['through'],7)
+            self.assertEqual(replay_cursor(m.db,'successor',3),7)
+            self.assertEqual(replay_cursor(m.db,self.epoch['instance'],17),25)
+            self.assertEqual(m.db.execute('select count(*) from namespace_replay_windows').fetchone(),(2,))
+
+    def test_retired_epoch_incomplete_replay_is_retained_but_not_a_new_epoch_input(self):
+        from vk_nightly_metadata_replay import stage_input
+        from vk_nightly_current_map import pending_replay_for_epoch
+        with CurrentMap.held(self.path,binding=self.binding) as m:
+            report,replay=self.inputs();sha=stage_input(m.db,report,replay,guard=lambda:None)
+            def stop():raise OSError('owned interrupted replay')
+            with self.assertRaises(OSError):self.apply(m,(report,replay),checkpoint=stop)
+            self.assertEqual(pending_replay_for_epoch(m.db,self.epoch['instance']),sha)
+            m.db.execute('create table namespace_reconciliation_history(binding text)')
+            m.db.execute('insert into namespace_reconciliation_history values(?)',(json.dumps(self.epoch),))
+            self.assertIsNone(pending_replay_for_epoch(m.db,'successor'))
+            self.assertEqual(m.db.execute('select complete from namespace_replay_windows where sha256=?',(sha,)).fetchone(),(0,))
+
+    def test_next_suffix_requires_previous_exact_cursor(self):
+        with CurrentMap.held(self.path,binding=self.binding) as m:
+            self.apply(m,self.inputs())
+            pair=self.inputs();pair[0]['sequence']=30;pair[0]['barrier']['durable_sequence']=30;pair[1]['through']=30
+            with self.assertRaisesRegex(ValueError,'cursor gap or rewind'):self.apply(m,pair)
+            pair[0]['since']=25;pair[1]['since']=25
+            self.assertEqual(self.apply(m,pair)['through'],30)
+
+
+if __name__=='__main__':unittest.main()

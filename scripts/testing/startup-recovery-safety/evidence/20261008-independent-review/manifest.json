@@ -1,0 +1,71 @@
+{
+  "review_scope": "Independent read-only evidence review; content findings supported, recovery-complete/zero-loss sign-off withheld.",
+  "source_commit": "984f5ee79d575df0066c6a3afc2ee49fe02e4d0e",
+  "final_tip_observed": "d000ce732049b296f71f47d8ee88edc01b84a904",
+  "files": {
+    "REVIEW.txt": {
+      "bytes": 9388,
+      "sha256": "60ea25f282d40636fd909ee6b7886a77c84230c9a63c10292c0c5453e9b27604"
+    },
+    "correction-bundle-authentication.json": {
+      "bytes": 363,
+      "sha256": "554aeb49f7d81e6df166706c685ba0f6c5980c288e6423ce0071a7d61f2ba238"
+    },
+    "final-pr-pin.json": {
+      "bytes": 276,
+      "sha256": "a6cd97c91ffa7e5a71469bd9210b83bc5b9c91779d35552afa6f3fe54b9dbb48"
+    },
+    "in-memory-checker-regressions.txt": {
+      "bytes": 3159,
+      "sha256": "61b8345419d7c8925630bc5a99be88009fffed7eb695160ad112986afe665b62"
+    },
+    "independent-0853-audit.json": {
+      "bytes": 1393,
+      "sha256": "f2a29e6c567c2a989c13c5b542370e9fefd3d3306565d2b1807ecfbc230a6c90"
+    },
+    "independent-0853-exceptions.json": {
+      "bytes": 18086,
+      "sha256": "cf39d20f6ab713931e3a22e69eb1d242c99bd5cdb1fe6bdcf16b60d76035e5d2"
+    },
+    "independent-145-history.json": {
+      "bytes": 63729,
+      "sha256": "9d2131c3acbdee66593c0fa9ee4a5766fa58be65dd31b28293260e74296597a7"
+    },
+    "independent-15-files.json": {
+      "bytes": 6801,
+      "sha256": "9f8f00c3b720da3e5b968cf4b520e69172cc4eacb156bf0b6e35e06eec5f4342"
+    },
+    "independent-710-rows.json": {
+      "bytes": 278759,
+      "sha256": "a77cd32cdbf83de242a3f564b07d7d2e8231e4ed2cb35b843ad1d833566f9ec4"
+    },
+    "independent-bindings-replay.json": {
+      "bytes": 10807,
+      "sha256": "122c30419c34def038dbff0031118dd550f26d52b5cf6b692a1eb3ca4a1727b9"
+    },
+    "independent-index-semantics.json": {
+      "bytes": 5312,
+      "sha256": "e10d08adece14d814776135300a28665072fb3c11b472ddc09f35bd351a1458a"
+    },
+    "inputs.json": {
+      "bytes": 220,
+      "sha256": "54d616206fc2e7a096a31038b7b310590553514214804f4496c0fc186268c0d3"
+    },
+    "packet-authentication.json": {
+      "bytes": 11192,
+      "sha256": "cff3396b66b9a3e9b16bd296a67b3a41e7904b4707eb0ec3b21000964fa771e2"
+    },
+    "pinned-checker-reproduction.json": {
+      "bytes": 8444,
+      "sha256": "de8e914d48e7dc16440a70d268c5068d6ff417197ceef03fa01a8f171bbbe33e"
+    },
+    "retirement-witness-check.json": {
+      "bytes": 911,
+      "sha256": "85ce2725d2c7cf6ae189f225ac83239bcdffc13b5fd2f663b8fb0419083a0433"
+    },
+    "unresolved-448.csv": {
+      "bytes": 104828,
+      "sha256": "271b667ee95466d5a7f98d4b81ab1d8e50a626b54edd5c982d92a37aeb52f92d"
+    }
+  }
+}

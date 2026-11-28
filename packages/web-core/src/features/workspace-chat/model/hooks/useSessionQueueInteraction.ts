@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { queueApi } from '@/shared/lib/api';
-import type { ExecutorConfig, QueueStatus } from 'shared/types';
+import type { ExecutorConfig, QueueStatus, RevivalStatus } from 'shared/types';
 
 interface UseSessionQueueInteractionOptions {
   /** Session ID for queue operations */
@@ -11,6 +11,7 @@ interface UseSessionQueueInteractionOptions {
 interface UseSessionQueueInteractionResult {
   /** Whether a message is currently queued */
   isQueued: boolean;
+  revival: RevivalStatus | null;
   /** The queued message content, if any */
   queuedMessage: string | null;
   /** The executor config from the queued message, if any */
@@ -23,7 +24,7 @@ interface UseSessionQueueInteractionResult {
   sendFollowUp: (
     message: string,
     executorConfig: ExecutorConfig
-  ) => Promise<void>;
+  ) => Promise<QueueStatus | undefined>;
   /** Cancel the queued message */
   cancelQueue: () => Promise<void>;
   /** Refresh queue status from server */
@@ -51,7 +52,8 @@ export function useSessionQueueInteraction({
       queryFn: () => queueApi.getStatus(sessionId!),
       enabled: !!sessionId,
       refetchInterval: (query) =>
-        query.state.data?.status === 'queued'
+        query.state.data?.status === 'queued' ||
+        query.state.data?.status === 'restoring'
           ? QUEUED_STATUS_REFRESH_MS
           : false,
       refetchOnWindowFocus: true,
@@ -95,7 +97,7 @@ export function useSessionQueueInteraction({
   const sendFollowUp = useCallback(
     async (message: string, executorConfig: ExecutorConfig) => {
       if (!sessionId) return;
-      await followUpMutation.mutateAsync({
+      return followUpMutation.mutateAsync({
         message,
         executorConfig,
       });
@@ -114,6 +116,7 @@ export function useSessionQueueInteraction({
   }, [sessionId, refetch]);
 
   return {
+    revival: queueStatus.status === 'restoring' ? queueStatus.revival : null,
     isQueued,
     queuedMessage,
     queuedConfig,

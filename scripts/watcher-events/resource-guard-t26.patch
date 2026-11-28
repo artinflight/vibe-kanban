@@ -1,0 +1,23 @@
+--- resource-guard.before
++++ resource-guard
+@@ -21,9 +21,9 @@
+ EMERGENCY_DISK_PERCENT=${EMERGENCY_DISK_PERCENT:-97}
+ DISK_RECOVERY_PERCENT=${DISK_RECOVERY_PERCENT:-83}
+ DISK_REMINDER_SECONDS=${DISK_REMINDER_SECONDS:-21600}
+-# Seamus's temporary OS headroom requirement, 2026-10-21. Decimal GB.
++# Seamus's final T26 alert threshold, 2026-10-24. Decimal GB; no admission change.
+ # This adds notification coverage only; it never deletes data or dispatches work.
+-ROOT_MIN_AVAILABLE_BYTES=${ROOT_MIN_AVAILABLE_BYTES:-25000000000}
++ROOT_MIN_AVAILABLE_BYTES=${ROOT_MIN_AVAILABLE_BYTES:-10000000000}
+ ROOT_HEADROOM_REMINDER_SECONDS=${ROOT_HEADROOM_REMINDER_SECONDS:-300}
+ MCP_NOTIFICATIONS_NTFY_URL=${MCP_NOTIFICATIONS_NTFY_URL:-}
+ MCP_NOTIFICATIONS_NTFY_TOPIC=${MCP_NOTIFICATIONS_NTFY_TOPIC:-}
+@@ -204,7 +204,7 @@
+     return 0
+   fi
+   deficit=$((ROOT_MIN_AVAILABLE_BYTES - available))
+-  if send_notification "Disk CRITICAL on $(hostname): OS below 25 GB" 4 warning,floppy_disk \
++  if send_notification "Disk CRITICAL on $(hostname): OS below $(storage_gb "$ROOT_MIN_AVAILABLE_BYTES")" 4 warning,floppy_disk \
+     "OS drive: $(storage_gb "$available") free. Target: $(storage_gb "$ROOT_MIN_AVAILABLE_BYTES"). Space needed: $(storage_gb "$deficit"). Disk cleanup is needed; preserve active work and recovery data. This alert does not itself perform cleanup."; then
+     printf 'low\n' >"$ROOT_HEADROOM_STATE_FILE"
+     printf '%s\n' "$now" >"$ROOT_HEADROOM_LAST_ALERT_FILE"

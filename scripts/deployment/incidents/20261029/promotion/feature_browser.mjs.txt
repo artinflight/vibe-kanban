@@ -1,0 +1,24 @@
+import { chromium } from '/usr/lib/node_modules/playwright/index.mjs';
+import fs from 'node:fs/promises';
+const root='/mnt/vk-storage/vk-new-build-repair-20261029';
+const browser=await chromium.launch({executablePath:'/opt/playwright-browsers/chromium_headless_shell-1217/chrome-headless-shell-linux64/chrome-headless-shell',env:{...process.env,TMPDIR:root+'/browser-tmp'}});
+const results=[];
+try{
+ for(const width of [1440,390]){
+  const context=await browser.newContext({ignoreHTTPSErrors:true,viewport:{width,height:950},isMobile:width<768,hasTouch:width<768});let blockedWrites=0;
+  await context.route(/\/api\//,async route=>{const r=route.request(),p=new URL(r.url()).pathname;if(!['GET','HEAD'].includes(r.method())&&!(r.method()==='POST'&&p==='/api/workspaces/summaries')){blockedWrites++;return route.fulfill({status:409,json:{success:false,message:'Read-only feature verification'}});}return route.continue();});
+  const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message.slice(0,150)));
+  const response=await page.goto('https://vibe.local/projects/INCIDENT_UUID_BCEDCFAC240A64FB',{waitUntil:'domcontentloaded',timeout:30000});
+  await page.getByRole('button',{name:/^Collapse issue /}).first().waitFor({timeout:18000}).catch(()=>{});
+  const controls=await page.getByRole('button').evaluateAll(els=>els.map(x=>({label:x.getAttribute('aria-label'),title:x.getAttribute('title'),text:x.textContent.slice(0,85),expanded:x.getAttribute('aria-expanded')})));
+  const body=await page.locator('body').innerText();
+  results.push({width,http:response.status(),errors,blockedWrites,controls,labels:{dotChat:/Dot Chat/i.test(body),checklists:/checklist/i.test(body),milestones:/milestone/i.test(body),decisions:/decision/i.test(body),questions:/question/i.test(body)}});
+  const collapse=page.locator('button[aria-label^="Collapse issue "]');
+  if(await collapse.count()){
+   const label=await collapse.first().getAttribute('aria-label');const expanded=label.replace('Collapse issue','Expand issue');await collapse.first().click();let ok=false;await page.getByRole('button',{name:expanded,exact:true}).first().waitFor({timeout:5000}).then(()=>ok=true).catch(()=>{});results.at(-1).collapseToggleVerified=ok;results.at(-1).testedLabel=label;results.at(-1).blockedWritesAfterClick=blockedWrites;
+
+  }
+  results.at(-1).collapseControls=await collapse.count();if(width<768){const open=page.getByRole('button',{name:'Open project sidebar',exact:true});if(await open.count()){await open.click();await page.waitForTimeout(500);results.at(-1).projectDotPanelVisible=/Dot Chat/i.test(await page.locator('body').innerText());}}results.at(-1).bodyPreview=body.slice(0,250);console.log(JSON.stringify({...results.at(-1),controls:undefined}));await context.close();
+ }
+ await fs.writeFile(root+'/FEATURE_BROWSER.private.json',JSON.stringify({results,UTC:new Date().toISOString()},null,2)+'\n',{mode:0o600});
+}finally{await browser.close();}

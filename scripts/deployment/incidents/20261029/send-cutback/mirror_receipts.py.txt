@@ -1,0 +1,29 @@
+import copy,hashlib,json,shutil,sys,tarfile
+from pathlib import Path
+D=Path(__file__).resolve().parent
+sys.path.insert(0,'/mnt/vk-storage/vk-stale-activity-20261029')
+from backup import guard,sha
+
+def main():
+ guard();assert json.loads((D/'RESULT.private.json').read_text())['current_data_retained'];assert json.loads((D/'FINAL.private.json').read_text())['user_confirmed_send_started']
+ names=sorted(p.name for p in D.iterdir()if p.is_file()and p.suffix in ['.py','.mjs','.json','.md'] and p.name!='RECOVERY_SEAL.private.json')
+ seal={name:dict(sha256=sha(D/name),bytes=(D/name).stat().st_size)for name in names}
+ (D/'RECOVERY_SEAL.private.json').write_text(json.dumps(seal,indent=2)+'\n')
+ target=D/'send-recovery-evidence.tar.gz'
+ with tarfile.open(target,'x:gz')as out:
+  for name in names+['RECOVERY_SEAL.private.json']:out.add(D/name,arcname=name)
+ target.chmod(0o600)
+ path=Path('/mnt/vk-storage/vk-staging-catchup-20261028/cutover-v5-20261029/MANIFEST.private.json')
+ assert sha(path)=='703488c3caa16d48336049e9be23e60967cccb95c4a48b10466b896200d0c961'
+ cfg=json.loads(path.read_text());assert sha(cfg['plan']['path'])==cfg['plan']['sha256']
+ plan=json.loads(Path(cfg['plan']['path']).read_text());sys.path.insert(0,plan['source_folder'])
+ from vk_nightly_desktop_objects import DesktopObjects
+ control=copy.deepcopy(plan['workers']['files']['desktop']);control.pop('whole_cycle_deadline_UTC',None)
+ raw=target.read_bytes();h=hashlib.sha256()
+ class Sink:
+  def write(self,block):h.update(block);return len(block)
+ with DesktopObjects(control,guard=guard)as remote:ref=remote.client.ensure(raw,readback_sink=Sink())
+ assert h.hexdigest()==sha(target)
+ receipt=dict(B_root=control['B_root'],file=target.name,bytes=len(raw),sha256=sha(target),object=ref,independent_native_readback_verified=True)
+ (D/'RECOVERY_KIT_B.private.json').write_text(json.dumps(receipt,indent=2)+'\n');print(json.dumps(dict(bytes=len(raw),sha256=receipt['sha256'],Desktop_B_verified=True)))
+if __name__=='__main__':main()

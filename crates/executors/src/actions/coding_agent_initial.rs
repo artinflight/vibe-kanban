@@ -4,8 +4,6 @@ use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
-#[cfg(not(feature = "qa-mode"))]
-use crate::profile::ExecutorConfigs;
 use crate::{
     actions::Executable,
     approvals::ExecutorApprovalService,
@@ -59,14 +57,8 @@ impl Executable for CodingAgentInitialRequest {
 
         #[cfg(not(feature = "qa-mode"))]
         {
-            let profile_id = self.executor_config.profile_id();
-            let mut agent = ExecutorConfigs::get_cached()
-                .get_coding_agent(&profile_id)
-                .ok_or(ExecutorError::UnknownExecutorType(profile_id.to_string()))?;
-
-            if self.executor_config.has_overrides() {
-                agent.apply_overrides(&self.executor_config);
-            }
+            let mut agent =
+                crate::original_worker::resolve_for_launch(&self.executor_config, env).await?;
             agent.use_approvals(approvals.clone());
 
             agent.spawn(&effective_dir, &self.prompt, env).await

@@ -22,6 +22,7 @@ import { useUserSystem } from '@/shared/hooks/useUserSystem';
 import { useTheme } from '@/shared/hooks/useTheme';
 import WYSIWYGEditor from '@/shared/components/WYSIWYGEditor';
 import { useMessageEditContext } from '../model/contexts/MessageEditContext';
+import { useQuietGitPreservationNotice } from '../model/hooks/useQuietGitPreservationNotice';
 import type { UseResetProcessResult } from '../model/hooks/useResetProcess';
 import { useChangesViewActions } from '@/shared/hooks/useChangesView';
 import { useLogsPanelActions } from '@/shared/hooks/useLogsPanel';
@@ -692,15 +693,21 @@ function GenericToolApprovalEntry({
       onToggle={toggle}
       workspaceId={workspaceId}
       status={status}
-      renderMarkdown={({ content, workspaceId }) => (
-        <AppChatMarkdown
-          content={content}
-          workspaceId={workspaceId}
-          sessionId={sessionId}
-          className={undefined}
-          maxWidth={undefined}
-        />
-      )}
+      renderMarkdown={({ content, workspaceId }) =>
+        toolName === 'codex.mcp_approval' ? (
+          <pre className="whitespace-pre-wrap break-words text-sm">
+            {content}
+          </pre>
+        ) : (
+          <AppChatMarkdown
+            content={content}
+            workspaceId={workspaceId}
+            sessionId={sessionId}
+            className={undefined}
+            maxWidth={undefined}
+          />
+        )
+      }
     />
   );
 }
@@ -1393,6 +1400,12 @@ function AggregatedDiffGroupEntry({ group }: { group: AggregatedDiffGroup }) {
 const DisplayConversationEntrySpaced = (props: Props) => {
   const { isEntryGreyed } = useMessageEditContext();
   const isGreyed = isEntryGreyed(props.expansionKey);
+  const quietGitNotice = useQuietGitPreservationNotice(
+    props.entry,
+    props.workspaceWithSession?.id,
+    props.executionProcessId
+  );
+  if (quietGitNotice) return null;
 
   return (
     <div

@@ -31,6 +31,7 @@ use crate::{
 /// Reusable harness for ACP-based conns (Gemini, Qwen, etc.)
 pub struct AcpAgentHarness {
     session_namespace: String,
+    personal_auth: bool,
     model: Option<String>,
     mode: Option<String>,
 }
@@ -48,6 +49,7 @@ impl AcpAgentHarness {
         Self {
             session_namespace: "gemini_sessions".to_string(),
             model: None,
+            personal_auth: false,
             mode: None,
         }
     }
@@ -57,8 +59,15 @@ impl AcpAgentHarness {
         Self {
             session_namespace: namespace.into(),
             model: None,
+            personal_auth: false,
             mode: None,
         }
+    }
+
+    /// Explicit selection for the Antigravity personal-account adapter only.
+    pub fn with_personal_auth(mut self) -> Self {
+        self.personal_auth = true;
+        self
     }
 
     pub fn with_model(mut self, model: impl Into<String>) -> Self {
@@ -69,6 +78,36 @@ impl AcpAgentHarness {
     pub fn with_mode(mut self, mode: impl Into<String>) -> Self {
         self.mode = Some(mode.into());
         self
+    }
+
+    /// Strict opt-in lifecycle: interactive approvals, native resume, terminal failures.
+    #[allow(clippy::too_many_arguments)]
+    pub async fn spawn_supervised_with_command(
+        &self,
+        cwd: &Path,
+        prompt: String,
+        session: Option<&str>,
+        command: CommandParts,
+        env: &ExecutionEnv,
+        approvals: Option<Arc<dyn ExecutorApprovalService>>,
+    ) -> Result<SpawnedChild, ExecutorError> {
+        if self.mode.is_some() {
+            return Err(ExecutorError::Io(std::io::Error::other(
+                "Supervised ACP mode overrides are unsupported",
+            )));
+        }
+        super::supervised::spawn(
+            self.session_namespace.clone(),
+            self.model.clone(),
+            self.personal_auth,
+            cwd,
+            prompt,
+            session,
+            command,
+            env,
+            approvals,
+        )
+        .await
     }
 
     pub fn apply_overrides(&mut self, executor_config: &crate::profile::ExecutorConfig) {

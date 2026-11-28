@@ -1,0 +1,58 @@
+import { build } from 'esbuild';
+import { spawnSync } from 'node:child_process';
+import { mkdir } from 'node:fs/promises';
+import { resolve } from 'node:path';
+
+if (!process.env.VK_TEST_OUTPUT)
+  throw new Error(
+    'Set VK_TEST_OUTPUT to a directory on the mounted build volume'
+  );
+await mkdir(process.env.VK_TEST_OUTPUT, { recursive: true });
+const outfile = resolve(process.env.VK_TEST_OUTPUT, 'mcp-ui-tests.cjs');
+await build({
+  entryPoints: ['scripts/testing/mcp-approval-ui.test.tsx'],
+  outfile,
+  bundle: true,
+  platform: 'node',
+  format: 'cjs',
+  jsx: 'automatic',
+  alias: {
+    react: resolve('packages/ui/node_modules/react'),
+    'react-dom': resolve('packages/ui/node_modules/react-dom'),
+    i18next: resolve('packages/web-core/node_modules/i18next'),
+    'react-i18next': resolve('packages/ui/node_modules/react-i18next'),
+    '@vibe/ui': resolve('packages/ui/src'),
+    '@tanstack/react-query': resolve(
+      'packages/web-core/node_modules/@tanstack/react-query'
+    ),
+  },
+  plugins: [
+    {
+      name: 'offline-approval-api',
+      setup(build) {
+        build.onResolve({ filter: /^@\/shared\/lib\/jsonPatch$/ }, () => ({
+          path: resolve('packages/web-core/src/shared/lib/jsonPatch.ts'),
+        }));
+        build.onResolve({ filter: /^jsdom$/ }, () => ({
+          path: resolve('node_modules/jsdom/lib/api.js'),
+          external: true,
+        }));
+        build.onResolve(
+          { filter: /^@\/shared\/lib\/localApiTransport$/ },
+          () => ({ path: resolve('scripts/testing/mcp-approval-stream.ts') })
+        );
+        build.onResolve({ filter: /^@\/shared\/lib\/api$/ }, () => ({
+          path: resolve('scripts/testing/mcp-approval-ui-api.ts'),
+        }));
+      },
+    },
+  ],
+});
+const result = spawnSync(
+  process.execPath,
+  ['--test', '--test-force-exit', outfile],
+  {
+    stdio: 'inherit',
+  }
+);
+process.exitCode = result.status ?? 1;

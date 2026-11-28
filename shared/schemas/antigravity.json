@@ -1,0 +1,32 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "additionalProperties": false,
+  "description": "Supervised official ACP runtime. Requires an explicit executable and personal account authentication; saving settings does not authenticate an account.",
+  "type": "object",
+  "properties": {
+    "append_prompt": {
+      "title": "Append Prompt",
+      "description": "Extra text appended to the prompt",
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "textarea",
+      "default": null
+    },
+    "executable": {
+      "description": "Absolute path to Google's separate agy_acp_server runtime; never agy CLI.",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "model": {
+      "description": "Exact ACP-advertised model ID. No guessed models or fallback substitutions.",
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  }
+}

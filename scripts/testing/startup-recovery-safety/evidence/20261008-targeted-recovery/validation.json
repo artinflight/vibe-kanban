@@ -1,0 +1,20 @@
+{
+  "checks": [
+    "Fixed pinned 145 original rows match published accounting in exact order and repository counts",
+    "Fixed independent 448 row IDs/path digests match published exhaustive unknown accounting",
+    "129 successful graphs have no missing dependencies; VK scopes retain original shallow boundary",
+    "26 cleared identity+witness rows meet both criteria; 119 witness gaps stay explicit",
+    "59 candidate copies cross-reference 13 unknown rows without original-identity/retirement claims",
+    "14382 metadata digests match original uncovered-name set and expected type counts",
+    "All artifact lengths/hashes match manifest",
+    "Three independent reviewer artifact hashes unchanged",
+    "Public JSON contains no raw author/message/content/transcript/link-target fields"
+  ],
+  "result": "passed",
+  "application_changes": false,
+  "completed_audits_repeated": false,
+  "format": "pnpm run format passed",
+  "governance": "pnpm run ops:check passed",
+  "remaining_hyrox_tree": "5411325f7e9aa19ca230043f5bb78677d3388c40",
+  "validation_script_private_sha256": "e35757fcd138846f18ad67a584a8df183ccf010bc2a4b64900f039841da5b134"
+}

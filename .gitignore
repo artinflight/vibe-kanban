@@ -2,6 +2,10 @@
 target/
 **/*.rs.bk
 
+# Python
+__pycache__/
+*.py[cod]
+
 # Node.js
 node_modules/
 npm-debug.log*

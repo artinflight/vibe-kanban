@@ -15,7 +15,10 @@ export function useProjectWorkspaceCreateDraft() {
   const openWorkspaceCreateFromState = useCallback(
     async (
       initialState: CreateModeInitialState,
-      options?: { issueId?: string | null }
+      options?: {
+        issueId?: string | null;
+        canNavigate?: () => boolean;
+      }
     ): Promise<string | null> => {
       if (!projectId) return null;
 
@@ -33,6 +36,9 @@ export function useProjectWorkspaceCreateDraft() {
         initialState.linkedIssue?.issueId ??
         routeState.issueId ??
         null;
+      // Persistence can outlive the originating composer. Check its current
+      // identity/visibility at the navigation boundary; retain the saved draft.
+      if (options?.canNavigate && !options.canNavigate()) return draftId;
       if (issueId) {
         appNavigation.goToProjectIssueWorkspaceCreate(
           projectId,

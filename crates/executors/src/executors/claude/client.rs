@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 
 use tokio_util::sync::CancellationToken;
 use workspace_utils::approvals::{ApprovalStatus, QuestionStatus};
@@ -35,6 +35,7 @@ pub struct ClaudeAgentClient {
     repo_context: RepoContext,
     commit_reminder_prompt: String,
     cancel: CancellationToken,
+    execution_id: OnceLock<String>,
 }
 
 impl ClaudeAgentClient {
@@ -54,7 +55,21 @@ impl ClaudeAgentClient {
             repo_context,
             commit_reminder_prompt,
             cancel,
+            execution_id: OnceLock::new(),
         })
+    }
+
+    pub fn set_execution_id(&self, execution: String) {
+        let _ = self.execution_id.set(execution);
+    }
+
+    /// Reuse already-parsed native messages; no duplicate parsing of chat/tool data.
+    pub fn observe_provider_message(&self, message: &serde_json::Value) {
+        if let Some(execution) = self.execution_id.get()
+            && let Err(error) = crate::provider_failover::observer::claude(execution, message)
+        {
+            tracing::warn!(%execution, %error, "Provider observation held; execution behavior unchanged");
+        }
     }
 
     async fn handle_approval(
@@ -283,6 +298,14 @@ impl ClaudeAgentClient {
         _permission_suggestions: Option<Vec<PermissionUpdate>>,
         tool_use_id: Option<String>,
     ) -> Result<PermissionResult, ExecutorError> {
+        if let Some(execution) = self.execution_id.get()
+            && crate::provider_failover::observer::guarded_handoff(execution)?
+            && (!crate::provider_failover::observer::action_allowed(execution, &tool_name, &input)?
+                || self.auto_approve
+                || tool_use_id.is_none())
+        {
+            return Ok(PermissionResult::Deny {message:"Provider handoff requires an authorized task action, verified native owner and explicit approval".into(),interrupt:Some(false)});
+        }
         if tool_name == ASK_USER_QUESTION_NAME {
             if let Some(latest_tool_use_id) = tool_use_id {
                 return self
@@ -304,8 +327,25 @@ impl ClaudeAgentClient {
                 updated_permissions: None,
             })
         } else if let Some(latest_tool_use_id) = tool_use_id {
-            self.handle_approval(latest_tool_use_id, tool_name, input)
-                .await
+            let result = self
+                .handle_approval(latest_tool_use_id.clone(), tool_name.clone(), input)
+                .await?;
+            if let Some(execution) = self.execution_id.get()
+                && crate::provider_failover::observer::guarded_handoff(execution)?
+                && let PermissionResult::Allow {
+                    ref updated_input, ..
+                } = result
+            {
+                // Review is not exactly-once execution: persist the tool claim before
+                // returning Allow, including any reviewer-approved input changes.
+                crate::provider_failover::observer::approved_tool(
+                    execution,
+                    &latest_tool_use_id,
+                    &tool_name,
+                    updated_input,
+                )?;
+            }
+            Ok(result)
         } else {
             // Auto approve tools with no matching tool_use_id
             // tool_use_id is undocumented so this may not be possible
@@ -346,6 +386,42 @@ impl ClaudeAgentClient {
             });
         }
 
+        if let Some(execution) = self.execution_id.get()
+            && crate::provider_failover::observer::guarded_handoff(execution)?
+        {
+            let tool = input
+                .get("tool_name")
+                .and_then(serde_json::Value::as_str)
+                .unwrap_or("");
+            let args = input
+                .get("tool_input")
+                .cloned()
+                .unwrap_or(serde_json::Value::Null);
+            if callback_id == "provider_effect_complete" {
+                let tool_id = input
+                    .get("tool_use_id")
+                    .and_then(serde_json::Value::as_str)
+                    .or(_tool_use_id.as_deref())
+                    .unwrap_or("");
+                crate::provider_failover::observer::completed_tool(
+                    execution, tool_id, tool, &args,
+                )?;
+                return Ok(serde_json::json!({}));
+            }
+            if callback_id == "provider_effect_failed" {
+                // A failed/partial tool may already have changed the outside world.
+                // Preserve Unknown; only an independently reconciled checkpoint can proceed.
+                return Ok(serde_json::json!({}));
+            }
+            let allowed = callback_id == "provider_read_approval"
+                && crate::provider_failover::observer::action_allowed(execution, tool, &args)?
+                && !self.auto_approve;
+            return Ok(
+                serde_json::json!({"hookSpecificOutput":{"hookEventName":"PreToolUse",
+                "permissionDecision":if allowed {"ask"}else{"deny"},
+                "permissionDecisionReason":"Task-scoped provider handoff requires explicit review; ungranted effects remain held"}}),
+            );
+        }
         if self.auto_approve {
             Ok(serde_json::json!({
                 "hookSpecificOutput": {

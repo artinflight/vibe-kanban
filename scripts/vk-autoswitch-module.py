@@ -50,6 +50,8 @@ def prepare(args):
         os.rename(candidate, validator)
         sync_directory(root)
     defaults = json.loads(subprocess.check_output([str(validator), '--defaults'], timeout=10))
+    if 'protocol' not in defaults:
+        raise ValueError('Pinned validator predates this module protocol; prepare a separate root with the backend-matched validator')
     temporary = Path(tempfile.mkdtemp(prefix='.preparing-', dir=target.parent))
     try:
         shutil.copy2(args.worker, temporary / 'worker')
@@ -59,7 +61,7 @@ def prepare(args):
         instructions = args.instructions.read_text() if args.instructions else defaults['instructions']
         (temporary / 'models.json').write_text(models)
         (temporary / 'instructions.txt').write_text(instructions)
-        manifest = {'protocol': 1, 'version': args.version,
+        manifest = {'protocol': defaults['protocol'], 'version': args.version,
                     'worker_sha256': digest(temporary / 'worker'),
                     'models_sha256': digest(temporary / 'models.json'),
                     'instructions_sha256': digest(temporary / 'instructions.txt'),

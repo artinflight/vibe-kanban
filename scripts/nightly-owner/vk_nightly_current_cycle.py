@@ -1,0 +1,268 @@
+"""Fixed serial integration of the direct-B current-set backup phases.
+
+The installed caller owns the lifetime cycle lease and externally authenticated
+configs, consumer contract/placement and existing normal-reader adapter. No
+manifest-selected command, bootstrap namespace scan, timer or backend restart.
+The B ledger and absolute whole-night deadline survive interrupted controllers.
+"""
+from datetime import datetime,timezone
+import time
+
+from vk_nightly_cycle_state import run_cycle
+from vk_nightly_file_cycle import Source
+from vk_nightly_file_cycle import run as file_cycle
+from vk_nightly_incremental import advance_suffix
+from vk_nightly_sql_cycle import run as SQL_cycle
+from vk_nightly_runtime_cycle import capture_component
+from vk_nightly_finalize_current import finalize,consumer_packet
+from vk_nightly_desktop_controls import DesktopControls
+from vk_nightly_typed_worker import host_guard,run_B
+from vk_typed_recovery import checksum
+
+
+
+def recorded_file_tail(worker,owner,*,report):
+    """One bounded recorded delta; deliver newer events without selecting them."""
+    owner.check();last_delivery=time.monotonic()
+    def boundary():
+        nonlocal last_delivery
+        owner.check()
+        if time.monotonic()-last_delivery>=120:
+            owner.deliver();last_delivery=time.monotonic()
+    selected=dict(worker,qualification=dict(worker['qualification'],attach_base_prefixes=False))
+    with DesktopControls(worker['B_controls'],guard=owner.guard) as remote:
+        return run_B(selected,at_component_boundary=boundary,
+            source_report=lambda:owner.report(remote.client),status_sink=report)
+
+
+def close_selected_file_absences(worker,owner,*,report):
+    """One metadata-only closure of at most16 vanished recorded regular files.
+
+    Do not advance the global suffix or invalidate the completed SQL cohort.
+    The B-native operation verifies the exact removal against durable events;
+    normal independent reopen verifies each preserved original row and proof.
+    """
+    import hashlib,json
+    from pathlib import Path
+    from vk_nightly_current_map import decode_member
+    from vk_nightly_metadata_replay import replay_cursor
+    owner.check();delivery=owner.deliver();target=owner.config['B_delivery_target']
+    with DesktopControls(worker['B_controls'],guard=owner.guard) as remote:
+        db=remote.client.connect(worker['B_index_name'],worker['B_checkpoint_sha256'])
+        journal=remote.client.connect(target['index_name'],target['checkpoint_sha256'],readonly=True,working=True)
+        try:
+            rows=db.execute("select name,row from members where state in ('file-needs-qualification','current-namespace-replay-required') order by name limit 17").fetchall()
+            if not rows:return dict(closed_file_absences=0)
+            if len(rows)>16:return dict(closed_file_absences=0,remaining=True)
+            binding=json.loads(db.execute('select binding from namespace_reconciliation where id=1').fetchone()[0])
+            since=replay_cursor(db,binding['instance'],binding['start_sequence'])
+            # The journal can be delivered by our minute service meanwhile.
+            # Select its exact committed latest barrier, under this read txn.
+            journal.execute('begin')
+            from vk_nightly_outbox_export import verify_delivery
+            cursor,sha=journal.execute('select cursor,sha256 from outbox_delivery where instance=?',(binding['instance'],)).fetchone()
+            saved=verify_delivery(journal,dict(instance=binding['instance'],sequence=cursor,report_sha256=sha))
+            records=[];events={}
+            for name,raw in rows:
+                owner.check();path=Path('/'+name);value=decode_member(raw)
+                if value.get('namespace',{}).get('kind')!='file':return dict(closed_file_absences=0,remaining=True)
+                try:path.lstat()
+                except FileNotFoundError:pass
+                else:return dict(closed_file_absences=0,remaining=True)
+                event=journal.execute('select sequence,mask from changes where instance=? and path=?',(binding['instance'],str(path))).fetchone()
+                if not event or event[0]<=since or not event[1]&(0x40|0x200|0x400):
+                    return dict(closed_file_absences=0,remaining=True)
+                records.append(dict(name=name,original_sha256=hashlib.sha256(raw).hexdigest(),observed_absent=True))
+                events[str(path)]=event[1]
+            owner.check()
+            for r in records:
+                try:Path('/'+r['name']).lstat()
+                except FileNotFoundError:continue
+                raise ValueError('selected file was recreated during absence bracket')
+            anchor=dict(format='vk-nightly-selected-file-absence-anchor-v1',since=since,through=cursor,
+                delivery_sha256=sha,barrier=saved['barrier'],events=events,
+                **{k:binding[k] for k in ('instance','plan_sha256','scope_sha256')})
+            result=db.request('close-recorded-file-absences',records=records,anchor=anchor,journal_index=journal.key)
+        finally:journal.close();db.close()
+    with DesktopControls(worker['B_controls'],guard=owner.guard) as remote:
+        view=remote.client.connect(worker['B_index_name'],worker['B_checkpoint_sha256'],readonly=True,working=True)
+        try:
+            for r in records:
+                if view.execute('select 1 from members where name=?',(r['name'],)).fetchone():raise ValueError('closed absent file remains in current map')
+                old,raw,sha=view.execute('select row,proof,proof_sha256 from recorded_file_absences where name=? and original_sha256=?',(r['name'],r['original_sha256'])).fetchone()
+                if hashlib.sha256(old).hexdigest()!=r['original_sha256'] or hashlib.sha256(raw.encode()).hexdigest()!=sha:
+                    raise ValueError('independent absence/original-row proof differs')
+            if replay_cursor(view,binding['instance'],binding['start_sequence'])!=since:raise ValueError('selected absence advanced global cursor')
+        finally:view.close()
+    owner.check();result=dict(result,normal_B_metadata_reopen_verified=True)
+    report(dict(result,phase='recorded-file-absence-closure',deferred_original_bytes_recovered=False))
+    return result
+
+
+def close_deferred_files(original,worker,owner,*,report,maximum_delta_paths=None):
+    """Close deferred versions, optionally using one normal journal suffix.
+
+    The predecessor receipt remains byte-for-byte readable on B. A crash before
+    the whole-cycle phase commit reuses accepted bodies from the same map; a
+    crash after that commit skips this callback through the reopened ledger.
+    Original deferred epoch truth is retained inside the composed receipt.
+    A normal cycle may apply one separately recorded, bounded journal suffix
+    if a recorded version vanished. Frozen-input handovers do not opt in.
+    """
+    if original.get('more_pending') is False:return original
+    if (original.get('actual_independent_B_file_cycle_receipt_reopen_verified') is not True
+            or original.get('requires_source_requalification') is not True):
+        raise ValueError('only independently reopened deferred file points can enter bounded closure')
+    if maximum_delta_paths is not None and (type(maximum_delta_paths) is not int or not 1<=maximum_delta_paths<=100000):
+        raise ValueError('existing finite namespace closure admission required')
+    tail=recorded_file_tail(worker,owner,report=report)
+    selected_absence_closure=None
+    if (tail.get('more_pending') is True and tail.get('requires_source_requalification') is True
+            and maximum_delta_paths is None):
+        # A frozen-input handover must not select a newer global suffix. It
+        # may still disposition at most16 vanished selected files using the
+        # existing native removal proof, retaining the old row and cursor.
+        selected_absence_closure=close_selected_file_absences(worker,owner,report=report)
+        if selected_absence_closure.get('normal_B_metadata_reopen_verified') is True:
+            tail=recorded_file_tail(worker,owner,report=report)
+    closure_delta=closure_delivery=None
+    if (tail.get('more_pending') is True and tail.get('requires_source_requalification') is True
+            and maximum_delta_paths is not None):
+        owner.check();closure_delivery=owner.deliver()
+        target=owner.config['B_delivery_target']
+        report(dict(phase='closing-unavailable-versions-with-one-journal-suffix',
+            original_file_receipt_sha256=checksum(original),maximum_paths=maximum_delta_paths,
+            global_namespace_audits_started=0,original_epoch_repaired=False))
+        with DesktopControls(worker['B_controls'],guard=owner.guard) as remote:
+            closure_delta=advance_suffix(remote.client,index_name=worker['B_index_name'],
+                checkpoint_sha256=worker['B_checkpoint_sha256'],journal_name=target['index_name'],
+                journal_checkpoint_sha256=target['checkpoint_sha256'],plan=owner.plan,
+                maximum_paths=maximum_delta_paths,maximum_journal_bytes=worker['B_controls']['maximum_index_bytes'],
+                guard=owner.guard,on_progress=report)
+        if closure_delta.get('normal_B_metadata_reopen_verified') is not True:
+            raise ValueError('actual independently reopened journal closure required')
+        tail=recorded_file_tail(worker,owner,report=report)
+    if tail.get('more_pending') is not False:
+        raise ValueError('recorded file points still changing or incomplete; preserve all versions')
+    # A different normal native connection observes committed member states;
+    # a caller's Boolean is insufficient to close a source replacement race.
+    with DesktopControls(worker['B_controls'],guard=owner.guard) as remote:
+        db=remote.client.connect(worker['B_index_name'],worker['B_checkpoint_sha256'],readonly=True,working=True)
+        try:
+            if db.execute("select 1 from members where state in ('file-needs-qualification',"
+                          "'current-namespace-replay-required','file-needs-capture') limit 1").fetchone():
+                raise ValueError('independent B map still has unresolved file points')
+            db.request('check')
+        finally:db.close()
+    owner.check()
+    return dict(phase='finite-current-file-cycle-complete',more_pending=False,
+        original_component_receipt=original,original_component_receipt_sha256=checksum(original),
+        recorded_file_delta=tail,selected_file_absence_closure=selected_absence_closure,
+        namespace_closure_delta=closure_delta,namespace_closure_delivery=closure_delivery,
+        normal_B_file_closure_reopen_verified=True,
+        actual_independent_B_file_cycle_receipt_reopen_verified=True,
+        final_B_delivery=original['final_B_delivery'],baseline_accepted=False,schedule_enabled=False)
+
+
+def run(config,workers,store,*,consumer,guard,report=lambda _:None,now=lambda:datetime.now(timezone.utc),
+        completed_components=None):
+    """Callbacks are fixed source functions; consumer is the trusted normal route.
+
+    Each new nightly must install a unique SQL phase/cohort tag bound to that
+    cycle. Replaying this SAME binding resumes its frozen request, not new SQL
+    API snapshots. Final delta consumes only names already recorded by that
+    request's suffix: it does not chase an always-changing global namespace.
+    """
+    binding=config['cycle_binding'];deadline=binding['deadline_UTC']
+    actual={name:dict(worker,whole_cycle_deadline_UTC=deadline,
+        B_controls=dict(worker['B_controls'],whole_cycle_deadline_UTC=deadline),
+        desktop=dict(worker.get('desktop',worker['B_controls']),whole_cycle_deadline_UTC=deadline))
+        for name,worker in workers.items()}
+    source_ref=config['files']['source_observer'];main=actual['files']
+    for name in ('SQL','runtime'):
+        if config[name]['source_observer']!=source_ref or actual[name]['B_controls']!=main['B_controls']:
+            raise ValueError('same actual source owner and native B controls required')
+    if (config['SQL']['cohort_tag']!=binding['SQL_cohort_tag']
+            or config['SQL']['SQL_phase_index']!=binding['SQL_phase_index']
+            or config['finalize']['current_map']!={k:main['B_'+k] for k in ('index_name','checkpoint_sha256')}):
+        raise ValueError('frozen cycle SQL request and retained map bindings differ')
+    if config['files'].get('metadata_predecessor') or config['SQL'].get('file_predecessor'):
+        raise ValueError('synchronous whole-cycle configuration cannot launch or await other phase units')
+    completed_components=completed_components or {}
+    if completed_components and set(completed_components)!=set(('files','SQL','runtime')):
+        raise ValueError('only one complete independently reopened existing serial chain can be adopted')
+    if completed_components and binding.get('cycle_kind')!='adopt-existing-commissioning':
+        raise ValueError('existing components cannot masquerade as a timed ordinary incremental cycle')
+    def files(_,end,check):
+        check()
+        value=completed_components['files'] if completed_components else file_cycle(config['files'],actual['files'],report=report)
+        if value.get('more_pending') is False:return value
+        started=time.monotonic()
+        owner=Source(source_ref,main['B_controls'],guard=lambda:(check(),host_guard(main,started)))
+        return close_deferred_files(value,main,owner,report=report,
+            maximum_delta_paths=(None if config['files'].get('resume_qualified_input_sha256')
+                                 else config['files'].get('maximum_delta_paths')))
+    def SQL(_,end,check):
+        check()
+        return completed_components['SQL'] if completed_components else SQL_cycle(config['SQL'],actual['SQL'],report=report)
+    def runtime(results,end,check):
+        started=time.monotonic();check()
+        if completed_components:return completed_components['runtime']
+        owner=Source(source_ref,main['B_controls'],guard=lambda:(check(),host_guard(actual['runtime'],started)))
+        return capture_component(config['runtime'],actual['runtime'],owner,guard=owner.guard,report=report)
+    def candidate(results,end,check):
+        # SQL selection advanced one durable journal suffix after the earlier
+        # file phase. Finish exactly those newly dirty files without advancing
+        # again and invalidating already captured SQL or chasing live history.
+        started=time.monotonic()
+        owner=Source(source_ref,main['B_controls'],guard=lambda:(check(),host_guard(main,started)))
+        tail=recorded_file_tail(main,owner,report=report)
+        absence_closure=None
+        if tail['more_pending'] and tail.get('requires_source_requalification') is True:
+            absence_closure=close_selected_file_absences(main,owner,report=report)
+            if absence_closure.get('normal_B_metadata_reopen_verified') is True:
+                tail=recorded_file_tail(main,owner,report=report)
+        if tail['more_pending']:raise ValueError('bounded recorded final delta remains incomplete; retain all points')
+        # Header qualification can discover a copied SQLite file after the
+        # earlier cohort froze. Close only that fixed namespace's SQL demand;
+        # never replay another suffix and invalidate completed current images.
+        with DesktopControls(main['B_controls'],guard=owner.guard) as remote:
+            db=remote.client.connect(main['B_index_name'],main['B_checkpoint_sha256'],readonly=True,working=True)
+            try:
+                missing_SQL=db.execute("select 1 from members where state='SQLite-needs-image' limit 1").fetchone() is not None
+                SQL_count=db.execute("select count(*) from SQL_sources s cross join members m on m.name=substr(s.path,2) and s.path='/'||m.name where m.state!='symlink'").fetchone()[0]
+            finally:db.close()
+        SQL_closure=None;SQL_phase=config['finalize']['SQL_phase']
+        if missing_SQL or SQL_count!=results['SQL']['complete_SQL_scope_sources']:
+            from vk_nightly_b_controls import name as index_name
+            SQL_phase=dict(SQL_phase,index_name=index_name(SQL_phase['index_name']+'-recorded'))
+            closure=dict(config['SQL'],SQL_phase_index=SQL_phase,
+                cohort_tag=config['SQL']['cohort_tag']+'-recorded',recorded_SQL_scope_from=config['SQL']['SQL_phase_index'])
+            SQL_closure=SQL_cycle(closure,actual['SQL'],report=report)
+            if SQL_closure.get('more_pending') or SQL_closure.get('deferred_SQL'):
+                raise ValueError('recorded SQL closure remains incomplete; preserve all images')
+        with DesktopControls(main['B_controls'],guard=owner.guard) as remote:
+            settings=dict(config['finalize'],guard=owner.guard,report=report,SQL_phase=SQL_phase)
+            settings['runtime_phase']=results['runtime']
+            value=finalize(remote.client,**settings)
+        left=(datetime.fromisoformat(end)-now()).total_seconds()
+        consumer_settings=dict(config['consumer'])
+        refresh=consumer_settings.pop('refresh_provider_placement',False)
+        if type(refresh) is not bool:raise ValueError('explicit provider requalification setting required')
+        if refresh:
+            from vk_nightly_remote_consumer import probe_placement
+            consumer_settings['provider_placement']=probe_placement(main['B_controls'],consumer_settings['provider_placement'],guard=owner.guard,deadline=end)
+            report(dict(phase='fresh-normal-B-provider-placement-verified',source_payload_bytes_read=0))
+        packet=consumer_packet(value,**dict(consumer_settings,remaining_seconds=left,whole_cycle_deadline_UTC=end))
+        import json
+        result=dict(candidate=value,packet=packet,final_delta=tail,recorded_file_absence_closure=absence_closure,recorded_SQL_closure=SQL_closure)
+        report(dict(phase='complete-current-candidate-ready',
+            candidate_receipt_bytes=len(json.dumps(result,separators=(',',':')).encode()),
+            consumer_packet_bytes=len(json.dumps(packet,separators=(',',':')).encode())))
+        return result
+    def restore(results,end,check):
+        # The independently pinned normal consumer must enforce actual B
+        # admission while it holds provider/metadata leases through readback.
+        return consumer(results['candidate']['packet'],guard=check,report=report)
+    return run_cycle(store,binding,files=files,SQL=SQL,runtime=runtime,finalize=candidate,
+                     restore=restore,guard=guard,now=now,report=report)

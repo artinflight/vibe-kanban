@@ -1,0 +1,105 @@
+[
+  {
+    "archive": "full",
+    "sha256": "9beef7c6ca1e533b9861f186d6654e5db0c4d7e13482bdddc70f0673b9b32e4d",
+    "authenticated": true,
+    "members_scanned": 329111,
+    "bytes": 23449698976,
+    "source": "B:/vk-backups/vk-runtime-backup-20261007/checkpoint--02136af9b9c24c08bccba0868864e597.tar.zst"
+  },
+  {
+    "archive": "delta",
+    "sha256": "4b2a3881da51148f0c66f773ac292476fab9b3a973f734f09af17e37680f0c53",
+    "authenticated": true,
+    "members_scanned": 234,
+    "bytes": 319227816,
+    "source": "B:/vk-backups/vk-runtime-backup-20261007/delta--430d3a842f5d4216862a1703e33232b8.tar.zst"
+  },
+  {
+    "source": "B:/vk-backups/vk-autoswitch-scope-release-20261001/checkpoint--0a5d3811433a41f885070bec137f5bde.tar.zst",
+    "sha256": "c79a6c5ca5aa0e8d2a25ed0c25bd41e5c22160bd1f3cb2aceeb32c18ae0abb87",
+    "bytes": 20930593566,
+    "members": 209346,
+    "unchanged_stat": true
+  },
+  {
+    "source": "B:/vk-backups/vk-autoswitch-scope-release-20261001/delta--19694b2a0baf46e5a109f60ddb5327a6.tar.zst",
+    "sha256": "ac03033be84d54a8a0278660429dbb70742c7565b12879fe85832be4b51d997c",
+    "bytes": 751079465,
+    "members": 10034,
+    "unchanged_stat": true
+  },
+  {
+    "source": "B:/vk-backups/ssd-offload-20260921/thread-recovery-20260907.tar.zst",
+    "sha256": "0c5e35c968d8d77c9db93e30017b4d9f8bc392409bf3d8fd1bd93e5893ce3fef",
+    "bytes": 56615783952,
+    "members": 5397,
+    "unchanged_stat": true
+  },
+  {
+    "source": "B:/vk-backups/vk-cutover-20260911T1854Z/preservation-backup.tar.zst",
+    "archive_sha256": "8bd447ea9e99bb1a6d7fc4c9f656b8ab4a69e903b171c5d524d917ced4d29da9",
+    "archive_bytes": 34647569752,
+    "members": 820573,
+    "destination": "B:/vk-backups/vk-targeted-recovery-investigation-20261008/september-original-object-stores-20261008T174030Z",
+    "object_files": 26395,
+    "object_bytes": 1304912934,
+    "unchanged_source_stat": true
+  },
+  {
+    "source": "/mnt/vk-storage/five-root-recovery-20261005/five-root-repaired-20261005.tar.zst",
+    "sha256": "746f5a3c2f2bf9c2568a37287bec0f64e4824709937dd36a2151e51280981823",
+    "bytes": 89812686,
+    "authenticated": true,
+    "members": 3412
+  },
+  {
+    "source": "/mnt/vk-storage/vk-green-cutover-20261005/historical-recovery-evidence.tar.zst",
+    "sha256": "de2a24e8610a115c5218130ff740eec9f5f027077fd7f99c00f07820de65b65c",
+    "bytes": 4993563,
+    "authenticated": true,
+    "members": 12
+  },
+  {
+    "source": "/mnt/vk-storage/vk-green-cutover-20261005/maintenance-software-20261005T152949Z.tar.zst",
+    "sha256": "9a4c2fe1f7c7d7c13e8baed5089d29a28c90b05318a1af3e1ca1b3da86b32bae",
+    "bytes": 305837939,
+    "authenticated": true,
+    "members": 1895
+  },
+  {
+    "source": "/mnt/vk-storage/vk-green-cutover-20261005/acceptance-20261005T153237Z.tar.zst",
+    "sha256": "6d4dbfb5b50e77cf28490246292e8fcc3e32a3d3647a6b8f4066b84649ee2fbc",
+    "bytes": 17442429,
+    "authenticated": true,
+    "members": 51
+  },
+  {
+    "source": "/mnt/vk-storage/vk-desktop-backup-20261007/desktop-evidence-final-6bd0b39e5.tar.gz",
+    "sha256": "b217c6b56e56dcf8d2930d1c863e9da8582bab98e770d890afcbda1b8405d10f",
+    "bytes": 18442537,
+    "authenticated": true,
+    "members": 187
+  },
+  {
+    "source": "B:/vk-backups/ssd-offload-20260921/older-vk-backups.tar.zst",
+    "archive_sha256": "db9f71b2c50b545530c5ecd497b6fdbff85e2eca7d331f14718b7fd96ee4aded",
+    "archive_bytes": 5260243962,
+    "authenticated": true,
+    "members": 13486
+  },
+  {
+    "source": "B:/vk-backups/ssd-offload-20260921/relocated-20260910-backups.tar.zst",
+    "archive_sha256": "fe601af6bc6d9fe29555c702d90c5396d49f8a4951d4f48719ca088fea3737f6",
+    "archive_bytes": 6766495670,
+    "authenticated": true,
+    "members": 26026
+  },
+  {
+    "source": "B:/vk-backups/ssd-offload-20260921/relocated-20260911-backups.tar.zst",
+    "archive_sha256": "aea0faf9a51fd221343efeef093e0f981260bed991dada2754a6d0ffbcbe967f",
+    "archive_bytes": 266772441,
+    "authenticated": true,
+    "members": 27
+  }
+]

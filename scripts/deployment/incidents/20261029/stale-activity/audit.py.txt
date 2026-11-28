@@ -1,0 +1,81 @@
+import concurrent.futures,datetime,hashlib,json,os,sqlite3,urllib.request,uuid
+from pathlib import Path
+D=Path('/mnt/vk-storage/vk-stale-activity-20261029')
+assert os.path.ismount('/mnt/vk-storage');D.mkdir(mode=0o700,exist_ok=False)
+DB=Path('/home/mcp/.local/share/vibe-kanban-green-xdg/vibe-kanban/db.v2.sqlite');N=Path('/home/mcp/.local/share/vibe-kanban-green-codex-home/state_5.sqlite')
+v=sqlite3.connect(DB.resolve().as_uri()+'?mode=ro',uri=True);n=sqlite3.connect(N.resolve().as_uri()+'?mode=ro',uri=True)
+v.row_factory=n.row_factory=sqlite3.Row
+boot=int(next(x.split()[1]for x in Path('/proc/stat').read_text().splitlines()if x.startswith('btime ')))
+bootdate=datetime.datetime.fromtimestamp(boot,datetime.timezone.utc)
+def iso(s):return datetime.datetime.fromisoformat(s.replace('Z','+00:00')).replace(tzinfo=datetime.timezone.utc)
+def api(path):
+ with urllib.request.urlopen('http://127.0.0.1:5621/api/'+path,timeout=20)as r:
+  d=json.load(r);assert d['success'];return d['data']
+def summary(archived):
+ req=urllib.request.Request('http://127.0.0.1:5621/api/workspaces/summaries',data=json.dumps({'archived':archived}).encode(),headers={'Content-Type':'application/json'})
+ with urllib.request.urlopen(req,timeout=30)as r:return json.load(r)['data']['summaries']
+summaries=summary(False)+summary(True)
+edges=[dict(r)for r in n.execute('select * from thread_spawn_edges')]
+parents={r['parent_thread_id']for r in edges}
+sessions={str(uuid.UUID(bytes=r['session_id']))for r in v.execute('select distinct e.session_id,c.agent_session_id from execution_processes e join coding_agent_turns c on c.execution_process_id=e.id where e.dropped=0 and c.agent_session_id is not null')if r['agent_session_id']in parents}
+sessions.update(str(uuid.UUID(bytes=r[0]))for r in v.execute("select distinct session_id from subagent_jobs where status in ('running','unresolved','not_found')"))
+with concurrent.futures.ThreadPoolExecutor(max_workers=3)as pool:jobs=dict(zip(sorted(sessions),pool.map(lambda s:api('execution-processes/subagents/session?session_id='+s),sorted(sessions))))
+records=[]
+for sid,js in jobs.items():
+ for j in js:
+  if j['status']not in ('running','unresolved','not_found'):continue
+  context=v.execute('''select e.status,e.completed_at,e.created_at,c.agent_session_id,s.workspace_id,w.archived,t.title
+   from execution_processes e join sessions s on s.id=e.session_id join workspaces w on w.id=s.workspace_id join tasks t on t.id=w.task_id
+   left join coding_agent_turns c on c.execution_process_id=e.id where e.id=?''',(uuid.UUID(j['execution_process_id']).bytes,)).fetchone()
+  th=n.execute('select id,rollout_path,created_at_ms,updated_at_ms from threads where id=?',(j['agent_id'],)).fetchone()
+  record={'job':j,'workspace':str(uuid.UUID(bytes=context['workspace_id'])),'title':context['title'],'archived':bool(context['archived']),'parent_status':context['status'],'parent_completed_at':context['completed_at'],'native_root':context['agent_session_id'],'native_thread':dict(th)if th else None}
+  existing=v.execute('select * from subagent_jobs where session_id=? and agent_id=?',(uuid.UUID(sid).bytes,j['agent_id'])).fetchall()
+  record['existing_rows']=[{k:(val.hex()if isinstance(val,bytes)else val)for k,val in dict(r).items()}for r in existing]
+  record['existing_parents']={}
+  for previous in existing:
+   ep=v.execute('select status,completed_at,session_id from execution_processes where id=?',(previous['execution_process_id'],)).fetchone()
+   record['existing_parents'][previous['execution_process_id'].hex()]={k:(val.hex()if isinstance(val,bytes)else val)for k,val in dict(ep).items()}
+  latest=None;events=0;has_partial=False
+  if th and th['rollout_path']:
+   p=Path(th['rollout_path']);record['rollout_exists']=p.exists()
+   if p.exists():
+    assert str(p.resolve()).startswith('/home/mcp/.local/share/vibe-kanban-green-codex-home/sessions/')
+    before=p.stat();h=hashlib.sha256()
+    with p.open('rb')as stream:
+     for line in stream:
+      h.update(line);has_partial=not line.endswith(b'\n')
+      try:r=json.loads(line)
+      except (ValueError,UnicodeDecodeError):continue
+      if isinstance(r.get('timestamp'),str):
+       try:t=iso(r['timestamp']);latest=max(latest,t)if latest else t
+       except ValueError:pass
+      events+=1
+    after=p.stat();assert (before.st_ino,before.st_size,before.st_mtime_ns)==(after.st_ino,after.st_size,after.st_mtime_ns),'Native evidence changed'
+    record['rollout_proof']=dict(path=str(p),bytes=after.st_size,sha256=h.hexdigest(),inode=after.st_ino,mtime_ns=after.st_mtime_ns,latest_timestamp=latest.isoformat()if latest else None,records=events,partial_tail=has_partial)
+  parent_stopped=context['status']in ('completed','failed','killed')and context['completed_at']and iso(context['completed_at'])<bootdate
+  native_old=th and (th['updated_at_ms'] or 0)<boot*1000 and (th['created_at_ms'] or 0)<boot*1000
+  log_old=not latest or latest<bootdate
+  record['preboot_orphan_candidate']=bool(parent_stopped and native_old and log_old)
+  records.append(record)
+# A matching live process or open transcript descriptor blocks reconciliation.
+patterns=set()
+for row in records:
+ patterns.update(x for x in [row['job']['agent_id'],row['native_root'],(row.get('native_thread')or{}).get('rollout_path')]if x)
+owners=[]
+for proc in Path('/proc').iterdir():
+ if not proc.name.isdigit()or int(proc.name)==os.getpid():continue
+ try:
+  raw=(proc/'cmdline').read_bytes().decode(errors='replace')
+  matched=[x for x in patterns if x in raw]
+  fds=[]
+  for fd in (proc/'fd').iterdir():
+   try:target=os.readlink(fd)
+   except OSError:continue
+   if target in patterns:fds.append(target)
+  if matched or fds:owners.append(dict(pid=int(proc.name),comm=(proc/'comm').read_text().strip(),matched=matched,files=fds))
+ except (FileNotFoundError,PermissionError,ProcessLookupError):pass
+out=dict(UTC=datetime.datetime.now(datetime.timezone.utc).isoformat(),boot_UTC=bootdate.isoformat(),database=str(DB.resolve()),database_inode=DB.stat().st_ino,native_state=str(N),workspaces_audited=len(summaries),sessions_with_native_children_or_jobs=len(sessions),summaries=summaries,records=records,matching_live_owners=owners,active_execution_count=v.execute("select count(*) from execution_processes where status='running'").fetchone()[0])
+p=D/'AUDIT.private.json';p.write_text(json.dumps(out,indent=2)+'\n');p.chmod(0o600)
+print(json.dumps(dict(workspaces=out['workspaces_audited'],sessions_scanned=len(sessions),nonterminal_jobs=len(records),preboot_orphans=sum(r['preboot_orphan_candidate']for r in records),matching_owner_count=len(owners),active_executions=out['active_execution_count'],affected_workspaces=len({r['workspace']for r in records})),indent=2))
+for r in records:
+ if not r['preboot_orphan_candidate']:print('UNRESOLVED_NEWER',r['title'],r['job']['agent_id'],r['parent_status'],r['parent_completed_at'])

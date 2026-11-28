@@ -1,0 +1,17 @@
+{
+  "executors": {
+    "CLAUDE_CODE": {
+      "AUTOSWITCH_CLAUDE_SUPERVISED": {
+        "CLAUDE_CODE": {
+          "model": "claude-sonnet-4-6",
+          "effort": "low",
+          "approvals": true,
+          "plan": false,
+          "dangerously_skip_permissions": false,
+          "disable_api_key": true,
+          "claude_code_router": false
+        }
+      }
+    }
+  }
+}

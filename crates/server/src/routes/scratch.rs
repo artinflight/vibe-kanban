@@ -49,7 +49,14 @@ async fn enqueue_ui_preferences_flush(
     scratch_type: ScratchType,
 ) {
     tokio::time::sleep(std::time::Duration::from_millis(750)).await;
-
+    services::services::admission::run(flush_ui_preferences_admitted(deployment, id, scratch_type))
+        .await;
+}
+async fn flush_ui_preferences_admitted(
+    deployment: DeploymentImpl,
+    id: Uuid,
+    scratch_type: ScratchType,
+) {
     let pending = {
         let mut pending = ui_preferences_write_buffer().lock().await;
         pending.remove(&id)
@@ -311,4 +318,7 @@ pub fn router(_deployment: &DeploymentImpl) -> Router<DeploymentImpl> {
             "/scratch/{scratch_type}/{id}/stream/ws",
             get(stream_scratch_ws),
         )
+        .layer(axum::middleware::from_fn(
+            crate::middleware::checkpoint_admission::checkpoint_admission,
+        ))
 }

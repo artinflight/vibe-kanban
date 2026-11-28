@@ -9,6 +9,7 @@ pub mod git;
 pub mod integration;
 pub mod links;
 pub mod pr;
+pub mod report_review;
 pub mod repos;
 pub mod streams;
 pub mod workspace_summary;
@@ -26,6 +27,7 @@ const PROMPT_JSON_BODY_LIMIT_BYTES: usize = 100 * 1024 * 1024;
 
 pub fn router(deployment: &DeploymentImpl) -> Router<DeploymentImpl> {
     let workspace_id_router = Router::new()
+        .merge(super::workspace_archive::workspace_routes())
         .route(
             "/",
             get(core::get_workspace)
@@ -33,6 +35,20 @@ pub fn router(deployment: &DeploymentImpl) -> Router<DeploymentImpl> {
                 .delete(core::delete_workspace),
         )
         .route("/messages/first", get(core::get_first_user_message))
+        .route("/github-sync", get(core::github_sync_status))
+        .route(
+            "/github-sync/input",
+            axum::routing::delete(core::dismiss_github_sync_input),
+        )
+        .route("/review-state", get(report_review::state::<DeploymentImpl>))
+        .route(
+            "/review-receipts",
+            post(report_review::receipt::<DeploymentImpl>),
+        )
+        .route(
+            "/review-hold",
+            axum::routing::put(report_review::hold::<DeploymentImpl>),
+        )
         .route("/seen", axum::routing::put(core::mark_seen))
         .route("/unread", axum::routing::put(core::mark_unread))
         .nest("/git", git::router())
@@ -40,6 +56,9 @@ pub fn router(deployment: &DeploymentImpl) -> Router<DeploymentImpl> {
         .nest("/integration", integration::router())
         .nest("/repos", repos::router())
         .nest("/pull-requests", pr::router())
+        .layer(axum::middleware::from_fn(
+            crate::middleware::checkpoint_admission::checkpoint_admission,
+        ))
         .layer(from_fn_with_state(
             deployment.clone(),
             load_workspace_middleware,

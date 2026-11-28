@@ -426,4 +426,7 @@ pub fn router() -> Router<DeploymentImpl> {
         .route("/repos/pr-info", get(get_pr_info))
         .route("/repos/{repo_id}/search", get(search_repo))
         .route("/repos/{repo_id}/open-editor", post(open_repo_in_editor))
+        .layer(axum::middleware::from_fn(
+            crate::middleware::checkpoint_admission::checkpoint_admission,
+        ))
 }

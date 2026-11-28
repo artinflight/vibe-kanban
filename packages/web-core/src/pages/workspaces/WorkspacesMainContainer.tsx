@@ -22,6 +22,7 @@ import { RetryUiProvider } from '@/features/workspace-chat/model/contexts/RetryU
 import { ApprovalFeedbackProvider } from '@/features/workspace-chat/model/contexts/ApprovalFeedbackContext';
 import { forwardWheelToScroller } from '@/features/workspace-chat/ui/forwardWheelToScroller';
 import { useDiffStats } from '@/shared/stores/useWorkspaceDiffStore';
+import { WorkspaceReadControls } from '@/shared/components/WorkspaceReadControls';
 
 /**
  * Isolated component that reads diffStats from WorkspaceContext.
@@ -115,7 +116,7 @@ export const WorkspacesMainContainer = forwardRef<
     repos,
     onSelectSession,
     isLoading,
-    isSessionsLoading: _isSessionsLoading,
+    isSessionsLoading = false,
     isNewSessionMode,
     onStartNewSession,
   },
@@ -168,30 +169,36 @@ export const WorkspacesMainContainer = forwardRef<
   const streamScopeKey = entriesProviderKey;
 
   const conversationContent = workspaceWithSession ? (
-    <div
-      className="flex-1 min-h-0 overflow-hidden flex justify-center"
-      onWheel={(e) => forwardWheelToScroller(e, conversationListRef)}
-    >
-      <div className="w-chat max-w-full h-full">
-        <RetryUiProvider workspaceId={workspaceWithSession.id}>
-          <ConversationList
-            key={streamScopeKey}
-            ref={conversationListRef}
-            attempt={workspaceWithSession}
-            repos={repos}
-            onAtBottomChange={handleAtBottomChange}
-            sessionScopeId={selectedSessionId}
-          />
-        </RetryUiProvider>
+    <>
+      <WorkspaceReadControls
+        key={workspaceWithSession.id}
+        workspaceId={workspaceWithSession.id}
+      />
+      <div
+        className="flex-1 min-h-0 overflow-hidden flex justify-center"
+        onWheel={(e) => forwardWheelToScroller(e, conversationListRef)}
+      >
+        <div className="w-chat max-w-full h-full">
+          <RetryUiProvider workspaceId={workspaceWithSession.id}>
+            <ConversationList
+              key={streamScopeKey}
+              ref={conversationListRef}
+              attempt={workspaceWithSession}
+              repos={repos}
+              onAtBottomChange={handleAtBottomChange}
+              sessionScopeId={selectedSessionId}
+            />
+          </RetryUiProvider>
+        </div>
       </div>
-    </div>
+    </>
   ) : null;
 
   const chatBoxContent = (
     <ChatBoxWithDiffStats
-      session={session}
-      workspaceId={workspaceWithSession?.id}
-      isNewSessionMode={isNewSessionMode}
+      session={isSessionsLoading ? undefined : session}
+      workspaceId={isSessionsLoading ? undefined : workspaceWithSession?.id}
+      isNewSessionMode={!isSessionsLoading && isNewSessionMode}
       sessions={sessions}
       onSelectSession={onSelectSession}
       onStartNewSession={onStartNewSession}

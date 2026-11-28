@@ -1,4 +1,8 @@
 import {
+  DotActivityIndicators,
+  type DotActivityState,
+} from './DotActivityIndicators';
+import {
   PushPinIcon,
   HandIcon,
   TriangleIcon,
@@ -12,7 +16,9 @@ import {
 import { useTranslation } from 'react-i18next';
 import { usePhoneLayout } from '../lib/usePhoneLayout';
 import { cn } from '../lib/cn';
+import { ReadLaterButton } from './ReadLaterButton';
 import { RunningDots } from './RunningDots';
+import { DotManagedIndicator } from './DotManagedIndicator';
 
 const formatRelativeElapsed = (dateString: string): string => {
   const date = new Date(dateString);
@@ -29,9 +35,10 @@ const formatRelativeElapsed = (dateString: string): string => {
   return `${diffDays}d ago`;
 };
 
-export interface WorkspaceSummaryProps {
+export interface WorkspaceSummaryProps extends DotActivityState {
   name: string;
   workspaceId?: string;
+  dotManaged?: boolean;
   filesChanged?: number;
   linesAdded?: number;
   linesRemoved?: number;
@@ -51,6 +58,8 @@ export interface WorkspaceSummaryProps {
   summary?: boolean;
   /** Whether this is a draft workspace (shows "Draft" instead of elapsed time) */
   isDraft?: boolean;
+  readLater?: boolean;
+  onToggleReadLater?: () => void;
   onOpenWorkspaceActions?: (workspaceId: string) => void;
 }
 
@@ -66,6 +75,9 @@ export function WorkspaceSummary({
   hasPendingApproval = false,
   hasRunningDevServer = false,
   hasUnseenActivity = false,
+  dotManaged = false,
+  dotUnreadCount = 0,
+  dotNeedsAttentionCount = 0,
   activeSubagentCount = 0,
   unresolvedSubagentCount = 0,
   latestProcessCompletedAt,
@@ -76,14 +88,24 @@ export function WorkspaceSummary({
   summary = false,
   isDraft = false,
   onOpenWorkspaceActions,
+  readLater,
+  onToggleReadLater,
 }: WorkspaceSummaryProps) {
   const { t } = useTranslation('common');
   const phone = usePhoneLayout();
   const hasChanges = filesChanged !== undefined && filesChanged > 0;
+  const hasDotActivity = dotUnreadCount > 0 || dotNeedsAttentionCount > 0;
   const isFailed =
     latestProcessStatus === 'failed' || latestProcessStatus === 'killed';
   const subagentCount = activeSubagentCount + unresolvedSubagentCount;
   const hasSubagentActivity = subagentCount > 0;
+  const showMetadata =
+    !summary ||
+    isActive ||
+    hasDotActivity ||
+    dotManaged ||
+    !!onToggleReadLater ||
+    !!(workspaceId && onOpenWorkspaceActions);
 
   const handleOpenCommandBar = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -108,12 +130,16 @@ export function WorkspaceSummary({
               : 'Ready';
     return (
       <article
-        className={cn('mobile-workspace-card phone-workspace-row', className)}
+        className={cn(
+          'mobile-workspace-card phone-workspace-row !block',
+          className
+        )}
         data-selected={isActive}
       >
         <button
           type="button"
-          className="phone-workspace-open"
+          data-workspace-title
+          className="phone-workspace-open w-full !pb-0"
           aria-current={isActive ? 'page' : undefined}
           onClick={onClick}
         >
@@ -139,8 +165,25 @@ export function WorkspaceSummary({
               {isPinned && <PushPinIcon size={14} weight="fill" />}
               {name}
             </span>
+          </span>
+        </button>
+        <div
+          data-workspace-status-row
+          className="flex items-center gap-half pb-half pl-[52px]"
+        >
+          <button
+            type="button"
+            onClick={onClick}
+            aria-label={name}
+            className="min-w-0 flex-1 text-left"
+          >
             <span className="phone-workspace-caption">
-              {state}
+              <span>{state}</span>
+              <DotManagedIndicator managed={dotManaged} />
+              <DotActivityIndicators
+                dotUnreadCount={dotUnreadCount}
+                dotNeedsAttentionCount={dotNeedsAttentionCount}
+              />
               {latestProcessCompletedAt && !isRunning && (
                 <> · {formatRelativeElapsed(latestProcessCompletedAt)}</>
               )}
@@ -149,18 +192,21 @@ export function WorkspaceSummary({
               {hasRunningDevServer && <> · Preview running</>}
               {prStatus && prStatus !== 'unknown' && <> · PR {prStatus}</>}
             </span>
-          </span>
-        </button>
-        {workspaceId && onOpenWorkspaceActions && (
-          <button
-            type="button"
-            className="phone-row-more"
-            aria-label={`Actions for ${name}`}
-            onClick={handleOpenCommandBar}
-          >
-            <DotsThreeIcon size={22} weight="bold" />
           </button>
-        )}
+          {onToggleReadLater && (
+            <ReadLaterButton later={readLater} onToggle={onToggleReadLater} />
+          )}
+          {workspaceId && onOpenWorkspaceActions && (
+            <button
+              type="button"
+              className="phone-row-more inline-flex size-11 shrink-0 items-center justify-center"
+              aria-label={`Actions for ${name}`}
+              onClick={handleOpenCommandBar}
+            >
+              <DotsThreeIcon size={22} weight="bold" />
+            </button>
+          )}
+        </div>
       </article>
     );
   }
@@ -181,18 +227,18 @@ export function WorkspaceSummary({
         )}
       />
       <button
+        type="button"
+        data-workspace-title
         aria-current={isActive ? 'page' : undefined}
         onClick={onClick}
         className={cn(
-          'flex w-full cursor-pointer flex-col text-left px-base py-half transition-all duration-150',
-          isActive
-            ? 'text-normal'
-            : 'text-low sm:opacity-60 sm:hover:opacity-100 sm:hover:text-normal'
+          'flex w-full min-w-0 cursor-pointer flex-col text-left px-base pt-half transition-all duration-150 text-normal',
+          !showMetadata && 'pb-half'
         )}
       >
         <div
           className={cn(
-            'overflow-hidden whitespace-nowrap pr-double',
+            'w-full overflow-hidden whitespace-nowrap',
             !summary && 'text-normal'
           )}
           style={{
@@ -204,135 +250,159 @@ export function WorkspaceSummary({
         >
           {name}
         </div>
-        {(!summary || isActive) && (
-          <div className="flex w-full items-center gap-base text-sm h-5">
-            {/* Dev server running - leftmost */}
-            {hasRunningDevServer && (
-              <PlayIcon
-                className="size-icon-xs text-brand shrink-0"
-                weight="fill"
-              />
-            )}
-
-            {/* Failed/killed status (only when not running) */}
-            {!isRunning && isFailed && (
-              <TriangleIcon
-                className="size-icon-xs text-error shrink-0"
-                weight="fill"
-              />
-            )}
-
-            {/* Running dots OR hand icon for pending approval */}
-            {isRunning &&
-              (hasPendingApproval ? (
-                <HandIcon
-                  className="size-icon-xs text-brand shrink-0"
-                  weight="fill"
-                />
-              ) : (
-                <RunningDots />
-              ))}
-
-            {/* Unseen activity indicator (only when not running and not failed) */}
-            {hasUnseenActivity &&
-              !isRunning &&
-              !hasSubagentActivity &&
-              !isFailed && (
-                <CircleIcon
+      </button>
+      {showMetadata && (
+        <div
+          data-workspace-status-row
+          className="flex w-full items-center px-base pb-half"
+        >
+          <button
+            type="button"
+            onClick={onClick}
+            aria-label={name}
+            className="min-w-0 flex-1 cursor-pointer text-left text-normal"
+          >
+            <div
+              className={cn(
+                'flex w-full items-center gap-base text-sm',
+                hasDotActivity || dotManaged ? 'flex-wrap min-h-5' : 'h-5'
+              )}
+            >
+              {/* Dev server running - leftmost */}
+              {hasRunningDevServer && (
+                <PlayIcon
                   className="size-icon-xs text-brand shrink-0"
                   weight="fill"
                 />
               )}
 
-            {/* Sub-agent activity from the Codex thread graph */}
-            {hasSubagentActivity && (
-              <span
-                className="inline-flex h-4 min-w-4 shrink-0 items-center gap-[2px] text-warning"
-                title={`${subagentCount} sub-agent${
-                  subagentCount === 1 ? '' : 's'
-                } active`}
-              >
-                <StackIcon className="size-icon-xs" weight="fill" />
-                {subagentCount > 1 && (
-                  <span className="text-[10px] leading-none tabular-nums">
-                    {subagentCount}
+              {/* Failed/killed status (only when not running) */}
+              {!isRunning && isFailed && (
+                <TriangleIcon
+                  className="size-icon-xs text-error shrink-0"
+                  weight="fill"
+                />
+              )}
+
+              {/* Approval remains visible independently of running activity. */}
+              {hasPendingApproval ? (
+                <HandIcon
+                  className="size-icon-xs text-brand shrink-0"
+                  weight="fill"
+                  role="img"
+                  aria-label="Pending approval"
+                />
+              ) : isRunning ? (
+                <RunningDots />
+              ) : null}
+
+              {/* Unseen activity indicator (only when not running and not failed) */}
+              {hasUnseenActivity &&
+                !isRunning &&
+                !hasSubagentActivity &&
+                !isFailed && (
+                  <CircleIcon
+                    className="size-icon-xs text-brand shrink-0"
+                    weight="fill"
+                  />
+                )}
+
+              <DotManagedIndicator managed={dotManaged} />
+              <DotActivityIndicators
+                dotUnreadCount={dotUnreadCount}
+                dotNeedsAttentionCount={dotNeedsAttentionCount}
+              />
+              {/* Sub-agent activity from the Codex thread graph */}
+              {hasSubagentActivity && (
+                <span
+                  className="inline-flex h-4 min-w-4 shrink-0 items-center gap-[2px] text-warning"
+                  title={`${subagentCount} sub-agent${
+                    subagentCount === 1 ? '' : 's'
+                  } active`}
+                >
+                  <StackIcon className="size-icon-xs" weight="fill" />
+                  {subagentCount > 1 && (
+                    <span className="text-[10px] leading-none tabular-nums">
+                      {subagentCount}
+                    </span>
+                  )}
+                </span>
+              )}
+
+              {/* PR status icon */}
+              {prStatus === 'open' && (
+                <GitPullRequestIcon
+                  className="size-icon-xs text-success shrink-0"
+                  weight="fill"
+                />
+              )}
+              {prStatus === 'merged' && (
+                <GitPullRequestIcon
+                  className="size-icon-xs text-merged shrink-0"
+                  weight="fill"
+                />
+              )}
+
+              {/* Pin icon */}
+              {isPinned && (
+                <PushPinIcon
+                  className="size-icon-xs text-brand shrink-0"
+                  weight="fill"
+                />
+              )}
+
+              {/* Time elapsed OR "Draft" label (when not running) */}
+              {!isRunning &&
+                !hasSubagentActivity &&
+                (isDraft ? (
+                  <span className="min-w-0 flex-1 truncate">
+                    {t('workspaces.draft')}
                   </span>
-                )}
-              </span>
-            )}
+                ) : latestProcessCompletedAt ? (
+                  <span className="min-w-0 flex-1 truncate">
+                    {formatRelativeElapsed(latestProcessCompletedAt)}
+                  </span>
+                ) : (
+                  <span className="flex-1" />
+                ))}
 
-            {/* PR status icon */}
-            {prStatus === 'open' && (
-              <GitPullRequestIcon
-                className="size-icon-xs text-success shrink-0"
-                weight="fill"
-              />
-            )}
-            {prStatus === 'merged' && (
-              <GitPullRequestIcon
-                className="size-icon-xs text-merged shrink-0"
-                weight="fill"
-              />
-            )}
-
-            {/* Pin icon */}
-            {isPinned && (
-              <PushPinIcon
-                className="size-icon-xs text-brand shrink-0"
-                weight="fill"
-              />
-            )}
-
-            {/* Time elapsed OR "Draft" label (when not running) */}
-            {!isRunning &&
-              !hasSubagentActivity &&
-              (isDraft ? (
-                <span className="min-w-0 flex-1 truncate">
-                  {t('workspaces.draft')}
-                </span>
-              ) : latestProcessCompletedAt ? (
-                <span className="min-w-0 flex-1 truncate">
-                  {formatRelativeElapsed(latestProcessCompletedAt)}
-                </span>
-              ) : (
+              {/* Spacer when running (no elapsed time shown) */}
+              {(isRunning || hasSubagentActivity) && (
                 <span className="flex-1" />
-              ))}
+              )}
 
-            {/* Spacer when running (no elapsed time shown) */}
-            {(isRunning || hasSubagentActivity) && <span className="flex-1" />}
+              {/* File count + lines changed on the right */}
+              {hasChanges && (
+                <span className="shrink-0 text-right flex items-center gap-half">
+                  <FileIcon className="size-icon-xs" weight="fill" />
+                  <span>{filesChanged}</span>
+                  {linesAdded !== undefined && (
+                    <span className="text-success">+{linesAdded}</span>
+                  )}
+                  {linesRemoved !== undefined && (
+                    <span className="text-error">-{linesRemoved}</span>
+                  )}
+                </span>
+              )}
+            </div>
+          </button>
 
-            {/* File count + lines changed on the right */}
-            {hasChanges && (
-              <span className="shrink-0 text-right flex items-center gap-half">
-                <FileIcon className="size-icon-xs" weight="fill" />
-                <span>{filesChanged}</span>
-                {linesAdded !== undefined && (
-                  <span className="text-success">+{linesAdded}</span>
-                )}
-                {linesRemoved !== undefined && (
-                  <span className="text-error">-{linesRemoved}</span>
-                )}
-              </span>
+          <div className="flex shrink-0 items-center pr-half">
+            {onToggleReadLater && (
+              <ReadLaterButton later={readLater} onToggle={onToggleReadLater} />
             )}
-          </div>
-        )}
-      </button>
-
-      {/* Right-side hover action - more options only */}
-      {workspaceId && onOpenWorkspaceActions && (
-        <div className="absolute right-0 top-0 bottom-0 flex items-center sm:opacity-0 sm:group-hover:opacity-100">
-          {/* Gradient fade from transparent to background */}
-          <div className="h-full w-6 pointer-events-none bg-gradient-to-r from-transparent to-secondary" />
-          {/* Single action button */}
-          <div className="flex items-center pr-base h-full bg-secondary">
-            <button
-              onClick={handleOpenCommandBar}
-              onPointerDown={(e) => e.stopPropagation()}
-              className="p-1.5 rounded-sm text-low hover:text-normal hover:bg-tertiary"
-              title={t('workspaces.more')}
-            >
-              <DotsThreeIcon className="size-5" weight="bold" />
-            </button>
+            {workspaceId && onOpenWorkspaceActions && (
+              <button
+                type="button"
+                onClick={handleOpenCommandBar}
+                onPointerDown={(event) => event.stopPropagation()}
+                className="rounded-sm p-1.5 text-low hover:bg-tertiary hover:text-normal focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brand sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
+                aria-label={t('workspaces.more')}
+                title={t('workspaces.more')}
+              >
+                <DotsThreeIcon className="size-5" weight="bold" />
+              </button>
+            )}
           </div>
         </div>
       )}

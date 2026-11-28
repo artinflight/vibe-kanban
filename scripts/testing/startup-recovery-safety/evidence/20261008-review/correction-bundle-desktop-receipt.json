@@ -1,0 +1,10 @@
+{
+  "path": "B:\\vk-backups\\vk-startup-recovery-safety-20261008\\recovery-evidence-correction-984f5ee79.tar.gz",
+  "sha256": "e597551a2344077d2df292e5201121ee725a9e7ae3ac9ac5c043d64ac20fa2f0",
+  "bytes": 264709,
+  "source_commit": "984f5ee79d575df0066c6a3afc2ee49fe02e4d0e",
+  "local_sha256_match": true,
+  "local_bytes_match": true,
+  "existing_packets_overwritten": false,
+  "raw_private_transcripts_included": false
+}

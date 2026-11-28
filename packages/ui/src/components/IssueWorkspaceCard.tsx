@@ -1,4 +1,9 @@
+import {
+  DotActivityIndicators,
+  type DotActivityState,
+} from './DotActivityIndicators';
 import { cn } from '../lib/cn';
+import { getWorkspaceAttentionLabel } from '../lib/workspaceAttention';
 import { useTranslation } from 'react-i18next';
 import {
   GitPullRequestIcon,
@@ -15,6 +20,7 @@ import {
 } from '@phosphor-icons/react';
 import { UserAvatar, type UserAvatarUser } from './UserAvatar';
 import { RunningDots } from './RunningDots';
+import { DotManagedIndicator } from './DotManagedIndicator';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -46,7 +52,8 @@ export interface WorkspacePr {
   status: 'open' | 'merged' | 'closed';
 }
 
-export interface WorkspaceWithStats {
+export interface WorkspaceWithStats extends DotActivityState {
+  dotManaged?: boolean;
   id: string;
   localWorkspaceId: string | null;
   name: string | null;
@@ -165,12 +172,16 @@ export function IssueWorkspaceCard({
     isFailed ||
     isRunning ||
     (hasUnseenActivity && !isRunning);
+  const attentionLabel = !workspace.archived
+    ? getWorkspaceAttentionLabel(workspace)
+    : undefined;
   const shouldStackPrBadges = workspace.prs.length > 2;
 
   return (
     <IssueWorkspaceCardContainer
       onClick={onClick}
       className={cn(
+        attentionLabel && 'kanban-attention-card',
         color &&
           '!bg-[hsl(var(--workspace-color)/0.48)] hover:!bg-[hsl(var(--workspace-color)/0.58)] shadow-[inset_3px_0_0_hsl(var(--workspace-color)/0.85)] dark:!bg-[hsl(var(--workspace-color)/0.18)] dark:hover:!bg-[hsl(var(--workspace-color)/0.24)]',
         className
@@ -340,7 +351,11 @@ export function IssueWorkspaceCard({
       >
         <div
           className={cn(
-            'flex items-center flex-wrap sm:flex-nowrap gap-half text-sm text-low min-w-0 overflow-hidden',
+            'flex items-center flex-wrap gap-half text-sm text-low min-w-0',
+            !workspace.dotManaged &&
+              !workspace.dotUnreadCount &&
+              !workspace.dotNeedsAttentionCount &&
+              'sm:flex-nowrap overflow-hidden',
             shouldStackPrBadges ? 'w-full' : 'flex-1'
           )}
         >
@@ -377,6 +392,11 @@ export function IssueWorkspaceCard({
             )}
           </div>
 
+          <DotManagedIndicator managed={workspace.dotManaged} />
+          <DotActivityIndicators
+            dotUnreadCount={workspace.dotUnreadCount}
+            dotNeedsAttentionCount={workspace.dotNeedsAttentionCount}
+          />
           {hasLiveStatusIndicator && (
             <span className="text-low/50 shrink-0">·</span>
           )}

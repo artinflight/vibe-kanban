@@ -145,7 +145,34 @@ pub struct ClaudeCode {
 }
 
 impl ClaudeCode {
-    async fn build_command_builder(&self) -> Result<CommandBuilder, CommandBuildError> {
+    pub fn provider_profile_facts(
+        &self,
+        variant: &str,
+    ) -> crate::provider_failover::claude::ProfileFacts {
+        crate::provider_failover::claude::ProfileFacts {
+            named_variant: variant.into(),
+            official_claude: true,
+            supervised: self.approvals == Some(true),
+            plan: self.plan.unwrap_or(false),
+            bypass: self.dangerously_skip_permissions.unwrap_or(false),
+            router: self.claude_code_router.unwrap_or(false),
+            disable_api_key: self.disable_api_key == Some(true),
+            command_overrides: self.cmd.base_command_override.is_some()
+                || self
+                    .cmd
+                    .additional_params
+                    .as_ref()
+                    .is_some_and(|p| !p.is_empty())
+                || self.cmd.env.as_ref().is_some_and(|e| !e.is_empty()),
+            model: self.model.clone(),
+            effort: self.effort.as_ref().map(|v| v.as_ref().to_owned()),
+            agent_override: self.agent.is_some(),
+        }
+    }
+    async fn build_command_builder(
+        &self,
+        guarded_handoff: bool,
+    ) -> Result<CommandBuilder, CommandBuildError> {
         // If base_command_override is provided and claude_code_router is also set, log a warning
         if self.cmd.base_command_override.is_some() && self.claude_code_router.is_some() {
             tracing::warn!(
@@ -163,11 +190,16 @@ impl ClaudeCode {
             tracing::warn!("Both plan and approvals are enabled. Plan will take precedence.");
         }
         if plan || approvals {
-            // Enable bypass at startup, otherwise we cannot change to it after exiting plan mode
+            // Ordinary plan-mode transitions keep their existing behavior. A
+            // supervised handoff must NEVER begin in bypass mode, even before input.
             builder = builder.extend_params(["--permission-prompt-tool=stdio"]);
             builder = builder.extend_params([format!(
                 "--permission-mode={}",
-                PermissionMode::BypassPermissions
+                if guarded_handoff {
+                    PermissionMode::Default
+                } else {
+                    PermissionMode::BypassPermissions
+                }
             )]);
         } else {
             builder = builder.extend_params(["--disallowedTools=AskUserQuestion"]);
@@ -330,6 +362,7 @@ impl StandardCodingAgentExecutor for ClaudeCode {
                     self.approvals = Some(false);
                 }
                 PermissionPolicy::Supervised => {
+                    self.dangerously_skip_permissions = Some(false);
                     self.plan = Some(false);
                     self.approvals = Some(true);
                 }
@@ -351,7 +384,11 @@ impl StandardCodingAgentExecutor for ClaudeCode {
         prompt: &str,
         env: &ExecutionEnv,
     ) -> Result<SpawnedChild, ExecutorError> {
-        let command_builder = self.build_command_builder().await?;
+        let guarded = match env.get("VK_EXECUTION_PROCESS_ID") {
+            Some(id) => crate::provider_failover::observer::guarded_handoff(id)?,
+            None => false,
+        };
+        let command_builder = self.build_command_builder(guarded).await?;
         let command_parts = command_builder.build_initial()?;
         self.spawn_internal(current_dir, prompt, command_parts, env)
             .await
@@ -365,7 +402,14 @@ impl StandardCodingAgentExecutor for ClaudeCode {
         reset_to_message_id: Option<&str>,
         env: &ExecutionEnv,
     ) -> Result<SpawnedChild, ExecutorError> {
-        let command_builder = self.build_command_builder().await?;
+        if let Some(execution) = env.get("VK_EXECUTION_PROCESS_ID")
+            && crate::provider_failover::observer::guarded_handoff(execution)?
+        {
+            return Err(ExecutorError::Io(std::io::Error::other(
+                "Provider handoff requires fresh initial session; resume denied",
+            )));
+        }
+        let command_builder = self.build_command_builder(false).await?;
 
         let mut args = vec!["--resume".to_string(), session_id.to_string()];
 
@@ -620,6 +664,22 @@ impl ClaudeCode {
         command_parts: CommandParts,
         env: &ExecutionEnv,
     ) -> Result<SpawnedChild, ExecutorError> {
+        if let Some(execution) = env.get("VK_EXECUTION_PROCESS_ID")
+            && crate::provider_failover::observer::guarded_handoff(execution)?
+        {
+            crate::provider_failover::claude::validate_profile(
+                &self.provider_profile_facts(crate::provider_failover::claude::PROFILE),
+            )?;
+            let names: Vec<_> = std::env::vars_os()
+                .map(|(name, _)| name.to_string_lossy().into_owned())
+                .collect();
+            crate::provider_failover::claude::subscription_environment(
+                names
+                    .iter()
+                    .map(String::as_str)
+                    .chain(env.vars.keys().map(String::as_str)),
+            )?;
+        }
         let (program_path, args) = command_parts.into_resolved().await?;
         let combined_prompt = self.append_prompt.combine_prompt(prompt);
 
@@ -654,7 +714,16 @@ impl ClaudeCode {
 
         let new_stdout = create_stdout_pipe_writer(&mut child)?;
         let permission_mode = self.permission_mode();
-        let hooks = self.get_hooks(env.commit_reminder);
+        let mut hooks = self.get_hooks(env.commit_reminder);
+        let strict_handoff = match env.get("VK_EXECUTION_PROCESS_ID") {
+            Some(execution) => crate::provider_failover::observer::guarded_handoff(execution)?,
+            None => false,
+        };
+        if strict_handoff {
+            // Ordinary supervised presets exclude native reads/Task from hooks.
+            // Handoffs must fence EVERY tool, including reads and delegation.
+            hooks = Some(crate::provider_failover::claude::handoff_hooks(hooks));
+        }
 
         // Create cancellation token for graceful shutdown
         let cancel = CancellationToken::new();
@@ -665,6 +734,7 @@ impl ClaudeCode {
         let repo_context = env.repo_context.clone();
         let commit_reminder_prompt = env.commit_reminder_prompt.clone();
         let cancel_for_task = cancel.clone();
+        let execution_id = env.get("VK_EXECUTION_PROCESS_ID").cloned();
         tokio::spawn(async move {
             let log_writer = LogWriter::new(new_stdout);
             let client = ClaudeAgentClient::new(
@@ -674,6 +744,9 @@ impl ClaudeCode {
                 commit_reminder_prompt,
                 cancel_for_task.clone(),
             );
+            if let Some(execution) = execution_id {
+                client.set_execution_id(execution);
+            }
             let protocol_peer =
                 ProtocolPeer::spawn(child_stdin, child_stdout, client.clone(), cancel_for_task);
 
@@ -688,6 +761,10 @@ impl ClaudeCode {
 
             if let Err(e) = protocol_peer.set_permission_mode(permission_mode).await {
                 tracing::warn!("Failed to set permission mode to {permission_mode}: {e}");
+                if strict_handoff {
+                    // Never submit input if review mode could not be established.
+                    return;
+                }
             }
 
             // Send user message

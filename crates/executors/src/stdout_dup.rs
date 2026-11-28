@@ -86,6 +86,27 @@ pub fn spawn_local_output_process()
     Ok((spawned, writer))
 }
 
+/// Replace only the selected child's stderr before the container takes its raw
+/// capture stream. The caller must drain the original pipe into sanitized output.
+pub fn create_stderr_pipe_writer<'b>(
+    child: &mut AsyncGroupChild,
+) -> Result<impl AsyncWrite + 'b, ExecutorError> {
+    let (reader, writer) = os_pipe::pipe().map_err(ExecutorError::Io)?;
+    #[cfg(unix)]
+    let std_stderr = {
+        let owned = unsafe { OwnedFd::from_raw_fd(reader.into_raw_fd()) };
+        std::process::ChildStderr::from(owned)
+    };
+    #[cfg(windows)]
+    let std_stderr = {
+        let owned = unsafe { OwnedHandle::from_raw_handle(reader.into_raw_handle()) };
+        std::process::ChildStderr::from(owned)
+    };
+    child.inner().stderr =
+        Some(tokio::process::ChildStderr::from_std(std_stderr).map_err(ExecutorError::Io)?);
+    wrap_fd_as_tokio_writer(writer)
+}
+
 // =========================================
 // OS file descriptor helper functions
 // =========================================

@@ -44,6 +44,7 @@ export interface ModelSelectorPopoverProps {
   onModelSelect: (id: string, providerId?: string) => void;
   onReasoningSelect: (reasoningId: string | null) => void;
   recentModelEntries?: string[];
+  preserveModelOrder?: boolean;
   showDefaultOption?: boolean;
   onSelectDefault?: () => void;
   scrollRef?: Ref<HTMLDivElement>;
@@ -363,6 +364,7 @@ export function ModelSelectorPopover({
   onModelSelect,
   onReasoningSelect,
   recentModelEntries = [],
+  preserveModelOrder = false,
   showDefaultOption = false,
   onSelectDefault,
   scrollRef,
@@ -402,7 +404,9 @@ export function ModelSelectorPopover({
       />
     );
   } else {
-    const sortedModels = sortByRecency(models, recentModelEntries);
+    const sortedModels = preserveModelOrder
+      ? models
+      : sortByRecency(models, recentModelEntries);
     const selectedModel = getSelectedModel(
       models,
       selectedProviderId,

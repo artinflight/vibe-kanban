@@ -1,0 +1,12 @@
+[Unit]
+Description=Check OS and secondary storage once per minute
+
+[Timer]
+OnActiveSec=1min
+OnUnitActiveSec=1min
+AccuracySec=15s
+Persistent=true
+Unit=storage-alert-response.service
+
+[Install]
+WantedBy=timers.target

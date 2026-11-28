@@ -23,6 +23,8 @@ interface UseJsonPatchStreamOptions<T> {
    * refresh from the next initial snapshot instead of leaving stale UI state.
    */
   reconnectOnCleanClose?: boolean;
+  /** Consent streams must receive a fresh snapshot/Ready before submitting. */
+  resetOnReconnect?: boolean;
 }
 
 interface UseJsonPatchStreamResult<T> {
@@ -56,6 +58,7 @@ export const useJsonPatchWsStream = <T extends object>(
   const injectInitialEntry = options?.injectInitialEntry;
   const deduplicatePatches = options?.deduplicatePatches;
   const reconnectOnCleanClose = options?.reconnectOnCleanClose ?? false;
+  const resetOnReconnect = options?.resetOnReconnect ?? false;
 
   useEffect(() => {
     if (!enabled || !endpoint) {
@@ -122,6 +125,12 @@ export const useJsonPatchWsStream = <T extends object>(
 
     if (!wsRef.current) {
       finishedRef.current = false;
+      if (resetOnReconnect) {
+        dataRef.current = initialData();
+        setData(dataRef.current);
+        initializedForEndpointRef.current = undefined;
+        setIsInitialized(false);
+      }
 
       void (async () => {
         try {
@@ -190,6 +199,10 @@ export const useJsonPatchWsStream = <T extends object>(
 
           ws.onclose = () => {
             setIsConnected(false);
+            if (resetOnReconnect) {
+              initializedForEndpointRef.current = undefined;
+              setIsInitialized(false);
+            }
             wsRef.current = null;
 
             // Only an explicit finished message is terminal for these streams.
@@ -242,6 +255,7 @@ export const useJsonPatchWsStream = <T extends object>(
     injectInitialEntry,
     deduplicatePatches,
     reconnectOnCleanClose,
+    resetOnReconnect,
     retryNonce,
   ]);
 

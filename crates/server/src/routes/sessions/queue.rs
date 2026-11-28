@@ -20,18 +20,98 @@ use crate::{DeploymentImpl, error::ApiError, middleware::load_session_middleware
 const PROMPT_JSON_BODY_LIMIT_BYTES: usize = 100 * 1024 * 1024;
 
 /// Request body for queueing a follow-up message
-#[derive(Debug, Deserialize, TS)]
-struct QueueMessageRequest {
+#[derive(Debug, serde::Serialize, Deserialize, TS)]
+pub(crate) struct QueueMessageRequest {
     pub message: String,
     pub executor_config: ExecutorConfig,
 }
 
 /// Steer an active Codex turn, or queue the message for agents without steering.
 async fn queue_message(
+    headers: axum::http::HeaderMap,
     Extension(session): Extension<Session>,
     State(deployment): State<DeploymentImpl>,
     Json(payload): Json<QueueMessageRequest>,
 ) -> Result<ResponseJson<ApiResponse<QueueStatus>>, ApiError> {
+    let existing = if services::services::workspace_archive::runtime::configured()
+        .map_err(|e| ApiError::Conflict(e.to_string()))?
+        .is_some()
+        && let Some(key) = headers
+            .get("Idempotency-Key")
+            .and_then(|v| v.to_str().ok())
+            .and_then(|v| uuid::Uuid::parse_str(v).ok())
+    {
+        sqlx::query_scalar::<_, bool>(
+            "SELECT EXISTS(SELECT 1 FROM workspace_archive_inputs WHERE request_id=?)",
+        )
+        .bind(key)
+        .fetch_one(&deployment.db().pool)
+        .await?
+    } else {
+        false
+    };
+    if existing
+        || services::services::workspace_archive::runtime::requires_revival(
+            &deployment.db().pool,
+            session.workspace_id,
+        )
+        .await
+        .map_err(|e| ApiError::Conflict(e.to_string()))?
+    {
+        let response = super::follow_up(
+            headers,
+            Extension(session),
+            State(deployment),
+            Json(super::CreateFollowUpAttempt {
+                prompt: payload.message,
+                executor_config: payload.executor_config,
+                retry_process_id: None,
+                force_when_dirty: None,
+                perform_git_reset: None,
+            }),
+        )
+        .await?;
+        return Ok(ResponseJson(ApiResponse::success(
+            response.0.into_error_data().unwrap_or(QueueStatus::Empty),
+        )));
+    }
+    let pool = deployment.db().pool.clone();
+    let received = services::services::queued_message::QueuedMessageService::receive(
+        &pool,
+        session.id,
+        serde_json::json!({"kind": "steering", "payload": &payload}),
+    )
+    .await?;
+    let result = services::services::admission::run(services::services::admission::owner(
+        session.workspace_id,
+        queue_message_admitted(Extension(session), State(deployment), Json(payload)),
+    ))
+    .await;
+    if result.is_ok() {
+        services::services::queued_message::QueuedMessageService::acknowledge(&pool, received)
+            .await?;
+    }
+    result
+}
+
+pub(crate) async fn queue_message_admitted<D: Deployment>(
+    Extension(session): Extension<Session>,
+    State(deployment): State<D>,
+    Json(payload): Json<QueueMessageRequest>,
+) -> Result<ResponseJson<ApiResponse<QueueStatus>>, ApiError> {
+    services::services::provider_admission::before_start(
+        deployment.container(),
+        session.workspace_id,
+        session.id,
+    )
+    .await?;
+    services::services::original_worker::record_input(&deployment.db().pool, session.id, false)
+        .await
+        .map_err(|e| ApiError::Conflict(e.to_string()))?;
+    // Steering is an amendment even when the text resembles a native resume.
+    services::services::original_worker::ordinary_input(session.id, "active_turn_steering")
+        .await
+        .map_err(|e| ApiError::Conflict(e.to_string()))?;
     let scheduled = if let Ok(Some(controller)) = executors::capacity::controller::configured() {
         controller
             .lock()
@@ -46,7 +126,7 @@ async fn queue_message(
     if scheduled {
         // The active-turn send UI uses this route. A manual message must take
         // over from scheduled work, rather than steer inside its restricted lease.
-        let response = super::follow_up(
+        let response = super::follow_up_admitted(
             Extension(session),
             State(deployment),
             Json(super::CreateFollowUpAttempt {
@@ -71,9 +151,11 @@ async fn queue_message(
     if !ExecutionProcess::has_running_queue_consumer_for_session(&deployment.db().pool, session.id)
         .await?
     {
-        deployment
-            .queued_message_service()
-            .cancel_queued(session.id);
+        if !services::services::admission::automatic_git_sync() {
+            deployment
+                .queued_message_service()
+                .cancel_queued(session.id);
+        }
         return Err(ApiError::Conflict(
             "Cannot queue a follow-up because this session is not currently running".to_string(),
         ));
@@ -114,6 +196,12 @@ async fn queue_message(
     let queued = deployment
         .queued_message_service()
         .queue_message(session.id, data);
+    if services::services::admission::automatic_git_sync() {
+        deployment
+            .queued_message_service()
+            .persist(&deployment.db().pool, session.id)
+            .await?;
+    }
 
     deployment
         .track_if_analytics_allowed(
@@ -139,9 +227,29 @@ async fn cancel_queued_message(
     Extension(session): Extension<Session>,
     State(deployment): State<DeploymentImpl>,
 ) -> Result<ResponseJson<ApiResponse<QueueStatus>>, ApiError> {
+    services::services::admission::run(services::services::admission::owner(
+        session.workspace_id,
+        cancel_queued_message_admitted(Extension(session), State(deployment)),
+    ))
+    .await
+}
+
+async fn cancel_queued_message_admitted(
+    Extension(session): Extension<Session>,
+    State(deployment): State<DeploymentImpl>,
+) -> Result<ResponseJson<ApiResponse<QueueStatus>>, ApiError> {
+    if services::services::workspace_archive::runtime::configured()
+        .map_err(|e| ApiError::Conflict(e.to_string()))?
+        .is_some()
+    {
+        services::services::workspace_archive::cancel(&deployment.db().pool, session.id)
+            .await
+            .map_err(|e| ApiError::Conflict(e.to_string()))?;
+    }
     deployment
         .queued_message_service()
-        .cancel_queued(session.id);
+        .cancel_durable(&deployment.db().pool, session.id)
+        .await?;
 
     deployment
         .track_if_analytics_allowed(
@@ -161,6 +269,16 @@ async fn get_queue_status(
     Extension(session): Extension<Session>,
     State(deployment): State<DeploymentImpl>,
 ) -> Result<ResponseJson<ApiResponse<QueueStatus>>, ApiError> {
+    if services::services::workspace_archive::runtime::configured()
+        .map_err(|e| ApiError::Conflict(e.to_string()))?
+        .is_some()
+        && let Some(revival) =
+            services::services::workspace_archive::status(&deployment.db().pool, session.id).await?
+    {
+        return Ok(ResponseJson(ApiResponse::success(QueueStatus::Restoring {
+            revival,
+        })));
+    }
     let status = deployment.queued_message_service().get_status(session.id);
 
     Ok(ResponseJson(ApiResponse::success(status)))

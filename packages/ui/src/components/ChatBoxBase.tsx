@@ -163,7 +163,29 @@ export function ChatBoxBase({
               >
                 <PaperclipIcon size={20} />
               </button>
-              <div className="phone-prompt-send">{footerRight}</div>
+              <div
+                className="phone-prompt-send"
+                onMouseDownCapture={(event) => {
+                  // Touch generates a compatibility mousedown before click.
+                  // Keep the keyboard open: blur restores bottom navigation
+                  // and moves these buttons before mouseup can activate them.
+                  const focused = document.activeElement;
+                  if (
+                    event.button === 0 &&
+                    event.target instanceof Element &&
+                    event.target.closest('button:not(:disabled)') &&
+                    focused instanceof HTMLElement &&
+                    focused.isContentEditable &&
+                    event.currentTarget
+                      .closest('.mobile-composer')
+                      ?.contains(focused)
+                  ) {
+                    event.preventDefault();
+                  }
+                }}
+              >
+                {footerRight}
+              </div>
             </div>
             <section
               id={optionsId}

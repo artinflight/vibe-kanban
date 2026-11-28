@@ -19,7 +19,8 @@ function isQueuedSendError(error: unknown): error is ApiError<QueueStatus> {
   return (
     error instanceof ApiError &&
     !!error.error_data &&
-    error.error_data.status === 'queued'
+    (error.error_data.status === 'queued' ||
+      error.error_data.status === 'restoring')
   );
 }
 
@@ -40,6 +41,12 @@ export function useCreateSession() {
       const session = await sessionsApi.create({
         workspace_id: workspaceId,
       });
+
+      if (session.workspace_id !== workspaceId) {
+        throw new Error(
+          'Created session does not match the requested workspace'
+        );
+      }
 
       const body: CreateFollowUpAttempt = {
         prompt,

@@ -1,6 +1,8 @@
 #![allow(clippy::items_after_test_module)]
 
-mod log_history;
+pub(crate) mod historical_response;
+pub(crate) mod log_history;
+pub(crate) mod stop_control;
 
 use std::pin::Pin;
 
@@ -35,6 +37,29 @@ use crate::{
     },
 };
 
+const EXECUTION_LOG_WS_IO_TIMEOUT: Duration = Duration::from_secs(5);
+
+pub(crate) async fn bounded_execution_log_ws_io<T>(
+    operation: &'static str,
+    io: impl std::future::Future<Output = anyhow::Result<T>>,
+) -> anyhow::Result<T> {
+    tokio::time::timeout(EXECUTION_LOG_WS_IO_TIMEOUT, io)
+        .await
+        .map_err(|_| anyhow::anyhow!("execution log websocket {operation} timed out"))?
+}
+
+async fn send_execution_log_ws_message(
+    socket: &mut MaybeSignedWebSocket,
+    message: Message,
+) -> anyhow::Result<()> {
+    // Keep inherent signed/plain send semantics; only bound the subscriber wait.
+    bounded_execution_log_ws_io("send", socket.send(message)).await
+}
+
+async fn close_execution_log_ws(socket: &mut MaybeSignedWebSocket) -> anyhow::Result<()> {
+    bounded_execution_log_ws_io("close", socket.close()).await
+}
+
 #[derive(Debug, Deserialize)]
 struct SessionExecutionProcessQuery {
     pub session_id: Uuid,
@@ -48,6 +73,39 @@ async fn get_execution_process_by_id(
     State(_deployment): State<DeploymentImpl>,
 ) -> Result<ResponseJson<ApiResponse<ExecutionProcess>>, ApiError> {
     Ok(ResponseJson(ApiResponse::success(execution_process)))
+}
+
+async fn activate_provider_failover(
+    Extension(execution): Extension<ExecutionProcess>,
+    State(deployment): State<DeploymentImpl>,
+) -> Result<ResponseJson<ApiResponse<services::services::provider_failover::Outcome>>, ApiError> {
+    let result =
+        services::services::provider_failover::activate(deployment.container(), execution.id)
+            .await
+            .map_err(ApiError::Container)?;
+    Ok(ResponseJson(ApiResponse::success(result)))
+}
+// Reserved for verified completion integration; intentionally not exposed as a route.
+#[allow(dead_code)]
+async fn complete_provider_failover(
+    Extension(execution): Extension<ExecutionProcess>,
+    State(deployment): State<DeploymentImpl>,
+) -> Result<ResponseJson<ApiResponse<services::services::provider_failover::Outcome>>, ApiError> {
+    let result =
+        services::services::provider_failover::release(deployment.container(), execution.id)
+            .await
+            .map_err(ApiError::Container)?;
+    Ok(ResponseJson(ApiResponse::success(result)))
+}
+async fn reconcile_provider_boundary(
+    Extension(execution): Extension<ExecutionProcess>,
+    State(deployment): State<DeploymentImpl>,
+) -> Result<ResponseJson<ApiResponse<services::services::provider_failover::Outcome>>, ApiError> {
+    let result =
+        services::services::provider_failover::boundary(deployment.container(), execution.id)
+            .await
+            .map_err(ApiError::Container)?;
+    Ok(ResponseJson(ApiResponse::success(result)))
 }
 
 async fn stream_raw_logs_ws(
@@ -85,10 +143,12 @@ async fn handle_raw_logs_ws(
         None => {
             // No logs available: send finished so the client gets a clean
             // close instead of retrying endlessly.
-            let _ = socket
-                .send(LogMsg::Finished.to_ws_message_unchecked())
-                .await;
-            let _ = socket.close().await;
+            let _ = send_execution_log_ws_message(
+                &mut socket,
+                LogMsg::Finished.to_ws_message_unchecked(),
+            )
+            .await;
+            let _ = close_execution_log_ws(&mut socket).await;
             return Ok(());
         }
     };
@@ -117,7 +177,7 @@ async fn handle_raw_logs_ws(
             item = stream.next() => {
                 match item {
                     Some(Ok(msg)) => {
-                        if socket.send(msg).await.is_err() {
+                        if send_execution_log_ws_message(&mut socket, msg).await.is_err() {
                             break;
                         }
                     }
@@ -140,7 +200,7 @@ async fn handle_raw_logs_ws(
     }
     // Send a proper close frame so the client sees code 1000 (normal closure)
     // instead of an abnormal TCP drop that triggers reconnection attempts.
-    let _ = socket.close().await;
+    let _ = close_execution_log_ws(&mut socket).await;
     Ok(())
 }
 
@@ -165,10 +225,12 @@ async fn stream_normalized_logs_ws(
             None => {
                 // No logs available: send finished and close cleanly
                 let mut socket = socket;
-                let _ = socket
-                    .send(utils::log_msg::LogMsg::Finished.to_ws_message_unchecked())
-                    .await;
-                let _ = socket.close().await;
+                let _ = send_execution_log_ws_message(
+                    &mut socket,
+                    utils::log_msg::LogMsg::Finished.to_ws_message_unchecked(),
+                )
+                .await;
+                let _ = close_execution_log_ws(&mut socket).await;
             }
         }
     })
@@ -192,8 +254,7 @@ async fn handle_normalized_logs_ws(
         }
 
         let patch = Patch(coalesce_patch_ops(std::mem::take(buffered_patch_ops)));
-        socket
-            .send(LogMsg::JsonPatch(patch).to_ws_message_unchecked())
+        send_execution_log_ws_message(socket, LogMsg::JsonPatch(patch).to_ws_message_unchecked())
             .await?;
         Ok(())
     };
@@ -223,7 +284,7 @@ async fn handle_normalized_logs_ws(
                             other => {
                                 flush_buffered_patch(&mut socket, &mut buffered_patch_ops).await?;
                                 flush_timer = None;
-                                if socket.send(other.to_ws_message_unchecked()).await.is_err() {
+                                if send_execution_log_ws_message(&mut socket, other.to_ws_message_unchecked()).await.is_err() {
                                     break;
                                 }
                             }
@@ -232,9 +293,7 @@ async fn handle_normalized_logs_ws(
                     Some(Err(e)) => {
                         let _ = flush_buffered_patch(&mut socket, &mut buffered_patch_ops).await;
                         tracing::error!("stream error: {}", e);
-                        let _ = socket
-                            .send(LogMsg::Finished.to_ws_message_unchecked())
-                            .await;
+                        let _ = send_execution_log_ws_message(&mut socket, LogMsg::Finished.to_ws_message_unchecked()).await;
                         break;
                     }
                     None => {
@@ -262,7 +321,7 @@ async fn handle_normalized_logs_ws(
             }
         }
     }
-    let _ = socket.close().await;
+    let _ = close_execution_log_ws(&mut socket).await;
     Ok(())
 }
 
@@ -289,6 +348,89 @@ mod tests {
     use serde_json::json;
 
     use super::coalesce_patch_ops;
+
+    #[test]
+    fn pr57_subscriber_timeout_is_five_seconds() {
+        assert_eq!(
+            super::EXECUTION_LOG_WS_IO_TIMEOUT,
+            std::time::Duration::from_secs(5)
+        );
+    }
+    #[tokio::test]
+    async fn pr57_success_error_and_final_frame_content_are_unchanged() {
+        let messages = [
+            utils::log_msg::LogMsg::Stdout("synthetic-new-delta".into()).to_ws_message_unchecked(),
+            utils::log_msg::LogMsg::Finished.to_ws_message_unchecked(),
+        ];
+        for message in messages {
+            let expected = message.clone();
+            let actual = super::bounded_execution_log_ws_io("send", async { Ok(message) })
+                .await
+                .unwrap();
+            assert_eq!(actual, expected);
+        }
+        let error = super::bounded_execution_log_ws_io::<()>("send", async {
+            Err(anyhow::anyhow!("synthetic-transport-refusal"))
+        })
+        .await
+        .unwrap_err();
+        assert_eq!(error.to_string(), "synthetic-transport-refusal");
+    }
+    #[tokio::test]
+    async fn pr57_stalled_send_drops_only_subscriber_future() {
+        use std::sync::{
+            Arc,
+            atomic::{AtomicBool, Ordering},
+        };
+        struct Dropped(Arc<AtomicBool>);
+        impl Drop for Dropped {
+            fn drop(&mut self) {
+                self.0.store(true, Ordering::SeqCst)
+            }
+        }
+        let dropped = Arc::new(AtomicBool::new(false));
+        let mark = dropped.clone();
+        let store = Arc::new(utils::msg_store::MsgStore::new());
+        let producer = store.clone();
+        let writer = tokio::spawn(async move {
+            producer.push_stdout("before-timeout");
+            tokio::time::sleep(std::time::Duration::from_millis(20)).await;
+            producer.push_stdout("after-timeout");
+            producer.push_finished();
+        });
+        let error = super::bounded_execution_log_ws_io::<()>("send", async {
+            let _drop = Dropped(mark);
+            std::future::pending::<anyhow::Result<()>>().await
+        })
+        .await
+        .unwrap_err();
+        writer.await.unwrap();
+        assert!(dropped.load(Ordering::SeqCst));
+        assert!(error.to_string().contains("send timed out"));
+        let history = store.get_history();
+        let text: String = history
+            .iter()
+            .filter_map(|m| {
+                if let utils::log_msg::LogMsg::Stdout(s) = m {
+                    Some(s.as_str())
+                } else {
+                    None
+                }
+            })
+            .collect();
+        assert_eq!(text, "before-timeoutafter-timeout");
+        assert!(matches!(
+            history.last(),
+            Some(utils::log_msg::LogMsg::Finished)
+        ));
+    }
+    #[tokio::test]
+    async fn pr57_stalled_close_is_bounded_without_retry() {
+        let error = super::bounded_execution_log_ws_io::<()>("close", std::future::pending())
+            .await
+            .unwrap_err();
+        assert!(error.to_string().contains("close timed out"));
+    }
 
     #[test]
     fn coalesce_patch_ops_keeps_last_write_for_each_path() {
@@ -387,7 +529,7 @@ async fn handle_execution_processes_by_session_ws(
             item = stream.next() => {
                 match item {
                     Some(Ok(msg)) => {
-                        if socket.send(msg).await.is_err() {
+                        if send_execution_log_ws_message(&mut socket, msg).await.is_err() {
                             break;
                         }
                     }
@@ -435,14 +577,42 @@ pub(super) fn router(deployment: &DeploymentImpl) -> Router<DeploymentImpl> {
     let workspace_id_router = Router::new()
         .route("/", get(get_execution_process_by_id))
         .route("/stop", post(stop_execution_process))
+        .route(
+            "/stop-exact",
+            get(stop_control::inspect)
+                .post(stop_control::stop)
+                .layer(axum::extract::DefaultBodyLimit::max(4096)),
+        )
+        .route("/stop-requests", get(stop_control::read_receipt))
+        .route(
+            "/provider-failover/activate",
+            post(activate_provider_failover),
+        )
+        .route(
+            "/provider-failover/checkpoint",
+            post(reconcile_provider_boundary),
+        )
         .route("/repo-states", get(get_execution_process_repo_states))
         .route("/log-history", get(log_history::get_log_history))
+        .route(
+            "/recover-native-final",
+            post(historical_response::import).layer(axum::extract::DefaultBodyLimit::max(8192)),
+        )
         .route("/raw-logs/ws", get(stream_raw_logs_ws))
-        .route("/normalized-logs/ws", get(stream_normalized_logs_ws))
-        .layer(from_fn_with_state(
-            deployment.clone(),
-            load_execution_process_middleware,
-        ));
+        .route("/normalized-logs/ws", get(stream_normalized_logs_ws));
+
+    #[cfg(target_os = "linux")]
+    let workspace_id_router = workspace_id_router.route(
+        "/native-recovery-status",
+        get(historical_response::local_repair::capture_status),
+    );
+
+    // Bind every execution route, including native recovery status, before
+    // registration in the session router. Retain provider and Stop endpoints.
+    let workspace_id_router = workspace_id_router.layer(from_fn_with_state(
+        deployment.clone(),
+        load_execution_process_middleware,
+    ));
 
     let workspaces_router = Router::new()
         .route("/subagents/session", get(list_subagent_jobs_by_session))

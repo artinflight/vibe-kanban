@@ -2,6 +2,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { createHash } from 'node:crypto';
 
 const repoRoot = process.cwd();
 
@@ -12,6 +13,7 @@ const requiredFiles = [
   'STATE.md',
   'STREAM.md',
   'HANDOFF.md',
+  'CONTINUITY_ARCHIVE.json',
   'VK_BACKEND_RESTART_PROTOCOL.md',
   'DELTA.md',
   'docs/audits/vibe-kanban-ops-audit.md',
@@ -32,6 +34,27 @@ const readUtf8 = (relPath) =>
   fs.readFileSync(path.join(repoRoot, relPath), 'utf8');
 
 if (errors.length === 0) {
+  const archive = JSON.parse(readUtf8('CONTINUITY_ARCHIVE.json'));
+  if (archive.schema !== 1 || archive.mandatory_budget_bytes !== 16384) {
+    errors.push('Unsupported continuity schema or changed 16 KiB pickup budget');
+  }
+  let pickupBytes = 0;
+  for (const item of archive.archives) {
+    const file = path.join(repoRoot, item.archive);
+    const raw = fs.readFileSync(file);
+    if (fs.lstatSync(file).isSymbolicLink() || raw.length !== item.bytes ||
+        createHash('sha256').update(raw).digest('hex') !== item.sha256) {
+      errors.push(`Historical pickup evidence changed: ${item.archive}`);
+    }
+    const current = fs.readFileSync(path.join(repoRoot, item.original));
+    pickupBytes += current.length;
+    if (!current.toString('utf8').includes(item.archive)) {
+      errors.push(`${item.original} must link its full historical archive`);
+    }
+  }
+  if (pickupBytes > archive.mandatory_budget_bytes) {
+    errors.push('STATE/STREAM/HANDOFF exceed the combined 16 KiB pickup budget');
+  }
   const agents = readUtf8('AGENTS.md');
   const readme = readUtf8('README.md');
   const localContainer = readUtf8('crates/local-deployment/src/container.rs');

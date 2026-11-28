@@ -41,52 +41,17 @@ import {
   DialogTitle,
 } from './KeyboardDialog';
 
-export const PASTEL_PROJECT_COLORS = [
-  '6 78% 84%',
-  '28 92% 82%',
-  '45 95% 78%',
-  '84 64% 80%',
-  '145 55% 78%',
-  '174 58% 78%',
-  '202 82% 82%',
-  '232 72% 84%',
-  '262 70% 86%',
-  '302 62% 85%',
-  '334 78% 84%',
-  '358 74% 84%',
-] as const;
+import {
+  PASTEL_PROJECT_COLORS,
+  getProjectInitials,
+  getProjectAbbreviation,
+  getProjectButtonStyle,
+} from '../lib/projectAppearance';
 
 function formatStarCount(count: number): string {
   if (count < 1000) return String(count);
   const k = count / 1000;
   return k >= 10 ? `${Math.floor(k)}k` : `${k.toFixed(1)}k`;
-}
-
-function getProjectInitials(name: string): string {
-  const trimmed = name.trim();
-  if (!trimmed) return '??';
-
-  const words = trimmed.split(/[\s_-]+/).filter(Boolean);
-  if (words.length >= 2) {
-    return (
-      words[0].charAt(0) + words[words.length - 1].charAt(0)
-    ).toUpperCase();
-  }
-  return trimmed.slice(0, 2).toUpperCase();
-}
-
-function getProjectAbbreviation(project: AppBarProject): string {
-  const abbreviation = project.abbreviation?.trim();
-  if (abbreviation) return abbreviation.slice(0, 3).toUpperCase();
-  return getProjectInitials(project.name);
-}
-
-function getProjectButtonStyle(project: AppBarProject, isActive: boolean) {
-  return {
-    backgroundColor: `hsl(${project.color} / ${isActive ? 1 : 0.72})`,
-    color: 'hsl(222 35% 18%)',
-    boxShadow: isActive ? `0 0 0 2px hsl(${project.color} / 0.35)` : undefined,
-  };
 }
 
 interface AppBarProps {
@@ -132,6 +97,8 @@ interface AppBarProps {
 }
 
 export interface AppBarProject {
+  dotUnreadCount?: number;
+  dotNeedsAttentionCount?: number;
   id: string;
   name: string;
   color: string;
@@ -605,7 +572,7 @@ export function AppBar({
                 <div
                   ref={dropProvided.innerRef}
                   {...dropProvided.droppableProps}
-                  className="flex h-full min-h-0 flex-col items-center gap-half overflow-y-auto overflow-x-hidden py-half"
+                  className="flex h-full min-h-0 flex-col items-center gap-half overflow-y-auto overflow-x-hidden overscroll-contain scrollbar-none py-half"
                 >
                   {item.projects.map((project, index) => (
                     <Draggable
@@ -627,6 +594,26 @@ export function AppBar({
                         >
                           <Tooltip content={project.name} side="right">
                             <div className="relative h-10 w-10">
+                              {!!(
+                                project.dotUnreadCount ||
+                                project.dotNeedsAttentionCount
+                              ) && (
+                                <span
+                                  className="absolute -left-1 -bottom-1 z-10 rounded-full bg-secondary px-1 text-xs"
+                                  style={{
+                                    color:
+                                      'hsl(var(--dot-activity, 270 65% 43%))',
+                                  }}
+                                  title={
+                                    project.dotNeedsAttentionCount
+                                      ? 'Dot · Needs Attention'
+                                      : 'Unread Dot replies'
+                                  }
+                                  aria-label={`${project.name}: ${project.dotUnreadCount ?? 0} unread Dot replies, ${project.dotNeedsAttentionCount ?? 0} Dot Needs Attention`}
+                                >
+                                  {project.dotNeedsAttentionCount ? '◆' : '●'}
+                                </span>
+                              )}
                               {project.hasNeedsReview && (
                                 <span
                                   className="absolute -right-1 -top-1 z-10 h-3 w-3 rounded-full border border-secondary bg-brand"
@@ -678,7 +665,7 @@ export function AppBar({
     <div
       onMouseEnter={onHoverStart}
       onMouseLeave={onHoverEnd}
-      className="relative z-30 h-full shrink-0"
+      className="relative z-30 h-full min-h-0 shrink-0"
     >
       <div
         className={cn(
@@ -710,7 +697,7 @@ export function AppBar({
         ))}
 
         {/* Bottom section: Notifications + User popover + GitHub + Discord */}
-        <div className="mt-auto pt-base flex flex-col items-center gap-4">
+        <div className="mt-auto shrink-0 pt-base flex flex-col items-center gap-4">
           {notificationBell}
           {showProfileButton ? userPopover : null}
           {showSocialLinks ? (
@@ -818,7 +805,7 @@ export function AppBar({
               <CaretLeftIcon className="h-4 w-4" weight="bold" />
             </button>
           </div>
-          <div className="min-h-0 flex-1 overflow-y-auto p-base">
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain scrollbar-none p-base">
             <div className="space-y-half">
               {projects.map((project) => (
                 <div
@@ -848,6 +835,19 @@ export function AppBar({
                       {project.name}
                     </span>
                   </button>
+                  {!!(
+                    project.dotUnreadCount || project.dotNeedsAttentionCount
+                  ) && (
+                    <span
+                      className="text-xs"
+                      style={{ color: 'hsl(var(--dot-activity, 270 65% 43%))' }}
+                      aria-label={`${project.name} Dot activity`}
+                    >
+                      {project.dotNeedsAttentionCount
+                        ? '◆ Dot · Needs Attention'
+                        : `● Dot ${project.dotUnreadCount}`}
+                    </span>
+                  )}
                   {project.hasNeedsReview && (
                     <span
                       className="h-2.5 w-2.5 shrink-0 rounded-full bg-brand"

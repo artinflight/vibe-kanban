@@ -70,6 +70,13 @@ separate. A UI flag or incomplete physical transaction never grants exclusion.
 - `normal_b.py`: existing Nightly native B object capture, immutable selected
   indexes, control checkpoints and normal decoder. Source pins, existing leases
   and operator connection settings remain required. No new backup transport.
+- `git_dependency.py` / `shared_dependency.py`: real clean-worktree and private
+  administrative identity checks, independently restored shared Git graphs and
+  reuse of verified commit/tag coverage across workspaces. Shared repositories
+  stay in place; unrelated branch changes do not recapture an already covered
+  graph. New workspace commits get a new immutable point. Dirty/untracked work,
+  unfinished Git operations, filters and unqualified external/submodule objects
+  are protected. Production authority/driver integration remains required.
 - `nightly_selection.py`: scoped cold-generation custody, coherent SQLite API
   image, active-path filtering and independent SQL/cold-reference recovery
   validation. Exclusions invalidate on retained messages, history-read intent,
@@ -131,6 +138,19 @@ restart to the outside managing agent.
 
 ## Recovery and selection refinements
 
+Actual host inspection confirmed that native/application histories and the common
+Git repository are on a different filesystem from the SSD. Restore publication
+therefore cannot rely on rename alone. Cross-filesystem recovery now retains
+verified backup staging on SSD and writes final active-file inodes anonymously
+on their destination filesystem. Only a complete hashed/metadata-applied/fsynced
+inode becomes visible, through a create-only link. Exact publication intent is
+journaled before directory creation. Directory construction and complete members
+resume after interruption; mismatched members/unknown entries remain protected.
+A final-destination resource admission is required in addition to SSD staging
+admission. No system-disk backup copy is created. Verified publication is durable
+before temporary-source retirement, allowing interrupted retirement to resume.
+These changes are tested source, not deployed filesystem movement.
+
 Physical preparation state and its original-path journal now commit in one SQL
 transaction. Failure of the journal write leaves no orphaned `preparing` state.
 A crash after intent can resume the same operation without another capture.
@@ -152,9 +172,13 @@ These are source contracts, not an activated Nightly or actual-B acceptance.
 
 ## Validation
 
-The full67-test Python suite passes with the actual maintained Nightly modules supplied.
-After moving remote checks outside live SQL transactions, all12 focused Nightly
-selection tests pass, including a concurrent SQL commit during B metadata reopen. Coverage
+The full81-test Python suite passes with the actual maintained Nightly modules
+supplied. This includes12 Nightly selection checks,7 real-Git dependency checks
+and6 actual cross-filesystem publication/recovery checks. The latter use small
+disposable /tmp and /dev/shm fixtures on distinct devices; they are not production
+or actual Desktop B acceptance. Concurrent SQL commits during B metadata reopen,
+anonymous-file interruption, copy-intent interruption, interrupted staging
+retirement, target capacity refusal and foreign data protection all pass. Coverage
 includes SQL intent/generation/input concurrency, native descendants, shared
 custody, exact bytes/Linux metadata/symlinks/empty files, interrupted copy and
 root renames, offline/corrupt recovery, messages during retirement, newer local

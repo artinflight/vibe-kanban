@@ -316,3 +316,130 @@ def remove_verified(manifest, roots, *, guard=lambda: None):
                 raise ValueError('Retired symlink differs')
             path.unlink()
         directory_sync(path.parent)
+
+
+def root_manifest(manifest, index):
+    validate(manifest)
+    if type(index) is not int or not 0 <= index < len(manifest['roots']):
+        raise ValueError('Exact payload root index required')
+    result = dict(format=manifest['format'], roots=[manifest['roots'][index]],
+                  entries=[dict(row, root=0) for row in manifest['entries'] if row['root'] == index])
+    validate(result)
+    return result
+
+
+def _publish_file(source, destination, row, guard):
+    """Publish complete final active bytes; no named partial or backup staging.
+
+    Linux O_TMPFILE keeps an interrupted destination inode invisible. Only a
+    fully hashed, metadata-applied, fsynced inode is linked into the namespace,
+    without replacement. All bulk backup/verification copies remain on SSD.
+    """
+    parent_safe(destination)
+    if not hasattr(os, 'O_TMPFILE'):
+        raise ValueError('Anonymous atomic active-file publication is unavailable')
+    fd = os.open(destination.parent, os.O_TMPFILE | os.O_RDWR | os.O_CLOEXEC, 0o600)
+    try:
+        size, hashed = 0, hashlib.sha256()
+        with os.fdopen(fd, 'wb', closefd=False) as output:
+            for block in read_file(source, signature(source.lstat()), guard):
+                output.write(block)
+                size += len(block)
+                hashed.update(block)
+            if size != row['bytes'] or hashed.hexdigest() != row['sha256']:
+                raise ValueError('Verified publication source changed')
+            output.flush()
+        meta = row['metadata']
+        os.fchown(fd, meta['uid'], meta['gid'])
+        os.fchmod(fd, meta['mode'])
+        for name in os.listxattr(fd):
+            if name not in meta['xattrs']:
+                os.removexattr(fd, name)
+        for name, raw in meta['xattrs'].items():
+            os.setxattr(fd, name, base64.b64decode(raw, validate=True))
+        os.utime(fd, ns=(meta['atime_ns'], meta['mtime_ns']))
+        os.fsync(fd)
+        guard()
+        parent_safe(destination)
+        libc = ctypes.CDLL(None, use_errno=True)
+        link = libc.linkat
+        link.argtypes = [ctypes.c_int, ctypes.c_char_p, ctypes.c_int, ctypes.c_char_p, ctypes.c_int]
+        link.restype = ctypes.c_int
+        # Following this process's owned fd avoids CAP_DAC_READ_SEARCH, which
+        # AT_EMPTY_PATH would require. The destination is still create-only.
+        if link(-100, os.fsencode('/proc/self/fd/' + str(fd)), -100, os.fsencode(destination), 0x400) != 0:
+            code = ctypes.get_errno()
+            if code == errno.EEXIST:
+                raise FileExistsError('Active restoration destination already exists')
+            raise OSError(code, os.strerror(code))
+        directory_sync(destination.parent)
+    finally:
+        os.close(fd)
+
+
+def publish_root(manifest, index, source, destination, *, guard=lambda: None):
+    """Resume a journal-owned cross-filesystem publication, without overwrites.
+
+    The caller records destination absence and exact copy intent before entry and
+    retains exclusive workspace custody until the full tree is verified. Existing
+    complete members must match exactly; unknown entries/aliases are preserved.
+    A crash leaves only complete files and recoverable directory construction.
+    """
+    tree = root_manifest(manifest, index)
+    source, destination = Path(source), Path(destination)
+    parent_safe(source)
+    parent_safe(destination)
+    verify(tree, [source], guard=guard)
+    children = {}
+    for row in tree['entries']:
+        relative = PurePosixPath(row['relative'])
+        if row['relative'] != '.':
+            children.setdefault(str(relative.parent), set()).add(relative.name)
+    directories = []
+    for row in tree['entries']:
+        guard()
+        path = destination / row['relative']
+        original = source / row['relative']
+        parent_safe(path)
+        if os.path.lexists(path):
+            st = path.lstat()
+            if row['kind'] == 'directory':
+                if (not stat.S_ISDIR(st.st_mode) or st.st_uid != os.getuid()
+                        or st.st_gid != row['metadata']['gid']
+                        or st.st_dev != destination.parent.stat().st_dev
+                        or stat.S_IMODE(st.st_mode) not in (0o700, row['metadata']['mode'])
+                        or any(row['metadata']['xattrs'].get(k) != v for k, v in metadata(path, st)['xattrs'].items())
+                        or set(os.listdir(path)) - children.get(row['relative'], set())):
+                    raise ValueError('Foreign publication directory or entries are protected')
+                directories.append((path, row))
+            elif row['kind'] == 'symlink':
+                if (not stat.S_ISLNK(st.st_mode) or os.readlink(path) != row['target']
+                        or st.st_uid != row['metadata']['uid'] or st.st_gid != row['metadata']['gid']
+                        or any(row['metadata']['xattrs'].get(k) != v for k, v in metadata(path, st)['xattrs'].items())):
+                    raise ValueError('Existing active symlink differs; preserve it')
+                # A symlink can survive creation before its timestamps/xattrs
+                # were applied. Its exact target/ownership remain mandatory.
+                apply_metadata(path, row)
+            else:
+                expected = dict(format=tree['format'], roots=[str(path)], entries=[dict(row, root=0, relative='.')])
+                if comparable(snapshot([path], guard)) != comparable(expected):
+                    raise ValueError('Existing active member differs; preserve it')
+            continue
+        if row['kind'] == 'directory':
+            path.mkdir(mode=0o700)
+            os.chown(path, row['metadata']['uid'], row['metadata']['gid'])
+            directories.append((path, row))
+            directory_sync(path.parent)
+        elif row['kind'] == 'symlink':
+            os.symlink(row['target'], path)
+            apply_metadata(path, row)
+            directory_sync(path.parent)
+        else:
+            _publish_file(original, path, row, guard)
+    for path, row in reversed(directories):
+        guard()
+        if set(os.listdir(path)) != children.get(row['relative'], set()):
+            raise ValueError('Restoration directory changed during publication')
+        apply_metadata(path, row)
+        directory_sync(path)
+    verify(tree, [destination], guard=guard)

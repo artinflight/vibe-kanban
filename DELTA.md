@@ -3734,3 +3734,14 @@ pass with maintained Nightly d419d85f4; fixture B is not actual B acceptance.
 Production driver/ownership closure, actual Nightly cycle wiring, combined
 candidate/fallback/actual-B/UI qualification and staging handoff remain open.
 No restart, archive retirement, Nightly activation or other-owner action occurred.
+
+
+2026-11-28 — Explicit public-source publication approval resolved the review hold;
+b8dd25238 is verified on the existing fork feature branch. Added shared Git
+ownership/graph recovery and covered-root reuse across workspaces, retaining
+shared repositories and previous epochs. Actual host device inspection exposed a
+rename-only restore gap. Added journaled create-only cross-filesystem publication
+using complete anonymous file inodes, target resource admission and durable
+verification before temporary-source retirement. The full81 Python tests pass,
+including real Git and two Linux fixture filesystems. No production movement,
+backend action, Nightly schedule change or actual-B acceptance is claimed.

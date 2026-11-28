@@ -27,8 +27,8 @@ request the writer's restoration. Concurrent readers share one restoration.
 The browser retains request identity and displays saved-message/recovery status.
 Ordinary recreation preserves populated/aliased worktrees on branch mismatch.
 
-The full67-test Python suite and12 final focused selection tests pass with
-Nightly source d419d85f4. Nine archive/revival Rust tests,
+The full81-test Python suite passes with Nightly source d419d85f4, including
+12 selection,7 real-Git dependency and6 cross-filesystem recovery tests. Nine archive/revival Rust tests,
 two kernel-custody tests, three worktree-preservation tests and three existing
 owner regressions pass. Backend compilation, generated types/check, all four
 frontend type checks, changed frontend lint and formatting pass. TypeScript used
@@ -43,6 +43,21 @@ metadata work does not pin a live SQL transaction. Physical preparation now
 commits its path journal atomically. Normal B restores old generations using
 current qualified reader inputs while preserving immutable provider/index identity.
 New logs: `archive-nightly-tests.log`, `selection-final-tests.log`, `format-nightly.log`.
+
+Shared Git dependency source now qualifies clean/private ownership, verifies an
+independently restored graph and reuses covered commit/tag roots across workspaces.
+It preserves shared repositories and older points. Production attachment closure
+and driver integration remain open. Host histories/common Git and SSD are on
+different devices; restore now journals create-only cross-filesystem publication,
+requires target resource admission and exposes only complete anonymous-file writes.
+Verified publication survives interrupted temporary-source retirement. Tests use
+actual Git and distinct Linux fixture filesystems, not live B or application QA.
+Logs: `archive-dependencies-tests.log`, `git-dependency-final-tests.log`,
+`cross-filesystem-tests.log`, `format-dependencies.log` in `source-recovery/`.
+
+The operator explicitly approved publication of this task's source/tests/docs to
+the existing public artinflight/vibe-kanban repository. b8dd25238 is verified pushed;
+the earlier publication hold is resolved. Preserve private data/credentials externally.
 
 ## Remaining outcomes
 

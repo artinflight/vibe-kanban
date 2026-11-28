@@ -82,6 +82,9 @@ class FixtureAuthority:
     def reserve_restore(self, manifest, stage):
         self.check(manifest['workspace_id'], manifest)
 
+    def reserve_publication(self, manifest, index, destination):
+        self.check(manifest['workspace_id'], manifest)
+
 
 class LifecycleTests(unittest.TestCase):
     def setUp(self):

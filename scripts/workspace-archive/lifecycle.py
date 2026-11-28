@@ -68,6 +68,12 @@ class Lifecycle:
                     for i in range(len(journal['restore_attempts']))]
         if attempts != journal['restore_attempts']:
             raise Conflict('Restore attempt paths differ')
+        if type(journal.get('publication_verified', False)) is not bool:
+            raise Conflict('Invalid publication verification state')
+        copies = journal.get('copy_publications', [])
+        if (not isinstance(copies, list) or len(set(copies)) != len(copies)
+                or any(type(i) is not int or not 0 <= i < len(roots) for i in copies)):
+            raise Conflict('Unowned cross-filesystem publication intent')
         if journal['publication'] is not None:
             if len(journal['publication']) != len(roots):
                 raise Conflict('Incomplete publication roots')
@@ -224,6 +230,9 @@ class Lifecycle:
         if state['phase'] != 'restoring':
             self.catalog.begin_restore(self.workspace)
         self.event('restore_intent', manifest)
+        if journal.get('publication_verified', False):
+            self._complete_restore(record, journal)
+            return
         if journal['publication'] is None:
             # Interrupted retirement may have left complete originals in their
             # source/quarantine locations. Reuse only if the whole tree verifies.
@@ -254,13 +263,38 @@ class Lifecycle:
             self.check(manifest)
             if staged == destination:
                 continue
-            if os.path.lexists(staged) and os.path.lexists(destination):
+            copies = journal.setdefault('copy_publications', [])
+            if os.path.lexists(staged) and os.path.lexists(destination) and i not in copies:
                 raise Conflict('Revival destination already exists; preserve newer data')
             if os.path.lexists(staged):
-                payloads.rename_new(staged, destination)
+                if i in copies or Path(staged).lstat().st_dev != Path(destination).parent.stat().st_dev:
+                    if i not in copies:
+                        # Destination absence was checked above. Commit exact
+                        # ownership before exposing even an empty target directory.
+                        copies.append(i)
+                        record = self._save(record, journal)
+                        self.event('copy_publication_intent', i)
+                    self.authority.reserve_publication(manifest, i, Path(destination))
+                    payloads.publish_root(tree, i, staged, destination,
+                                          guard=lambda: self.check(manifest))
+                else:
+                    payloads.rename_new(staged, destination)
                 self.event('root_revived', i)
             elif not os.path.lexists(destination):
                 raise Conflict('Both revival source and destination are absent')
+        self._complete_restore(record, journal)
+
+    def _complete_restore(self, record, journal):
+        manifest = journal['manifest']
+        tree = manifest['payloads']
         payloads.verify(tree, guard=lambda: self.check(manifest))
+        if not journal.get('publication_verified', False):
+            journal['publication_verified'] = True
+            self._save(record, journal)
+            self.event('publication_verified', manifest)
+        for i in journal.get('copy_publications', []):
+            source = journal['publication'][i]
+            payloads.remove_verified(payloads.root_manifest(tree, i), [source],
+                                     guard=lambda: self.check(manifest))
         self.catalog.finish_restore(self.workspace, manifest['operation_id'])
         self.event('revival_complete', manifest)

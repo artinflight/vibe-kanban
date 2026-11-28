@@ -10,9 +10,9 @@ integration, not deployment, restart authorization or a completion claim.
 | --- | --- | --- |
 | Original writer cutover and history conversion | Original conversion and catch-up accepted; supported Codex resume avoids historical replay duplication | Preserve native context and verify current growth after final deployment |
 | Packed storage/performance repair | Three compatible readers and finite/daily converters tested; Desktop B recovery and private paired switch accepted | Deploy qualified readers, publish packed storage, retire only verified old objects, finish current public/recovery/performance checks |
-| Archived workspace separation | Intent/catalog, journaled movement and B adapter source; 53 Python fixture/contract tests | Finish production dependency authority/driver and actual B qualification |
+| Archived workspace separation | Intent/catalog, journaled cross-filesystem movement, shared Git and B adapter source; 81 Python fixture/contract tests | Finish production dependency authority/driver and actual B qualification |
 | Automatic revival on message | Ordinary admission/readers and visible recovery state connected in opt-in source; backend compiles | Qualify physical driver, exact dispatch, both readers and ordinary UI on combined candidate |
-| Nightly active-workspace backup | Existing Nightly preparation belongs to its existing owner | Integrate archive catalog/shared recovery closure; prove cold payloads aren't recopied; schedule remains off |
+| Nightly active-workspace backup | Cold/current-SQL selection and recovery contract tested; existing Nightly retains its owner | Wire into recorded namespace/current-map and shared recovery closure; prove cold payloads aren't recopied; schedule remains off |
 
 **No dedup conversion job was running at the November27 readback.** The prepared
 packed-reader activation has no APPROVAL, ARMED, STARTED, ATTEMPT or POST_ACTIVATION
